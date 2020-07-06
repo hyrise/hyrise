@@ -93,7 +93,8 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
   // In-depth verification
-  check_unique_constraint_mapping(table_key_constraints, unique_constraints_mock_node_a);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints_mock_node_a));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints_mock_node_a));
 
   // Check whether MockNode is referenced by the constraint's expressions
   for (const auto& unique_constraint : *unique_constraints_mock_node_a) {
@@ -122,7 +123,7 @@ TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {
   unique_constraints = _mock_node_a->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 1);
   // In-depth check
-  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_c}, unique_constraints);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
 }
 
 }  // namespace opossum

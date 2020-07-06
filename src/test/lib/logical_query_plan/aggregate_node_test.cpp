@@ -139,9 +139,10 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
   // Basic check
   EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
   const auto key_constraint_group_by_cols =
       TableKeyConstraint{{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE};
-  check_unique_constraint_mapping({key_constraint_b, key_constraint_group_by_cols}, unique_constraints);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_group_by_cols, unique_constraints));
 }
 
 TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
@@ -161,7 +162,7 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   const auto& unique_constraints = _aggregate_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 1);
   // In-depth check
-  check_unique_constraint_mapping({table_key_constraint}, unique_constraints);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_constraints));
 }
 
 }  // namespace opossum

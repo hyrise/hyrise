@@ -74,8 +74,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsEmpty) {
 
 TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
   // Add constraints to MockNode
-  const auto key_constraints = TableKeyConstraints{*_key_constraint_a_b_pk, *_key_constraint_b};
-  _mock_node->set_key_constraints(key_constraints);
+  _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
 
   {
@@ -86,7 +85,8 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
-    check_unique_constraint_mapping(key_constraints, unique_constraints);
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_constraints));
   }
 
   {
@@ -97,14 +97,14 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
-    check_unique_constraint_mapping(key_constraints, unique_constraints);
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_constraints));
   }
 }
 
 TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   // Prepare two unique constraints for MockNode
-  const auto table_key_constraints = TableKeyConstraints{*_key_constraint_a_b_pk, *_key_constraint_b};
-  _mock_node->set_key_constraints(table_key_constraints);
+  _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
 
   // Test (a, b, c) -> (a, c) - no more constraints valid
@@ -123,7 +123,8 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
-    check_unique_constraint_mapping(table_key_constraints, unique_constraints);
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_constraints));
   }
 
   {
@@ -134,7 +135,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 1);
     // In-depth check
-    check_unique_constraint_mapping(TableKeyConstraints{*_key_constraint_b}, unique_constraints);
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_constraints));
   }
 }
 

@@ -285,21 +285,22 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 TEST_F(StoredTableNodeTest, UniqueConstraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
-  table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_a_b);
+  table->add_soft_key_constraint(key_constraint_c);
 
-  const auto table_key_constraints = table->soft_key_constraints();
-  const auto lqp_unique_constraints = _stored_table_node->unique_constraints();
+  const auto unique_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
-  EXPECT_EQ(table_key_constraints.size(), 2);
-  EXPECT_EQ(lqp_unique_constraints->size(), 2);
+  EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
-  check_unique_constraint_mapping(table_key_constraints, lqp_unique_constraints);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
 
   // Check whether StoredTableNode is referenced by the constraint's expressions
-  for (const auto& lqp_unique_constraint : *lqp_unique_constraints) {
-    for (const auto& expression : lqp_unique_constraint.expressions) {
+  for (const auto& unique_constraint : *unique_constraints) {
+    for (const auto& expression : unique_constraint.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
       EXPECT_TRUE(column_expression->original_node.lock() == _stored_table_node);
@@ -328,7 +329,7 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   const auto& unique_constraints = _stored_table_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 1);
   // In-depth check
-  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_c}, unique_constraints);
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
 }
 
 TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
