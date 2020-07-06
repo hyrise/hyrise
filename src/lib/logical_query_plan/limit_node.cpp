@@ -20,7 +20,7 @@ std::string LimitNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
   return _forward_unique_constraints();
 }
 

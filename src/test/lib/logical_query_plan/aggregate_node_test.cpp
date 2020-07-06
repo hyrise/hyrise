@@ -108,13 +108,13 @@ TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
   // Check whether AggregateNode adds a new unique constraint for its group-by column(s)
   {
     EXPECT_EQ(agg_node_a->unique_constraints()->size(), 1);
-    const auto unique_constraint = *agg_node_a->unique_constraints()->cbegin();
+    const auto& unique_constraint = *agg_node_a->unique_constraints()->cbegin();
     EXPECT_EQ(unique_constraint.expressions.size(), 1);
     EXPECT_TRUE(unique_constraint.expressions.contains(_a));
   }
   {
     EXPECT_EQ(agg_node_b->unique_constraints()->size(), 1);
-    const auto unique_constraint = *agg_node_b->unique_constraints()->cbegin();
+    const auto& unique_constraint = *agg_node_b->unique_constraints()->cbegin();
     EXPECT_EQ(unique_constraint.expressions.size(), 2);
     EXPECT_TRUE(unique_constraint.expressions.contains(_a));
     EXPECT_TRUE(unique_constraint.expressions.contains(_b));
@@ -130,7 +130,7 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
 
   const auto aggregate = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
-  const auto unique_constraints = _aggregate_node->unique_constraints();
+  const auto& unique_constraints = _aggregate_node->unique_constraints();
 
   // Since _b is part of the group-by columns, key_constraint_b remains valid.
   // As _c becomes aggregated, key_constraint_c is discarded.

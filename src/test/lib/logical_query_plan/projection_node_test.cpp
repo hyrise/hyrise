@@ -82,7 +82,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
-    const auto unique_constraints = _projection_node->unique_constraints();
+    const auto& unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
@@ -94,7 +94,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
-    const auto unique_constraints = _projection_node->unique_constraints();
+    const auto& unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
@@ -120,7 +120,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
 
     // Basic check
-    const auto unique_constraints = _projection_node->unique_constraints();
+    const auto& unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
     // In-depth check
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_constraints));
@@ -132,7 +132,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
 
     // Basic check
-    const auto unique_constraints = _projection_node->unique_constraints();
+    const auto& unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 1);
     // In-depth check
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_constraints));

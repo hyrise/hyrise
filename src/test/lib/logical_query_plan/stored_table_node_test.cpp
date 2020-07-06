@@ -290,7 +290,7 @@ TEST_F(StoredTableNodeTest, UniqueConstraints) {
   table->add_soft_key_constraint(key_constraint_a_b);
   table->add_soft_key_constraint(key_constraint_c);
 
-  const auto unique_constraints = _stored_table_node->unique_constraints();
+  const auto& unique_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
   EXPECT_EQ(unique_constraints->size(), 2);

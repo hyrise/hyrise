@@ -77,8 +77,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   return output_expressions;
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
+  const auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // (1) Create new unique constraint from the group-by column(s) which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
@@ -95,7 +95,7 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
   // Check each constraint for applicability
-  auto input_unique_constraints = left_input()->unique_constraints();
+  const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
     // Do not add duplicate constraints
     bool duplicate = std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),

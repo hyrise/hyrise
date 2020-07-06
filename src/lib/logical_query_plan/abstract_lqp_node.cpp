@@ -261,7 +261,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints() const {
   Fail("Node misses implementation for unique constraints.");
 }
 
@@ -280,7 +280,7 @@ bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output
            "The given expressions are not a subset of the LQP's output expressions.");
   }
 
-  const auto unique_constraints = this->unique_constraints();
+  const auto& unique_constraints = this->unique_constraints();
   if (unique_constraints->empty()) return false;
 
   // Look for a unique constraint that is solely based on the given expressions
@@ -415,9 +415,9 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_constraints() const {
   Assert(left_input(), "Cannot forward unique constraints from an empty input node.");
-  const auto input_unique_constraints = left_input()->unique_constraints();
+  const auto& input_unique_constraints = left_input()->unique_constraints();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing

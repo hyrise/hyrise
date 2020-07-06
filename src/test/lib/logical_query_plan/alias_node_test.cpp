@@ -83,7 +83,7 @@ TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
   mock_node->set_key_constraints({key_constraint_a_b, key_constraint_b});
 
   // Basic check
-  const auto unique_constraints = alias_node->unique_constraints();
+  const auto& unique_constraints = alias_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));

@@ -45,7 +45,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::Positions:

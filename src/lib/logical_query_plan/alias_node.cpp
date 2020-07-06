@@ -31,7 +31,7 @@ std::string AliasNode::description(const DescriptionMode mode) const {
 
 std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const { return node_expressions; }
 
-const std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
   return _forward_unique_constraints();
 }
 

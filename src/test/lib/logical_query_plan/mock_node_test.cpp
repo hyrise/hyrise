@@ -88,7 +88,7 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   _mock_node_a->set_key_constraints(table_key_constraints);
 
   // Basic checks
-  const auto unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
+  const auto& unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
   EXPECT_EQ(unique_constraints_mock_node_a->size(), 2);
   EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 

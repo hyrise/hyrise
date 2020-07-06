@@ -42,7 +42,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   return *_output_expressions;
 }
 
-const std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
   // Generate from table key constraints
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
