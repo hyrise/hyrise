@@ -50,10 +50,10 @@ std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() cons
     auto unique_constraint_expressions = ExpressionUnorderedSet{};
 
     for (const auto& column_id : table_key_constraint.columns()) {
-      const auto output_expression = find_output_expression(column_id);
-      Assert(output_expression, "Did not find output expression in StaticTableNode");
+      const auto column_expression_opt = find_column_expression(column_id);
+      Assert(column_expression_opt, "Did not find column expression in StaticTableNode.");
 
-      unique_constraint_expressions.insert(*output_expression);
+      unique_constraint_expressions.insert(*column_expression_opt);
     }
 
     unique_constraints->emplace_back(unique_constraint_expressions);

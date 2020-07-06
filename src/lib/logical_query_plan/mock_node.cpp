@@ -89,9 +89,9 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
       // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
       auto constraint_expressions = ExpressionUnorderedSet{};
       for (const auto& column_id : table_key_constraint.columns()) {
-        const auto output_expression = find_output_expression(column_id);
-        Assert(output_expression, "Did not find output expression for ColumnID in MockNode");
-        constraint_expressions.emplace(*output_expression);
+        const auto column_expression_opt = find_column_expression(column_id);
+        Assert(column_expression_opt, "Did not find column expression for ColumnID in MockNode.");
+        constraint_expressions.emplace(*column_expression_opt);
       }
 
       // Create LQPUniqueConstraint

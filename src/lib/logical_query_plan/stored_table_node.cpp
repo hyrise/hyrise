@@ -117,10 +117,10 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
       auto constraint_expressions = ExpressionUnorderedSet{};
 
       for (const auto& column_id : table_key_constraint.columns()) {
-        const auto column_expr_opt = find_output_expression(column_id);
-        Assert(column_expr_opt, "Did not find column expression in LQPNode");
+        const auto column_expression_opt = find_column_expression(column_id);
+        Assert(column_expression_opt, "Did not find column expression in LQPNode");
 
-        constraint_expressions.insert(*column_expr_opt);
+        constraint_expressions.insert(*column_expression_opt);
       }
 
       // Create LQPUniqueConstraint
