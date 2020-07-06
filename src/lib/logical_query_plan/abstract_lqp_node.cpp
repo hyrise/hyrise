@@ -267,14 +267,14 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
 
 bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
-    const auto& output_expressions = this->output_expressions();
+    Assert(!output_expressions_subset.empty(), "An empty input expressions set does not make sense.");
 
+    const auto& output_expressions = this->output_expressions();
     Assert(std::all_of(output_expressions_subset.cbegin(), output_expressions_subset.cend(),
                             [&output_expressions](const auto& input_expression) {
                               return std::any_of(output_expressions.cbegin(), output_expressions.cend(),
                                                  [&input_expression](const auto& output_expression) {
-                                                   return output_expression == input_expression;
+                                                   return *output_expression == *input_expression;
                                                  });
                             }),
                 "The given expressions are not a subset of the LQP's output expressions.");

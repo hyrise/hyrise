@@ -91,10 +91,10 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const
       join_mode == JoinMode::FullOuter) {
     // TODO(Julian) Comment why Outer Joins do not need special handling (Null values do not break constraints)
 
-    // Check for uniqueness of join key columns
-    bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
-    bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
-    if (left_operand_unique && right_operand_unique) {
+    // Check uniqueness of join columns
+    bool left_operand_is_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
+    bool right_operand_is_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
+    if (left_operand_is_unique && right_operand_is_unique) {
       // Due to the one-to-one relationship, the constraints of both sides remain valid.
       auto left_constraints = left_input()->unique_constraints();
       auto right_constraints = right_input()->unique_constraints();
@@ -107,11 +107,11 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const
       }
       return output_constraints;
 
-    } else if (left_operand_unique) {
+    } else if (left_operand_is_unique) {
       // Uniqueness on the left prevents duplication of records on the right
       return right_input()->unique_constraints();
 
-    } else if (right_operand_unique) {
+    } else if (right_operand_is_unique) {
       // Uniqueness on the right prevents duplication of records on the left
       return left_input()->unique_constraints();
 
