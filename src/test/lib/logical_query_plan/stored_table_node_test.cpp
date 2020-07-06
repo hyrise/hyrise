@@ -318,15 +318,14 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   table->add_soft_key_constraint(table_key_constraint_a_b);
   table->add_soft_key_constraint(table_key_constraint_c);
   const auto& table_key_constraints = table->soft_key_constraints();
-  const auto unique_constraints = _stored_table_node->unique_constraints();
   EXPECT_EQ(table_key_constraints.size(), 3);
-  EXPECT_EQ(unique_constraints.size(), 3);
+  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 3);
 
   // Prune column a, which should remove two unique constraints
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check
-  unique_constraints = _stored_table_node->unique_constraints();
+  const auto& unique_constraints = _stored_table_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 1);
   // In-depth check
   check_unique_constraint_mapping(TableKeyConstraints{table_key_constraint_c}, unique_constraints);

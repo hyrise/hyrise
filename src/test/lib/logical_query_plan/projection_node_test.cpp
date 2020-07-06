@@ -27,13 +27,11 @@ class ProjectionNodeTest : public BaseTest {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
 
     // Constraints for later use
-    // Primary Key: a, b
-    _key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-    // Unique: b
+    _key_constraint_a_b_pk = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     _key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }
 
-  std::optional<TableKeyConstraint> _key_constraint_a_b;
+  std::optional<TableKeyConstraint> _key_constraint_a_b_pk;
   std::optional<TableKeyConstraint> _key_constraint_b;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
@@ -76,11 +74,12 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsEmpty) {
 
 TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
   // Add constraints to MockNode
-  const auto key_constraints = TableKeyConstraints{*_key_constraint_a_b, *_key_constraint_b};
+  const auto key_constraints = TableKeyConstraints{*_key_constraint_a_b_pk, *_key_constraint_b};
   _mock_node->set_key_constraints(key_constraints);
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
 
-  {  // Reorder columns: (a, b, c) -> (c, a, b)
+  {
+    // Reorder columns: (a, b, c) -> (c, a, b)
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
@@ -90,7 +89,8 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
     check_unique_constraint_mapping(key_constraints, unique_constraints);
   }
 
-  {  // Reorder columns: (a, b, c) -> (b, c, a)
+  {
+    // Reorder columns: (a, b, c) -> (b, c, a)
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
@@ -102,8 +102,8 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
 }
 
 TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
-  // Add constraints to MockNode
-  const auto table_key_constraints = TableKeyConstraints{*_key_constraint_a_b, *_key_constraint_b};
+  // Prepare two unique constraints for MockNode
+  const auto table_key_constraints = TableKeyConstraints{*_key_constraint_a_b_pk, *_key_constraint_b};
   _mock_node->set_key_constraints(table_key_constraints);
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
 
@@ -115,9 +115,10 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
   EXPECT_TRUE(_projection_node->unique_constraints()->empty());
 
-  // Test (a, b, c) -> (a, b) - all constraints remain valid
-  _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
   {
+    // Test (a, b, c) -> (a, b) - all constraints remain valid
+    _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
+
     // Basic check
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 2);
@@ -125,9 +126,10 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
     check_unique_constraint_mapping(table_key_constraints, unique_constraints);
   }
 
-  // Test (a, b, c) -> (b) - unique constraint for b remains valid
-  _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
   {
+    // Test (a, b, c) -> (b) - unique constraint for b remains valid
+    _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
+
     // Basic check
     const auto unique_constraints = _projection_node->unique_constraints();
     EXPECT_EQ(unique_constraints->size(), 1);
