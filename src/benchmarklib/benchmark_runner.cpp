@@ -48,7 +48,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     Hyrise::get().set_scheduler(scheduler);
   }
 
-  _table_generator->generate_and_store();
+  if (_table_generator) {
+    _table_generator->generate_and_store();
+  }
 
   _benchmark_item_runner->on_tables_loaded();
 
@@ -419,8 +421,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json report{{"context", _context},
                         {"benchmarks", std::move(benchmarks)},
                         {"log", std::move(log_json)},
-                        {"summary", std::move(summary)},
-                        {"table_generation", _table_generator->metrics}};
+                        {"summary", std::move(summary)}};
+  if (_table_generator) {
+    report["table_generation"] = _table_generator->metrics;
+  }
 
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
