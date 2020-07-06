@@ -108,13 +108,13 @@ TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
   // Check whether AggregateNode adds a new unique constraint for its group-by column(s)
   {
     EXPECT_EQ(agg_node_a->unique_constraints()->size(), 1);
-    const auto& unique_constraint = *agg_node_a->unique_constraints()->cbegin();
+    const auto unique_constraint = *agg_node_a->unique_constraints()->cbegin();
     EXPECT_EQ(unique_constraint.expressions.size(), 1);
     EXPECT_TRUE(unique_constraint.expressions.contains(_a));
   }
   {
     EXPECT_EQ(agg_node_b->unique_constraints()->size(), 1);
-    const auto& unique_constraint = *agg_node_b->unique_constraints()->cbegin();
+    const auto unique_constraint = *agg_node_b->unique_constraints()->cbegin();
     EXPECT_EQ(unique_constraint.expressions.size(), 2);
     EXPECT_TRUE(unique_constraint.expressions.contains(_a));
     EXPECT_TRUE(unique_constraint.expressions.contains(_b));
