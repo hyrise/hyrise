@@ -33,29 +33,30 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
   unique_constraints->reserve(node_expressions.size());
 
+  // Forward unique constraints if applicable
   auto input_unique_constraints = left_input()->unique_constraints();
 
-  // Check each input constraint for applicability in this projection node
-  const auto& expressions = output_expressions();
-  const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
+  const auto& expressions = this->output_expressions();
+  const auto output_expressions = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
     // Check whether expressions are missing in the output relation
     bool found_all_expressions = std::all_of(
         input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
         [&](const std::shared_ptr<AbstractExpression>& constraint_expression) {
-          return expressions_set.contains(constraint_expression);
+          return output_expressions.contains(constraint_expression);
         });
 
     if (found_all_expressions) {
       unique_constraints->push_back(input_unique_constraint);
-    }  // else { save constraint for the next block - derived constraints }
+    }  // else { save unique constraint for the next block - derived constraints }
   }
 
-  // TODO(Julian) Very basic check above. In the future, we also might want to look for
-  //  derived column expressions, like 'column + 1', that preserve uniqueness.
-  //  However, in case of derived column expressions we also have to create new, derived constraints.
-  // { ... }
+  /**
+   * TODO(anyone) Check for derived output expressions that preserve uniqueness.
+   * For example: 'column + 1'
+   * Create unique constraints for derived output expressions that preserve uniqueness.
+   */
 
   return unique_constraints;
 }
