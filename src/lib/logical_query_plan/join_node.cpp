@@ -74,7 +74,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing constraints are forwarded as they remain valid.
-  if (join_mode == JoinMode::Semi | join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
     return _forward_unique_constraints();
   }
 
