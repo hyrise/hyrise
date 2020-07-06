@@ -64,8 +64,7 @@ TEST_F(StaticTableNodeTest, UniqueConstraints) {
   const auto& unique_constraints = static_table_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
-  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_a, key_constraint_a_b},
-                                  unique_constraints);
+  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_a, key_constraint_a_b}, unique_constraints);
 }
 
 }  // namespace opossum

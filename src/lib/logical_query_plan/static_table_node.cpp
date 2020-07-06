@@ -47,16 +47,16 @@ const std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints(
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   for (const auto& table_key_constraint : table->soft_key_constraints()) {
-    auto constraint_expressions = ExpressionUnorderedSet{};
+    auto unique_constraint_expressions = ExpressionUnorderedSet{};
 
     for (const auto& column_id : table_key_constraint.columns()) {
       const auto output_expression = find_output_expression(column_id);
       Assert(output_expression, "Did not find output expression in StaticTableNode");
 
-      constraint_expressions.insert(*output_expression);
+      unique_constraint_expressions.insert(*output_expression);
     }
 
-    unique_constraints->emplace_back(constraint_expressions);
+    unique_constraints->emplace_back(unique_constraint_expressions);
   }
 
   return unique_constraints;

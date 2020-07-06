@@ -82,9 +82,9 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 
 TEST_F(MockNodeTest, UniqueConstraints) {
   // Add constraints to MockNode
-  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-  const auto table_key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto table_key_constraints = TableKeyConstraints{table_key_constraint_a_b, table_key_constraint_c};
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraints = TableKeyConstraints{key_constraint_a_b, key_constraint_c};
   _mock_node_a->set_key_constraints(table_key_constraints);
 
   // Basic checks

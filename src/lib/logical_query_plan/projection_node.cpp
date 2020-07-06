@@ -33,7 +33,7 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
   unique_constraints->reserve(node_expressions.size());
 
-  // Forward unique constraints if applicable
+  // Forward unique constraints, if applicable
   auto input_unique_constraints = left_input()->unique_constraints();
 
   const auto& expressions = this->output_expressions();

@@ -139,8 +139,8 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
   // Basic check
   EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
-  const auto key_constraint_group_by_cols = TableKeyConstraint{{_a->original_column_id, _b->original_column_id},
-                                                               KeyConstraintType::UNIQUE};
+  const auto key_constraint_group_by_cols =
+      TableKeyConstraint{{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE};
   check_unique_constraint_mapping({key_constraint_b, key_constraint_group_by_cols}, unique_constraints);
 }
 

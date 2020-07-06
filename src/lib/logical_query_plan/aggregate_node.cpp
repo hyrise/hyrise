@@ -88,7 +88,7 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
 
   unique_constraints->emplace_back(group_by_columns);
 
-  // (2) Forward input constraints if applicable
+  // (2) Forward input constraints, if applicable
   // We call output_expressions() to avoid ANY() aggregates from the DependentGroupByReductionRule
   const auto& output_expressions_vec = this->output_expressions();
   const auto output_expressions =

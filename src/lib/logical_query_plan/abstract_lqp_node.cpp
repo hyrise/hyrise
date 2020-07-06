@@ -425,7 +425,8 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_con
     ExpressionUnorderedSet output_expressions{expressions.cbegin(), expressions.cend()};
     for (const auto& unique_constraint : *input_unique_constraints) {
       for (const auto& expression : unique_constraint.expressions) {
-        Assert(output_expressions.contains(expression), "Forwarding of constraints is illegal because node misses "
+        Assert(output_expressions.contains(expression),
+               "Forwarding of constraints is illegal because node misses "
                "output expressions.");
       }
     }

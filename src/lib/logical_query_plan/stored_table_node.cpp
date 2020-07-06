@@ -96,13 +96,13 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
-  // Extract relevant table key constraints
+  // We create unique constraints from selected table key constraints
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_key_constraints = table->soft_key_constraints();
 
   for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
     // Discard constraints which involve pruned column(s)
-    const auto discard_constraint = [&]() {
+    const auto discard_key_constraint = [&]() {
       for (const auto& column_id : table_key_constraint.columns()) {
         //  Check whether constraint involves pruned column id(s).
         if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
@@ -112,7 +112,7 @@ const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints(
       return false;
     }();
 
-    if (!discard_constraint) {
+    if (!discard_key_constraint) {
       // Search for expressions representing the key constraint's ColumnIDs
       auto constraint_expressions = ExpressionUnorderedSet{};
 

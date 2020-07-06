@@ -279,9 +279,10 @@ TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
 
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
-    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-                                          _mock_node_a,
-                                          _mock_node_b);
+    const auto join_node =
+    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+      _mock_node_a,
+      _mock_node_b);
     // clang-format on
 
     EXPECT_TRUE(*join_node->unique_constraints() == *_mock_node_a->unique_constraints());
@@ -336,7 +337,10 @@ TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
 
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
     join_unique_constraints = join_node->unique_constraints();
+
+    // Basic check
     EXPECT_EQ(join_unique_constraints->size(), 4);
+    // In-depth check
     check_unique_constraint_mapping({*_key_constraint_a, *_key_constraint_b_c, *_key_constraint_x, *_key_constraint_y},
                                     join_unique_constraints);
   }
@@ -361,10 +365,10 @@ TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
   // clang-format off
-  const auto join_node = JoinNode::make(JoinMode::Inner,
-                                        expression_vector(less_than_(_t_a_a, _t_b_x), greater_than_(_t_a_a, _t_b_y)),
-                                        _mock_node_a,
-                                        _mock_node_b);
+  const auto join_node =
+  JoinNode::make(JoinMode::Inner, expression_vector(less_than_(_t_a_a, _t_b_x), greater_than_(_t_a_a, _t_b_y)),
+    _mock_node_a,
+    _mock_node_b);
   // clang-format on
 
   EXPECT_TRUE(join_node->unique_constraints()->empty());
