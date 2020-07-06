@@ -139,9 +139,7 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
 
   const auto aggregate = sum_(_b);
-  _aggregate_node =
-  AggregateNode::make(expression_vector(_a), expression_vector(aggregate),
-    _mock_node);
+  _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate), _mock_node);
 
   // AggregateNode creates a new unique constraint based on group-by-column _a.
   // It is the same as MockNode's unique constraint. We do not want AggregateNode to output duplicate unique

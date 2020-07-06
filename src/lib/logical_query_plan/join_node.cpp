@@ -89,7 +89,6 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const
 
   if (join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
       join_mode == JoinMode::FullOuter) {
-
     // Check uniqueness of join columns
     bool left_operand_is_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
     bool right_operand_is_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});

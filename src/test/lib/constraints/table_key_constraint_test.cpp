@@ -21,8 +21,6 @@ class TableKeyConstraintTest : public BaseTest {
       _table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
       sm.add_table("table", _table);
-
-
     }
 
     {
@@ -32,7 +30,6 @@ class TableKeyConstraintTest : public BaseTest {
       _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
       sm.add_table("table_nullable", _table_nullable);
-
     }
   }
 
@@ -42,7 +39,7 @@ class TableKeyConstraintTest : public BaseTest {
 
 TEST_F(TableKeyConstraintTest, DuplicateColumnIDs) {
   // Implementation should avoid duplicate ColumnIDs
-  const auto key_constraint = TableKeyConstraint ({{ColumnID{1}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+  const auto key_constraint = TableKeyConstraint({{ColumnID{1}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(key_constraint.columns().size(), 1);
   EXPECT_EQ(*key_constraint.columns().begin(), ColumnID{1});
 }
@@ -91,7 +88,6 @@ TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
                std::logic_error);
   EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
-
 }
 
 TEST_F(TableKeyConstraintTest, Equals) {
