@@ -82,8 +82,7 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 
 TEST_F(MockNodeTest, UniqueConstraints) {
   // Add constraints to MockNode
-  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}},
-                                                           KeyConstraintType::PRIMARY_KEY};
+  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto table_key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   const auto table_key_constraints = TableKeyConstraints{table_key_constraint_a_b, table_key_constraint_c};
   _mock_node_a->set_key_constraints(table_key_constraints);
@@ -106,6 +105,24 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   }
 }
 
-// TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {} // TODO(Julian)
+TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {
+  // Prepare unique constraints
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  _mock_node_a->set_key_constraints({key_constraint_a, key_constraint_a_b, key_constraint_c});
+  EXPECT_EQ(_mock_node_a->key_constraints().size(), 3);
+  auto unique_constraints = _mock_node_a->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 3);
+
+  // Prune column a, which should remove two unique constraints
+  _mock_node_a->set_pruned_column_ids({ColumnID{0}});
+
+  // Basic check
+  unique_constraints = _mock_node_a->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 1);
+  // In-depth check
+  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_c}, unique_constraints);
+}
 
 }  // namespace opossum
