@@ -2,7 +2,7 @@
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
-	clang_format="/usr/local/opt/llvm@9/bin/clang-format"
+	clang_format="/usr/local/opt/llvm/bin/clang-format"
 	format_cmd="$clang_format -i -style=file '{}'"
 elif [[ "$unamestr" == 'Linux' ]]; then
 	format_cmd="clang-format -i -style=file '{}'"
