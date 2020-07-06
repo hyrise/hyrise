@@ -262,7 +262,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints() const {
-  return std::make_shared<LQPUniqueConstraints>();
+  Fail("Node misses implementation for unique constraints.");
 }
 
 bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {

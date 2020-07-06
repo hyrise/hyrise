@@ -12,4 +12,12 @@ bool AbstractNonQueryNode::is_column_nullable(const ColumnID column_id) const {
   Fail("Node does not return any column");
 }
 
+const std::shared_ptr<LQPUniqueConstraints> AbstractNonQueryNode::unique_constraints() const {
+  Fail("Node does not support unique constraints.");
+}
+
+std::vector<FunctionalDependency> AbstractNonQueryNode::functional_dependencies() const {
+  Fail("Node does not support functional dependencies.");
+}
+
 }  // namespace opossum

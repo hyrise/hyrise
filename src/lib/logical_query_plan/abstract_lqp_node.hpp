@@ -158,8 +158,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * TODO(Julian)
-   * @return
+   * @return A shared pointer to a vector of unique constraints valid for the current LQP.
+   * See lqp_unique_constraint.hpp for documentation. Nodes that query data must override this function.
    */
   [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> unique_constraints() const;
 
