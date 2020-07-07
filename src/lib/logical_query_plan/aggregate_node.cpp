@@ -78,7 +78,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
 }
 
 std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  const auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // (1) Create new unique constraint from the group-by column(s) which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;

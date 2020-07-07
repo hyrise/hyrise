@@ -78,14 +78,14 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     return _forward_unique_constraints();
   }
 
-  auto output_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // No guarantees for Cross Joins and multi predicate joins
   const auto predicates = join_predicates();
-  if (predicates.empty() || predicates.size() > 1) return output_constraints;
+  if (predicates.empty() || predicates.size() > 1) return unique_constraints;
   // Also, no guarantees for Non-Equi/Theta-Joins
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
-  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return unique_constraints;
 
   if (join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
       join_mode == JoinMode::FullOuter) {
@@ -94,16 +94,16 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     bool right_operand_is_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
     if (left_operand_is_unique && right_operand_is_unique) {
       // Due to the one-to-one relationship, the constraints of both sides remain valid.
-      const auto& left_constraints = left_input()->unique_constraints();
-      const auto& right_constraints = right_input()->unique_constraints();
+      const auto& left_unique_constraints = left_input()->unique_constraints();
+      const auto& right_unique_constraints = right_input()->unique_constraints();
 
-      for (auto it = left_constraints->begin(); it != left_constraints->end(); it++) {
-        output_constraints->emplace_back(std::move(*it));
+      for (auto it = left_unique_constraints->begin(); it != left_unique_constraints->end(); it++) {
+        unique_constraints->emplace_back(std::move(*it));
       }
-      for (auto it = right_constraints->begin(); it != right_constraints->end(); it++) {
-        output_constraints->emplace_back(std::move(*it));
+      for (auto it = right_unique_constraints->begin(); it != right_unique_constraints->end(); it++) {
+        unique_constraints->emplace_back(std::move(*it));
       }
-      return output_constraints;
+      return unique_constraints;
 
     } else if (left_operand_is_unique) {
       // Uniqueness on the left prevents duplication of records on the right
@@ -115,7 +115,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 
     } else {
       // No constraints to return.
-      return output_constraints;
+      return unique_constraints;
     }
   } else {
     Fail("Unhandled JoinMode");
