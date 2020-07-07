@@ -198,7 +198,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
     JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
-        _mock_node_b));
+      _mock_node_b));
   // clang-format on
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
@@ -285,7 +285,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
       _mock_node_b);
     // clang-format on
 
-    EXPECT_TRUE(*join_node->unique_constraints() == *_mock_node_a->unique_constraints());
+    EXPECT_EQ(*join_node->unique_constraints(), *_mock_node_a->unique_constraints());
   }
 }
 
@@ -353,9 +353,10 @@ TEST_F(JoinNodeTest, UniqueConstraintsNonEquiJoin) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
   // clang-format off
-  const auto theta_join_node = JoinNode::make(JoinMode::Inner, greater_than_(_t_a_a, _t_b_x),
-                                              _mock_node_a,
-                                              _mock_node_b);
+  const auto theta_join_node =
+  JoinNode::make(JoinMode::Inner, greater_than_(_t_a_a, _t_b_x),
+    _mock_node_a,
+    _mock_node_b);
   // clang-format on
 
   EXPECT_TRUE(theta_join_node->unique_constraints()->empty());
