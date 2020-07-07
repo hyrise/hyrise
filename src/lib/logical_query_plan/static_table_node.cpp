@@ -8,7 +8,7 @@
 namespace opossum {
 
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
-    : AbstractNonQueryNode(LQPNodeType::StaticTable), table(init_table) {}
+    : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
 
 std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
