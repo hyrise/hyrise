@@ -28,6 +28,10 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
+std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const {
+  return {}; //TODO(Julian)
+}
+
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
