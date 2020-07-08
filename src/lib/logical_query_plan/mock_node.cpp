@@ -77,7 +77,7 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
     // Discard constraints which involve pruned column(s)
     const auto discard_key_constraint = [&]() {
       for (const auto& column_id : table_key_constraint.columns()) {
-        //  Check whether constraint involves pruned column id(s).
+        // Check whether constraint involves pruned column id(s).
         if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
           return true;
         }

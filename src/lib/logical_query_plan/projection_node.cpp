@@ -55,8 +55,8 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   /**
    * Future Work:
    * The above implementation is simple but does not exploit all opportunities.
-   * As the next step, we could check for derived output expressions that preserve uniqueness. Expressions, such as
-   * 'column + 1'.
+   * As the next step, we could check for derived output expressions that preserve uniqueness, for example,
+   * the expression 'column + 1'.
    * Instead of discarding a unique constraint for 'column', we could create and output a new one for 'column + 1'.
    */
 

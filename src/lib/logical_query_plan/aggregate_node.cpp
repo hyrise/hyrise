@@ -90,7 +90,7 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   // (2) Forward input constraints, if applicable
   // We call output_expressions() to avoid ANY() aggregates from the DependentGroupByReductionRule
-  const auto& output_expressions_vec = this->output_expressions();
+  const auto& output_expressions_vec = output_expressions();
   const auto output_expressions =
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
