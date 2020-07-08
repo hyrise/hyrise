@@ -142,20 +142,4 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
       and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, a_a)), equals_(a_c, 7))));
 }
 
-TEST_F(ExpressionUtilsTest, ExpressionsSubset) {
-  const auto expr_a = expression_vector(a_a, a_b);
-  const auto expr_b = expression_vector(a_b, a_a);
-  const auto expr_c = expression_vector(a_a);
-  const auto expr_d = expression_vector(a_a, a_b, a_c);
-
-  // Compare vectors - equivalent, but different order
-  EXPECT_TRUE(expressions_subset(expr_a, expr_b));
-
-  // Compare vectors - no subset
-  EXPECT_FALSE(expressions_subset(expr_a, expr_c));
-
-  // Compare vectors - real subset
-  EXPECT_TRUE(expressions_subset(expr_a, expr_d));
-}
-
 }  // namespace opossum
