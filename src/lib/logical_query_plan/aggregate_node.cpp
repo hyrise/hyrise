@@ -98,14 +98,14 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
     // Do not add duplicate constraints
-    bool duplicate = std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
+    const bool duplicate = std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
                                  [&input_unique_constraint](const auto& unique_constraint) {
                                    return input_unique_constraint == unique_constraint;
                                  });
     if (duplicate) continue;
 
     // Ensure that the unique constraint's expressions are part of the output
-    bool found_all_expressions =
+    const bool found_all_expressions =
         std::all_of(input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
                     [&output_expressions](const std::shared_ptr<AbstractExpression>& expression) {
                       return output_expressions.contains(expression);

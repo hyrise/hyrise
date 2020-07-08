@@ -118,7 +118,7 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
 
       for (const auto& column_id : table_key_constraint.columns()) {
         const auto column_expression_opt = find_column_expression(column_id);
-        Assert(column_expression_opt, "Did not find column expression in LQPNode");
+        Assert(column_expression_opt, "Did not find column expression in StoredTableNode");
 
         constraint_expressions.insert(*column_expression_opt);
       }
