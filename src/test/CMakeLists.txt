@@ -252,7 +252,7 @@ set(
     gtest
     gmock
     sqlite3
-    MvccDeletePlugin  # So that we can test member methods without going through dlsym
+    hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -268,7 +268,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

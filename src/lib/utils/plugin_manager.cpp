@@ -10,8 +10,10 @@
 namespace opossum {
 
 bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const {
+  const auto& plugin_ref = *plugin;
   for (const auto& [_, plugin_handle_wrapper] : _plugins) {
-    if (typeid(plugin_handle_wrapper.plugin) == typeid(plugin)) {
+    const auto& loaded_plugin = *plugin_handle_wrapper.plugin;
+    if (typeid(loaded_plugin) == typeid(plugin_ref)) {
       return true;
     }
   }

@@ -91,6 +91,15 @@ TEST_F(PluginManagerTest, LoadingNonInstantiableLibrary) {
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestNonInstantiablePlugin")), std::exception);
 }
 
+TEST_F(PluginManagerTest, LoadingDifferentPlugins) {
+  auto& pm = Hyrise::get().plugin_manager;
+  auto& plugins = get_plugins();
+
+  EXPECT_EQ(plugins.size(), 0u);
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseMVCCDeletePlugin"));
+}
+
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
