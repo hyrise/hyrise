@@ -29,7 +29,7 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
 }
 
 std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const {
-  return _forward_unique_constraints();
+  return _forward_left_unique_constraints();
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }

@@ -218,7 +218,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return Returns all unique constraints from the left input node.
    */
-  std::shared_ptr<LQPUniqueConstraints> _forward_unique_constraints() const;
+  std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

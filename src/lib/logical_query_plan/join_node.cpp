@@ -75,7 +75,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing constraints are forwarded as they remain valid.
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
-    return _forward_unique_constraints();
+    return _forward_left_unique_constraints();
   }
 
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();

@@ -33,7 +33,7 @@ std::string SortNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const { return _forward_unique_constraints(); }
+std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const { return _forward_left_unique_constraints(); }
 
 size_t SortNode::_on_shallow_hash() const {
   size_t hash{0};
