@@ -97,7 +97,8 @@ TEST_F(PluginManagerTest, LoadingDifferentPlugins) {
 
   EXPECT_EQ(plugins.size(), 0u);
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
-  pm.load_plugin(build_dylib_path("libhyriseMVCCDeletePlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
+  EXPECT_EQ(plugins.size(), 2u);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
