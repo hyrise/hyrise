@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "constraints/lqp_unique_constraint.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "functional_dependency.hpp"
+#include "lqp_unique_constraint.hpp"
 #include "types.hpp"
 
 namespace opossum {

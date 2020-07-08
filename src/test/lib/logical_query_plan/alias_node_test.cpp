@@ -1,10 +1,10 @@
 #include "base_test.hpp"
 
-#include "constraints/table_key_constraint.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
 namespace opossum {

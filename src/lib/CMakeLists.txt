@@ -19,12 +19,6 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    constraints/abstract_table_constraint.cpp
-    constraints/abstract_table_constraint.hpp
-    constraints/lqp_unique_constraint.cpp
-    constraints/lqp_unique_constraint.hpp
-    constraints/table_key_constraint.cpp
-    constraints/table_key_constraint.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
@@ -148,6 +142,8 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_unique_constraint.cpp
+    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
@@ -423,6 +419,10 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/abstract_table_constraint.cpp
+    storage/abstract_table_constraint.hpp
+    storage/table_key_constraint.cpp
+    storage/table_key_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp

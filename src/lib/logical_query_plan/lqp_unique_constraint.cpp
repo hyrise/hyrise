@@ -1,4 +1,4 @@
-#include "constraints/lqp_unique_constraint.hpp"
+#include "lqp_unique_constraint.hpp"
 
 namespace opossum {
 
