@@ -26,6 +26,8 @@ class CalibrationTableGenerator {
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:
+  std::shared_ptr<const CalibrationTableWrapper> _generate_sorted_table(
+      const std::shared_ptr<const CalibrationTableWrapper>& original_table) const;
   std::shared_ptr<TableGeneratorConfig> _config;
   std::vector<ColumnDataDistribution> _column_data_distributions;
   std::vector<ColumnSpecification> _column_specs;
