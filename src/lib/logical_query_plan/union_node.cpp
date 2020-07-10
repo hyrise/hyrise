@@ -49,17 +49,16 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::Positions:
-      // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are
-      // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
+      // UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
+      // pos lists. Therefore, unique constraints remain valid.
       Assert(*left_input()->unique_constraints() == *right_input()->unique_constraints(),
              "Input tables should have the same constraints.");
       return _forward_left_unique_constraints();
 
     case SetOperationMode::All:
-      // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
+      // With UnionAll, two tables become merged. The resulting table might contain duplicates.
       // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
-      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous
-      // nodes.
+      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all input unique constraints.
       return std::make_shared<LQPUniqueConstraints>();
   }
   Fail("Unhandled UnionMode");

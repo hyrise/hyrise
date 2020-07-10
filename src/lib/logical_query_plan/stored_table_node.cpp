@@ -101,31 +101,27 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
   const auto& table_key_constraints = table->soft_key_constraints();
 
   for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
-    // Discard constraints which involve pruned column(s)
-    const auto discard_key_constraint = [&]() {
-      for (const auto& column_id : table_key_constraint.columns()) {
-        // Check whether constraint involves pruned column id(s).
-        if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
-          return true;
-        }
-      }
-      return false;
-    }();
 
-    if (!discard_key_constraint) {
-      // Search for expressions representing the key constraint's ColumnIDs
-      auto constraint_expressions = ExpressionUnorderedSet{};
+    // Discard key constraints that involve pruned column id(s).
+    const auto key_constraint_column_ids = table_key_constraint.columns();
+    if(std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                                                    [&key_constraint_column_ids](const auto& pruned_column_id) {
+                                                      return key_constraint_column_ids.contains(pruned_column_id);
+                                                    })) continue;
 
-      for (const auto& column_id : table_key_constraint.columns()) {
-        const auto column_expression_opt = find_column_expression(column_id);
-        Assert(column_expression_opt, "Did not find column expression in StoredTableNode");
+    // Search for expressions representing the key constraint's ColumnIDs
+    auto constraint_expressions = ExpressionUnorderedSet{};
 
-        constraint_expressions.insert(*column_expression_opt);
-      }
+    for (const auto& column_id : table_key_constraint.columns()) {
+      const auto column_expression_opt = find_column_expression(column_id);
+      Assert(column_expression_opt, "Did not find column expression in StoredTableNode");
 
-      // Create LQPUniqueConstraint
-      unique_constraints->emplace_back(constraint_expressions);
+      constraint_expressions.insert(*column_expression_opt);
     }
+
+    // Create LQPUniqueConstraint
+    unique_constraints->emplace_back(constraint_expressions);
+
   }
 
   return unique_constraints;

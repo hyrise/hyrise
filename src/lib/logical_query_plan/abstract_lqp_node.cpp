@@ -262,7 +262,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {
+bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {
   if constexpr (HYRISE_DEBUG) {
     Assert(!output_expressions_subset.empty(), "An empty input expressions set does not make sense.");
 

@@ -74,29 +74,24 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   for (const auto& table_key_constraint : _table_key_constraints) {
-    // Discard constraints which involve pruned column(s)
-    const auto discard_key_constraint = [&]() {
-      for (const auto& column_id : table_key_constraint.columns()) {
-        // Check whether constraint involves pruned column id(s).
-        if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
-          return true;
-        }
-      }
-      return false;
-    }();
 
-    if (!discard_key_constraint) {
-      // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
-      auto constraint_expressions = ExpressionUnorderedSet{};
-      for (const auto& column_id : table_key_constraint.columns()) {
-        const auto column_expression_opt = find_column_expression(column_id);
-        Assert(column_expression_opt, "Did not find column expression for ColumnID in MockNode.");
-        constraint_expressions.emplace(*column_expression_opt);
-      }
+    // Discard key constraints that involve pruned column id(s).
+    const auto key_constraint_column_ids = table_key_constraint.columns();
+    if(std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                   [&key_constraint_column_ids](const auto& pruned_column_id) {
+                     return key_constraint_column_ids.contains(pruned_column_id);
+                   })) continue;
 
-      // Create LQPUniqueConstraint
-      unique_constraints->emplace_back(constraint_expressions);
+    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
+    auto constraint_expressions = ExpressionUnorderedSet{};
+    for (const auto& column_id : table_key_constraint.columns()) {
+      const auto column_expression_opt = find_column_expression(column_id);
+      Assert(column_expression_opt, "Did not find column expression for ColumnID in MockNode.");
+      constraint_expressions.emplace(*column_expression_opt);
     }
+
+    // Create LQPUniqueConstraint
+    unique_constraints->emplace_back(constraint_expressions);
   }
 
   return unique_constraints;

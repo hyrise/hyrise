@@ -161,18 +161,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return Unique constraints valid for the current LQP. See lqp_unique_constraint.hpp for more documentation.
    */
-  [[nodiscard]] virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
+  virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
 
   /**
-   * @return True, if a unique constraint exists for the given subset of output expressions. False otherwise.
+   * @return True, if there is unique constraint matching the given subset of output expressions. False
+   * otherwise.
    */
-  [[nodiscard]] bool has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const;
+  bool has_matching_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
    *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
    */
-  [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
+  virtual std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
    * Perform a deep equality check

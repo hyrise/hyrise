@@ -10,10 +10,10 @@
 namespace opossum {
 
 /**
- * This node type is used to (1) represent the intersect set operation with the modes Unique and All, and (2) to
- * intersect disjuncitve PosLists (using the Positions mode). For example, `a = 1 OR b = 2` can be split up into
+ * This node type is used to
+ * (1) represent the intersect set operation with the modes Unique and All, and
+ * (2) to intersect disjuncitve PosLists (using the Positions mode). For example, `a = 1 OR b = 2` can be split up into
  * and later united by a UnionNode in the Positions mode.
- *
  */
 
 class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode {

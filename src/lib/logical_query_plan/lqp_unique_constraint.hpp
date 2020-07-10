@@ -6,9 +6,9 @@
 namespace opossum {
 
 /**
- * Container structure to define uniqueness for subsets of LQP output expressions.
- * A set of "unique" output expressions means distinct values. However, any number of NULL-values
- * (AbstractLQPNode::is_column_nullable) is allowed, similar to table key constraints with KeyConstraintType::UNIQUE.
+ * Container structure to define uniqueness for subsets of LQP output expressions. Analogous to SQL's UNIQUE
+ * constraint, rows containing NULL values in any of the expressions are always considered to be distinct. For
+ * PRIMARY KEY semantics, check if the expressions are nullable, cf. AbstractLQPNode::is_column_nullable.
  */
 struct LQPUniqueConstraint final {
   explicit LQPUniqueConstraint(ExpressionUnorderedSet init_expressions);

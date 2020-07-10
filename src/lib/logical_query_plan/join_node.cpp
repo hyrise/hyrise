@@ -83,7 +83,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   // No guarantees for Cross Joins and multi predicate joins
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) return unique_constraints;
-  // Also, no guarantees for Non-Equi/Theta-Joins
+  // Also, no guarantees for other join predicates than _equals() (Equi Join)
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return unique_constraints;
 
@@ -92,10 +92,9 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 
   if (join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
       join_mode == JoinMode::FullOuter) {
-
     // Check uniqueness of join columns
-    bool left_operand_is_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
-    bool right_operand_is_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
+    bool left_operand_is_unique = left_input()->has_matching_unique_constraint({join_predicate->left_operand()});
+    bool right_operand_is_unique = right_input()->has_matching_unique_constraint({join_predicate->right_operand()});
 
     if (left_operand_is_unique && right_operand_is_unique) {
       // Due to the one-to-one relationship, the constraints of both sides remain valid.
@@ -106,8 +105,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
         unique_constraints->emplace_back(unique_constraint);
       }
 
-      return unique_constraints;
-
     } else if (left_operand_is_unique) {
       // Uniqueness on the left prevents duplication of records on the right
       return right_unique_constraints;
@@ -115,15 +112,13 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     } else if (right_operand_is_unique) {
       // Uniqueness on the right prevents duplication of records on the left
       return left_unique_constraints;
-
-    } else {
-      // No unique constraints to return.
-      return unique_constraints;
     }
-  } else {
-    DebugAssert(false, "Unhandled JoinMode");
-    return unique_constraints;
   }
+
+  DebugAssert(!(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
+                  join_mode == JoinMode::FullOuter),
+                "Unhandled JoinMode");
+  return unique_constraints;
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {

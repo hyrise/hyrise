@@ -88,8 +88,11 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   unique_constraints->emplace_back(group_by_columns);
 
-  // (2) Forward input constraints, if applicable
-  // We call output_expressions() to avoid ANY() aggregates from the DependentGroupByReductionRule
+  // (2) Forward input unique constraints, if applicable
+  // The DependentGroupByReductionRule might wrap some expressions within ANY() aggregate functions.
+  // However, ANY() acts as a pure marker for optimizations and does not change the expressions themselves. Therefore,
+  // unique constraints from child nodes should not be discarded because of ANY() wrapping.
+  // To simplify the forwarding logic, we call output_expressions() to get all expressions without the ANY() wrapping.
   const auto& output_expressions_vec = output_expressions();
   const auto output_expressions =
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
@@ -97,23 +100,23 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   // Check each constraint for applicability
   const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    // Do not add duplicate constraints
-    const bool duplicate = std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
-                                 [&input_unique_constraint](const auto& unique_constraint) {
-                                   return input_unique_constraint == unique_constraint;
-                                 });
-    if (duplicate) continue;
-
     // Ensure that the unique constraint's expressions are part of the output
     const bool found_all_expressions =
         std::all_of(input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
                     [&output_expressions](const std::shared_ptr<AbstractExpression>& expression) {
                       return output_expressions.contains(expression);
                     });
-    if (found_all_expressions) {
+    if (!found_all_expressions) continue;
+
+    const bool duplicate = std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
+                                       [&input_unique_constraint](const auto& unique_constraint) {
+                                         return input_unique_constraint == unique_constraint;
+                                       });
+    if (!duplicate) {
       // Forward constraint
       unique_constraints->push_back(input_unique_constraint);
     }
+
   }
 
   return unique_constraints;
