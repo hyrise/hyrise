@@ -47,7 +47,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
 
 std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
-    case SetOperationMode::Unique:
+
     case SetOperationMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
       // pos lists. Therefore, unique constraints remain valid.
@@ -60,6 +60,9 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
       // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
       // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all input unique constraints.
       return std::make_shared<LQPUniqueConstraints>();
+
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
   Fail("Unhandled UnionMode");
 }
