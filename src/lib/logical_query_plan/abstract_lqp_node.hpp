@@ -148,10 +148,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * Searches all output expressions for an LQPColumnExpression with the given @param column_id.
-   * @return LQPColumnExpression with @param column_id or std::nullopt if it cannot be found.
+   * @return A set of column expressions created by the current node, matching the given @param column_ids.
    */
-  std::optional<const std::shared_ptr<LQPColumnExpression>> find_column_expression(const ColumnID column_id) const;
+  ExpressionUnorderedSet find_column_expressions(const std::unordered_set<ColumnID>& column_ids) const;
 
   /**
    * @return whether the output column at @param column_id is nullable

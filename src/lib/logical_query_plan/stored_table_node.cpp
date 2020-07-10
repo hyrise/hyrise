@@ -101,7 +101,6 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
   const auto& table_key_constraints = table->soft_key_constraints();
 
   for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
-
     // Discard key constraints that involve pruned column id(s).
     const auto key_constraint_column_ids = table_key_constraint.columns();
     if(std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
@@ -110,18 +109,12 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
                                                     })) continue;
 
     // Search for expressions representing the key constraint's ColumnIDs
-    auto constraint_expressions = ExpressionUnorderedSet{};
-
-    for (const auto& column_id : table_key_constraint.columns()) {
-      const auto column_expression_opt = find_column_expression(column_id);
-      Assert(column_expression_opt, "Did not find column expression in StoredTableNode");
-
-      constraint_expressions.insert(*column_expression_opt);
-    }
+    const auto& column_expressions = find_column_expressions(table_key_constraint.columns());
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(), "Unexpected count of "
+                "column expressions.");
 
     // Create LQPUniqueConstraint
-    unique_constraints->emplace_back(constraint_expressions);
-
+    unique_constraints->emplace_back(column_expressions);
   }
 
   return unique_constraints;

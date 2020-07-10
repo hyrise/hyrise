@@ -242,17 +242,20 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(
-    const ColumnID column_id) const {
+ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unordered_set<ColumnID>& column_ids) const {
   const auto& output_expressions = this->output_expressions();
+  auto column_expressions = ExpressionUnorderedSet{};
 
   for (const auto& output_expression : output_expressions) {
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (column_expression && column_expression->original_column_id == column_id) {
-      return column_expression;
+    if (column_expression && column_ids.contains(column_expression->original_column_id)
+                          && *column_expression->original_node.lock() == *this) {
+        const auto& [element, inserted] = column_expressions.emplace(column_expression);
+        DebugAssert(inserted, "Did not expect multiple column expressions for the same column id.");
     }
   }
-  return std::nullopt;
+
+  return column_expressions;
 }
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {

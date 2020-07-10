@@ -45,18 +45,13 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
   // Generate from table key constraints
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  const auto table_key_constraints = table->soft_key_constraints();
 
-  for (const auto& table_key_constraint : table->soft_key_constraints()) {
-    auto unique_constraint_expressions = ExpressionUnorderedSet{};
-
-    for (const auto& column_id : table_key_constraint.columns()) {
-      const auto column_expression_opt = find_column_expression(column_id);
-      Assert(column_expression_opt, "Did not find column expression in StaticTableNode.");
-
-      unique_constraint_expressions.insert(*column_expression_opt);
-    }
-
-    unique_constraints->emplace_back(unique_constraint_expressions);
+  for (const auto& table_key_constraint : table_key_constraints) {
+    const auto& column_expressions = find_column_expressions(table_key_constraint.columns());
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(), "Unexpected count of "
+                                                                                    "column expressions.");
+    unique_constraints->emplace_back(column_expressions);
   }
 
   return unique_constraints;
