@@ -258,6 +258,16 @@ ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unord
   return column_expressions;
 }
 
+bool AbstractLQPNode::expressions_are_subset_of_output_expressions(const ExpressionUnorderedSet& expressions) const {
+  const auto& output_expressions_vec = output_expressions();
+  ExpressionUnorderedSet output_expressions{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
+
+  return std::all_of(expressions.cbegin(), expressions.cend(),
+                     [&](const std::shared_ptr<AbstractExpression>& expression) {
+                       return output_expressions.contains(expression);
+                     });
+}
+
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   // Default behaviour: Forward from input
   Assert(left_input() && !right_input(),
@@ -421,14 +431,10 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    const auto& expressions = this->output_expressions();
-    ExpressionUnorderedSet output_expressions{expressions.cbegin(), expressions.cend()};
     for (const auto& unique_constraint : *input_unique_constraints) {
-      for (const auto& expression : unique_constraint.expressions) {
-        Assert(output_expressions.contains(expression),
+        Assert(expressions_are_subset_of_output_expressions(unique_constraint.expressions),
                "Forwarding of constraints is illegal because node misses "
                "output expressions.");
-      }
     }
   }
 

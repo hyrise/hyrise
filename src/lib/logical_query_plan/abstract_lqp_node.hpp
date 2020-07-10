@@ -153,6 +153,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ExpressionUnorderedSet find_column_expressions(const std::unordered_set<ColumnID>& column_ids) const;
 
   /**
+   * @return True, if the given set of expressions is a subset of the node's output expressions. False otherwise.
+   */
+  bool expressions_are_subset_of_output_expressions(const ExpressionUnorderedSet& expressions) const;
+
+  /**
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;

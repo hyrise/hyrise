@@ -40,16 +40,12 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   const auto output_expressions = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    // Check whether expressions are missing in the output relation
-    bool found_all_expressions =
-        std::all_of(input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
-                    [&](const std::shared_ptr<AbstractExpression>& constraint_expression) {
-                      return output_expressions.contains(constraint_expression);
-                    });
 
-    if (found_all_expressions) {
-      unique_constraints->push_back(input_unique_constraint);
-    }  // else { save unique constraint for the next block - derived constraints }
+    if (!expressions_are_subset_of_output_expressions(input_unique_constraint.expressions)) {
+      // Future Work: Save unique constraint for next block (derived constraints, see comment down below)
+      continue;
+    }
+    unique_constraints->emplace_back(input_unique_constraint);
   }
 
   /**
