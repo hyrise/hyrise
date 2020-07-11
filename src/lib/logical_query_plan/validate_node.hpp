@@ -15,6 +15,7 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
  protected:

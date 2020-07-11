@@ -23,7 +23,15 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  /**
+   * (1) Forwards the unique constraints of the left input node in case of SetOperationMode::Positions.
+   *     (unique constraints of both, left and right input node are identical)
+   * (2) Discards all input unique constraints for SetOperationMode::All and
+   * (3) Fails for SetOperationMode::Unique, which is not yet implemented.
+   */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+
   std::vector<FunctionalDependency> functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;

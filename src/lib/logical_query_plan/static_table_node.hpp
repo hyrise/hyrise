@@ -20,7 +20,10 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
 
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  // Generates unique constraints from table's key constraints.
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+
   std::vector<FunctionalDependency> functional_dependencies() const override;
 
   const std::shared_ptr<Table> table;

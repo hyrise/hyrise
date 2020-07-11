@@ -14,6 +14,11 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  /**
+   * Forwards unique constraints from the left input node that fulfill the following criteria:
+   *  - unique constraint's expressions remain part of the ProjectionNode's output expressions
+   */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
  protected:
