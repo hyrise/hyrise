@@ -250,8 +250,8 @@ ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unord
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
     if (column_expression && column_ids.contains(column_expression->original_column_id) &&
         *column_expression->original_node.lock() == *this) {
-      const auto& [element, inserted] = column_expressions.emplace(column_expression);
-      DebugAssert(inserted, "Did not expect multiple column expressions for the same column id.");
+      const auto& [_, success] = column_expressions.emplace(column_expression);
+      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
     }
   }
 
@@ -274,35 +274,25 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {
-  if constexpr (HYRISE_DEBUG) {
-    Assert(!output_expressions_subset.empty(), "An empty input expressions set does not make sense.");
-
-    const auto& output_expressions = this->output_expressions();
-    Assert(std::all_of(output_expressions_subset.cbegin(), output_expressions_subset.cend(),
-                       [&output_expressions](const auto& input_expression) {
-                         return std::any_of(output_expressions.cbegin(), output_expressions.cend(),
-                                            [&input_expression](const auto& output_expression) {
-                                              return *output_expression == *input_expression;
-                                            });
-                       }),
-           "The given expressions are not a subset of the LQP's output expressions.");
-  }
+bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const {
+  DebugAssert(!expressions.empty(), "An empty input expressions set does not make sense.");
+  DebugAssert(expressions_are_subset_of_output_expressions(expressions),
+              "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_constraints = this->unique_constraints();
   if (unique_constraints->empty()) return false;
 
   // Look for a unique constraint that is solely based on the given expressions
   for (const auto& unique_constraint : *unique_constraints) {
-    if (unique_constraint.expressions.size() == output_expressions_subset.size() &&
-        std::all_of(
-            output_expressions_subset.cbegin(), output_expressions_subset.cend(),
-            [&](const auto output_expression) { return unique_constraint.expressions.contains(output_expression); })) {
-      // Found match
+    if (unique_constraint.expressions.size() == expressions.size() &&
+        std::all_of(expressions.cbegin(), expressions.cend(), [&unique_constraint](const auto expression) {
+          return unique_constraint.expressions.contains(expression);
+        })) {
+      // Found a matching unique constraint
       return true;
     }
   }
-  // No match
+  // Did not find a unique constraint that matches the given expressions
   return false;
 }
 
