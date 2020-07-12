@@ -34,7 +34,7 @@ constexpr auto CONFIG_PATH = "../../data/config";
 //constexpr auto CHUNK_SIZE = size_t{1'000'000};
 constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
-constexpr auto ORDER_BY_MODE = OrderByMode::Ascending;
+constexpr auto SORT_MODE = SortMode::Ascending;
 constexpr auto EXECUTION_COUNT = 1;
 
 //Chunk encodings copied from ping data micro benchmark 
@@ -280,7 +280,7 @@ int main() {
       table_wrapper->execute();
       auto sort = std::make_shared<Sort>(
         table_wrapper, std::vector<SortColumnDefinition>{
-          SortColumnDefinition{conf_chunk_sort_column_id, ORDER_BY_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
+          SortColumnDefinition{conf_chunk_sort_column_id, SORT_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
       sort->execute();
       const auto sorted_single_chunk_table = sort->get_output();
 
@@ -288,9 +288,9 @@ int main() {
       // Note: we do not care about MVCC at all at the moment
       sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
       const auto& added_chunk = sorted_table->get_chunk(chunk_id);
-      // Set order by for chunk 
-      added_chunk->set_ordered_by({conf_chunk_sort_column_id, ORDER_BY_MODE});
       added_chunk->finalize();
+      // Set order by for chunk 
+      added_chunk->set_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
      
       // Encode segments of sorted single chunk table
 
