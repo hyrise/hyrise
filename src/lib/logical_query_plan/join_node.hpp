@@ -31,11 +31,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
- /**
- * (1) Forwards left input node's unique constraints for JoinMode::Semi and JoinMode::AntiNullAsTrue/False
- * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
- * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
- */
+  /**
+   * (1) Forwards left input node's unique constraints for JoinMode::Semi and JoinMode::AntiNullAsTrue/False
+   * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
+   * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
+   */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;

@@ -47,7 +47,6 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
 
 std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
-
     case SetOperationMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
       // pos lists. Therefore, unique constraints remain valid.

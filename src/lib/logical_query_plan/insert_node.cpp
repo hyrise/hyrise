@@ -21,7 +21,6 @@ std::string InsertNode::description(const DescriptionMode mode) const {
   return desc.str();
 }
 
-
 size_t InsertNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

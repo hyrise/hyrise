@@ -248,10 +248,10 @@ ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unord
 
   for (const auto& output_expression : output_expressions) {
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (column_expression && column_ids.contains(column_expression->original_column_id)
-                          && *column_expression->original_node.lock() == *this) {
-        const auto& [element, inserted] = column_expressions.emplace(column_expression);
-        DebugAssert(inserted, "Did not expect multiple column expressions for the same column id.");
+    if (column_expression && column_ids.contains(column_expression->original_column_id) &&
+        *column_expression->original_node.lock() == *this) {
+      const auto& [element, inserted] = column_expressions.emplace(column_expression);
+      DebugAssert(inserted, "Did not expect multiple column expressions for the same column id.");
     }
   }
 
@@ -262,10 +262,9 @@ bool AbstractLQPNode::expressions_are_subset_of_output_expressions(const Express
   const auto& output_expressions_vec = output_expressions();
   ExpressionUnorderedSet output_expressions{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
-  return std::all_of(expressions.cbegin(), expressions.cend(),
-                     [&](const std::shared_ptr<AbstractExpression>& expression) {
-                       return output_expressions.contains(expression);
-                     });
+  return std::all_of(
+      expressions.cbegin(), expressions.cend(),
+      [&](const std::shared_ptr<AbstractExpression>& expression) { return output_expressions.contains(expression); });
 }
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
@@ -432,9 +431,9 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
     for (const auto& unique_constraint : *input_unique_constraints) {
-        Assert(expressions_are_subset_of_output_expressions(unique_constraint.expressions),
-               "Forwarding of constraints is illegal because node misses "
-               "output expressions.");
+      Assert(expressions_are_subset_of_output_expressions(unique_constraint.expressions),
+             "Forwarding of constraints is illegal because node misses "
+             "output expressions.");
     }
   }
 

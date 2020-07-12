@@ -74,18 +74,19 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   for (const auto& table_key_constraint : _table_key_constraints) {
-
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if(std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
-                   [&key_constraint_column_ids](const auto& pruned_column_id) {
-                     return key_constraint_column_ids.contains(pruned_column_id);
-                   })) continue;
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&key_constraint_column_ids](const auto& pruned_column_id) {
+                      return key_constraint_column_ids.contains(pruned_column_id);
+                    }))
+      continue;
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
     const auto& column_expressions = find_column_expressions(key_constraint_column_ids);
-    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(), "Unexpected count of "
-                    "column expressions.");
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of "
+                "column expressions.");
 
     // Create LQPUniqueConstraint
     unique_constraints->emplace_back(column_expressions);
