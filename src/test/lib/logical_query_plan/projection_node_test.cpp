@@ -26,7 +26,6 @@ class ProjectionNodeTest : public BaseTest {
     // SELECT c, a, b, b+c, a+c
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
 
-    // Constraints for later use
     _key_constraint_a_b_pk = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     _key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }

@@ -18,7 +18,6 @@ class MockNodeTest : public BaseTest {
   void SetUp() override {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
         {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
-
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }

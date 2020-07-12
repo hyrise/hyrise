@@ -134,7 +134,7 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwardingSimple) {
   /**
    * Expected behaviour:
    *  - key_constraint_b remains valid since _b is part of the group-by columns.
-   *  - key_constraint_c, however, should be discarded because _c gets aggregated
+   *  - key_constraint_c, however, should be discarded because _c gets aggregated.
    *  - Also, we should gain a new unique constraint, covering all group-by columns.
    */
 
@@ -162,7 +162,7 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwardingAnyAggregates) {
    * Expected behaviour:
    *  - key_constraint_b remains valid because _b is aggregated via ANY(), a pseudo aggregate function used
    *    by the DependentGroupByReductionRule to optimize group-bys.
-   *  - key_constraint_c should be discarded because _c is aggregated
+   *  - key_constraint_c should be discarded because _c is aggregated.
    *  - Also, we should gain a new unique constraint, covering all group-by columns.
    */
 
@@ -183,10 +183,11 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   const auto aggregate = sum_(_b);
   _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate), _mock_node);
 
-  /** AggregateNode creates a new unique constraint based on group-by-column _a. It is the same as MockNode's unique
-  *  constraint.
-  *  In the following, we check whether AggregateNode prevents duplicate unique constraints as expected.
-  */
+  /**
+   * AggregateNode creates a new unique constraint based on group-by-column _a. It is the same as MockNode's unique
+   * constraint.
+   * In the following, we check whether AggregateNode prevents duplicate unique constraints as expected.
+   */
 
   // Basic check
   const auto& unique_constraints = _aggregate_node->unique_constraints();

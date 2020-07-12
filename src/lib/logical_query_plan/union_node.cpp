@@ -56,8 +56,8 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
 
     case SetOperationMode::All:
       // With UnionAll, two tables become merged. The resulting table might contain duplicates.
-      // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
-      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all input unique constraints.
+      // To forward constraints from child nodes, we would have to ensure that both input tables are completely
+      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
       return std::make_shared<LQPUniqueConstraints>();
 
     case SetOperationMode::Unique:

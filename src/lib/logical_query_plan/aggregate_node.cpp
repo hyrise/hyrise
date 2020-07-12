@@ -93,16 +93,12 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
    *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
    *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
-   *     To simplify the forwarding logic, we call output_expressions() to get rid of the ANY() wrapping.
    */
-  const auto& output_expressions_vec = output_expressions();
-  const auto output_expressions =
-      ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
   // Check each constraint for applicability
   const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!expressions_are_subset_of_output_expressions(input_unique_constraint.expressions)) continue;
+    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
 
     // Avoid duplicates
     if (std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),

@@ -40,7 +40,7 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   const auto output_expressions = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!expressions_are_subset_of_output_expressions(input_unique_constraint.expressions)) {
+    if (!has_output_expressions(input_unique_constraint.expressions)) {
       // Future Work: Save unique constraint for next block (derived constraints, see comment down below)
       continue;
     }

@@ -155,7 +155,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return True, if the given set of expressions is a subset of the node's output expressions. False otherwise.
    */
-  bool expressions_are_subset_of_output_expressions(const ExpressionUnorderedSet& expressions) const;
+  bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return whether the output column at @param column_id is nullable
@@ -168,8 +168,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
 
   /**
-   * @return True, if there is unique constraint matching the given subset of output expressions. False
-   * otherwise.
+   * @return True, if there is unique constraint matching the given subset of output expressions. False otherwise.
    */
   bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
 

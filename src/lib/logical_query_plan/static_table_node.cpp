@@ -50,8 +50,7 @@ std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() cons
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto& column_expressions = find_column_expressions(table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
-                "Unexpected count of "
-                "column expressions.");
+                "Unexpected count of column expressions.");
     unique_constraints->emplace_back(column_expressions);
   }
 

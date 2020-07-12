@@ -85,8 +85,7 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
     const auto& column_expressions = find_column_expressions(key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
-                "Unexpected count of "
-                "column expressions.");
+                "Unexpected count of column expressions.");
 
     // Create LQPUniqueConstraint
     unique_constraints->emplace_back(column_expressions);

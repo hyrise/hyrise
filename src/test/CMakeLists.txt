@@ -21,7 +21,6 @@ set(
     lib/concurrency/commit_context_test.cpp
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp
-    lib/constraints/table_key_constraint_test.cpp
     lib/cost_estimation/abstract_cost_estimator_test.cpp
     lib/expression/evaluation/expression_result_test.cpp
     lib/expression/evaluation/like_matcher_test.cpp
@@ -196,6 +195,7 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
+    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
