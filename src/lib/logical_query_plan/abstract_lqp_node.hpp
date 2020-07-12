@@ -220,8 +220,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * This is a helper method for node types that do not have an effect on uniqueness.
-   * @return It returns all unique constraints from the left input node.
+   * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
+   * @return All unique constraints from the left input node.
    */
   std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
 

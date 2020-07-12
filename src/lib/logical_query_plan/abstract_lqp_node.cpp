@@ -250,8 +250,8 @@ ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unord
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
     if (column_expression && column_ids.contains(column_expression->original_column_id) &&
         *column_expression->original_node.lock() == *this) {
-      const auto& [_, success] = column_expressions.emplace(column_expression);
-      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+      const auto [_, success] = column_expressions.emplace(column_expression);
+      Assert(success, "Did not expect multiple column expressions for the same column id.");
     }
   }
 
@@ -275,7 +275,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const {
-  DebugAssert(!expressions.empty(), "An empty input expressions set does not make sense.");
+  DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(expressions_are_subset_of_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
@@ -422,8 +422,7 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
     // Check whether output expressions are missing
     for (const auto& unique_constraint : *input_unique_constraints) {
       Assert(expressions_are_subset_of_output_expressions(unique_constraint.expressions),
-             "Forwarding of constraints is illegal because node misses "
-             "output expressions.");
+             "Forwarding of constraints is illegal because node misses output expressions.");
     }
   }
 

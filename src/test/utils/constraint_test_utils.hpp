@@ -21,14 +21,10 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
                           // Find column expression for column id
                           const auto& find_column_expression = std::find_if(
                               unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
-                              [&column_id](const std::shared_ptr<AbstractExpression>& expression) {
+                              [&column_id](const auto& expression) {
                                 const auto& column_expression =
                                     std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                                if (column_expression && column_expression->original_column_id == column_id) {
-                                  return true;
-                                } else {
-                                  return false;
-                                }
+                                return (column_expression && column_expression->original_column_id == column_id);
                               });
 
                           // Check whether a column expression has been found
