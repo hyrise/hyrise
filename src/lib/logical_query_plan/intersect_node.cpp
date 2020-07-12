@@ -31,7 +31,7 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
 std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const {
   // Because INTERSECT acts as a pure filter for the left input table, all unique constraints from the left input node
   // can be forwarded.
-  _forward_left_unique_constraints();
+  return _forward_left_unique_constraints();
 }
 
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
