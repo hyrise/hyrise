@@ -171,7 +171,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return True, if there is unique constraint matching the given subset of output expressions. False
    * otherwise.
    */
-  bool has_matching_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const;
+  bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
