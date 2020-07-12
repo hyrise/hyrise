@@ -88,11 +88,13 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   unique_constraints->emplace_back(group_by_columns);
 
-  // (2) Forward input unique constraints, if applicable
-  // The DependentGroupByReductionRule might wrap some expressions within ANY() aggregate functions.
-  // However, ANY() acts as a pure marker for optimizations and does not change the expressions themselves. Therefore,
-  // unique constraints from child nodes should not be discarded because of ANY() wrapping.
-  // To simplify the forwarding logic, we call output_expressions() to get all expressions without the ANY() wrapping.
+  /**
+   * (2) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
+   *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
+   *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
+   *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
+   *     To simplify the forwarding logic, we call output_expressions() to get rid of the ANY() wrapping.
+   */
   const auto& output_expressions_vec = output_expressions();
   const auto output_expressions =
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};

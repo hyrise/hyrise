@@ -25,6 +25,11 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  /**
+   * (1) Creates a new unique constraint from all group-by expressions.
+   * (2) Forwards left input node's unique constraints, if its expressions are a subset of the group-by expressions.
+   */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
