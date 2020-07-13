@@ -38,16 +38,16 @@ void MetaCachedOperatorsTable::_process_pqp(
     const std::shared_ptr<const AbstractOperator>& op, const std::string& query_hex_hash,
     std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
     const std::shared_ptr<Table>& output_table) const {
-  const auto& performance_data = op->performance_data();
+  const auto& performance_data = op->performance_data;
   output_table->append({pmr_string{op->name()}, pmr_string{query_hex_hash}, pmr_string{op->description()},
-                        static_cast<int64_t>(performance_data.walltime.count()),
-                        static_cast<int64_t>(performance_data.output_chunk_count),
-                        static_cast<int64_t>(performance_data.output_row_count)});
+                        static_cast<int64_t>(performance_data->walltime.count()),
+                        static_cast<int64_t>(performance_data->output_chunk_count),
+                        static_cast<int64_t>(performance_data->output_row_count)});
 
   visited_pqp_nodes.insert(op);
 
-  const auto left_input = op->input_left();
-  const auto right_input = op->input_right();
+  const auto left_input = op->left_input();
+  const auto right_input = op->right_input();
   if (left_input && !visited_pqp_nodes.contains(left_input)) {
     _process_pqp(left_input, query_hex_hash, visited_pqp_nodes, output_table);
   }

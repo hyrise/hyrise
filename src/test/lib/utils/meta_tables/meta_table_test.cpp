@@ -116,16 +116,6 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_delete());
 }
 
-TEST_P(MultiMetaTablesTest, SQLFeatures) {
-  // TEST SQL features on meta tables
-  const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM " + MetaTableManager::META_PREFIX + GetParam()->name()}
-                          .create_pipeline()
-                          .get_result_table();
-
-  EXPECT_EQ(result.first, SQLPipelineStatus::Success);
-  EXPECT_EQ(result.second->row_count(), 1);
-}
-
 TEST_P(MultiStorageMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   const auto meta_table = generate_meta_table(GetParam());
