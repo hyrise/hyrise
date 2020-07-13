@@ -8,7 +8,7 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "base_encoded_segment.hpp"
+#include "abstract_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -42,7 +42,7 @@ class BaseCompressedVector;
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceSegment : public BaseEncodedSegment {
+class FrameOfReferenceSegment : public AbstractEncodedSegment {
  public:
   /**
    * The segment is divided into fixed-size blocks.
@@ -62,7 +62,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
   const BaseCompressedVector& offset_values() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -80,14 +80,14 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
 

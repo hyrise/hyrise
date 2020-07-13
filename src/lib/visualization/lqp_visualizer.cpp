@@ -82,8 +82,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
                                     const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
-  float row_count;
-  double pen_width;
+  float row_count = NAN;
+  double pen_width = 1.0;
   auto row_percentage = 100.0f;
 
   try {
@@ -91,8 +91,6 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
-    row_count = NAN;
-    pen_width = 1.0;
   }
 
   if (from->left_input()) {

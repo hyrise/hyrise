@@ -45,10 +45,18 @@ try {
   }
 
   node('linux') {
+    stage("Hostname") {
+      // Print the hostname to let us know on which node the docker image was executed for reproducibility.
+      sh "hostname"
+    }
+
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
-    oppossumCI.inside("-u 0:0") {
+    // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
+    // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
+    // See also: https://github.com/google/sanitizers/issues/764
+    oppossumCI.inside("--cap-add SYS_PTRACE -u 0:0") {
       try {
         stage("Setup") {
           checkout scm
@@ -57,8 +65,11 @@ try {
           cmake = 'cmake -DCI_BUILD=ON'
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
-          clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-          clang10 = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
+          // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
+          // DEPENDENCIES.md, clang_tidy_wrapper.sh, and the documentation (README, Wiki).
+          clang = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
           debug = '-DCMAKE_BUILD_TYPE=Debug'
@@ -80,7 +91,7 @@ try {
           mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
           mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
           mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake} ${debug}          ${clang10} ${unity} .. &\
+          mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
           wait"
         }
 
@@ -89,10 +100,10 @@ try {
             sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
           }
-        }, clang10Debug: {
-          stage("clang-10-debug") {
-            sh "cd clang-10-debug && make all -j \$(( \$(nproc) / 4))"
-            sh "./clang-10-debug/hyriseTest clang-10-debug"
+        }, clang9Debug: {
+          stage("clang-9-debug") {
+            sh "cd clang-9-debug && make all -j \$(( \$(nproc) / 4))"
+            sh "./clang-9-debug/hyriseTest clang-9-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
@@ -302,7 +313,6 @@ try {
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
-          sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"

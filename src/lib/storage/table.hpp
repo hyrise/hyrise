@@ -6,10 +6,10 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/constraints/table_constraint_definition.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -92,7 +92,7 @@ class Table : private Noncopyable {
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
-  std::shared_ptr<Chunk> last_chunk();
+  std::shared_ptr<Chunk> last_chunk() const;
 
   /**
    * Removes the chunk with the given id.
@@ -197,18 +197,29 @@ class Table : private Noncopyable {
   }
 
   /**
-   * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
-   * by this method. Constraint column IDs will always be sorted from here on.
-   * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" key constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
-  const std::vector<TableConstraintDefinition>& get_soft_unique_constraints() const;
+  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+  const TableKeyConstraints& soft_key_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
+
+  /**
+   * Tables may be clustered by one or more columns. Each value within such a column will occur in exactly one chunk.
+   * E.g., all mean values are in one chunk, all odds in another. This information can be used, e.g., when executing
+   * GROUP BY on a clustered column, which can then look at individual chunks instead of the entire table.
+   *
+   * Note that value clustering does not imply values being sorted. At the same time, sorted data is not necessarily
+   * clustered as a value could still occur at the end of one chunk and in the beginning of the next.
+   *
+   * To avoid ambiguities, we do not accept NULL values here.
+   */
+  const std::vector<ColumnID>& value_clustered_by() const;
+  void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
  protected:
   const TableColumnDefinitions _column_definitions;
@@ -227,8 +238,9 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  std::vector<TableConstraintDefinition> _constraint_definitions;
+  TableKeyConstraints _table_key_constraints;
 
+  std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;

@@ -10,7 +10,7 @@ class TestPlugin : public AbstractPlugin {
  public:
   TestPlugin() : storage_manager(Hyrise::get().storage_manager) {}
 
-  const std::string description() const final;
+  std::string description() const final;
 
   void start() final;
 

@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "table.hpp"
 #include "types.hpp"
@@ -17,7 +17,7 @@
 namespace opossum {
 
 // ReferenceSegment is a specific segment type that stores all its values as position list of a referenced segment
-class ReferenceSegment : public BaseSegment {
+class ReferenceSegment : public AbstractSegment {
  public:
   // creates a reference segment
   // the parameters specify the positions and the referenced column
@@ -33,7 +33,7 @@ class ReferenceSegment : public BaseSegment {
 
   ColumnID referenced_column_id() const;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 

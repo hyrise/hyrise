@@ -21,7 +21,9 @@
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/semi_join_reduction_rule.hpp"
+#include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
+#include "utils/timer.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
@@ -90,7 +92,7 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+  auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
@@ -131,6 +133,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
+  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
+  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
+  // executed after the ColumnPruningRule and ChunkPruningRule.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
@@ -154,7 +161,9 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
   _rules.emplace_back(std::move(rule));
 }
 
-std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQPNode> input) const {
+std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
+    std::shared_ptr<AbstractLQPNode> input,
+    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -169,12 +178,21 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
   for (const auto& rule : _rules) {
+    Timer rule_timer{};
     _apply_rule(*rule, root_node);
+    auto rule_duration = rule_timer.lap();
+
+    if (rule_durations) {
+      auto& rule_reference = *rule;
+      auto rule_name = std::string(typeid(rule_reference).name());
+      rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
+    }
+
     if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
   }
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_input();
+  auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
   return optimized_node;

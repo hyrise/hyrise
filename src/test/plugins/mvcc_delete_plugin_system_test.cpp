@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
@@ -19,7 +20,6 @@
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/plugin_test_utils.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -139,7 +139,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (1) Load the MvccDeletePlugin
   auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
 
   // (2) Validate start conditions
   validate_table();
@@ -315,5 +315,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   validate_table();
 
   // (17) Unload the plugin
-  Hyrise::get().plugin_manager.unload_plugin("MvccDeletePlugin");
+  Hyrise::get().plugin_manager.unload_plugin("hyriseMvccDeletePlugin");
 }

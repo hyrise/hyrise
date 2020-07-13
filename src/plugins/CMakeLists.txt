@@ -31,7 +31,7 @@ endfunction(add_plugin)
 add_plugin(NAME CompressionPlugin SRCS compression_plugin.cpp compression_plugin.hpp)
 add_plugin(NAME ClusteringPlugin SRCS clustering_plugin.cpp clustering_plugin.hpp)
 add_plugin(NAME IndexSelectionPlugin SRCS index_selection_plugin.cpp index_selection_plugin.hpp)
-add_plugin(NAME MvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
+add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 

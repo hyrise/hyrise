@@ -8,6 +8,7 @@
 | clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |
 | cmake                     | >= 3.9           |    All   |                                    No |
+| dos2unix                  | any              |    All   |                         Yes (linting) |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
@@ -31,7 +32,6 @@
 - benchmark (https://github.com/google/benchmark)
 - cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
 - cpplint (https://github.com/cpplint/cpplint.git)
-- cqf (https://github.com/ArneMayer/cqf)
 - cxxopts (https://github.com/jarro2783/cxxopts.git)
 - flash_hash_map (https://github.com/skarupke/flat_hash_map)
 - googletest (https://github.com/google/googletest)
@@ -39,6 +39,7 @@
 - join-order-benchmark (https://github.com/gregrahn/join-order-benchmark)
 - libpqxx (https://github.com/jtv/libpqxx)
 - lz4 (https://github.com/lz4/lz4)
+- magic_enum (https://github.com/Neargye/magic_enum)
 - nlohmann_json (https://github.com/nlohmann/json)
 - pgasus (https://github.com/kateyy/pgasus)
 - sql-parser (https://github.com/hyrise/sql-parser)

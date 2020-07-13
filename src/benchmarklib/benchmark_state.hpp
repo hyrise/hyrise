@@ -18,7 +18,7 @@ struct BenchmarkState {
 
   bool keep_running();
   void set_done();
-  bool is_done();
+  bool is_done() const;
 
   std::atomic<State> state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};

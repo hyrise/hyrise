@@ -113,11 +113,11 @@ std::string MetaSystemInformationTable::_cpu_model() {
 
 #ifdef __APPLE__
   size_t buffer_size = 256;
-  char buffer[256];
+  auto buffer = std::array<char, 256>{};
   const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
-  return std::string(buffer);
+  return std::string(&buffer[0]);
 #endif
 
   Fail("Method not implemented for this platform");
