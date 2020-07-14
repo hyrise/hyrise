@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-const std::string IndexSelectionPlugin::description() const { return "IndexSelectionPlugin"; }
+std::string IndexSelectionPlugin::description() const { return "IndexSelectionPlugin"; }
 
 void IndexSelectionPlugin::start() {
   Hyrise::get().log_manager.add_message(description(), "Initialized!", LogLevel::Info);

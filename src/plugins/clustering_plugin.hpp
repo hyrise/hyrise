@@ -17,7 +17,7 @@ namespace opossum {
 
 class ClusteringPlugin : public AbstractPlugin {
  public:
-  const std::string description() const final;
+  std::string description() const final;
 
   void start() final;
 

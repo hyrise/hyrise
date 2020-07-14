@@ -8,7 +8,7 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -62,7 +62,7 @@ size_t get_all_segments_memory_usage() {
 
 namespace opossum {
 
-const std::string CompressionPlugin::description() const { return "CompressionPlugin"; }
+std::string CompressionPlugin::description() const { return "CompressionPlugin"; }
 
 void CompressionPlugin::start() {
   Hyrise::get().log_manager.add_message(description(), "Initialized!", LogLevel::Info);
@@ -106,26 +106,26 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
     }
 
     auto chunk = table->get_chunk(chunk_id);
-    const auto base_segment = chunk->get_segment(column_id);
+    const auto abstract_segment = chunk->get_segment(column_id);
 
-    const auto current_encoding_spec = get_segment_encoding_spec(base_segment);
+    const auto current_encoding_spec = get_segment_encoding_spec(abstract_segment);
     if (current_encoding_spec.encoding_type == segment_encoding_spec.encoding_type &&
         (!segment_encoding_spec.vector_compression_type || segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
       continue;
     }
 
-    const auto previous_segment_size = base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    const auto previous_segment_size = abstract_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
     memory_usage_old += previous_segment_size;
 
-    const auto encoded_segment = ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec);
-    if (base_segment == encoded_segment) {
+    const auto encoded_segment = ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec);
+    if (abstract_segment == encoded_segment) {
       // No encoding took place, segment was already encoded with the requesting encoding.
       continue;
     }
     const auto new_segment_size = encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
     memory_usage_new += new_segment_size;
 
-    _keep_alive_stash.emplace_back(base_segment);
+    _keep_alive_stash.emplace_back(abstract_segment);
     chunk->replace_segment(column_id, encoded_segment);
     achieved_memory_usage_reduction += previous_segment_size - new_segment_size;
     ++encoded_segment_count;
