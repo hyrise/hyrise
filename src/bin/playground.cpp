@@ -275,22 +275,32 @@ int main() {
       std::vector<std::shared_ptr<Chunk>> single_chunk_vector = {chunk};
       auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::move(single_chunk_vector), UseMvcc::No);
 
-      // Sort single chunk table
       auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
       table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(
-        table_wrapper, std::vector<SortColumnDefinition>{
-          SortColumnDefinition{conf_chunk_sort_column_id, SORT_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
-      sort->execute();
-      const auto sorted_single_chunk_table = sort->get_output();
 
-      // Add sorted chunk to sorted table
-      // Note: we do not care about MVCC at all at the moment
-      sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
-      const auto& added_chunk = sorted_table->get_chunk(chunk_id);
-      added_chunk->finalize();
-      // Set order by for chunk 
-      added_chunk->set_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
+      std::shared_ptr<Chunk> added_chunk;
+
+      // Sort single chunk table
+      if (conf_chunk_sort_column_id < single_chunk_table->column_count()) {
+        auto sort = std::make_shared<Sort>(
+          table_wrapper, std::vector<SortColumnDefinition>{
+            SortColumnDefinition{conf_chunk_sort_column_id, SORT_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
+        sort->execute();
+        const auto sorted_single_chunk_table = sort->get_output();
+
+        // Add sorted chunk to sorted table
+        // Note: we do not care about MVCC at all at the moment
+        sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
+        added_chunk = sorted_table->get_chunk(chunk_id);
+        added_chunk->finalize();
+        // Set order by for chunk 
+        added_chunk->set_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
+      } else {
+        // append unsorted chunk to sorted table 
+        sorted_table->append_chunk(get_segments_of_chunk(single_chunk_table, ChunkID{0}));
+        added_chunk = sorted_table->get_chunk(chunk_id);
+        added_chunk->finalize();
+      }
      
       // Encode segments of sorted single chunk table
 
