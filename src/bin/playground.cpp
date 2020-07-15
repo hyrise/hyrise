@@ -31,8 +31,8 @@ using namespace opossum;  // NOLINT
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
-//constexpr auto CHUNK_SIZE = size_t{1'000'000};
-constexpr auto CHUNK_SIZE = size_t{10};
+constexpr auto CHUNK_SIZE = size_t{1'000'000};
+//constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
 constexpr auto SORT_MODE = SortMode::Ascending;
 constexpr auto EXECUTION_COUNT = 1;
@@ -317,7 +317,7 @@ int main() {
         const auto encoding_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][2]));
         const auto encoding = CHUNK_ENCODINGS[encoding_id];
         const auto segment = added_chunk->get_segment(column_id);
-        
+
         Assert(encoding_id < CHUNK_ENCODINGS.size(), 
           "Undefined encoding specified in configuration file");
 
@@ -337,7 +337,7 @@ int main() {
       }
     }
 
-    //Print::print(sorted_table);
+    Print::print(sorted_table);
 
     std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
 
