@@ -337,7 +337,7 @@ int main() {
       }
     }
 
-    Print::print(sorted_table);
+    //Print::print(sorted_table);
 
     std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
 
