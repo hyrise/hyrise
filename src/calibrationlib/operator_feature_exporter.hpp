@@ -34,13 +34,13 @@ class OperatorFeatureExporter {
 
  protected:
   void _export_operator(const std::shared_ptr<const AbstractOperator>& op);
-  void _export_operator(const std::shared_ptr<const AbstractJoinOperator>& op);
-  void _export_operator(const std::shared_ptr<const AbstractAggregateOperator>& op);
-  void _export_operator(const std::shared_ptr<const GetTable>& op);
-  void _export_operator(const std::shared_ptr<const TableScan>& op);
+  void _export_general_operator(const std::shared_ptr<const AbstractOperator>& op);
+  void _export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op);
+  void _export_join(const std::shared_ptr<const AbstractJoinOperator>& op);
+  void _export_get_table(const std::shared_ptr<const GetTable>& op);
+  void _export_table_scan(const std::shared_ptr<const TableScan>& op);
 
-  std::shared_ptr<const GeneralOperatorInformation> _general_operator_information(
-      const std::shared_ptr<const AbstractOperator>& op);
+  const GeneralOperatorInformation _general_operator_information(const std::shared_ptr<const AbstractOperator>& op);
 
   // currently, supports only HashJoin stages
   void _export_join_stages(const std::shared_ptr<const AbstractJoinOperator>& op);

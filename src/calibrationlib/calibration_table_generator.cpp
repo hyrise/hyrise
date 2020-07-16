@@ -99,7 +99,8 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto mvcc_data = std::make_shared<MvccData>(segments[chunk_id].front()->size(), CommitID{0});
     const auto chunk = std::make_shared<Chunk>(segments[chunk_id], mvcc_data);
-    chunk->set_sorted_by(sort_column_definitions.at(chunk_id));
+    chunk->finalize();
+    chunk->set_sorted_by(sort_column_definitions);
     chunks.emplace_back(chunk);
   }
 

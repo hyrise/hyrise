@@ -9,6 +9,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/pqp_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -22,7 +23,6 @@ OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) {
   std::lock_guard<std::mutex> lock(_mutex);
-  //const auto join = std::dynamic_pointer_cast<const AbstractJoinOperator>(op);
   visit_pqp(op, [&](const auto& node) {
     Assert(op->performance_data->has_output, "Expected operator to have been executed.");
     _export_operator(node);
@@ -37,41 +37,57 @@ void OperatorFeatureExporter::flush() {
   CsvWriter::write(*_join_stages_table, _join_stages_output_path);
 }
 
-std::shared_ptr<const OperatorFeatureExporter::GeneralOperatorInformation>
-OperatorFeatureExporter::_general_operator_information(const std::shared_ptr<const AbstractOperator>& op) {
-  auto operator_info = std::make_shared<GeneralOperatorInformation>();
-  operator_info->name = pmr_string{op->name()};
+const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporter::_general_operator_information(
+    const std::shared_ptr<const AbstractOperator>& op) {
+  GeneralOperatorInformation operator_info;
+  operator_info.name = pmr_string{op->name()};
 
   if (op->left_input()) {
-    operator_info->left_input_rows = static_cast<int64_t>(op->left_input()->performance_data->output_row_count);
-    if (op->left_input_table())
-      operator_info->left_input_columns = static_cast<int32_t>(op->left_input_table()->column_count());
+    operator_info.left_input_rows = static_cast<int64_t>(op->left_input()->performance_data->output_row_count);
+    operator_info.left_input_columns = static_cast<int32_t>(op->left_input()->performance_data->output_column_count);
   }
   if (op->right_input()) {
-    operator_info->right_input_rows = static_cast<int64_t>(op->right_input()->performance_data->output_row_count);
-    if (op->right_input_table())
-      operator_info->right_input_rows = static_cast<int32_t>(op->right_input_table()->column_count());
+    operator_info.right_input_rows = static_cast<int64_t>(op->right_input()->performance_data->output_row_count);
+    operator_info.right_input_columns = static_cast<int32_t>(op->right_input()->performance_data->output_column_count);
   }
 
-  operator_info->output_rows = static_cast<int32_t>(op->performance_data->output_row_count);
-  operator_info->walltime = static_cast<int64_t>(op->performance_data->walltime.count());
-
-  if (op->get_output()) {
-    operator_info->output_columns = static_cast<int32_t>(op->get_output()->column_count());
-  }
+  operator_info.output_rows = static_cast<int64_t>(op->performance_data->output_row_count);
+  operator_info.walltime = static_cast<int64_t>(op->performance_data->walltime.count());
+  operator_info.output_columns = static_cast<int32_t>(op->->performance_data->output_column_count);
 
   return operator_info;
 }
 
 void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractOperator>& op) {
+  switch (op->type()) {
+    case OperatorType::Aggregate:
+      _export_aggregate(static_pointer_cast<const AbstractAggregateOperator>(op));
+      break;
+    case OperatorType::GetTable:
+      _export_get_table(static_pointer_cast<const GetTable>(op));
+      break;
+    case OperatorType::JoinHash:
+    case OperatorType::JoinSortMerge:
+    case OperatorType::JoinNestedLoop:
+      _export_join(static_pointer_cast<const AbstractJoinOperator>(op));
+      break;
+    case OperatorType::TableScan:
+      _export_table_scan(static_pointer_cast<const TableScan>(op));
+      break;
+    default:
+      _export_general_operator(op);
+  }
+}
+
+void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<const AbstractOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
 
-  auto output_row = std::vector<AllTypeVariant>{operator_info->name,
-                                                operator_info->left_input_rows,
-                                                operator_info->left_input_rows,
-                                                operator_info->output_rows,
-                                                operator_info->output_columns,
-                                                operator_info->walltime,
+  auto output_row = std::vector<AllTypeVariant>{operator_info.name,
+                                                operator_info.left_input_rows,
+                                                operator_info.left_input_columns,
+                                                operator_info.output_rows,
+                                                operator_info.output_columns,
+                                                operator_info.walltime,
                                                 NULL_VALUE,
                                                 NULL_VALUE,
                                                 NULL_VALUE,
@@ -102,53 +118,56 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
   _general_output_table->append(output_row);
 }
 
-void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractAggregateOperator>& op) {
+void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
 
   auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
-                                                operator_info->left_input_rows,
-                                                operator_info->left_input_rows,
-                                                operator_info->output_rows,
-                                                operator_info->output_columns,
-                                                operator_info->walltime,
+                                                operator_info.left_input_rows,
+                                                operator_info.left_input_columns,
+                                                operator_info.output_rows,
+                                                operator_info.output_columns,
+                                                operator_info.walltime,
                                                 NULL_VALUE,
                                                 NULL_VALUE,
                                                 NULL_VALUE,
-                                                operator_info->name};
+                                                operator_info.name};
 
   _general_output_table->append(output_row);
 }
 
-void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractJoinOperator>& op) {
+void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJoinOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
   const auto join_mode = pmr_string{join_mode_to_string.left.at(op->mode())};
   _export_join_stages(op);
 
   const auto output_row = std::vector<AllTypeVariant>{static_cast<int32_t>(_current_join_id),
-                                                      operator_info->name,
+                                                      operator_info.name,
                                                       join_mode,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->output_rows,
-                                                      operator_info->output_columns,
-                                                      operator_info->walltime,
+                                                      operator_info.left_input_rows,
+                                                      operator_info.right_input_rows,
+                                                      operator_info.left_input_columns,
+                                                      operator_info.right_input_columns,
+                                                      operator_info.output_rows,
+                                                      operator_info.output_columns,
+                                                      operator_info.walltime,
                                                       NULL_VALUE,
                                                       NULL_VALUE,
                                                       NULL_VALUE,
                                                       NULL_VALUE};
+
   _join_output_table->append(output_row);
   ++_current_join_id;
 }
 
-void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const GetTable>& op) {
+void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetTable>& op) {
   const auto& operator_info = _general_operator_information(op);
 
-  const auto output_row = std::vector<AllTypeVariant>{operator_info->name,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->output_rows,
-                                                      operator_info->output_columns,
-                                                      operator_info->walltime,
+  const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
+                                                      operator_info.left_input_rows,
+                                                      operator_info.left_input_columns,
+                                                      operator_info.output_rows,
+                                                      operator_info.output_columns,
+                                                      operator_info.walltime,
                                                       NULL_VALUE,
                                                       pmr_string{op->table_name()},
                                                       NULL_VALUE,
@@ -157,7 +176,7 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const GetTa
   _general_output_table->append(output_row);
 }
 
-void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const TableScan>& op) {
+void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const TableScan>& op) {
   const auto& operator_info = _general_operator_information(op);
 
   pmr_string scan_type = "REFERENCE_SCAN";
@@ -166,16 +185,15 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Table
     scan_type = "COLUMN_SCAN";
   }
 
-  const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
-  Assert(table_scan->_impl_description != "Unset", "Expected TableScan to be executed.");
-  const auto implementation = pmr_string{table_scan->_impl_description};
+  Assert(op->_impl_description != "Unset", "Expected TableScan to be executed.");
+  const auto implementation = pmr_string{op->_impl_description};
 
-  const auto output_row = std::vector<AllTypeVariant>{operator_info->name,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->left_input_rows,
-                                                      operator_info->output_rows,
-                                                      operator_info->output_columns,
-                                                      operator_info->walltime,
+  const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
+                                                      operator_info.left_input_rows,
+                                                      operator_info.left_input_columns,
+                                                      operator_info.output_rows,
+                                                      operator_info.output_columns,
+                                                      operator_info.walltime,
                                                       scan_type,
                                                       NULL_VALUE,
                                                       NULL_VALUE,

@@ -41,8 +41,35 @@ void TableFeatureExporter::_export_column_data(std::shared_ptr<const Calibration
     const auto table_name = pmr_string{table_wrapper->get_name()};
     const auto column_name = pmr_string{table->column_name(column_id)};
     const auto column_data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    bool sorted_ascending = true;
+    bool sorted_descending = true;
 
-    _tables.at(TableFeatureExportType::COLUMN)->append({table_name, column_name, column_data_type});
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+      const auto& sort_definitions = chunk->sorted_by();
+      if (sort_definitions.empty()) {
+        sorted_ascending = false;
+        sorted_descending = false;
+        break;
+      }
+
+      bool chunk_sorted_ascending = false;
+      bool chunk_sorted_descending = false;
+      for (const auto& sort_definition : sort_definitions) {
+        if (sort_definition.column == column_id) {
+          if (sort_definition.sort_mode == SortMode::Ascending) {
+            chunk_sorted_ascending = true;
+          } else
+            chunk_sorted_descending = true;
+        }
+      }
+      sorted_ascending &= chunk_sorted_ascending;
+      sorted_descending &= chunk_sorted_descending;
+    }
+
+    _tables.at(TableFeatureExportType::COLUMN)
+        ->append({table_name, column_name, column_data_type, static_cast<int32_t>(sorted_ascending),
+                  static_cast<int32_t>(sorted_descending)});
   }
 }
 

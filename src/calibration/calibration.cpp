@@ -61,10 +61,7 @@ int main() {
   }
 
   lqp_generator.generate_joins(tables);
-
   const auto lqps = lqp_generator.get_lqps();
-  std::cout << lqps.size() << std::endl;
-
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
