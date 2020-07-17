@@ -148,11 +148,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return A set of column expressions created by the current node, matching the given @param column_ids.
-   */
-  ExpressionUnorderedSet find_column_expressions(const std::unordered_set<ColumnID>& column_ids) const;
-
-  /**
    * @return True, if the given set of expressions is a subset of the node's output expressions. False otherwise.
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;

@@ -242,22 +242,6 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unordered_set<ColumnID>& column_ids) const {
-  const auto& output_expressions = this->output_expressions();
-  auto column_expressions = ExpressionUnorderedSet{};
-
-  for (const auto& output_expression : output_expressions) {
-    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (column_expression && column_ids.contains(column_expression->original_column_id) &&
-        *column_expression->original_node.lock() == *this) {
-      const auto [_, success] = column_expressions.emplace(column_expression);
-      Assert(success, "Did not expect multiple column expressions for the same column id.");
-    }
-  }
-
-  return column_expressions;
-}
-
 bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expressions) const {
   const auto& output_expressions = this->output_expressions();
 

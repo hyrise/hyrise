@@ -165,4 +165,11 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
+/**
+ * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
+ *         Currently, only StoredTableNode, StaticTableNode and MockNode are supported.
+ */
+ExpressionUnorderedSet find_column_expressions(const std::shared_ptr<AbstractLQPNode>& lqp_node,
+                                               const std::unordered_set<ColumnID>& column_ids);
+
 }  // namespace opossum

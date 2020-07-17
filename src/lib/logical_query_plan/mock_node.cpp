@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -84,7 +85,7 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
-    const auto& column_expressions = find_column_expressions(key_constraint_column_ids);
+    const auto& column_expressions = find_column_expressions(this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 

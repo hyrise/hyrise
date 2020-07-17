@@ -2,6 +2,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -111,10 +112,9 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
     }
 
     // Search for expressions representing the key constraint's ColumnIDs
-    const auto& column_expressions = find_column_expressions(table_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
-                "Unexpected count of "
-                "column expressions.");
+                "Unexpected count of column expressions.");
 
     // Create LQPUniqueConstraint
     unique_constraints->emplace_back(column_expressions);
