@@ -89,6 +89,17 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   unique_constraints->emplace_back(group_by_columns);
 
   /**
+   * Future Work:
+   * Under some circumstances, the DependentGroupByReductionRule reduces the number of group-by columns. Consequently,
+   * we might be able to create shorter unique constraints after the optimizer rule has been run.
+   * (shorter unique constraints are always preferred)
+   * However, it would be great if this function could return the shortest unique constraints possible,
+   * without having to rely on the execution of the optimizer rule.
+   * Fortunately, we can shorten unique constraints ourselves by looking at the available functional dependencies.
+   * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
+   */
+
+  /**
    * (2) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
    *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
