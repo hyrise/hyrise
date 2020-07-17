@@ -84,7 +84,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   if (predicates.empty() || predicates.size() > 1) return unique_constraints;
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
-              join_mode == JoinMode::FullOuter,
+                  join_mode == JoinMode::FullOuter,
               "Unhandled JoinMode");
 
   // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)

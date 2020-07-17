@@ -111,7 +111,7 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
               std::inserter(group_by_columns, group_by_columns.begin()));
 
   // Make sure, we do not add an already existing or a superset unique constraint.
-  if(!contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
+  if (!contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
     unique_constraints->emplace_back(group_by_columns);
   }
 

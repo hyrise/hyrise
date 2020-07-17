@@ -247,7 +247,7 @@ bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expre
 
   for (const auto& expression : expressions) {
     if (!std::any_of(output_expressions.cbegin(), output_expressions.cend(),
-                    [&expression](const auto& output_expression) { return *output_expression == *expression; })) {
+                     [&expression](const auto& output_expression) { return *output_expression == *expression; })) {
       return false;
     }
   }
@@ -284,7 +284,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
-  Assert(type != LQPNodeType::Union || fds_left != fds_right, "FD-forwarding for UnionNodes with differing input FDs "
+  Assert(type != LQPNodeType::Union || fds_left != fds_right,
+         "FD-forwarding for UnionNodes with differing input FDs "
          "is not yet supported.");
 
   if (HYRISE_DEBUG && !fds_right.empty()) {
