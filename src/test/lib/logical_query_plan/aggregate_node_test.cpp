@@ -135,16 +135,12 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwardingSimple) {
    * Expected behaviour:
    *  - key_constraint_b remains valid since _b is part of the group-by columns.
    *  - key_constraint_c, however, should be discarded because _c gets aggregated.
-   *  - Also, we should gain a new unique constraint, covering all group-by columns.
    */
 
   // Basic check
-  EXPECT_EQ(unique_constraints->size(), 2);
+  EXPECT_EQ(unique_constraints->size(), 1);
   // In-depth check
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
-  const auto key_constraint_group_by =
-      TableKeyConstraint{{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE};
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_group_by, unique_constraints));
 }
 
 TEST_F(AggregateNodeTest, UniqueConstraintsForwardingAnyAggregates) {
@@ -180,13 +176,39 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
 
-  const auto aggregate = sum_(_b);
-  _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate), _mock_node);
+  const auto aggregate1 = sum_(_b);
+  const auto aggregate2 = sum_(_c);
+  _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
 
   /**
-   * AggregateNode creates a new unique constraint based on group-by-column _a. It is the same as MockNode's unique
-   * constraint.
-   * In the following, we check whether AggregateNode prevents duplicate unique constraints as expected.
+   * AggregateNode should try to create a new unique constraint from its group-by-column _a. It is the same as
+   * MockNode's unique constraint which gets forwarded.
+   *
+   * Expected behaviour: AggregateNode should not output the same unique constraint twice.
+   */
+
+  // Basic check
+  const auto& unique_constraints = _aggregate_node->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 1);
+  // In-depth check
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_constraints));
+}
+
+TEST_F(AggregateNodeTest, UniqueConstraintsNoSupersets) {
+  // Prepare single unique constraint
+  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node->set_key_constraints({table_key_constraint});
+  EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
+
+  const auto aggregate = sum_(_c);
+  _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
+
+  /**
+   * AggregateNode should try to create a new unique constraint from both group-by-columns _a and _b.
+   * However, MockNode already has a unique constraint for _a which gets forwarded. It is shorter and
+   * therefore preferred over the unique constraint covering both, _a and _b.
+   *
+   * Expected behaviour: AggregateNode should forward the input unique constraint only.
    */
 
   // Basic check

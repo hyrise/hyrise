@@ -80,13 +80,32 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
 std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
-  // (1) Create new unique constraint from the group-by column(s), which form a candidate key for the output relation.
+  /**
+   * (1) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
+   *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
+   *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
+   *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
+   */
+
+  // Check each constraint for applicability
+  const auto& input_unique_constraints = left_input()->unique_constraints();
+  for (const auto& input_unique_constraint : *input_unique_constraints) {
+    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
+
+    // Forward constraint
+    unique_constraints->emplace_back(input_unique_constraint);
+  }
+
+  // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
   ExpressionUnorderedSet group_by_columns(group_by_columns_count);
   std::copy_n(node_expressions.begin(), group_by_columns_count,
               std::inserter(group_by_columns, group_by_columns.begin()));
 
-  unique_constraints->emplace_back(group_by_columns);
+  // Make sure, we do not add an already existing or a superset unique constraint.
+  if(!contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
+    unique_constraints->emplace_back(group_by_columns);
+  }
 
   /**
    * Future Work:
@@ -99,28 +118,6 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
    */
 
-  /**
-   * (2) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
-   *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
-   *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
-   *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
-   */
-
-  // Check each constraint for applicability
-  const auto& input_unique_constraints = left_input()->unique_constraints();
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
-
-    // Avoid duplicates
-    if (std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
-                    [&input_unique_constraint](const auto& unique_constraint) {
-                      return input_unique_constraint == unique_constraint;
-                    })) {
-      continue;
-    }
-    // Forward constraint
-    unique_constraints->push_back(input_unique_constraint);
-  }
 
   return unique_constraints;
 }

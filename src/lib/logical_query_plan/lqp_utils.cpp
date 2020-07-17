@@ -331,4 +331,24 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+                                         const ExpressionUnorderedSet& expressions) {
+  DebugAssert(unique_constraints->empty(), "Invalid input. Set of unique constraints should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
+
+  // Look for a unique constraint that is based on a subset of the given expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (unique_constraint.expressions.size() <= expressions.size() &&
+        std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
+                    [&expressions](const auto unique_constraint_expression) {
+                      return expressions.contains(unique_constraint_expression);
+                    })) {
+      // Found a matching unique constraint
+      return true;
+    }
+  }
+  // Did not find a unique constraint for the given expressions
+  return false;
+}
+
 }  // namespace opossum
