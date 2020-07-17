@@ -246,8 +246,8 @@ bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expre
   const auto& output_expressions = this->output_expressions();
 
   for (const auto& expression : expressions) {
-    if (std::any_of(output_expressions.cbegin(), output_expressions.cend(),
-                    [&expression](const auto& output_expression) { return expression == output_expression; })) {
+    if (!std::any_of(output_expressions.cbegin(), output_expressions.cend(),
+                    [&expression](const auto& output_expression) { return *output_expression == *expression; })) {
       return false;
     }
   }
