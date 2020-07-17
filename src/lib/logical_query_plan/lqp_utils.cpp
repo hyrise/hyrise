@@ -307,19 +307,22 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   return root_nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const std::shared_ptr<AbstractLQPNode>& lqp_node,
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::unordered_set<ColumnID>& column_ids) {
-  DebugAssert(std::dynamic_pointer_cast<StoredTableNode>(lqp_node) ||
-                  std::dynamic_pointer_cast<StaticTableNode>(lqp_node) || std::dynamic_pointer_cast<MockNode>(lqp_node),
+ // DEBUG LQPNodeType
+
+  DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
+                 lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
 
-  const auto& output_expressions = lqp_node->output_expressions();
+  const auto& output_expressions = lqp_node.output_expressions();
   auto column_expressions = ExpressionUnorderedSet{};
+  column_expressions.reserve(column_ids.size());
 
   for (const auto& output_expression : output_expressions) {
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
     if (column_expression && column_ids.contains(column_expression->original_column_id) &&
-        *column_expression->original_node.lock() == *lqp_node) {
+        *column_expression->original_node.lock() == lqp_node) {
       const auto [_, success] = column_expressions.emplace(column_expression);
       DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
     }
