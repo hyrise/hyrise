@@ -85,6 +85,14 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
    *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
    *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
+   *
+   *     Future Work:
+   *     Aggregate functions usually change the value range of input expressions (e.g. COUNT, SUM).
+   *     Currently, we discard any unique constraint that involves expressions to be aggregated because uniqueness
+   *     guarantees might break.
+   *     However, there are some aggregate functions that do not change value ranges. For example MAX or MIN.
+   *     As a next step, we could recreate some input unique constraints to involve the aforementioned
+   *     "non-destructive" aggregate expressions.
    */
 
   // Check each constraint for applicability
@@ -117,7 +125,6 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    * Fortunately, we can shorten unique constraints ourselves by looking at the available functional dependencies.
    * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
    */
-
 
   return unique_constraints;
 }

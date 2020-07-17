@@ -363,7 +363,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsNonEquiJoin) {
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
-  // Except for Semi- and Anti-Joins, we do not support forwarding of unique constraints for multi predicate joins.
+  // Except for Semi- and Anti-Joins, we do not support forwarding of unique constraints for multi-predicate joins.
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
   // clang-format off

@@ -48,16 +48,24 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
 std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Positions:
-      // UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
-      // pos lists. Therefore, unique constraints remain valid.
+      /**
+       * UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
+       * pos lists. Therefore, unique constraints remain valid.
+       *
+       * In the cases that we have seen so far (usually disjunctions turned into individual nodes by the
+       * PredicateSplitUpRule), the constraints have remained the same on the left and right sides. This is not
+       * necessarily true in the future. We assert this behaviour so that we are aware if this ever changes.
+       */
       Assert(*left_input()->unique_constraints() == *right_input()->unique_constraints(),
              "Input tables should have the same constraints.");
       return _forward_left_unique_constraints();
 
     case SetOperationMode::All:
-      // With UnionAll, two tables become merged. The resulting table might contain duplicates.
-      // To forward constraints from child nodes, we would have to ensure that both input tables are completely
-      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
+      /**
+       * With UnionAll, two tables become merged. The resulting table might contain duplicates.
+       * To forward constraints from child nodes, we would have to ensure that both input tables are completely
+       * distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
+       */
       return std::make_shared<LQPUniqueConstraints>();
 
     case SetOperationMode::Unique:
