@@ -106,8 +106,9 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
     if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
                     [&key_constraint_column_ids](const auto& pruned_column_id) {
                       return key_constraint_column_ids.contains(pruned_column_id);
-                    }))
+                    })) {
       continue;
+    }
 
     // Search for expressions representing the key constraint's ColumnIDs
     const auto& column_expressions = find_column_expressions(table_key_constraint.columns());

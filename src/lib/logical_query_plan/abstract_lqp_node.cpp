@@ -259,11 +259,13 @@ ExpressionUnorderedSet AbstractLQPNode::find_column_expressions(const std::unord
 }
 
 bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expressions) const {
-  const auto& output_expressions_vec = output_expressions();
-  ExpressionUnorderedSet output_expressions{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
+  const auto& output_expressions = this->output_expressions();
 
   for (const auto& expression : expressions) {
-    if (!output_expressions.contains(expression)) return false;
+    if (std::any_of(output_expressions.cbegin(), output_expressions.cend(),
+                    [&expression](const auto& output_expression) { return expression == output_expression; })) {
+      return false;
+    }
   }
 
   return true;
@@ -340,8 +342,9 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
                     [&output_expressions_non_nullable](const auto& expression) {
                       return !output_expressions_non_nullable.contains(expression);
-                    }))
+                    })) {
       continue;
+    }
 
     // We do not check the columns of the FD's dependents set since they are allowed to be nullable.
 

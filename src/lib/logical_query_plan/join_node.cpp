@@ -78,18 +78,18 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     return _forward_left_unique_constraints();
   }
 
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
-
-  // No guarantees for Cross Joins and multi predicate joins
-  const auto predicates = join_predicates();
-  if (predicates.empty() || predicates.size() > 1) return unique_constraints;
-  // Also, no guarantees for other join predicates than _equals() (Equi Join)
-  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
-  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return unique_constraints;
-
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
                   join_mode == JoinMode::FullOuter,
               "Unhandled JoinMode");
+
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+
+  // No guarantees implemented yet for Cross Joins and multi predicate joins
+  const auto predicates = join_predicates();
+  if (predicates.empty() || predicates.size() > 1) return unique_constraints;
+  // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)
+  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return unique_constraints;
 
   const auto& left_unique_constraints = left_input()->unique_constraints();
   const auto& right_unique_constraints = right_input()->unique_constraints();

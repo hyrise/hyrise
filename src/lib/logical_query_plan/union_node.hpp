@@ -11,8 +11,8 @@ namespace opossum {
 
 /**
  * This node type is used to:
- * (1) Represent the intersect set operation with the modes Unique and All.
- * (2) Intersect disjuncitve PosLists (using the Positions mode).
+ * (1) Represent the UNION set operation in two modes, Unique and All.
+ * (2) Intersect disjunctive PosLists (using the Positions mode).
  *     For example, `a = 1 OR b = 2` can be split up into two PredicateNodes, which unite in a UnionNode with
  *     SetOperationMode::Positions.
  */

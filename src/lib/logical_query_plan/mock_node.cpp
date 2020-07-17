@@ -79,8 +79,9 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
     if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
                     [&key_constraint_column_ids](const auto& pruned_column_id) {
                       return key_constraint_column_ids.contains(pruned_column_id);
-                    }))
+                    })) {
       continue;
+    }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
     const auto& column_expressions = find_column_expressions(key_constraint_column_ids);

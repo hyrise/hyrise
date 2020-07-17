@@ -104,8 +104,9 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
     if (std::any_of(unique_constraints->cbegin(), unique_constraints->cend(),
                     [&input_unique_constraint](const auto& unique_constraint) {
                       return input_unique_constraint == unique_constraint;
-                    }))
+                    })) {
       continue;
+    }
     // Forward constraint
     unique_constraints->push_back(input_unique_constraint);
   }

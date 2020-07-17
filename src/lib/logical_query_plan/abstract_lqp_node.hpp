@@ -168,7 +168,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
 
   /**
-   * @return True, if there is unique constraint matching the given subset of output expressions. False otherwise.
+   * @return True, if there is unique constraint matching the given subset of output expressions.
+   *         (i.e., the rows are guaranteed to be unique).
    */
   bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
 
