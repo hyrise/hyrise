@@ -270,17 +270,18 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
   const auto& unique_constraints = this->unique_constraints();
   if (unique_constraints->empty()) return false;
 
-  // Look for a unique constraint that is solely based on the given expressions
+  // Look for a unique constraint that is based on a subset of the given expressions
   for (const auto& unique_constraint : *unique_constraints) {
-    if (unique_constraint.expressions.size() == expressions.size() &&
-        std::all_of(expressions.cbegin(), expressions.cend(), [&unique_constraint](const auto expression) {
-          return unique_constraint.expressions.contains(expression);
+    if (unique_constraint.expressions.size() <= expressions.size() &&
+        std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
+                    [&expressions](const auto unique_constraint_expression) {
+            return expressions.contains(unique_constraint_expression);
         })) {
       // Found a matching unique constraint
       return true;
     }
   }
-  // Did not find a unique constraint that matches the given expressions
+  // Did not find a unique constraint for the given expressions
   return false;
 }
 
