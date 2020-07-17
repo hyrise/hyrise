@@ -337,4 +337,23 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(_stored_table_node->unique_constraints()->empty());
 }
 
+TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_a);
+  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 1);
+
+  // Negative test
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b}));
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_c}));
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b, _c}));
+
+  // Test exact match
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a}));
+
+  // Test superset of column ids
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _b}));
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _c}));
+}
+
 }  // namespace opossum
