@@ -284,9 +284,6 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
-  Assert(type != LQPNodeType::Union || fds_left != fds_right,
-         "We do not yet support FD-forwarding for UnionNodes with differing input FDs.");
-
   if (HYRISE_DEBUG && !fds_right.empty()) {
     for (const auto& fd_right : fds_right) {
       const bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
