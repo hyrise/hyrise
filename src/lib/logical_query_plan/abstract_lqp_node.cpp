@@ -285,8 +285,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   Assert(type != LQPNodeType::Union || fds_left != fds_right,
-         "FD-forwarding for UnionNodes with differing input FDs "
-         "is not yet supported.");
+         "We do not yet support FD-forwarding for UnionNodes with differing input FDs.");
 
   if (HYRISE_DEBUG && !fds_right.empty()) {
     for (const auto& fd_right : fds_right) {

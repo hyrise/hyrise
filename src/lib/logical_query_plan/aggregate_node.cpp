@@ -83,16 +83,16 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   /**
    * (1) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
-   *     However, ANY() is a pseudo aggregate function and does not change values (cf. DependentGroupByReductionRule).
+   *     However, ANY() is a pseudo aggregate function that does not change any values.
+   *     (cf. DependentGroupByReductionRule)
    *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
    *
    *     Future Work:
-   *     Aggregate functions usually change the value range of input expressions (e.g. COUNT, SUM).
-   *     Currently, we discard any unique constraint that involves expressions to be aggregated because uniqueness
-   *     guarantees might break.
-   *     However, there are some aggregate functions that do not change value ranges. For example MAX or MIN.
-   *     As a next step, we could recreate some input unique constraints to involve the aforementioned
-   *     "non-destructive" aggregate expressions.
+   *     Currently, we discard unique constraints that involve expressions to be aggregated, except for ANY().
+   *     The logic: Column values change during aggregation, which might break unique constraints.
+   *     However, there are some aggregate functions such as MIN() and MAX() for which the latter logic does not apply.
+   *     Instead of discarding corresponding unique constraints, we could recreate them with the added aggregate
+   *     expressions.
    */
 
   // Check each constraint for applicability
