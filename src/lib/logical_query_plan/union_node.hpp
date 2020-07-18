@@ -26,7 +26,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards the unique constraints of the left input node in case of SetOperationMode::Positions.
+   * (1) Forwards unique constraints from the left input node in case of SetOperationMode::Positions.
    *     (unique constraints of both, left and right input node are identical)
    * (2) Discards all input unique constraints for SetOperationMode::All and
    * (3) Fails for SetOperationMode::Unique, which is not yet implemented.

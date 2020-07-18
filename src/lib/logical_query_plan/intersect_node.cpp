@@ -34,6 +34,8 @@ std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const 
    *
    * Future Work: Merge unique constraints from the left and right input node.
    */
+  DebugAssert(left_input()->unique_constraints() == right_input()->unique_constraints(), "Merging of unique "
+              "constraints should be implemented.");
   return _forward_left_unique_constraints();
 }
 

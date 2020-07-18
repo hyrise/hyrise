@@ -89,10 +89,19 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *
    *     Future Work:
    *     Currently, we discard unique constraints that involve expressions to be aggregated, except for ANY().
-   *     The logic: Column values change during aggregation, which might break unique constraints.
-   *     However, there are some aggregate functions such as MIN() and MAX() for which the latter logic does not apply.
-   *     Instead of discarding corresponding unique constraints, we could recreate them with the added aggregate
-   *     expressions.
+   *     The logic: Column values change during aggregation and might break unique constraints.
+   *     However, there are some aggregate functions such as MIN() or MAX() for which the latter logic does not apply.
+   *     Instead of discarding corresponding unique constraints, we could recreate them as shown in the following
+   *     example:
+   *
+   *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique constraints:
+   *       - LQPUniqueConstraint for {a, c}.
+   *       - LQPUniqueConstraint for {b, d}.
+   *     An AggregateNode which follows defines the following:
+   *       - COUNT(a), MAX(b)
+   *       - Group By {c, d}
+   *     => The unique constraint for {a, c} has to be discarded because of the COUNT(a) aggregate.
+   *     => The unique constraint for {b, d} can be reformulated as { MAX(b), d }
    */
 
   // Check each constraint for applicability
