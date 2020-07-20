@@ -50,7 +50,7 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
     case SetOperationMode::Positions:
       /**
        * UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
-       * pos lists. Therefore, unique constraints remain valid.
+       * PosLists. Therefore, unique constraints remain valid.
        *
        * In the cases that we have seen so far (usually disjunctions turned into individual nodes by the
        * PredicateSplitUpRule), the constraints have remained the same on the left and right sides. This is not

@@ -27,8 +27,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique constraints, if its expressions are a subset of the group-by expressions.
-   * (2) Creates a new unique constraint from the group-by expressions, if not already existing.
+   * (1) Forwards left input node's unique constraints if its expressions are a subset of the group-by expressions.
+   * (2) Creates a new unique constraint from the group-by expressions if not already existing.
    */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 

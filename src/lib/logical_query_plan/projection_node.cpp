@@ -36,9 +36,6 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   // Forward unique constraints, if applicable
   const auto& input_unique_constraints = left_input()->unique_constraints();
 
-  const auto& expressions = this->output_expressions();
-  const auto output_expressions = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
-
   for (const auto& input_unique_constraint : *input_unique_constraints) {
     if (!has_output_expressions(input_unique_constraint.expressions)) {
       continue;

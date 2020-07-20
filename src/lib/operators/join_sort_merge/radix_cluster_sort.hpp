@@ -354,7 +354,7 @@ class RadixClusterSort {
     }
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
-    // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
+    // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
 

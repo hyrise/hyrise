@@ -81,18 +81,16 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   /**
-   * (1) Forward unique constraints from child nodes, if all expressions belong to the group-by section.
+   * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
    *     However, ANY() is a pseudo aggregate function that does not change any values.
    *     (cf. DependentGroupByReductionRule)
    *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
    *
    *     Future Work:
-   *     Currently, we discard unique constraints that involve expressions to be aggregated, except for ANY().
-   *     The logic: Column values change during aggregation and might break unique constraints.
-   *     However, there are some aggregate functions such as MIN() or MAX() for which the latter logic does not apply.
-   *     Instead of discarding corresponding unique constraints, we could recreate them as shown in the following
-   *     example:
+   *     Some aggregation functions maintain the uniqueness of their input expressions. For example, if {a} is unique,
+   *     so is MAX(a), independently of the group by columns. We could create these new constraints as shown in the
+   *     following example:
    *
    *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique constraints:
    *       - LQPUniqueConstraint for {a, c}.
@@ -102,6 +100,9 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *       - Group By {c, d}
    *     => The unique constraint for {a, c} has to be discarded because of the COUNT(a) aggregate.
    *     => The unique constraint for {b, d} can be reformulated as { MAX(b), d }
+   *
+   *     Furthermore, for AggregateNodes without group by columns, where only one row is generated, all columns are
+   *     unique. We are not yet sure if this should be modeled as a unique constraint.
    */
 
   // Check each constraint for applicability

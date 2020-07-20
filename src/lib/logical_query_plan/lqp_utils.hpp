@@ -167,7 +167,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
- *         Currently, only StoredTableNode, StaticTableNode and MockNode are supported.
+ *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
+ *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
  */
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::unordered_set<ColumnID>& column_ids);

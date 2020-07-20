@@ -309,11 +309,10 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::unordered_set<ColumnID>& column_ids) {
-  // DEBUG LQPNodeType
-
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
 
   const auto& output_expressions = lqp_node.output_expressions();
   auto column_expressions = ExpressionUnorderedSet{};

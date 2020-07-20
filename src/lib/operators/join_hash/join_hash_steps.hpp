@@ -630,7 +630,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // we need to the check the NULL bit vector here because a NULL value (represented
             // as a zero) yields the same rows as an actual zero value.
             // For inner joins, we skip NULL values and output them for outer joins.
-            // Note, if the materialization/radix partitioning phase did not explicitly consider
+            // Note: If the materialization/radix partitioning phase did not explicitly consider
             // NULL values, they will not be handed to the probe function.
             if constexpr (keep_null_values) {
               if (null_values[partition_offset]) {
