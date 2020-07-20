@@ -365,7 +365,7 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       current_node = current_node->left_input();
     }
 
-    // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
+    // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input

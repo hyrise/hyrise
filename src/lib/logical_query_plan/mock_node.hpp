@@ -7,7 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table_key_constraint.hpp"
 
 namespace opossum {
 
@@ -33,6 +33,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  // Generates unique constraints from table's key constraints and pays respect to pruned columns.
+  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.

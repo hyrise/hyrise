@@ -20,6 +20,8 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;

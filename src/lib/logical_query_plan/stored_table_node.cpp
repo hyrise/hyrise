@@ -2,6 +2,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -93,6 +94,35 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
+std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+
+  // We create unique constraints from selected table key constraints
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_key_constraints = table->soft_key_constraints();
+
+  for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
+    // Discard key constraints that involve pruned column id(s).
+    const auto& key_constraint_column_ids = table_key_constraint.columns();
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&key_constraint_column_ids](const auto& pruned_column_id) {
+                      return key_constraint_column_ids.contains(pruned_column_id);
+                    })) {
+      continue;
+    }
+
+    // Search for expressions representing the key constraint's ColumnIDs
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of column expressions.");
+
+    // Create LQPUniqueConstraint
+    unique_constraints->emplace_back(column_expressions);
+  }
+
+  return unique_constraints;
+}
+
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -118,7 +148,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     auto dependents = ExpressionUnorderedSet{};
 
     for (const auto& expression : expressions) {
-      // Check whether column expression belongs on the left (determinants) or right (dependents) side of the FD
+      // Check whether column expression belongs to the left (determinants) or the right (dependents) side of the FD
       const auto column_id = static_cast<const LQPColumnExpression&>(*expression).original_column_id;
       if (std::find(key_constraint.columns().cbegin(), key_constraint.columns().cend(), column_id) ==
           key_constraint.columns().cend()) {
