@@ -64,7 +64,7 @@ def calculate_and_format_p_value(old_durations, new_durations):
             return colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
 
 
-def print_context_overview(old_config, new_config, github_format):
+def create_context_overview(old_config, new_config, github_format):
     ignore_difference_for = ["GIT-HASH", "date"]
 
     old_context_keys = set(old_config["context"].keys())
@@ -100,13 +100,13 @@ def print_context_overview(old_config, new_config, github_format):
         # In case of github formatting, the table's usage of '+' for the tables lines is interpreted as an improvement.
         # Thus, we prepend an additional space for all lines, except for diverging config lines which get a '-' to mark
         # the line in red.
-        for line in table_outputsplitlines():
-            if '≠' in line:
-                print(f'-{line}')
-            else:
-                print(f' {line}')
-    else:
-        print(table_output)
+        new_output = ''
+        for line in table_output.splitlines():
+            marker = "-" if "≠" in line else " "
+            new_output += f"{marker}{line}\n"
+        return new_output
+
+    return table_output
 
 
 # Doubles the separators (can be | normal rows and + for horizontal separators within the table) given by the list
@@ -144,8 +144,6 @@ total_runtime_new = 0
 
 add_note_for_capped_runs = False
 add_note_for_insufficient_pvalue_runs = False
-
-print_context_overview(old_data, new_data, github_format)
 
 table_data = []
 # $latency and $thrghpt (abbreviated to keep the column at a max width of 8 chars) will later be replaced with a title
@@ -317,12 +315,12 @@ result = new_result
 # colored green, removed lines (starting with -) are red, and others (starting with an empty space) are black.
 # Because terminaltables (unsurprisingly) does not support this hack, we need to post-process the result string,
 # searching for the control codes that define text to be formatted as green or red.
-
 if github_format:
-    new_result = "```diff\n"
     green_control_sequence = colored("", "green")[0:5]
     red_control_sequence = colored("", "red")[0:5]
 
+    new_result = "```diff\n"
+    new_result += create_context_overview(old_data, new_data, github_format) + "\n"
     for line in result.splitlines():
         if green_control_sequence + "+" in line:
             new_result += "+"
@@ -334,6 +332,8 @@ if github_format:
         new_result += line + "\n"
     new_result += "```"
     result = new_result
+else:
+    result = create_context_overview(old_data, new_data, github_format) + "\n\n" + result
 
 print("")
 print(result)
