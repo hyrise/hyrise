@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import pexpect
-
 
 
 def close_benchmark(benchmark):
@@ -34,7 +35,7 @@ def check_json(json, argument, error, return_error, difference=None):
 
 def initialize():
     if len(sys.argv) == 1:
-        print("Usage: ./scripts/test/" + benchmark_name + "_test.py <build_dir>")
+        print("Usage: ./scripts/test/{BENCHMARK_NAME}_test.py <build_dir>")
         sys.exit(1)
 
     build_dir = sys.argv[1]

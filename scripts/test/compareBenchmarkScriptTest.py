@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import os
-import re
 import json
-import math
 import subprocess
 
 # This script takes two JSON result files, runs the compare_benchmarks.py script, and checks that the output is as
@@ -34,9 +31,7 @@ class CompareBenchmarkScriptTest:
         with open(result_filepath_2) as json_file:
             self.results_2 = json.load(json_file)
 
-        with subprocess.Popen(
-            [script_path, result_filepath_1, result_filepath_2], stdout=subprocess.PIPE
-        ) as proc:
+        with subprocess.Popen([script_path, result_filepath_1, result_filepath_2], stdout=subprocess.PIPE) as proc:
             self.script_output = proc.stdout.read().decode("utf-8")
 
         self.script_output_lines = self.script_output.splitlines()
@@ -50,34 +45,24 @@ class CompareBenchmarkScriptTest:
         assert self.script_output.startswith("+Configuration Overview----")
 
         horizontal_table_separators = [
-            i
-            for i, line in enumerate(self.script_output_lines)
-            if line.startswith("+-------")
+            i for i, line in enumerate(self.script_output_lines) if line.startswith("+-------")
         ]
-        end_of_context_table = horizontal_table_separators[
-            1
-        ]  # first is end of context table header
+        end_of_context_table = horizontal_table_separators[1]  # first is end of context table header
 
         context_1 = self.results_1["context"]
         context_2 = self.results_2["context"]
 
         common_keys = set(context_1.keys()) & set(context_2.keys())
         expected_row_count = (
-            len(common_keys)
-            + (len(context_1) - len(common_keys))
-            + (len(context_2) - len(common_keys))
+            len(common_keys) + (len(context_1) - len(common_keys)) + (len(context_2) - len(common_keys))
         )
-        assert (
-            end_of_context_table - 3
-        ) == expected_row_count  # s -3 to substact header
+        assert (end_of_context_table - 3) == expected_row_count  # s -3 to substact header
 
         # check for diverging contexts
         if len(context_1) != len(context_2):
             # when an item exists only in one context, it is still printed and the other side is shown an "undefined"
             lines_with_undefined = [
-                line
-                for line in self.script_output_lines[3:end_of_context_table]
-                if "undefined" in line
+                line for line in self.script_output_lines[3:end_of_context_table] if "undefined" in line
             ]
             # if the context differ, there needs to be at least one undefined
             assert (expected_row_count - len(common_keys)) == len(lines_with_undefined)
@@ -85,14 +70,9 @@ class CompareBenchmarkScriptTest:
     # Checks the contents of result table.
     def check_result_table(self):
         horizontal_table_separators = [
-            i
-            for i, line in enumerate(self.script_output_lines)
-            if line.startswith("+-------")
+            i for i, line in enumerate(self.script_output_lines) if line.startswith("+-------")
         ]
-        begin_of_result_table = horizontal_table_separators[
-            3
-        ]  # first three are for context table
-        end_of_result_table = horizontal_table_separators[5]
+        begin_of_result_table = horizontal_table_separators[3]  # first three are for context table
         # Note: depending on the benchmarks notes (e.g., limited runs note) there can be 6 or 7 horizontal tables lines
 
         # the compare script somewhat handles benchmark files with diverging benchmark items, but this automated test
@@ -100,9 +80,7 @@ class CompareBenchmarkScriptTest:
         assert len(self.results_1["benchmarks"]) == len(self.results_2["benchmarks"])
 
         current_position = begin_of_result_table + 1  # first result line
-        for old_benchmark, new_benchmark in zip(
-            self.results_1["benchmarks"], self.results_2["benchmarks"]
-        ):
+        for old_benchmark, new_benchmark in zip(self.results_1["benchmarks"], self.results_2["benchmarks"]):
             current_line = self.script_output_lines[current_position]
             fields = current_line.split("|")  # obtain cells of table
             assert len(fields) == 12
@@ -118,14 +96,10 @@ class CompareBenchmarkScriptTest:
 
             # check the latency values for both JSON files
             assert_latency_equals(
-                len(old_successful_runs),
-                [run["duration"] for run in old_successful_runs],
-                fields[3],
+                len(old_successful_runs), [run["duration"] for run in old_successful_runs], fields[3],
             )
             assert_latency_equals(
-                len(new_successful_runs),
-                [run["duration"] for run in new_successful_runs],
-                fields[4],
+                len(new_successful_runs), [run["duration"] for run in new_successful_runs], fields[4],
             )
 
             # Get the divisors for both benchmark files. They differ for Ordered and Shuffled mode.
@@ -147,7 +121,7 @@ class CompareBenchmarkScriptTest:
 
             current_position += 1
 
-            # Check if there has been a single unsucessful run. In this case, a second line for the current item is shown.
+            # Check if there are unsucessful runs. In this case, a second line for the current benchmark item is shown.
             if len(old_unsuccessful_runs) > 0 or len(new_unsuccessful_runs) > 0:
                 current_line = self.script_output_lines[current_position]
                 fields = current_line.split("|")
@@ -156,26 +130,18 @@ class CompareBenchmarkScriptTest:
 
                 if len(old_unsuccessful_runs) > 0:
                     assert_latency_equals(
-                        len(old_unsuccessful_runs),
-                        [run["duration"] for run in old_unsuccessful_runs],
-                        fields[3],
+                        len(old_unsuccessful_runs), [run["duration"] for run in old_unsuccessful_runs], fields[3],
                     )
-                    assert_throughput_equals(
-                        len(old_unsuccessful_runs), divisors[0], fields[7]
-                    )
+                    assert_throughput_equals(len(old_unsuccessful_runs), divisors[0], fields[7])
                 else:
                     assert "nan" in fields[3]
                     assert "0.00" in fields[7]
 
                 if len(new_unsuccessful_runs) > 0:
                     assert_latency_equals(
-                        len(new_unsuccessful_runs),
-                        [run["duration"] for run in new_unsuccessful_runs],
-                        fields[4],
+                        len(new_unsuccessful_runs), [run["duration"] for run in new_unsuccessful_runs], fields[4],
                     )
-                    assert_throughput_equals(
-                        len(new_unsuccessful_runs), divisors[1], fields[8]
-                    )
+                    assert_throughput_equals(len(new_unsuccessful_runs), divisors[1], fields[8])
                 else:
                     assert "nan" in fields[4]
                     assert "0.00" in fields[8]
