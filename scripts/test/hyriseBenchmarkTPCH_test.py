@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
-from hyriseBenchmarkCore import *
+import json
+import os
+import sys
+
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize
 from compareBenchmarkScriptTest import *
 
 # This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-from hyriseBenchmarkCore import *
+import sys
+
 from compareBenchmarkScriptTest import *
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, initialize
 
 def main():
   build_dir = initialize()

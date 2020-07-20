@@ -27,7 +27,7 @@ ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<c
 
 std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsColumn"; }
 
-std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
+std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_segment = chunk->get_segment(_left_column_id);
   const auto right_segment = chunk->get_segment(_right_column_id);

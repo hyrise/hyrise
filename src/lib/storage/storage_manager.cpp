@@ -78,8 +78,17 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-const tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const {
-  return _tables;
+std::unordered_map<std::string, std::shared_ptr<Table>> StorageManager::tables() const {
+  std::unordered_map<std::string, std::shared_ptr<Table>> result;
+
+  for (const auto& [table_name, table] : _tables) {
+    // Skip dropped table, as we don't remove the map entry when dropping, but only reset the table pointer.
+    if (!table) continue;
+
+    result[table_name] = table;
+  }
+
+  return result;
 }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
@@ -129,8 +138,16 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
-const tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>>& StorageManager::views() const {
-  return _views;
+std::unordered_map<std::string, std::shared_ptr<LQPView>> StorageManager::views() const {
+  std::unordered_map<std::string, std::shared_ptr<LQPView>> result;
+
+  for (const auto& [view_name, view] : _views) {
+    if (!view) continue;
+
+    result[view_name] = view;
+  }
+
+  return result;
 }
 
 void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
@@ -165,9 +182,16 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
   _prepared_plans[name] = nullptr;
 }
 
-const tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans()
-    const {
-  return _prepared_plans;
+std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans() const {
+  std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> result;
+
+  for (const auto& [prepared_plan_name, prepared_plan] : _prepared_plans) {
+    if (!prepared_plan) continue;
+
+    result[prepared_plan_name] = prepared_plan;
+  }
+
+  return result;
 }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {

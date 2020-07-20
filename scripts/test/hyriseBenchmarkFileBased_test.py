@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
-from hyriseBenchmarkCore import *
+import glob
+import json
+import os
+import sys
+
 from compareBenchmarkScriptTest import *
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize
 
 # This test runs the binary hyriseBenchmarkFileBased with two different sets of arguments.
 # During the first run, the shell output is validated using pexpect.

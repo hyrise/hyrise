@@ -1,8 +1,7 @@
 import os
 import sys
 import pexpect
-import glob
-import json
+
 
 
 def close_benchmark(benchmark):
@@ -11,7 +10,7 @@ def close_benchmark(benchmark):
 
 
 def check_exit_status(benchmark):
-    if benchmark.exitstatus != 0 or benchmark.signalstatus != None:
+    if benchmark.exitstatus != 0 or benchmark.signalstatus is not None:
         print(
             "Benchmark failed with exit status "
             + str(benchmark.exitstatus)
@@ -28,16 +27,7 @@ def check_json(json, argument, error, return_error, difference=None):
             return True
     else:
         if abs(json - argument) > difference:
-            print(
-                "ERROR: "
-                + error
-                + " "
-                + str(json)
-                + " "
-                + str(argument)
-                + " "
-                + str(difference)
-            )
+            print(f"ERROR: {error} {json} {argument} {difference}")
             return True
     return return_error
 
@@ -52,9 +42,7 @@ def initialize():
 
 
 def run_benchmark(build_dir, arguments, benchmark_name, verbose):
-    if "--table_path" in arguments and not os.path.isdir(
-        arguments["--table_path"].replace("'", "")
-    ):
+    if "--table_path" in arguments and not os.path.isdir(arguments["--table_path"].replace("'", "")):
         print(
             "Cannot find "
             + arguments["--table_path"]
@@ -62,9 +50,7 @@ def run_benchmark(build_dir, arguments, benchmark_name, verbose):
         )
         sys.exit(1)
 
-    if "--query_path" in arguments and not os.path.isdir(
-        arguments["--query_path"].replace("'", "")
-    ):
+    if "--query_path" in arguments and not os.path.isdir(arguments["--query_path"].replace("'", "")):
         print(
             "Cannot find "
             + arguments["--query_path"]
@@ -75,10 +61,7 @@ def run_benchmark(build_dir, arguments, benchmark_name, verbose):
     concat_arguments = " ".join(["=".join(map(str, x)) for x in arguments.items()])
 
     benchmark = pexpect.spawn(
-        build_dir + "/" + benchmark_name + " " + concat_arguments,
-        maxread=1000000,
-        timeout=1000,
-        dimensions=(200, 64),
+        build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=1000, dimensions=(200, 64)
     )
     if verbose:
         benchmark.logfile = sys.stdout.buffer

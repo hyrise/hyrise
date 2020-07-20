@@ -5,7 +5,9 @@
 #endif
 
 #include <array>
+#include <atomic>
 
+#include "operators/operator_performance_data.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
@@ -23,7 +25,10 @@ class AbstractTableScanImpl {
 
   virtual std::string description() const = 0;
 
-  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const = 0;
+  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) = 0;
+
+  std::atomic<size_t> chunk_scans_skipped{0};
+  std::atomic<size_t> chunk_scans_sorted{0};
 
  protected:
   /**
@@ -151,9 +156,9 @@ class AbstractTableScanImpl {
       // Next, write *all* offsets in the block into `offsets`
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
 
-      if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
-                                                                      std::decay_t<decltype(*left_it)>,
-                                                                      std::decay_t<decltype(left_it)>>,
+      if constexpr (!std::is_base_of_v<AbstractPointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
+                                                                          std::decay_t<decltype(*left_it)>,
+                                                                          std::decay_t<decltype(left_it)>>,
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup

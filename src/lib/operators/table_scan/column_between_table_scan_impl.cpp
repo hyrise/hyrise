@@ -35,8 +35,8 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
   // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
@@ -49,6 +49,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++chunk_scans_sorted;
         return;
       }
     }
@@ -63,7 +64,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 }
 
 void ColumnBetweenTableScanImpl::_scan_generic_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
@@ -90,7 +91,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(left_value);
@@ -124,6 +125,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
    * Early out: No entries match
    */
   if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
+    ++chunk_scans_skipped;
     return;
   }
 
@@ -151,7 +153,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const SortMode sort_mode) const {

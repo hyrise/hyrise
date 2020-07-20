@@ -7,7 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/base_non_query_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -21,8 +21,8 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
-                                   std::unique_ptr<OperatorPerformanceData> performance_data)
-    : _type(type), _left_input(left), _right_input(right), _performance_data(std::move(performance_data)) {}
+                                   std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
+    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
@@ -30,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
   DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
-  DebugAssert(!_performance_data->executed, "Operator has already been executed");
+  DebugAssert(!performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -55,28 +55,28 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  _performance_data->walltime = performance_timer.lap();
-  _performance_data->executed = true;
   if (_output) {
-    _performance_data->has_output = true;
-    _performance_data->output_row_count = _output->row_count();
-    _performance_data->output_chunk_count = _output->chunk_count();
+    performance_data->has_output = true;
+    performance_data->output_row_count = _output->row_count();
+    performance_data->output_chunk_count = _output->chunk_count();
   }
+  performance_data->walltime = performance_timer.lap();
+  performance_data->executed = true;
 
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
+  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
   // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
     if (lqp_node) {
-      [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
+      [[maybe_unused]] const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
         DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
-      } else if (std::dynamic_pointer_cast<const BaseNonQueryNode>(lqp_node) ||
+      } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // BaseNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
-        // for better compatibility with the console and the server. We do not assert anything here.
+        // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
+        // 'OK' for better compatibility with the console and the server. We do not assert anything here.
         // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
         // need to be tested.
       } else {
@@ -143,8 +143,6 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_right_input() const 
   return std::const_pointer_cast<AbstractOperator>(_right_input);
 }
 
-const OperatorPerformanceData& AbstractOperator::performance_data() const { return *_performance_data; }
-
 std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { return _left_input; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
@@ -196,7 +194,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
-      fn_stream << abstract_operator.performance_data() << ")";
+      fn_stream << *abstract_operator.performance_data;
+      fn_stream << ")";
     }
   };
 

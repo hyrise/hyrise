@@ -79,8 +79,8 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
-                                                          const UseMvcc use_mvcc = UseMvcc::No) {
+  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
+      const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
@@ -89,20 +89,7 @@ class SQLTranslatorTest : public BaseTest {
     const auto lqps = translation_result.lqp_nodes;
 
     Assert(lqps.size() == 1, "Expected just one LQP");
-    return lqps.at(0);
-  }
-
-  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, std::vector<ParameterID>> compile_prepared_query(
-      const std::string& query) {
-    hsql::SQLParserResult parser_result;
-    hsql::SQLParser::parseSQLString(query, &parser_result);
-    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
-
-    SQLTranslator sql_translator{UseMvcc::No};
-    const auto translation_result = sql_translator.translate_parser_result(parser_result);
-    const auto lqps = translation_result.lqp_nodes;
-    Assert(lqps.size() == 1, "Expected just one LQP");
-    return {lqps.at(0), translation_result.translation_info.parameter_ids_of_value_placeholders};
+    return {lqps.at(0), translation_result.translation_info};
   }
 
   static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
@@ -113,7 +100,7 @@ class SQLTranslatorTest : public BaseTest {
 };
 
 TEST_F(SQLTranslatorTest, NoFromClause) {
-  const auto actual_lqp = compile_query("SELECT 1 + 2;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT 1 + 2;");
 
   // clang-format off
   const auto expected_lqp =
@@ -125,7 +112,7 @@ TEST_F(SQLTranslatorTest, NoFromClause) {
 }
 
 TEST_F(SQLTranslatorTest, ExpressionStringTest) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a = 'b'");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float WHERE a = 'b'");
 
   // clang-format off
   const auto expected_lqp =
@@ -137,7 +124,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 }
 
 TEST_F(SQLTranslatorTest, SelectSingleColumn) {
-  const auto actual_lqp = compile_query("SELECT a FROM int_float;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a FROM int_float;");
 
   const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
 
@@ -145,8 +132,8 @@ TEST_F(SQLTranslatorTest, SelectSingleColumn) {
 }
 
 TEST_F(SQLTranslatorTest, SelectStar) {
-  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float;");
-  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float;");
+  const auto [actual_lqp_no_table, translation_info_no_table] = sql_to_lqp_helper("SELECT * FROM int_float;");
+  const auto [actual_lqp_table, translation_info] = sql_to_lqp_helper("SELECT int_float.* FROM int_float;");
 
   EXPECT_LQP_EQ(actual_lqp_no_table, stored_table_node_int_float);
   EXPECT_LQP_EQ(actual_lqp_table, stored_table_node_int_float);
@@ -158,8 +145,10 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
    */
 
   // "a + b" is a temporary column that shouldn't be in the output
-  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float ORDER BY a + b");
-  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float ORDER BY a + b");
+  const auto [actual_lqp_no_table, translation_info_no_table] =
+      sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a + b");
+  const auto [actual_lqp_table, translation_info] =
+      sql_to_lqp_helper("SELECT int_float.* FROM int_float ORDER BY a + b");
 
   // clang-format off
   const auto expected_lqp =
@@ -174,11 +163,11 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
 }
 
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
-  const auto actual_lqp_a = compile_query("SELECT a * b FROM int_float;");
-  const auto actual_lqp_b = compile_query("SELECT a / b FROM int_float;");
-  const auto actual_lqp_c = compile_query("SELECT a + b FROM int_float;");
-  const auto actual_lqp_d = compile_query("SELECT a - b FROM int_float;");
-  const auto actual_lqp_e = compile_query("SELECT a % b FROM int_float;");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT a * b FROM int_float;");
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper("SELECT a / b FROM int_float;");
+  const auto [actual_lqp_c, translation_info_c] = sql_to_lqp_helper("SELECT a + b FROM int_float;");
+  const auto [actual_lqp_d, translation_info_d] = sql_to_lqp_helper("SELECT a - b FROM int_float;");
+  const auto [actual_lqp_e, translation_info_e] = sql_to_lqp_helper("SELECT a % b FROM int_float;");
 
   // clang-format off
   const auto expected_lqp_a = ProjectionNode::make(expression_vector(mul_(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
@@ -197,7 +186,7 @@ TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
 
 TEST_F(SQLTranslatorTest, NestedArithmeticExpression) {
   // With parentheses: `(a*b) + ((a/b) % 5))`
-  const auto actual_lqp = compile_query("SELECT a * b + a / b % 5 FROM int_float;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a * b + a / b % 5 FROM int_float;");
 
   // clang-format off
   const auto expected_lqp =
@@ -209,7 +198,7 @@ TEST_F(SQLTranslatorTest, NestedArithmeticExpression) {
 }
 
 TEST_F(SQLTranslatorTest, CaseExpressionSimple) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT"
       "    CASE (a + b) * 3"
       "       WHEN 123 THEN 'Hello'"
@@ -232,7 +221,7 @@ TEST_F(SQLTranslatorTest, CaseExpressionSimple) {
 }
 
 TEST_F(SQLTranslatorTest, CaseExpressionSimpleNoElse) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT"
       "    CASE (a + b) * 3"
       "       WHEN 123 THEN 'Hello'"
@@ -254,7 +243,7 @@ TEST_F(SQLTranslatorTest, CaseExpressionSimpleNoElse) {
 }
 
 TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT"
       "    CASE"
       "       WHEN a = 123 THEN b"
@@ -277,7 +266,8 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAlias) {
-  const auto actual_lqp = compile_query("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
 
   const auto aliases = std::vector<std::string>{{"column_a", "b", "sum_column"}};
   const auto expressions = expression_vector(int_float_a, int_float_b, add_(int_float_b, int_float_a));
@@ -292,8 +282,8 @@ TEST_F(SQLTranslatorTest, SelectListAlias) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasUsedInWhere) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float WHERE a > 5");
-  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float WHERE x > 5");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT a AS x FROM int_float WHERE a > 5");
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper("SELECT a AS x FROM int_float WHERE x > 5");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -310,10 +300,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInWhere) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasUsedInGroupBy) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY a");
-  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x");
-  const auto actual_lqp_c = compile_query("SELECT a AS x FROM int_float GROUP BY int_float.a");
-  const auto actual_lqp_d = compile_query("SELECT a AS x FROM int_float GROUP BY int_float.x");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY a");
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY x");
+  const auto [actual_lqp_c, translation_info_c] =
+      sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY int_float.a");
+  const auto [actual_lqp_d, translation_info_d] =
+      sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY int_float.x");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -331,8 +323,10 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasUsedInGroupByAndHaving) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING a > 5");
-  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING x > 5");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY x HAVING a > 5");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT a AS x FROM int_float GROUP BY x HAVING x > 5");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -349,8 +343,10 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInGroupByAndHaving) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY a, b");
-  const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT a AS x, b AS y FROM int_float ORDER BY a, b");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
   const auto aliases = std::vector<std::string>({"x", "y"});
   const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Ascending});
@@ -367,9 +363,9 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
-  const auto actual_lqp_a = compile_query(
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper(
       "SELECT R.a, R.b FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.b = S.b");
-  const auto actual_lqp_b = compile_query(
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper(
       "SELECT R.c, R.d FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.d = S.b");
 
   const auto aliases = std::vector<std::string>({"c", "d"});
@@ -392,7 +388,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumns) {
-  const auto actual_lqp = compile_query("SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"a1", "b2", "b3", "a3", "b1", "a2"});
   const auto expressions =
@@ -409,7 +406,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumns) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
-  const auto actual_lqp = compile_query("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
   const auto aggregate = count_star_(stored_table_node_int_float);
@@ -427,7 +425,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float) AS R");
 
   const auto outer_aliases = std::vector<std::string>({"a1", "b2", "a3"});
@@ -449,8 +447,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery)
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubquery) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
   const auto aggregate = count_star_(stored_table_node_int_float);
@@ -473,19 +471,20 @@ TEST_F(SQLTranslatorTest, RepeatingAggregates) {
   // See #1902. Optimally, these queries would produce correct results. Until then, at least make sure they don't
   // produce any wrong ones.
 
-  EXPECT_THROW(compile_query("SELECT COUNT(*) FROM (SELECT COUNT(*) FROM t WHERE a <= 1234) t2"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COUNT(*) FROM (SELECT COUNT(*) FROM t WHERE a <= 1234) t2"),
                InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2"), InvalidInputException);
-
-  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) AS b FROM t GROUP BY a) t2"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2"),
                InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT AVG(a) FROM (SELECT a, AVG(a) FROM t GROUP BY a) t3"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COUNT(a) FROM (SELECT a, COUNT(a) AS b FROM t GROUP BY a) t2"),
+               InvalidInputException);
+
+  EXPECT_THROW(sql_to_lqp_helper("SELECT AVG(a) FROM (SELECT a, AVG(a) FROM t GROUP BY a) t3"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectAggregate) {
-  const auto actual_lqp = compile_query("SELECT COUNT(*) FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT COUNT(*) FROM int_float");
 
   const auto aggregate = count_star_(stored_table_node_int_float);
 
@@ -499,7 +498,7 @@ TEST_F(SQLTranslatorTest, SelectAggregate) {
 }
 
 TEST_F(SQLTranslatorTest, SelectAggregates) {
-  const auto actual_lqp = compile_query("SELECT COUNT(*), SUM(a + b) FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT COUNT(*), SUM(a + b) FROM int_float");
 
   const auto aggregate0 = count_star_(stored_table_node_int_float);
   const auto aggregate1 = sum_(add_(int_float_a, int_float_b));
@@ -515,7 +514,7 @@ TEST_F(SQLTranslatorTest, SelectAggregates) {
 }
 
 TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM ("
       "  SELECT COUNT(*) AS cnt1"
       "  FROM int_float"
@@ -544,8 +543,8 @@ TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsAndFromColumnAliasing) {
-  const auto actual_lqp =
-      compile_query("SELECT x AS x1, x AS x2, x AS x3, y AS y1, y AS y2, y AS y3 FROM int_float AS R (x, y)");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT x AS x1, x AS x2, x AS x3, y AS y1, y AS y2, y AS y3 FROM int_float AS R (x, y)");
 
   const auto aliases = std::vector<std::string>({"x1", "x2", "x3", "y1", "y2", "y3"});
   const auto expressions =
@@ -562,7 +561,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsAndFromColu
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryAndFromColumnAliasing) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT u, z, w FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float)"
       "AS R (y, x, v, w, u, z)");
 
@@ -585,7 +584,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryA
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInJoin) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT l.a1, l.a2, r.a1 FROM ("
       "  SELECT a AS a1, a AS a2 FROM int_float"
       ") AS l JOIN ("
@@ -613,7 +612,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInJoin)
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorrelatedSubquery) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT b AS b1, b AS b2 FROM int_float WHERE a < (SELECT MAX(b) FROM int_float2 WHERE int_float2.b > b1)");
 
   const auto aliases = std::vector<std::string>({"b1", "b2"});
@@ -638,7 +637,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorre
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
-  const auto result_node = compile_query("CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
+  const auto [result_node, translation_info] =
+      sql_to_lqp_helper("CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"x", "y"});
@@ -662,8 +662,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView) {
-  const auto result_node =
-      compile_query("CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+  const auto [result_node, translation_info] =
+      sql_to_lqp_helper("CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"a1", "a2"});
@@ -688,8 +688,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
 }
 
 TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInView) {
-  const auto result_node =
-      compile_query("CREATE VIEW alias_view (a3, a4) AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+  const auto [result_node, translation_info] =
+      sql_to_lqp_helper("CREATE VIEW alias_view (a3, a4) AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"a1", "a2"});
@@ -711,7 +711,7 @@ TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInV
 }
 
 TEST_F(SQLTranslatorTest, WhereSimple) {
-  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a FROM int_float WHERE a < 200;");
 
   // clang-format off
   const auto expected_lqp =
@@ -723,7 +723,7 @@ TEST_F(SQLTranslatorTest, WhereSimple) {
 }
 
 TEST_F(SQLTranslatorTest, WhereWithArithmetics) {
-  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a * b >= b + a;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a FROM int_float WHERE a * b >= b + a;");
 
   const auto a_times_b = mul_(int_float_a, int_float_b);
   const auto b_plus_a = add_(int_float_b, int_float_a);
@@ -739,9 +739,11 @@ TEST_F(SQLTranslatorTest, WhereWithArithmetics) {
 }
 
 TEST_F(SQLTranslatorTest, WhereWithLike) {
-  const auto actual_lqp_a = compile_query("SELECT * FROM int_string WHERE b LIKE '%test1%';");
-  const auto actual_lqp_b = compile_query("SELECT * FROM int_string WHERE b NOT LIKE '%test1%';");
-  const auto actual_lqp_c = compile_query("SELECT * FROM int_string WHERE b NOT LIKE CONCAT('%test1', '%');");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT * FROM int_string WHERE b LIKE '%test1%';");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE '%test1%';");
+  const auto [actual_lqp_c, translation_info_c] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE CONCAT('%test1', '%');");
 
   // clang-format off
   const auto expected_lqp_a = PredicateNode::make(like_(int_string_b, "%test1%"), stored_table_node_int_string);
@@ -757,7 +759,8 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
 }
 
 TEST_F(SQLTranslatorTest, WhereWithLogical) {
-  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE 5 >= b + a OR (a > 2 AND b > 2);");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT a FROM int_float WHERE 5 >= b + a OR (a > 2 AND b > 2);");
 
   const auto b_plus_a = add_(int_float_b, int_float_a);
 
@@ -775,7 +778,7 @@ TEST_F(SQLTranslatorTest, WhereWithLogical) {
 }
 
 TEST_F(SQLTranslatorTest, WhereWithBetween) {
-  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a BETWEEN b and 5;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a FROM int_float WHERE a BETWEEN b and 5;");
 
   const auto a_times_b = mul_(int_float_a, int_float_b);
   const auto b_plus_a = add_(int_float_b, int_float_a);
@@ -791,7 +794,7 @@ TEST_F(SQLTranslatorTest, WhereWithBetween) {
 }
 
 TEST_F(SQLTranslatorTest, WhereIsNull) {
-  const auto actual_lqp = compile_query("SELECT b FROM int_float WHERE a + b IS NULL;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT b FROM int_float WHERE a + b IS NULL;");
 
   // clang-format off
   const auto expected_lqp =
@@ -804,7 +807,7 @@ TEST_F(SQLTranslatorTest, WhereIsNull) {
 }
 
 TEST_F(SQLTranslatorTest, WhereIsNotNull) {
-  const auto actual_lqp = compile_query("SELECT b FROM int_float WHERE a IS NOT NULL;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT b FROM int_float WHERE a IS NOT NULL;");
 
   // clang-format off
   const auto expected_lqp =
@@ -817,8 +820,8 @@ TEST_F(SQLTranslatorTest, WhereIsNotNull) {
 }
 
 TEST_F(SQLTranslatorTest, WhereExists) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
@@ -835,7 +838,7 @@ TEST_F(SQLTranslatorTest, WhereExists) {
 }
 
 TEST_F(SQLTranslatorTest, WhereNotExists) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float WHERE NOT EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
@@ -853,8 +856,8 @@ TEST_F(SQLTranslatorTest, WhereNotExists) {
 }
 
 TEST_F(SQLTranslatorTest, WhereWithCorrelatedSubquery) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float WHERE a > (SELECT MIN(a + int_float.b) FROM int_float2);");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float WHERE a > (SELECT MIN(a + int_float.b) FROM int_float2);");
 
   const auto parameter_b = correlated_parameter_(ParameterID{0}, int_float_b);
 
@@ -874,14 +877,15 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSubquery) {
 }
 
 TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
-  const auto actual_lqp_a = compile_query("SELECT * FROM int_float WHERE NOT (a = b);");
-  const auto actual_lqp_b = compile_query("SELECT * FROM int_float WHERE NOT (a != b);");
-  const auto actual_lqp_c = compile_query("SELECT * FROM int_float WHERE NOT (a > b);");
-  const auto actual_lqp_d = compile_query("SELECT * FROM int_float WHERE NOT (a < b);");
-  const auto actual_lqp_e = compile_query("SELECT * FROM int_float WHERE NOT (a >= b);");
-  const auto actual_lqp_f = compile_query("SELECT * FROM int_float WHERE NOT (a <= b);");
-  const auto actual_lqp_g = compile_query("SELECT * FROM int_float WHERE NOT (a IS NULL);");
-  const auto actual_lqp_h = compile_query("SELECT * FROM int_float WHERE NOT (a IS NOT NULL);");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a = b);");
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a != b);");
+  const auto [actual_lqp_c, translation_info_c] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a > b);");
+  const auto [actual_lqp_d, translation_info_d] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a < b);");
+  const auto [actual_lqp_e, translation_info_e] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a >= b);");
+  const auto [actual_lqp_f, translation_info_f] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a <= b);");
+  const auto [actual_lqp_g, translation_info_g] = sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a IS NULL);");
+  const auto [actual_lqp_h, translation_info_h] =
+      sql_to_lqp_helper("SELECT * FROM int_float WHERE NOT (a IS NOT NULL);");
 
   // clang-format off
   const auto expected_lqp_a = PredicateNode::make(not_equals_(int_float_a, int_float_b), stored_table_node_int_float);
@@ -905,7 +909,7 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
-  const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
 
   const auto a_times_3 = mul_(int_float_a, 3);
 
@@ -921,7 +925,8 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
-  const auto actual_lqp = compile_query("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");
 
   const auto select_list_expressions = expression_vector(int_float_b, sum_(int_float_a));
   const auto aliases = std::vector<std::string>({"b", "s"});
@@ -938,7 +943,8 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
-  const auto actual_lqp = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT b, COUNT(a) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
 
   // clang-format off
   const auto expected_lqp =
@@ -952,7 +958,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
 }
 
 TEST_F(SQLTranslatorTest, Distinct) {
-  const auto actual_lqp = compile_query("SELECT DISTINCT b FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT b FROM int_float");
 
   // clang-format off
   const auto expected_lqp =
@@ -964,7 +970,7 @@ TEST_F(SQLTranslatorTest, Distinct) {
 }
 
 TEST_F(SQLTranslatorTest, DistinctStar) {
-  const auto actual_lqp = compile_query("SELECT DISTINCT * FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT * FROM int_float");
 
   // clang-format off
   const auto expected_lqp =
@@ -976,7 +982,7 @@ TEST_F(SQLTranslatorTest, DistinctStar) {
 }
 
 TEST_F(SQLTranslatorTest, DistinctAndGroupBy) {
-  const auto actual_lqp = compile_query("SELECT DISTINCT b FROM int_float GROUP BY b");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT b FROM int_float GROUP BY b");
 
   // clang-format off
   const auto expected_lqp =
@@ -989,7 +995,8 @@ TEST_F(SQLTranslatorTest, DistinctAndGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
-  const auto actual_lqp = compile_query("SELECT DISTINCT b, SUM(a * 3) * b FROM int_float GROUP BY b");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT DISTINCT b, SUM(a * 3) * b FROM int_float GROUP BY b");
 
   const auto a_times_3 = mul_(int_float_a, 3);
 
@@ -1005,7 +1012,7 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithDistinctAndUnrelatedGroupBy) {
-  const auto actual_lqp = compile_query("SELECT DISTINCT MIN(a) FROM int_float GROUP BY b");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT MIN(a) FROM int_float GROUP BY b");
 
   const auto a_times_3 = mul_(int_float_a, 3);
 
@@ -1020,7 +1027,8 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndUnrelatedGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateCount) {
-  const auto actual_lqp_count_a = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b");
+  const auto [actual_lqp_count_a, translation_info_1] =
+      sql_to_lqp_helper("SELECT b, COUNT(a) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_a =
   AggregateNode::make(expression_vector(int_float_b), expression_vector(count_(int_float_a)),
@@ -1028,7 +1036,8 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_a, expected_lqp_a);
 
-  const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
+  const auto [actual_lqp_count_star, translation_info_2] =
+      sql_to_lqp_helper("SELECT b, COUNT(*) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_star =
   AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_(stored_table_node_int_float)),
@@ -1036,8 +1045,8 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_star, expected_lqp_star);
 
-  const auto actual_lqp_count_distinct_a_plus_b =
-      compile_query("SELECT a, b, COUNT(DISTINCT a + b) FROM int_float GROUP BY a, b");
+  const auto [actual_lqp_count_distinct_a_plus_b, translation_info_3] =
+      sql_to_lqp_helper("SELECT a, b, COUNT(DISTINCT a + b) FROM int_float GROUP BY a, b");
   // clang-format off
   const auto expected_lqp_count_distinct_a_plus_b =
   AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(count_distinct_(add_(int_float_a, int_float_b))),  // NOLINT
@@ -1046,7 +1055,8 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
 
-  const auto actual_lqp_count_1 = compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  const auto [actual_lqp_count_1, translation_info_4] =
+      sql_to_lqp_helper("SELECT a, COUNT(1) FROM int_float GROUP BY a");
   // clang-format off
   const auto expected_lqp_count_1 =
   AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
@@ -1057,7 +1067,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
 }
 
 TEST_F(SQLTranslatorTest, GroupByOnly) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, a, b");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float GROUP BY b + 3, a / b, a, b");
 
   const auto b_plus_3 = add_(int_float_b, 3);
   const auto a_divided_by_b = div_(int_float_a, int_float_b);
@@ -1075,7 +1085,8 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
-  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY a, y, b");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY a, y, b");
 
   const auto sum_a_plus_b = sum_(add_(int_float_a, int_float_b));
   const auto b_plus_3 = add_(int_float_b, 3);
@@ -1098,8 +1109,8 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcardTwoTables) {
   // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
-  const auto actual_lqp =
-      compile_query("SELECT t1.*, t2.a, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT t1.*, t2.a, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a");
 
   // clang-format off
   const auto expected_lqp =
@@ -1113,7 +1124,8 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcardTwoTables) {
 TEST_F(SQLTranslatorTest, AggregateForwarding) {
   // Test that a referenced Aggregate does not result in redundant (and illegal!) AggregateNodes
 
-  const auto actual_lqp = compile_query("SELECT x + 3 FROM (SELECT MIN(a) as x FROM int_float) AS t;");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT x + 3 FROM (SELECT MIN(a) as x FROM int_float) AS t;");
 
   // clang-format off
   const auto expected_lqp =
@@ -1129,7 +1141,8 @@ TEST_F(SQLTranslatorTest, AggregateForwarding) {
 TEST_F(SQLTranslatorTest, ProjectedAggregateForwarding) {
   // Test that a referenced Aggregate does not result in redundant (and illegal!) AggregateNodes
 
-  const auto actual_lqp = compile_query("SELECT x + 3 FROM (SELECT MIN(a) - 1 as x FROM int_float) AS t;");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT x + 3 FROM (SELECT MIN(a) - 1 as x FROM int_float) AS t;");
 
   // clang-format off
   const auto expected_lqp =
@@ -1144,9 +1157,12 @@ TEST_F(SQLTranslatorTest, ProjectedAggregateForwarding) {
 }
 
 TEST_F(SQLTranslatorTest, SubqueryFromSimple) {
-  const auto actual_lqp_a = compile_query("SELECT z.x, z.a, z.b FROM (SELECT a + b AS x, * FROM int_float) AS z");
-  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT a + b AS x, * FROM int_float) AS z");
-  const auto actual_lqp_c = compile_query("SELECT z.* FROM (SELECT a + b AS x, * FROM int_float) AS z");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT z.x, z.a, z.b FROM (SELECT a + b AS x, * FROM int_float) AS z");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT * FROM (SELECT a + b AS x, * FROM int_float) AS z");
+  const auto [actual_lqp_c, translation_info_c] =
+      sql_to_lqp_helper("SELECT z.* FROM (SELECT a + b AS x, * FROM int_float) AS z");
 
   const auto expressions = expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b);
   const auto aliases = std::vector<std::string>({"x", "a", "b"});
@@ -1165,7 +1181,8 @@ TEST_F(SQLTranslatorTest, SubqueryFromSimple) {
 }
 
 TEST_F(SQLTranslatorTest, SubquerySelectList) {
-  const auto actual_lqp = compile_query("SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f");
 
   // clang-format off
   const auto parameter_d = correlated_parameter_(ParameterID{0}, int_float5_d);
@@ -1187,7 +1204,7 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 }
 
 TEST_F(SQLTranslatorTest, OrderByTest) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
   const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
 
@@ -1203,7 +1220,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
 }
 
 TEST_F(SQLTranslatorTest, InArray) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1215,7 +1232,7 @@ TEST_F(SQLTranslatorTest, InArray) {
 }
 
 TEST_F(SQLTranslatorTest, NotInArray) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 NOT IN (1+2,3,4)");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float WHERE a + 7 NOT IN (1+2,3,4)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1227,7 +1244,8 @@ TEST_F(SQLTranslatorTest, NotInArray) {
 }
 
 TEST_F(SQLTranslatorTest, InSelect) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (SELECT * FROM int_float2)");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float WHERE a + 7 IN (SELECT * FROM int_float2)");
 
   // clang-format off
   const auto subquery_lqp = stored_table_node_int_float2;
@@ -1243,7 +1261,7 @@ TEST_F(SQLTranslatorTest, InSelect) {
 }
 
 TEST_F(SQLTranslatorTest, InCorrelatedSubquery) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float WHERE a IN (SELECT * FROM int_float2 WHERE int_float.b * int_float.a * int_float.a > "
       "b)");
 
@@ -1270,12 +1288,14 @@ TEST_F(SQLTranslatorTest, InCorrelatedSubquery) {
 }
 
 TEST_F(SQLTranslatorTest, JoinSimple) {
-  const auto actual_lqp_a = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a");
-  const auto actual_lqp_b = compile_query("SELECT * FROM int_float LEFT JOIN int_float2 ON int_float2.a > int_float.a");
-  const auto actual_lqp_c =
-      compile_query("SELECT * FROM int_float RIGHT JOIN int_float2 ON int_float2.a > int_float.a");
-  const auto actual_lqp_d =
-      compile_query("SELECT * FROM int_float FULL OUTER JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT * FROM int_float LEFT JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto [actual_lqp_c, translation_info_c] =
+      sql_to_lqp_helper("SELECT * FROM int_float RIGHT JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto [actual_lqp_d, translation_info_d] =
+      sql_to_lqp_helper("SELECT * FROM int_float FULL OUTER JOIN int_float2 ON int_float2.a > int_float.a");
 
   const auto a_gt_a = greater_than_(int_float2_a, int_float_a);
   const auto node_a = stored_table_node_int_float;
@@ -1293,7 +1313,8 @@ TEST_F(SQLTranslatorTest, JoinSimple) {
 }
 
 TEST_F(SQLTranslatorTest, JoinCrossSelectStar) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
 
   // clang-format off
   const auto expected_lqp =
@@ -1309,8 +1330,8 @@ TEST_F(SQLTranslatorTest, JoinCrossSelectStar) {
 }
 
 TEST_F(SQLTranslatorTest, JoinCrossSelectElements) {
-  const auto actual_lqp =
-      compile_query("SELECT int_float5.d, t.* FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT int_float5.d, t.* FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
 
   // clang-format off
   const auto expected_lqp =
@@ -1327,7 +1348,8 @@ TEST_F(SQLTranslatorTest, JoinCrossSelectElements) {
 }
 
 TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
-  const auto actual_lqp_left = compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a = b.a;");
+  const auto [actual_lqp_left, translation_info_1] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a = b.a;");
 
   // clang-format off
   const auto expected_lqp_left =
@@ -1338,7 +1360,8 @@ TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
 
   EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
 
-  const auto actual_lqp_right = compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a = b.a;");
+  const auto [actual_lqp_right, translation_info_2] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a = b.a;");
 
   // clang-format off
   const auto expected_lqp_right =
@@ -1348,7 +1371,8 @@ TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
 
-  const auto actual_lqp_full = compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.a;");
+  const auto [actual_lqp_full, translation_info_3] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.a;");
 
   // clang-format off
   const auto expected_lqp_full_outer =
@@ -1363,7 +1387,7 @@ TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
 TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
 
-  const auto actual_lqp_left = compile_query(
+  const auto [actual_lqp_left, translation_info_1] = sql_to_lqp_helper(
       "SELECT"
       "  * "
       "FROM "
@@ -1383,7 +1407,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
 
   EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
 
-  const auto actual_lqp_right = compile_query(
+  const auto [actual_lqp_right, translation_info_2] = sql_to_lqp_helper(
       "SELECT"
       "  * "
       "FROM "
@@ -1407,23 +1431,23 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
 TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
   // See #1436
 
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
                InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
                InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
                InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
                InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   // Also test that columns can be referenced after a natural join
 
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT "
       "  * "
       "FROM "
@@ -1448,7 +1472,7 @@ TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
 TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   // Test that the Natural join can work with column aliases and that the output columns have the correct name
 
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT "
       "  * "
       "FROM "
@@ -1471,7 +1495,7 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
 
   // clang-format off
@@ -1488,8 +1512,8 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float AS m1 JOIN int_float AS m2 ON m1.a * 3 = m2.a - 5 OR m1.a > 20;");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS m1 JOIN int_float AS m2 ON m1.a * 3 = m2.a - 5 OR m1.a > 20;");
 
   // clang-format off
   const auto a_times_3 = mul_(int_float_a, 3);
@@ -1509,8 +1533,10 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
-  const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
-  const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
 
   // clang-format off
   const auto expected_lqp =
@@ -1525,8 +1551,8 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
-  const auto actual_lqp =
-      compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1542,8 +1568,10 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
 TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
   // Tricky: Columns "switch names". a becomes b and b becomes a
 
-  const auto actual_lqp_a = compile_query("SELECT * FROM int_float AS t (b, a) WHERE b = t.a");
-  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT * FROM int_float) AS t (b, a) WHERE b = t.a");
+  const auto [actual_lqp_a, translation_info_a] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS t (b, a) WHERE b = t.a");
+  const auto [actual_lqp_b, translation_info_b] =
+      sql_to_lqp_helper("SELECT * FROM (SELECT * FROM int_float) AS t (b, a) WHERE b = t.a");
 
   // clang-format off
   const auto expected_lqp =
@@ -1559,11 +1587,11 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
 TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   // Tricky: Tables "switch names". int_float becomes int_float2 and int_float2 becomes int_float
 
-  const auto actual_lqp_a = compile_query(
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper(
       "SELECT int_float.y, int_float2.* "
       "FROM int_float AS int_float2 (a, b), int_float2 AS int_float(x,y) "
       "WHERE int_float.x = int_float2.b");
-  const auto actual_lqp_b = compile_query(
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper(
       "SELECT int_float.y, int_float2.* "
       "FROM (SELECT * FROM int_float) AS int_float2 (a, b), (SELECT * FROM int_float2) AS int_float(x,y) "
       "WHERE int_float.x = int_float2.b");
@@ -1583,7 +1611,7 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
 }
 
 TEST_F(SQLTranslatorTest, SameColumnForDifferentTableNames) {
-  const auto actual_lqp = compile_query("SELECT R.a, S.a FROM int_float AS R, int_float AS S");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT R.a, S.a FROM int_float AS R, int_float AS S");
 
   // clang-format off
   const auto expected_lqp =
@@ -1598,14 +1626,15 @@ TEST_F(SQLTranslatorTest, SameColumnForDifferentTableNames) {
 
 TEST_F(SQLTranslatorTest, LimitLiteral) {
   // Most common case: LIMIT to a fixed number
-  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 1;");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float LIMIT 1;");
   const auto expected_lqp = LimitNode::make(value_(1), stored_table_node_int_float);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, LimitExpression) {
   // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated)
-  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
 
   // clang-format off
   const auto subquery =
@@ -1633,7 +1662,7 @@ TEST_F(SQLTranslatorTest, Extract) {
     std::stringstream query_str;
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
-    actual_lqp = compile_query(query_str.str());
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query_str.str());
     expected_lqp = ProjectionNode::make(expression_vector(extract_(component, "1993-08-01")), DummyTableNode::make());
 
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1641,7 +1670,7 @@ TEST_F(SQLTranslatorTest, Extract) {
 }
 
 TEST_F(SQLTranslatorTest, ValuePlaceholders) {
-  const auto actual_lqp = compile_query("SELECT a + ?, ? FROM int_float WHERE a > ?");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT a + ?, ? FROM int_float WHERE a > ?");
 
   // clang-format off
   const auto expected_lqp =
@@ -1656,12 +1685,13 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
 TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   // clang-format off
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT ? + (SELECT a + ? "
                   "FROM int_float2) "
       "FROM (SELECT a "
             "FROM int_float WHERE ? > (SELECT a + ? "
                                       "FROM int_string)) s1");
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 4u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
@@ -1747,7 +1777,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
                                           "FROM int_string)";
 
   // NOLINTNEXTLINE
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
+
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{1});
@@ -1809,9 +1841,9 @@ TEST_F(SQLTranslatorTest, UseMvcc) {
 }
 
 TEST_F(SQLTranslatorTest, Substr) {
-  const auto actual_lqp_a = compile_query("SELECT SUBSTR('Hello', 3, 2 + 3)");
-  const auto actual_lqp_b = compile_query("SELECT substr('Hello', 3, 2 + 3)");
-  const auto actual_lqp_c = compile_query("SELECT substring('Hello', 3, 2 + 3)");
+  const auto [actual_lqp_a, translation_info_a] = sql_to_lqp_helper("SELECT SUBSTR('Hello', 3, 2 + 3)");
+  const auto [actual_lqp_b, translation_info_b] = sql_to_lqp_helper("SELECT substr('Hello', 3, 2 + 3)");
+  const auto [actual_lqp_c, translation_info] = sql_to_lqp_helper("SELECT substring('Hello', 3, 2 + 3)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1825,7 +1857,7 @@ TEST_F(SQLTranslatorTest, Substr) {
 }
 
 TEST_F(SQLTranslatorTest, Exists) {
-  const auto actual_lqp = compile_query("SELECT EXISTS(SELECT * FROM int_float);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT EXISTS(SELECT * FROM int_float);");
 
   // clang-format off
   const auto expected_lqp =
@@ -1837,7 +1869,7 @@ TEST_F(SQLTranslatorTest, Exists) {
 }
 
 TEST_F(SQLTranslatorTest, NotExists) {
-  const auto actual_lqp = compile_query("SELECT NOT EXISTS(SELECT * FROM int_float);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT NOT EXISTS(SELECT * FROM int_float);");
 
   // clang-format off
   const auto expected_lqp =
@@ -1849,8 +1881,8 @@ TEST_F(SQLTranslatorTest, NotExists) {
 }
 
 TEST_F(SQLTranslatorTest, ExistsCorrelated) {
-  const auto actual_lqp =
-      compile_query("SELECT EXISTS(SELECT * FROM int_float WHERE int_float.a > int_float2.b) FROM int_float2");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT EXISTS(SELECT * FROM int_float WHERE int_float.a > int_float2.b) FROM int_float2");
 
   // clang-format off
   const auto subquery_lqp =
@@ -1867,7 +1899,7 @@ TEST_F(SQLTranslatorTest, ExistsCorrelated) {
 }
 
 TEST_F(SQLTranslatorTest, UnaryMinus) {
-  const auto actual_lqp = compile_query("SELECT -a FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT -a FROM int_float");
 
   // clang-format off
   const auto expected_lqp =
@@ -1879,16 +1911,17 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 }
 
 TEST_F(SQLTranslatorTest, ShowTables) {
-  const auto actual_lqp = compile_query("SHOW TABLES");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW TABLES");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, ShowColumns) {
-  const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW COLUMNS int_float");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1901,21 +1934,25 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
         static_table_node);
   // clang-format on
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTable) {
-  const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
-  const auto actual_lqp = compile_query("SELECT table_name FROM (SELECT table_name, column_count FROM " +
-                                        MetaTableManager::META_PREFIX + "tables) as subquery");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT table_name FROM (SELECT table_name, column_count FROM " +
+                        MetaTableManager::META_PREFIX + "tables) as subquery");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1929,12 +1966,48 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
       ProjectionNode::make(expression_vector(table_name_column, column_count_column), static_table_node);
   const auto expected_lqp = ProjectionNode::make(expression_vector(table_name_column), expected_subquery_lqp);
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectMetaTableTwoSubqueries) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * from meta_tables, (SELECT 1) as subquery");
+
+  EXPECT_EQ(translation_info.cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableInClauseNotCacheable) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float WHERE a in (SELECT column_count FROM " + MetaTableManager::META_PREFIX + "tables)");
+
+  EXPECT_EQ(translation_info.cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableOuterWithInClauseNotCacheable) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables WHERE column_count in (SELECT * FROM int_float2)");
+
+  EXPECT_EQ(translation_info.cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableExistsClauseNotCacheable) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT 1 WHERE EXISTS (SELECT * FROM " + MetaTableManager::META_PREFIX + "tables)");
+
+  EXPECT_EQ(translation_info.cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableOuterExistsClauseNotCacheable) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM  " + MetaTableManager::META_PREFIX + "tables WHERE EXISTS (SELECT 1)");
+
+  EXPECT_EQ(translation_info.cacheable, false);
+}
+
 TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
-  const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
-                                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
+                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1948,16 +2021,17 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   const auto table_2 = std::static_pointer_cast<StaticTableNode>(actual_lqp->right_input())->table;
   EXPECT_EQ(table_1, table_2);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
-  EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
-  EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
-  EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("DELETE FROM meta_tables;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, InsertValues) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float VALUES (10, 12.5);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO int_float VALUES (10, 12.5);");
 
   // clang-format off
   const auto expected_lqp =
@@ -1970,7 +2044,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float (b, a) VALUES (12.5, 10);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO int_float (b, a) VALUES (12.5, 10);");
 
   // clang-format off
   const auto expected_lqp =
@@ -1983,7 +2057,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float (b) VALUES (12.5);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO int_float (b) VALUES (12.5);");
 
   // clang-format off
   const auto expected_lqp =
@@ -1996,7 +2070,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
 }
 
 TEST_F(SQLTranslatorTest, InsertNull) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float (b, a) VALUES (12.5, NULL);");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO int_float (b, a) VALUES (12.5, NULL);");
 
   // clang-format off
   const auto expected_lqp =
@@ -2009,7 +2083,8 @@ TEST_F(SQLTranslatorTest, InsertNull) {
 }
 
 TEST_F(SQLTranslatorTest, InsertSubquery) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float SELECT a, b FROM int_float2 WHERE a > 5;");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("INSERT INTO int_float SELECT a, b FROM int_float2 WHERE a > 5;");
 
   // clang-format off
   const auto expected_lqp =
@@ -2022,7 +2097,7 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 }
 
 TEST_F(SQLTranslatorTest, InsertConvertibleType) {
-  const auto actual_lqp = compile_query("INSERT INTO int_float VALUES (5.5, 12)");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO int_float VALUES (5.5, 12)");
 
   // clang-format off
   const auto expected_lqp =
@@ -2035,7 +2110,7 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
-  const auto actual_lqp = compile_query("INSERT INTO meta_plugins VALUES ('foo');");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO meta_plugins VALUES ('foo');");
 
   // clang-format off
   const auto expected_lqp =
@@ -2045,15 +2120,16 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
       DummyTableNode::make()));
   // clang-format on
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DeleteWithoutMVCC) {
-  EXPECT_THROW(compile_query("DELETE FROM int_float;"), std::logic_error);
+  EXPECT_THROW(sql_to_lqp_helper("DELETE FROM int_float;"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, DeleteSimple) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DELETE FROM int_float", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
@@ -2066,7 +2142,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
 }
 
 TEST_F(SQLTranslatorTest, DeleteConditional) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DELETE FROM int_float WHERE a > 5", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
@@ -2080,7 +2156,8 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
 }
 
 TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
-  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("plugins");
   const auto select_node = StaticTableNode::make(meta_table);
@@ -2093,15 +2170,16 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
     DummyTableNode::make());
   // clang-format on
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, UpdateWithoutMVCC) {
-  EXPECT_THROW(compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;"), std::logic_error);
+  EXPECT_THROW(sql_to_lqp_helper("UPDATE int_float SET b = 3.2 WHERE a > 1;"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, UpdateUnconditional) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET b = b + 1", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("UPDATE int_float SET b = b + 1", UseMvcc::Yes);
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2119,7 +2197,8 @@ TEST_F(SQLTranslatorTest, UpdateUnconditional) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateConditional) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("UPDATE int_float SET b = 3.2 WHERE a > 1;", UseMvcc::Yes);
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2138,7 +2217,8 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateCast) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET a = b, b = 3 WHERE a > 1;", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("UPDATE int_float SET a = b, b = 3 WHERE a > 1;", UseMvcc::Yes);
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2157,7 +2237,8 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateMetaTable) {
-  const auto actual_lqp = compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("settings");
   const auto select_node = StaticTableNode::make(meta_table);
@@ -2179,12 +2260,13 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
       row_subquery_lqp));
   // clang-format on
 
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, CreateView) {
   const auto query = "CREATE VIEW my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
-  const auto result_node = compile_query(query);
+  const auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
   // clang-format off
   const auto select_list_expressions = expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b), mul_(int_float_a, int_float_b));  // NOLINT
@@ -2210,7 +2292,8 @@ TEST_F(SQLTranslatorTest, CreateView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
-  const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
@@ -2230,7 +2313,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
 TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
   const auto query = "CREATE VIEW IF NOT EXISTS my_first_view AS SELECT b, a FROM int_float WHERE a = 'b';";
-  const auto result_node = compile_query(query);
+  const auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
   const auto select_list_expressions = expression_vector(int_float_b, int_float_a);
 
@@ -2252,7 +2335,7 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
 
 TEST_F(SQLTranslatorTest, DropView) {
   const auto query = "DROP VIEW my_third_view";
-  auto result_node = compile_query(query);
+  auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
   const auto lqp = DropViewNode::make("my_third_view", false);
 
@@ -2261,7 +2344,7 @@ TEST_F(SQLTranslatorTest, DropView) {
 
 TEST_F(SQLTranslatorTest, DropViewIfExists) {
   const auto query = "DROP VIEW IF EXISTS my_third_view";
-  auto result_node = compile_query(query);
+  auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
   const auto lqp = DropViewNode::make("my_third_view", true);
 
@@ -2269,7 +2352,7 @@ TEST_F(SQLTranslatorTest, DropViewIfExists) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTable) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
       "NULL)");
 
@@ -2286,7 +2369,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "CREATE TABLE IF NOT EXISTS a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string "
       "VARCHAR(10) NOT NULL)");
 
@@ -2303,7 +2386,7 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
-  const auto actual_lqp = compile_query("CREATE TABLE a_table AS SELECT * FROM int_float");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("CREATE TABLE a_table AS SELECT * FROM int_float");
 
   const auto stored_table_node = StoredTableNode::make("int_float");
   const auto expected_lqp = CreateTableNode::make("a_table", false, stored_table_node);
@@ -2312,7 +2395,7 @@ TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
 }
 
 TEST_F(SQLTranslatorTest, DropTable) {
-  const auto actual_lqp = compile_query("DROP TABLE a_table");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE a_table");
 
   const auto expected_lqp = DropTableNode::make("a_table", false);
 
@@ -2320,7 +2403,7 @@ TEST_F(SQLTranslatorTest, DropTable) {
 }
 
 TEST_F(SQLTranslatorTest, DropTableIfExists) {
-  const auto actual_lqp = compile_query("DROP TABLE IF EXISTS a_table");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE IF EXISTS a_table");
 
   const auto expected_lqp = DropTableNode::make("a_table", true);
 
@@ -2328,7 +2411,8 @@ TEST_F(SQLTranslatorTest, DropTableIfExists) {
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
-  const auto actual_lqp = compile_query("PREPARE some_prepared_plan FROM 'SELECT a AS x FROM int_float'");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("PREPARE some_prepared_plan FROM 'SELECT a AS x FROM int_float'");
 
   // clang-format off
   const auto statement_lqp =
@@ -2344,7 +2428,7 @@ TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithParameters) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float "
       "WHERE a > ? AND b < ?'");
 
@@ -2367,7 +2451,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubquery) {
   // Correlated subqueries and prepared statement's parameters both use the ParameterID system, so let's test that they
   // cooperate
 
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float WHERE a > ? AND"
       " a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND"
       " b < ?'");
@@ -2418,7 +2502,7 @@ TEST_F(SQLTranslatorTest, Execute) {
 
   Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
 
-  const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
   // clang-format off
   const auto execute_subquery_lqp =
@@ -2445,7 +2529,7 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   Hyrise::get().storage_manager.add_prepared_plan("another_prepared_plan", prepared_plan);
 
-  const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE another_prepared_plan ()");
 
   EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
 }
@@ -2458,52 +2542,53 @@ TEST_F(SQLTranslatorTest, OperatorPrecedence) {
    */
 
   // clang-format off
-  EXPECT_LQP_EQ(compile_query("SELECT 1 + 2 * 3 / -4"), ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), -4))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(compile_query("SELECT 1 + 2 * 3 / 4"), ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), 4))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(compile_query("SELECT 3 + 5 % 3"), ProjectionNode::make(expression_vector(add_(3, mod_(5, 3))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(compile_query("SELECT 3 + 5 > 4 / 2"), ProjectionNode::make(expression_vector(greater_than_(add_(3, 5), div_(4, 2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(compile_query("SELECT 5 < 3 == 2 < 1"), ProjectionNode::make(expression_vector(equals_(less_than_(5, 3), less_than_(2, 1))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(compile_query("SELECT 1 OR 2 AND 3 OR 4"), ProjectionNode::make(expression_vector(or_(or_(1, and_(2, 3)), 4)), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2 * 3 / -4").first, ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), -4))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2 * 3 / 4").first, ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), 4))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 3 + 5 % 3").first, ProjectionNode::make(expression_vector(add_(3, mod_(5, 3))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 3 + 5 > 4 / 2").first, ProjectionNode::make(expression_vector(greater_than_(add_(3, 5), div_(4, 2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 5 < 3 == 2 < 1").first, ProjectionNode::make(expression_vector(equals_(less_than_(5, 3), less_than_(2, 1))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 OR 2 AND 3 OR 4").first, ProjectionNode::make(expression_vector(or_(or_(1, and_(2, 3)), 4)), DummyTableNode::make()));  // NOLINT
   // clang-format on
 }
 
 TEST_F(SQLTranslatorTest, CatchInputErrors) {
-  EXPECT_THROW(compile_query("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT SUM(b) FROM int_string;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a FROM int_string GROUP BY a HAVING SUM(b) > 2;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
-               InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT no_such_function(5+3);"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT no_such_column FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM no_such_table;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT SUM(b) FROM int_string;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_string GROUP BY a HAVING SUM(b) > 2;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
+      InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
-  EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a AS b FROM int_float WHERE b > 5"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a AS b FROM int_float GROUP BY int_float.b"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a AS b, b AS a FROM int_float WHERE a > 5"), InvalidInputException);
-  EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
-  EXPECT_THROW(compile_query("INSERT INTO no_such_table (a) VALUES (1);"), InvalidInputException);
-  EXPECT_THROW(compile_query("DELETE FROM no_such_table"), InvalidInputException);
-  EXPECT_THROW(compile_query("DELETE FROM no_such_table WHERE a = 1"), InvalidInputException);
-  EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1"), InvalidInputException);
-  EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
-  EXPECT_THROW(compile_query("WITH q AS (SELECT * FROM int_float), q AS (SELECT b FROM q) SELECT * FROM q;"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a AS b FROM int_float WHERE b > 5"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a AS b FROM int_float GROUP BY int_float.b"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a AS b, b AS a FROM int_float WHERE a > 5"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("INSERT INTO no_such_table (a) VALUES (1);"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("DELETE FROM no_such_table"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("DELETE FROM no_such_table WHERE a = 1"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("UPDATE no_such_table SET a = 1"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("WITH q AS (SELECT * FROM int_float), q AS (SELECT b FROM q) SELECT * FROM q;"),
                InvalidInputException);
-  EXPECT_THROW(compile_query("COPY no_such_table TO 'a_file.tbl';"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FROM meta_unknown;"), InvalidInputException);
-  EXPECT_THROW(compile_query("UPDATE meta_unknown SET a = 1;"), InvalidInputException);
-  EXPECT_THROW(compile_query("DELETE FROM meta_unknown;"), InvalidInputException);
-  EXPECT_THROW(compile_query("INSERT INTO meta_unknown (a) VALUES(1);"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("COPY no_such_table TO 'a_file.tbl';"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM meta_unknown;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("UPDATE meta_unknown SET a = 1;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("DELETE FROM meta_unknown;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("INSERT INTO meta_unknown (a) VALUES(1);"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT a, b FROM int_int_int) "
       "SELECT * FROM wq WHERE a > 123;");
@@ -2522,7 +2607,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT a AS x FROM int_int_int) "
       "SELECT * FROM wq WHERE x > 123;");
@@ -2545,7 +2630,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT a AS x FROM int_int_int WHERE a > 123) "
       "SELECT x AS z FROM wq;");
@@ -2568,7 +2653,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupBy) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT a, SUM(b) FROM int_int_int GROUP BY a) "
       "SELECT * FROM wq;");
@@ -2585,7 +2670,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT a, SUM(b) AS sum FROM int_int_int GROUP BY a) "
       "SELECT * FROM wq WHERE sum > 10;");
@@ -2610,7 +2695,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq1 AS (SELECT a AS a1, b AS b1 FROM int_float), "
       "wq2 AS (SELECT a AS a2, b AS b2 FROM int_float2) "
@@ -2640,7 +2725,7 @@ TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesSimple) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq1 AS (SELECT a, b FROM int_int_int), "
       "wq2 AS (SELECT b FROM wq1) "
@@ -2661,7 +2746,7 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesSimple) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq1 AS (SELECT a, b FROM int_int_int WHERE a > 9), "
       "wq2 AS (SELECT b AS z FROM wq1 WHERE b >= 10) "
@@ -2691,12 +2776,13 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
 
 TEST_F(SQLTranslatorTest, WithClausePlaceholders) {
   // clang-format off
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT ?, a, b "
              "FROM int_int_int WHERE a > ?) "
       "SELECT ?, a "
       "FROM (SELECT * FROM wq WHERE b = ?) AS t WHERE a = ?;");
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{0});
@@ -2727,12 +2813,12 @@ TEST_F(SQLTranslatorTest, WithClausePlaceholders) {
 
 TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
   // Check StorageManager for existance of table int_float
-  const auto pre_condition_lqp_actual = compile_query("SELECT * FROM int_float;");
+  const auto [pre_condition_lqp_actual, translation_info_1] = sql_to_lqp_helper("SELECT * FROM int_float;");
   const auto pre_condition_lqp_expected = stored_table_node_int_float;
   EXPECT_LQP_EQ(pre_condition_lqp_actual, pre_condition_lqp_expected);
 
   // Mask StorageManager's int_float table via WITH clause
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info_2] = sql_to_lqp_helper(
       "WITH "
       "int_float AS (SELECT a, b FROM int_int_int) "
       "SELECT * FROM int_float;");
@@ -2747,7 +2833,7 @@ TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
 }
 
 TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info_2] = sql_to_lqp_helper(
       "SELECT a FROM int_float "
       "EXCEPT "
       "SELECT a FROM int_float2;");
@@ -2763,7 +2849,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
 }
 
 TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT a FROM int_float "
       "INTERSECT "
       "SELECT a FROM int_float2;");
@@ -2779,7 +2865,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
 }
 
 TEST_F(SQLTranslatorTest, MultiSetOperations) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT a FROM int_int_int "
       "INTERSECT "
       "SELECT b FROM int_int_int "
@@ -2799,7 +2885,7 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
 }
 
 TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
-  const auto actual_lqp = compile_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "(SELECT a FROM int_int_int ORDER by a) "
       "INTERSECT "
       "(SELECT b FROM int_int_int "
@@ -2826,27 +2912,27 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {
-    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl';");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl';");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -2855,34 +2941,34 @@ TEST_F(SQLTranslatorTest, CopyStatementImport) {
 TEST_F(SQLTranslatorTest, CopyStatementExport) {
   // clang-format off
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl';");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';");
     const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); //NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl';", UseMvcc::Yes);
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';", UseMvcc::Yes);
     const auto expected_lqp =
       ExportNode::make("int_float", "a_file.tbl", FileType::Auto,
         ValidateNode::make(stored_table_node_int_float));
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
     const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Tbl, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
     const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Csv, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
     const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
     const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -2891,22 +2977,22 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
 
 TEST_F(SQLTranslatorTest, ImportStatement) {
   {
-    const auto actual_lqp = compile_query("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto actual_lqp = compile_query("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }

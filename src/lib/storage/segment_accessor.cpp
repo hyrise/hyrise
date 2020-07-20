@@ -5,7 +5,7 @@
 namespace opossum::detail {
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
-    const std::shared_ptr<const BaseSegment>& segment) {
+    const std::shared_ptr<const AbstractSegment>& segment) {
   std::unique_ptr<AbstractSegmentAccessor<T>> accessor;
   resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;

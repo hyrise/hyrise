@@ -14,7 +14,7 @@ size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOf
   return row_count * sizeof(ChunkOffset) + distinct_count * sizeof(std::size_t);
 }
 
-GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
+GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
       _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
                            ? nullptr              // but range check needed for accessing the first segment
@@ -128,7 +128,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_get_positions_iterator_at(ValueID value_
   return iter;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segments() const {
+std::vector<std::shared_ptr<const AbstractSegment>> GroupKeyIndex::_get_indexed_segments() const {
   return {_indexed_segment};
 }
 
