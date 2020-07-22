@@ -346,6 +346,4 @@ if github_format:
 else:
     result = create_context_overview(old_data, new_data, github_format) + "\n\n" + result
 
-print("")
 print(result)
-print("")
