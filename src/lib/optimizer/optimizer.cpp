@@ -95,11 +95,13 @@ std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   // Constant expressions can only be reduced when the predicate values are substitued.
   // However, this does not work if the predicate originates from a dummy table
   // See: SELECT * FROM meta_system_information WHERE cpu_count IN (SELECT 14 + 1)
-  // optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
@@ -119,7 +121,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
-  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+  //This rule cannot work properly on PlaceholderExpressions
+  //optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
@@ -130,7 +133,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
-  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+  //This rule cannot work properly on PlaceholderExpressions
+  //optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
@@ -161,8 +165,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
-
-  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   return optimizer;
 }
