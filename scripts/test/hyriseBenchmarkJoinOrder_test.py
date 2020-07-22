@@ -29,7 +29,7 @@ def main():
     arguments["--clients"] = "1"
     arguments["--scheduler"] = "false"
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
@@ -102,7 +102,7 @@ def main():
         print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
         return_error = True
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     arguments = {}
     arguments["--table_path"] = "'resources/test_data/imdb_sample/'"

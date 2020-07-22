@@ -34,7 +34,7 @@ def main():
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
 
@@ -69,7 +69,7 @@ def main():
         print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
         return_error = True
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     if not os.path.isfile(arguments["--output"].replace("'", "")):
         print("ERROR: Cannot find output file " + arguments["--output"])
