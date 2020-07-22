@@ -80,6 +80,12 @@ def create_context_overview(old_config, new_config, github_format):
         if old_value != new_value and key not in ignore_difference_for:
             color = "red"
             marker = "≠"
+
+        if key == "build_type" and (old_value == "debug" or new_value == "debug"):
+            # Always warn when non-release builds are benchmarked
+            color = "red"
+            marker = "!"
+
         table_lines.append([colored(marker + key, color), old_value, new_value])
 
     # print keys that are not present in both contexts
@@ -102,7 +108,7 @@ def create_context_overview(old_config, new_config, github_format):
         # the line in red.
         new_output = ''
         for line in table_output.splitlines():
-            marker = "-" if "≠" in line else " "
+            marker = "-" if ("≠" in line or "!" in line) else " "
             new_output += f"{marker}{line}\n"
         return new_output
 
@@ -142,12 +148,14 @@ diffs_throughput = []
 total_runtime_old = 0
 total_runtime_new = 0
 
-add_note_for_capped_runs = False
-add_note_for_insufficient_pvalue_runs = False
+add_note_for_capped_runs = False  # Flag set when max query runs was set for benchmark run
+add_note_for_insufficient_pvalue_runs = False  # Flag set when runs was insufficient for p-value calculation
 
-table_data = []
+
+# Create table header:
 # $latency and $thrghpt (abbreviated to keep the column at a max width of 8 chars) will later be replaced with a title
 # spanning two columns
+table_data = []
 table_data.append(["Item", "$latency", "", "Change", "$thrghpt", "", "Change", "p-value"])
 table_data.append(["", "old", "new", "", "old", "new", "", ""])
 
@@ -156,18 +164,18 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     if old["name"] != new["name"]:
         name += " -> " + new["name"]
 
+    # Create numpy arrays for old/new successfull/unsuccessful runs from benchmark dictionary
     old_successful_durations = np.array([run["duration"] for run in old["successful_runs"]], dtype=np.float64)
     new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype=np.float64)
     old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype=np.float64)
     new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype=np.float64)
-    old_iteration_count = len(old_successful_durations) + len(old_unsuccessful_durations)
-    new_iteration_count = len(new_successful_durations) + len(new_unsuccessful_durations)
     old_avg_successful_duration = np.mean(old_successful_durations)  # defaults to np.float64 for int input
     new_avg_successful_duration = np.mean(new_successful_durations)
 
     total_runtime_old += old_avg_successful_duration if not math.isnan(old_avg_successful_duration) else 0.0
     total_runtime_new += new_avg_successful_duration if not math.isnan(new_avg_successful_duration) else 0.0
 
+    # Check for duration==0 to avoid div/0
     if float(old_avg_successful_duration) > 0.0:
         diff_duration = float(new_avg_successful_duration / old_avg_successful_duration)
     else:
@@ -179,10 +187,13 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     else:
         diff_throughput = float("nan")
 
+    # Format the diffs (add colors and percentage output) and calculate p-value
     diff_throughput_formatted = color_diff(diff_throughput)
     diff_duration_formatted = color_diff(diff_duration, True)
     p_value_formatted = calculate_and_format_p_value(old_successful_durations, new_successful_durations)
 
+    old_iteration_count = len(old_successful_durations) + len(old_unsuccessful_durations)
+    new_iteration_count = len(new_successful_durations) + len(new_unsuccessful_durations)
     if (old_data["context"]["max_runs"] > 0 or new_data["context"]["max_runs"] > 0) and (
         old_iteration_count >= old_data["context"]["max_runs"] or new_iteration_count >= new_data["context"]["max_runs"]
     ):

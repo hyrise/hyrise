@@ -9,11 +9,6 @@ from compareBenchmarkScriptTest import CompareBenchmarkScriptTest
 from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize, run_benchmark
 
 
-# This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.
-# During the first run, the shell output is validated using pexpect.
-# After the first run, this test checks if an output file was created and if it matches the arguments.
-# During the second run, the shell output is validated using pexpect
-# and the test checks if all queries were successfully verified with sqlite.
 def main():
     build_dir = initialize()
     compare_benchmarks_path = f"{build_dir}/../scripts/compare_benchmarks.py"
@@ -21,6 +16,8 @@ def main():
 
     return_error = False
 
+    # First, run TPC-H and validate it using pexpect. After this run, check if an output file was created and if it
+    # matches the arguments.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--use_prepared_statements"] = "true"
@@ -40,7 +37,7 @@ def main():
 
     benchmark.expect_exact(f"Writing benchmark results to '{output_filename}'")
     benchmark.expect_exact("Running in single-threaded mode")
-    benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
+    benchmark.expect_exact("1 simulated client is scheduling items")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
     benchmark.expect_exact("Encoding is 'Dictionary'")
     benchmark.expect_exact("Max duration per item is 10 seconds")
@@ -126,6 +123,7 @@ def main():
     close_benchmark(benchmark_comparison)
     check_exit_status(benchmark_comparison)
 
+    # Run TPC-H and validate its output using pexpect and check if all queries were successfully verified with sqlite.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--chunk_size"] = "10000"
@@ -159,7 +157,8 @@ def main():
     close_benchmark(benchmark)
     check_exit_status(benchmark)
 
-    # Finally test that pruning works end-to-end, that is from the command line parameter all the way to the visualizer
+    # Run TPC-H and create query plan visualizations. Test that pruning works end-to-end, that is from the command line
+    # parameter all the way to the visualizer.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--chunk_size"] = "10000"
@@ -189,6 +188,8 @@ def main():
     if return_error:
         sys.exit(1)
 
+    # The next two TPC-H runs are executed to create output files with which we check the output of the
+    # compare_benchmark.py script.
     output_filename_1 = f"{build_dir}/tpch_output_1.json"
     output_filename_2 = f"{build_dir}/tpch_output_2.json"
 
