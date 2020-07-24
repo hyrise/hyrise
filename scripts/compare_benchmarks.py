@@ -281,7 +281,7 @@ lines = double_vertical_separators(lines, [1, 4])
 # As the used terminaltables module does not support cells that span multiple columns, we do that manually for latency
 # and throughput in the header. We used two place holders that are narrow enough to not grow the column any wider than
 # necessary for the actual values. After manually changing the column title to span two column, we replace the place
-# holder the actual full descriptions.
+# holder with the actual full descriptions.
 for (placeholder, final) in [
     ("$thrghpt", "Throughput (iter/s)"),
     ("$latency", "Latency (ms/iter)"),
