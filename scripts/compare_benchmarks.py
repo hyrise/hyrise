@@ -164,7 +164,7 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     if old["name"] != new["name"]:
         name += " -> " + new["name"]
 
-    # Create numpy arrays for old/new successfull/unsuccessful runs from benchmark dictionary
+    # Create numpy arrays for old/new successful/unsuccessful runs from benchmark dictionary
     old_successful_durations = np.array([run["duration"] for run in old["successful_runs"]], dtype=np.float64)
     new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype=np.float64)
     old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype=np.float64)
@@ -195,15 +195,15 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     old_iteration_count = len(old_successful_durations) + len(old_unsuccessful_durations)
     new_iteration_count = len(new_successful_durations) + len(new_unsuccessful_durations)
     if (old_data["context"]["max_runs"] > 0 or new_data["context"]["max_runs"] > 0) and (
-        old_iteration_count >= old_data["context"]["max_runs"] or new_iteration_count >= new_data["context"]["max_runs"]
+        old_iteration_count == old_data["context"]["max_runs"] or new_iteration_count == new_data["context"]["max_runs"]
     ):
         note = colored("˄", "yellow", attrs=["bold"])
         add_note_for_capped_runs = True
     else:
         note = " "
 
-    # Note, we use column widths of 7 (latency) and 8 (throughput) for printing to ensure that we can later savely
-    # replace the latency/throughput marker and everything still fits nicely.
+    # We use column widths of 7 (latency) and 8 (throughput) for printing to ensure that we have enough space to
+    # replace the latency/throughput marker with a column header spanning multiple columns.
     table_data.append(
         [
             name,
@@ -279,8 +279,9 @@ lines = result.splitlines()
 lines = double_vertical_separators(lines, [1, 4])
 
 # As the used terminaltables module does not support cells that span multiple columns, we do that manually for latency
-# and throughput in the header. We used two space holders that are narrow enough to not grow the column any wider than
-# necessary for the actual values. As the new header spans two columns, we use the full descriptions.
+# and throughput in the header. We used two place holders that are narrow enough to not grow the column any wider than
+# necessary for the actual values. After manually changing the column title to span two column, we replace the place
+# holder the actual full descriptions.
 for (placeholder, final) in [
     ("$thrghpt", "Throughput (iter/s)"),
     ("$latency", "Latency (ms/iter)"),
@@ -295,7 +296,7 @@ for (placeholder, final) in [
             lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2:])
 
 
-# Swap second line of header with automatically added separator. Terminaltables does not support multi-line header. So
+# Swap second line of header with automatically added separator. Terminaltables does not support multi-line headers. So
 # we have the second header line as part of the results after a separator line. We need to swap these.
 lines[2], lines[3] = lines[3], lines[2]
 for (line_number, line) in enumerate(lines):
