@@ -35,7 +35,7 @@ def check_json(json, argument, error, return_error, difference=None):
 
 def initialize():
     if len(sys.argv) == 1:
-        print("Usage: ./scripts/test/{BENCHMARK_NAME}_test.py <build_dir>")
+        print(f"Usage: ./scripts/test/{os.path.basename(sys.argv[0])} <build_dir>")
         sys.exit(1)
 
     build_dir = sys.argv[1]
