@@ -42,7 +42,7 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
 
   for (ChunkOffset offset{0}; offset < _chunk->size(); offset++) {
     if (mvcc_data->get_end_cid(offset) != MvccData::MAX_COMMIT_ID) {
-      // The DELETE operator locks rows to delete them, but does not unlock on commit. TODO Bug or feature?
+      // The DELETE operator locks rows to delete them, but does not unlock them on commit (intentionally).
       continue;
     }
 
@@ -108,7 +108,7 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
 
   Assert(_chunk->invalid_row_count() == _chunk->size(), "only " + std::to_string(_chunk->invalid_row_count()) + " of " + std::to_string(_chunk->size()) + " marked invalid");
   _chunk->set_cleanup_commit_id(commit_id);
-  _unlock_chunk(_chunk);
+  // _unlock_chunk(_chunk);
 }
 
 // TODO do we need locks on the cluster-chunks that are added by this operator?

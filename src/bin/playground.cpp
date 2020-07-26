@@ -20,7 +20,7 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
-
+#include "sql/sql_pipeline_builder.hpp"
 
 #include "SQLParserResult.h"
 
@@ -92,6 +92,12 @@ int main(int argc, char* argv[]) {
       Hyrise::get().benchmark_runner = benchmark_runner;
 
       if (!plugin_loaded) {
+        //const std::string sql = "DELETE FROM lineitem WHERE l_orderkey = 1";
+        //std::cout << "Executing SQL: " << sql << std::endl;
+        //auto sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder(sql).create_pipeline());
+        //sql_pipeline->get_result_table();
+
+
         const std::string plugin_filename = argv[1];
         const std::filesystem::path plugin_path(plugin_filename);
         Hyrise::get().plugin_manager.load_plugin(plugin_path);
@@ -120,7 +126,7 @@ int main(int argc, char* argv[]) {
     std::cout << "- Scale factor is " << scale_factor << std::endl;
     auto query_files = tpcds_filename_whitelist();
     // TODO
-    query_files = {"93.sql"};
+    //query_files = {"93.sql"};
     std::vector<std::string> result_file_names{};
 
 
