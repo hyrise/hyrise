@@ -39,10 +39,11 @@ def run_benchmark(benchmark, config_name, chunk_size):
             stderr=sys.stderr
         )
   p.wait()
-  p = Popen(["mv", "lineitem.cs", output_file + ".cs" ])
-  p.wait()
-  p = Popen(["mv", "lineitem.stats", output_file + ".stats" ])
-  p.wait()
+  if benchmark.name().lower() == "tpch":
+    p = Popen(["mv", "lineitem.cs", output_file + ".cs" ])
+    p.wait()
+    p = Popen(["mv", "lineitem.stats", output_file + ".stats" ])
+    p.wait()
 
 def build_sort_order_string(sort_order_per_table):
   return json.dumps(sort_order_per_table)

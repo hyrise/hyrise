@@ -8,7 +8,7 @@ class TPCHBenchmark(AbstractBenchmark):
     return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch/cluster_size_experiments"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch/post_midterm"
 
   def max_runs(self):
     return -1
@@ -23,6 +23,41 @@ class TPCHBenchmark(AbstractBenchmark):
     return [65535]
 
   def sort_orders(self):
+    # Post-master-merge  2020-06-23
+
+    return {
+      'nosort': {},
+      'default': {
+        'lineitem': [['l_shipdate', 2]],
+        'orders': [['o_orderdate', 2]]
+      },
+      'l_orderkey-5_l_shipdate-20_l_orderkey-1_o_orderdate-2': {
+        'lineitem': [['l_orderkey', 5], ['l_shipdate', 20], ['l_orderkey', 1]],
+        'orders': [['o_orderdate', 2]]
+      },
+      'l_orderkey-5_l_shipdate-20_l_shipdate-1_o_orderdate-2': {
+        'lineitem': [['l_orderkey', 5], ['l_shipdate', 20], ['l_shipdate', 1]],
+        'orders': [['o_orderdate', 2]]
+      },
+      'l_orderkey-4_l_shipdate-25_l_orderkey-1_o_orderdate-2': {
+        'lineitem': [['l_orderkey', 4], ['l_shipdate', 25], ['l_orderkey', 1]],
+        'orders': [['o_orderdate', 2]]
+      },
+      'l_orderkey-12_l_partkey-8_l_orderkey-1_o_orderdate-2': {
+        'lineitem': [['l_orderkey', 12], ['l_partkey', 8], ['l_orderkey', 5]],
+        'orders': [['o_orderdate', 2]]
+      },
+      'l_shipdate-92_l_discount-1_o_orderdate-2': {
+        'lineitem': [['l_shipdate', 92], ['l_discount', 1]],
+        'orders': [['o_orderdate', 2]]
+      },
+    }
+
+
+
+
+
+
 ##
     return {
       'ex10-l_orderkey-2_l_shipdate-46_l_orderkey-1_o_orderdate-2': {

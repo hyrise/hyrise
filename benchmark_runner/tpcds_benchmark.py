@@ -8,10 +8,10 @@ class TPCDSBenchmark(AbstractBenchmark):
     return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpcds/joins_frequency_clusters"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpcds/tmp"
 
   def time(self):
-    return 60
+    return 10
 
   def max_runs(self):
     return -1
@@ -24,6 +24,79 @@ class TPCDSBenchmark(AbstractBenchmark):
     return [65535]
 
   def sort_orders(self):
+
+    # tmp
+    return {
+      'default':{},
+      'ss_sold_date_sk-6_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+
+    }
+
+    return {
+      'sr_ticket_number-5_sr_reason_sk-1': {'store_returns': [('sr_ticket_number',
+    5),
+   ('sr_reason_sk', 1)]},
+ 'sr_customer_sk-3_sr_ticket_number-3_sr_reason_sk-1': {'store_returns': [('sr_customer_sk',
+    3),
+   ('sr_ticket_number', 3),
+   ('sr_reason_sk', 1)]},
+ 'sr_returned_date_sk-3_sr_ticket_number-3_sr_reason_sk-1': {'store_returns': [('sr_returned_date_sk',
+    3),
+   ('sr_ticket_number', 3),
+   ('sr_reason_sk', 1)]},
+ 'ws_sold_date_sk-4_ws_bill_addr_sk-4_ws_sold_date_sk-1': {'web_sales': [('ws_sold_date_sk',
+    4),
+   ('ws_bill_addr_sk', 4),
+   ('ws_sold_date_sk', 1)]},
+ 'ws_bill_addr_sk-4_ws_bill_customer_sk-4_ws_sold_date_sk-1': {'web_sales': [('ws_bill_addr_sk',
+    4),
+   ('ws_bill_customer_sk', 4),
+   ('ws_sold_date_sk', 1)]},
+ 'ws_bill_addr_sk-4_ws_item_sk-4_ws_sold_date_sk-1': {'web_sales': [('ws_bill_addr_sk',
+    4),
+   ('ws_item_sk', 4),
+   ('ws_sold_date_sk', 1)]},
+ 'cs_sold_date_sk-5_cs_bill_cdemo_sk-5_cs_sold_date_sk-1': {'catalog_sales': [('cs_sold_date_sk',
+    5),
+   ('cs_bill_cdemo_sk', 5),
+   ('cs_sold_date_sk', 1)]},
+ 'cs_sold_date_sk-5_cs_bill_customer_sk-5_cs_sold_date_sk-1': {'catalog_sales': [('cs_sold_date_sk',
+    5),
+   ('cs_bill_customer_sk', 5),
+   ('cs_sold_date_sk', 1)]},
+ 'cs_bill_customer_sk-5_cs_bill_cdemo_sk-5_cs_sold_date_sk-1': {'catalog_sales': [('cs_bill_customer_sk',
+    5),
+   ('cs_bill_cdemo_sk', 5),
+   ('cs_sold_date_sk', 1)]},
+    }
+
+    return {
+      'inv_date_sk-15_inv_item_sk-15_inv_date_sk-1': {
+        'inventory': [['inv_date_sk', 15], ['inv_item_sk', 15], ['inv_date_sk', 1]]
+      },
+      'inv_date_sk-15_inv_item_sk-15_inv_warehouse_sk-1': {
+        'inventory': [['inv_date_sk', 15], ['inv_item_sk', 15], ['inv_warehouse_sk', 1]]
+      },
+      'inv_item_sk-100_inv_date_sk-2': {
+        'inventory': [['inv_item_sk', 100], ['inv_date_sk', 2]]
+      },
+    }
+
+  # SF 1 RUNS -1
+    return {
+      'nosort': {},
+      'inv_item_sk-2': {
+        'inventory': [['inv_item_sk', 2]]
+      },
+      'inv_warehouse_sk-2': {
+        'inventory': [['inv_warehouse_sk', 2]]
+      },
+    }
+
+
 
   # SF 1 RUNS 1
     return  {'ss_sold_date_sk-6_ss_ticket_number-9_ss_sold_time_sk-1': {'store_sales': [('ss_sold_date_sk',
