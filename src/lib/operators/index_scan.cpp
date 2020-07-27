@@ -47,8 +47,9 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = _in_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
-      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+      // Commented out by Keven to fix the problem of empty include lists for several configurations
+      // Martin addressed the problem in issue #2187   
+      //jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   } else {
     jobs.reserve(included_chunk_ids.size());
