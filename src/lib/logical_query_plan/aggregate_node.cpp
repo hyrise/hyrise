@@ -140,9 +140,8 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 }
 
 std::vector<FunctionalDependency> AggregateNode::functional_dependencies() const {
-  // TODO(Julian)
 
-  // Add another FD? https://github.com/hyrise/hyrise/pull/2156#discussion_r452708322
+  // TODO(Julian) Add another FD? https://github.com/hyrise/hyrise/pull/2156#discussion_r452708322
 
   return _remove_invalid_fds(left_input()->functional_dependencies());
 }
