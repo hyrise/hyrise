@@ -38,7 +38,7 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
 
   /**
    * Generates a random last name based on a set of syllables
-   * @param i   a number, if less than 1000 it each digit represents a syllable
+   * @param i   a number, if less than 1000, each digit represents a syllable
    *            for i's greater than 1000 we calculate a non-uniform random number below 1000
    * @return    a String representing the last name
    */

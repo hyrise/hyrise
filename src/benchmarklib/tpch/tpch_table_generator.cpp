@@ -12,7 +12,7 @@ extern "C" {
 #include "benchmark_config.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table_key_constraint.hpp"
 #include "table_builder.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"

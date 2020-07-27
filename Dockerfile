@@ -1,3 +1,5 @@
+# IMPORTANT: Changes in this file do not automatically affect the Docker image used by the CI server.
+# You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
 FROM ubuntu:20.04
@@ -15,6 +17,7 @@ RUN apt-get update \
         clang-tidy-10 \
         cmake \
         curl \
+        dos2unix \
         g++-9 \
         gcc-9 \
         gcovr \
@@ -35,7 +38,7 @@ RUN apt-get update \
         parallel \
         postgresql-server-dev-all \
         python3 \
-        python3-pexpect \
+        python3-pip \
         software-properties-common \
         sudo \
         systemtap \

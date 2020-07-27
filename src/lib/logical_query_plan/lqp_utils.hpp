@@ -79,7 +79,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  *         /       \                                                                       \              /
  *  Predicate D     |                                                        Predicate B     ---  OR  ---
  *        |      Predicate E                                                        \             /
- *  Predicate C  ´  |                                                                 --- AND ---
+ *  Predicate C     |                                                                 --- AND ---
  *         \       /                                                                       |
  *        Projection                                                               returned expression
  *             |
@@ -164,5 +164,20 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
+ *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
+ *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
+ */
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                               const std::unordered_set<ColumnID>& column_ids);
+
+/**
+ * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
+ *         set of expressions. A unique constraint matches if it covers a subset of @param expressions.
+ */
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+                                         const ExpressionUnorderedSet& expressions);
 
 }  // namespace opossum

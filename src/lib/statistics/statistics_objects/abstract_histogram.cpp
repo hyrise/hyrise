@@ -499,14 +499,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto maximum = bin_maximum(value_bin_id);
       const auto distinct_count = bin_distinct_count(value_bin_id);
 
-      // Do not create empty bin, if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin
       const auto new_bin_count = minimum == maximum ? bin_count() - 1 : bin_count();
 
       GenericHistogramBuilder<T> builder{new_bin_count, _domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
-      // Do not create empty bin, if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
         // TODO(anybody) Implement bin bounds trimming for strings

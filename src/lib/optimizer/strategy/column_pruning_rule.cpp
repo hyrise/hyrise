@@ -123,7 +123,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     //   (1) were already computed and are re-used as arguments in this projection
     //   (2) cannot be computed (i.e., Aggregate and LQPColumn inputs)
     // PredicateNodes have the same requirements - if they have their own implementation, they require all columns to
-    // be already computed, if they use the ExpressionEvaluator the columns should at least be computable.
+    // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
       for (const auto& expression : node->node_expressions) {

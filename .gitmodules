@@ -10,9 +10,6 @@
 [submodule "third_party/cpplint"]
 	path = third_party/cpplint
 	url = https://github.com/cpplint/cpplint.git
-[submodule "third_party/cqf"]
-	path = third_party/cqf
-	url = https://github.com/ArneMayer/cqf.git
 [submodule "third_party/cxxopts"]
 	path = third_party/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
@@ -40,6 +37,7 @@
 [submodule "third_party/nlohmann_json"]
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
+	shallow = true
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser

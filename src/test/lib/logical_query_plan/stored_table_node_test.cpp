@@ -9,9 +9,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table_key_constraint.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -279,6 +280,80 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 
     EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
   }
+}
+
+TEST_F(StoredTableNodeTest, UniqueConstraints) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_a_b);
+  table->add_soft_key_constraint(key_constraint_c);
+
+  const auto& unique_constraints = _stored_table_node->unique_constraints();
+
+  // Basic check
+  EXPECT_EQ(unique_constraints->size(), 2);
+  // In-depth check
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
+
+  // Check whether StoredTableNode is referenced by the constraint's expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    for (const auto& expression : unique_constraint.expressions) {
+      const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
+      EXPECT_TRUE(column_expression->original_node.lock() == _stored_table_node);
+    }
+  }
+}
+
+TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  // Prepare unique constraints
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_a);
+  table->add_soft_key_constraint(key_constraint_a_b);
+  table->add_soft_key_constraint(key_constraint_c);
+  const auto& table_key_constraints = table->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 3);
+  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 3);
+
+  // Prune column a, which should remove two unique constraints
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  // Basic check
+  const auto& unique_constraints = _stored_table_node->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 1);
+  // In-depth check
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
+}
+
+TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
+  EXPECT_TRUE(_stored_table_node->unique_constraints()->empty());
+}
+
+TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_a);
+  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 1);
+
+  // Negative test
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b}));
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_c}));
+  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b, _c}));
+
+  // Test exact match
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a}));
+
+  // Test superset of column ids
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _b}));
+  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _c}));
 }
 
 }  // namespace opossum

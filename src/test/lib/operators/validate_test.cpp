@@ -205,7 +205,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // If Validate has a reference table as input, it can usually optimize the evaluation of the MVCC data.
-  // This optimization is possible, if a PosList of a reference segment references only one chunk.
+  // This optimization is possible if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
   auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);

@@ -63,7 +63,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   void guarantee_single_chunk();
 
-  // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
+  // Returns whether the single ChunkID guarantee has been given.
   bool references_single_chunk() const final;
 
   // For chunks that share a common ChunkID, returns that ID.
