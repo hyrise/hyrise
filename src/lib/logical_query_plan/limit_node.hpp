@@ -18,6 +18,9 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
   // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  // Forwards FDs from left input node
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   std::shared_ptr<AbstractExpression> num_rows_expression() const;
 
  protected:

@@ -37,6 +37,10 @@ std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
+std::vector<FunctionalDependency> SortNode::functional_dependencies() const {
+  return _remove_invalid_fds(left_input()->functional_dependencies());
+}
+
 size_t SortNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& sort_mode : sort_modes) {

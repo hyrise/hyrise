@@ -24,6 +24,10 @@ std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
+std::vector<FunctionalDependency> LimitNode::functional_dependencies() const {
+  return _remove_invalid_fds(left_input()->functional_dependencies());
+}
+
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

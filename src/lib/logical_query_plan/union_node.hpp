@@ -33,6 +33,9 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
    */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  /**
+   * TODO(Julian)
+   */
   std::vector<FunctionalDependency> functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;

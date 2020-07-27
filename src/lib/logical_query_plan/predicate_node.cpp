@@ -32,6 +32,10 @@ std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const 
   return _forward_left_unique_constraints();
 }
 
+std::vector<FunctionalDependency> PredicateNode::functional_dependencies() const {
+  return _remove_invalid_fds(left_input()->functional_dependencies());
+}
+
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
 
 size_t PredicateNode::_on_shallow_hash() const { return boost::hash_value(scan_type); }

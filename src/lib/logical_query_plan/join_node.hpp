@@ -38,6 +38,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  /**
+   * TODO(Julian)
+   */
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   JoinMode join_mode;

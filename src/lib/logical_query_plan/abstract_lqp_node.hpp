@@ -174,7 +174,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
    *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
    */
-  virtual std::vector<FunctionalDependency> functional_dependencies() const;
+  virtual std::vector<FunctionalDependency> functional_dependencies() const = 0;
 
   /**
    * Perform a deep equality check
@@ -221,6 +221,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return All unique constraints from the left input node.
    */
   std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
+
+  /**
+   * TODO
+   */
+  std::vector<FunctionalDependency> _remove_invalid_fds(const std::vector<FunctionalDependency>& fds_in) const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

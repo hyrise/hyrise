@@ -34,6 +34,10 @@ std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
+std::vector<FunctionalDependency> ExceptNode::functional_dependencies() const {
+  return _remove_invalid_fds(left_input()->functional_dependencies());
+}
+
 size_t ExceptNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> ExceptNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

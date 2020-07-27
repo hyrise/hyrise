@@ -21,6 +21,9 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
   // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  // Forwards FDs from left input node
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   const std::vector<SortMode> sort_modes;
 
  protected:

@@ -31,6 +31,9 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  // Forwards FDs from left input node
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   std::shared_ptr<AbstractExpression> predicate() const;
 
   ScanType scan_type{ScanType::TableScan};

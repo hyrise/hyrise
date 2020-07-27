@@ -123,6 +123,22 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   return unique_constraints;
 }
 
+std::vector<FunctionalDependency> JoinNode::functional_dependencies() const {
+  auto fds_in = left_input()->functional_dependencies();
+  auto fds_right = right_input()->functional_dependencies();
+
+  if (!fds_right.empty()) {
+    for (const auto& fd_right : fds_right) {
+      // Do not add duplicate FDs
+      if (!std::any_of(fds_in.begin(), fds_in.end(), [&fd_right](const auto& fd) { return fd == fd_right; })) {
+        fds_in.push_back(fd_right);
+      }
+    }
+  }
+
+  return _remove_invalid_fds(fds_in);
+};
+
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
