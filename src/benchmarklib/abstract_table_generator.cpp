@@ -85,18 +85,14 @@ void AbstractTableGenerator::generate_and_store() {
 
       if (is_sorted) {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
+        const SortColumnDefinition sort_definition{sort_column_id, sort_mode};
 
-        for (const auto& sort_column_definition : table->get_chunk(ChunkID{0})->sorted_by()) {
-          if (sort_column_definition.column == sort_column_id) {
-            Assert(sort_column_definition.sort_mode == sort_mode, "Column is already sorted by another SortMode");
-            continue;
-          }
-        }
+        if (_table_is_sorted_by(table, sort_definition)) continue;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
           Assert(chunk->sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
-          chunk->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
+          chunk->set_sorted_by(sort_definition);
         }
 
         continue;
@@ -283,5 +279,22 @@ AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_
 
 void AbstractTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
+
+bool AbstractTableGenerator::_table_is_sorted_by(const std::shared_ptr<Table>& table,
+                                                 const SortColumnDefinition& sort_definition) {
+  bool table_sorted = true;
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    bool chunk_sorted = false;
+    for (const auto& sort_column_definition : table->get_chunk(chunk_id)->sorted_by()) {
+      if (sort_column_definition.column == sort_definition.column) {
+        Assert(sort_column_definition.sort_mode == sort_definition.sort_mode,
+               "Column is already sorted by another SortMode");
+        chunk_sorted = true;
+      }
+    }
+    table_sorted &= chunk_sorted;
+  }
+  return table_sorted;
+}
 
 }  // namespace opossum
