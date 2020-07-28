@@ -136,7 +136,7 @@ void MockNode::set_functional_dependencies(const std::vector<FunctionalDependenc
 std::vector<FunctionalDependency> MockNode::on_functional_dependencies() const {
   Assert(_table_key_constraints.empty() || !_functional_dependencies.empty(),
          "There might be a misconception: Unlike StoredTableNode, MockNode does not generate FDs from table "
-         "constraints. FDs have to be set up manually.");
+         "constraints. FDs have to be set up manually."); // TODO(Julian)
   return _functional_dependencies;
 }
 

@@ -123,10 +123,6 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> StoredTableNode::on_functional_dependencies() const {
-  return std::vector<FunctionalDependency>();
-}
-
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 

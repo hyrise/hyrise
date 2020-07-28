@@ -40,6 +40,7 @@ std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const 
 }
 
 std::vector<FunctionalDependency> IntersectNode::on_functional_dependencies() const {
+  // TODO(Julian) Assert equality?
   return left_input()->on_functional_dependencies();
 }
 

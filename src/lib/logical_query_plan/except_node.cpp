@@ -35,6 +35,7 @@ std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> ExceptNode::on_functional_dependencies() const {
+  // TODO(Julian) Assert equality?
   return left_input()->on_functional_dependencies();
 }
 

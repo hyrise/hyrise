@@ -332,9 +332,13 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::on_functional_dependencies() const {
-  Assert(left_input() && !right_input(), "Expected single input node for implicit FD forwarding. Please override this"
-         " function.");
-  return left_input()->on_functional_dependencies();
+  if(left_input()) {
+    Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this"
+                           " function.");
+    return left_input()->on_functional_dependencies();
+  } else {
+    return {};
+  }
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {

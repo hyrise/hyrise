@@ -141,13 +141,6 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> AggregateNode::on_functional_dependencies() const {
-
-  // TODO(Julian) Add another FD? https://github.com/hyrise/hyrise/pull/2156#discussion_r452708322
-
-  return left_input()->on_functional_dependencies();
-}
-
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
   Assert(left_input(), "Need left input to determine nullability");

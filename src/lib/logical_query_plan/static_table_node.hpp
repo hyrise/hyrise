@@ -23,8 +23,6 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
 
   // Generates unique constraints from table's key constraints.
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
-  std::vector<FunctionalDependency> on_functional_dependencies() const override;
-
 
   const std::shared_ptr<Table> table;
 
