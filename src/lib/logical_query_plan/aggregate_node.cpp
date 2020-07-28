@@ -116,13 +116,15 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
-  ExpressionUnorderedSet group_by_columns(group_by_columns_count);
-  std::copy_n(node_expressions.begin(), group_by_columns_count,
-              std::inserter(group_by_columns, group_by_columns.begin()));
+  if(group_by_columns_count > 0) {
+    ExpressionUnorderedSet group_by_columns(group_by_columns_count);
+    std::copy_n(node_expressions.begin(), group_by_columns_count,
+                std::inserter(group_by_columns, group_by_columns.begin()));
 
-  // Make sure, we do not add an already existing or a superset unique constraint.
-  if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
-    unique_constraints->emplace_back(group_by_columns);
+    // Make sure, we do not add an already existing or a superset unique constraint.
+    if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
+      unique_constraints->emplace_back(group_by_columns);
+    }
   }
 
   /**
