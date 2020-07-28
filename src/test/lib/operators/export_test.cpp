@@ -70,7 +70,7 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  std::string reference_filename = reference_filepath + reference_filenames.at(GetParam());
+  const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
   auto exporter = std::make_shared<opossum::Export>(table_wrapper, test_filename, GetParam());
   exporter->execute();
 
@@ -89,7 +89,7 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
   table_wrapper->execute();
 
   auto filename = test_filename + file_extensions.at(GetParam());
-  auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
+  const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
   auto exporter = std::make_shared<opossum::Export>(table_wrapper, filename);
   exporter->execute();
 
