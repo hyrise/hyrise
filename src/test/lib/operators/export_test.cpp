@@ -71,7 +71,7 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
   table_wrapper->execute();
 
   const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, test_filename, GetParam());
+  auto exporter = std::make_shared<Export>(table_wrapper, test_filename, GetParam());
   exporter->execute();
 
   EXPECT_TRUE(file_exists(test_filename));
@@ -90,7 +90,7 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
 
   auto filename = test_filename + file_extensions.at(GetParam());
   const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, filename);
+  auto exporter = std::make_shared<Export>(table_wrapper, filename);
   exporter->execute();
 
   EXPECT_TRUE(file_exists(filename));
@@ -101,7 +101,7 @@ TEST_F(OperatorsExportTest, NonsensePath) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "this/path/does/not/exist.tbl");
+  auto exporter = std::make_shared<Export>(table_wrapper, "this/path/does/not/exist.tbl");
   EXPECT_THROW(exporter->execute(), std::exception);
 }
 
@@ -110,7 +110,7 @@ TEST_F(OperatorsExportTest, EmptyPathWithoutFileType) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  EXPECT_THROW(std::make_shared<opossum::Export>(table_wrapper, ""), std::exception);
+  EXPECT_THROW(std::make_shared<Export>(table_wrapper, ""), std::exception);
 }
 
 TEST_F(OperatorsExportTest, EmptyPathWithFileType) {
@@ -118,7 +118,7 @@ TEST_F(OperatorsExportTest, EmptyPathWithFileType) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "", FileType::Csv);
+  auto exporter = std::make_shared<Export>(table_wrapper, "", FileType::Csv);
 
   EXPECT_THROW(exporter->execute(), std::exception);
 }
@@ -128,7 +128,7 @@ TEST_F(OperatorsExportTest, UnknownFileExtension) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  EXPECT_THROW(std::make_shared<opossum::Export>(table_wrapper, "not_existing_file.mp3"), std::exception);
+  EXPECT_THROW(std::make_shared<Export>(table_wrapper, "not_existing_file.mp3"), std::exception);
 }
 
 }  // namespace opossum
