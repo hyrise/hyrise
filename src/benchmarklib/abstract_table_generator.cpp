@@ -86,10 +86,11 @@ void AbstractTableGenerator::generate_and_store() {
       if (is_sorted) {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
 
-        for(const auto& sort_column_definition : table->get_chunk{ChunkID{0}}->sorted_by()) {
-          if (sort_column_definition.column == column_id) {
-            Assert(sort_column_definition.sort_mode == sort_mode, "Column is already sorted with another SortMode");
+        for(const auto& sort_column_definition : table->get_chunk(ChunkID{0})->sorted_by()) {
+          if (sort_column_definition.column == sort_column_id) {
+            Assert(sort_column_definition.sort_mode == sort_mode, "Column is already sorted by another SortMode");
             continue;
+          }
         }
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
