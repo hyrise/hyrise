@@ -35,7 +35,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   /**
    * TODO(Julian)
    */
-  std::vector<FunctionalDependency> functional_dependencies() const override;
+  std::vector<FunctionalDependency> on_functional_dependencies() const override;
 
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
   size_t aggregate_expressions_begin_idx;

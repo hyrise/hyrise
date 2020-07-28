@@ -53,8 +53,8 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> ProjectionNode::functional_dependencies() const {
-  return _remove_invalid_fds(left_input()->functional_dependencies());
+std::vector<FunctionalDependency> ProjectionNode::on_functional_dependencies() const {
+  return left_input()->on_functional_dependencies();
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

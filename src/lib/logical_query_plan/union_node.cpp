@@ -59,7 +59,7 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   Fail("Unhandled UnionMode");
 }
 
-std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
+std::vector<FunctionalDependency> UnionNode::on_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::All:
@@ -73,7 +73,7 @@ std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
       DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
                   "Expected both input nodes to have the same FDs.");
 
-      return left_input()->functional_dependencies();
+      return left_input()->on_functional_dependencies();
   }
   Fail("Unhandled UnionMode");
 }

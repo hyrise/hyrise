@@ -123,7 +123,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> JoinNode::functional_dependencies() const {
+std::vector<FunctionalDependency> JoinNode::on_functional_dependencies() const {
   auto fds_in = left_input()->functional_dependencies();
   auto fds_right = right_input()->functional_dependencies();
 
@@ -136,7 +136,7 @@ std::vector<FunctionalDependency> JoinNode::functional_dependencies() const {
     }
   }
 
-  return _remove_invalid_fds(fds_in);
+  return fds_in;
 };
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {

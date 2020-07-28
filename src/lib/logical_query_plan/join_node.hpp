@@ -41,7 +41,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * TODO(Julian)
    */
-  std::vector<FunctionalDependency> functional_dependencies() const override;
+  std::vector<FunctionalDependency> on_functional_dependencies() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 

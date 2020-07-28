@@ -16,7 +16,7 @@ std::shared_ptr<LQPUniqueConstraints> AbstractNonQueryNode::unique_constraints()
   Fail("Node does not support unique constraints.");
 }
 
-std::vector<FunctionalDependency> AbstractNonQueryNode::functional_dependencies() const {
+std::vector<FunctionalDependency> AbstractNonQueryNode::on_functional_dependencies() const {
   Fail("Node does not support functional dependencies.");
 }
 

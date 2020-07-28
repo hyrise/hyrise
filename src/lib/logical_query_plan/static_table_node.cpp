@@ -58,7 +58,7 @@ std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() cons
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> StaticTableNode::functional_dependencies() const {
+std::vector<FunctionalDependency> StaticTableNode::on_functional_dependencies() const {
   // We could construct some FDs here, similar to StoredTableNode.
   // We did not do so yet because StaticTableNode is rarely used.
   return {};

@@ -22,9 +22,9 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
 
   // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
-
   // Forwards FDs from left input node
-  std::vector<FunctionalDependency> functional_dependencies() const override;
+  std::vector<FunctionalDependency> on_functional_dependencies() const override;
+
 
   const SetOperationMode set_operation_mode;
 

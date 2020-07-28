@@ -39,8 +39,8 @@ std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const 
   return _forward_left_unique_constraints();
 }
 
-std::vector<FunctionalDependency> IntersectNode::functional_dependencies() const {
-  return _remove_invalid_fds(left_input()->functional_dependencies());
+std::vector<FunctionalDependency> IntersectNode::on_functional_dependencies() const {
+  return left_input()->on_functional_dependencies();
 }
 
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

@@ -273,6 +273,42 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
   return contains_matching_unique_constraint(unique_constraints, expressions);
 }
 
+std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
+  // TODO(Julian) Create FDs from unique constraints?
+  const auto& fds_in = on_functional_dependencies();
+
+  // Currently, we do not support FDs in conjunction with null values in their determinant set.
+  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
+  // for compliance and discard them, if necessary.
+  auto fds_out = std::vector<FunctionalDependency>();
+
+  // Collect non-nullable columns
+  const auto& output_expressions = this->output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (!is_column_nullable(column_id)) {
+      output_expressions_non_nullable.insert(output_expressions.at(column_id));
+    }
+  }
+
+  for (const auto& fd : fds_in) {
+    // Check whether the determinants are a subset of the current node's non-nullable output expressions
+    if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
+                    [&output_expressions_non_nullable](const auto& expression) {
+                      return !output_expressions_non_nullable.contains(expression);
+                    })) {
+      continue;
+    }
+
+    // We do not check the columns of the FD's dependents set since they are allowed to be nullable.
+
+    // FD remains valid, so add it to the output vector
+    fds_out.push_back(fd);
+  }
+
+  return fds_out;
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
@@ -348,42 +384,7 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
              "Forwarding of constraints is illegal because node misses output expressions.");
     }
   }
-
   return input_unique_constraints;
-}
-
-std::vector<FunctionalDependency> AbstractLQPNode::_remove_invalid_fds(
-    const std::vector<FunctionalDependency>& fds_in) const {
-  // Currently, we do not support FDs in conjunction with null values in their determinant set.
-  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
-  // for compliance and discard them, if necessary.
-  auto fds_out = std::vector<FunctionalDependency>();
-
-  // Collect non-nullable columns
-  const auto& output_expressions = this->output_expressions();
-  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (!is_column_nullable(column_id)) {
-      output_expressions_non_nullable.insert(output_expressions.at(column_id));
-    }
-  }
-
-  for (const auto& fd : fds_in) {
-    // Check whether the determinants are a subset of the current node's non-nullable output expressions
-    if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                    [&output_expressions_non_nullable](const auto& expression) {
-                      return !output_expressions_non_nullable.contains(expression);
-                    })) {
-      continue;
-    }
-
-    // We do not check the columns of the FD's dependents set since they are allowed to be nullable.
-
-    // FD remains valid, so add it to the output vector
-    fds_out.push_back(fd);
-  }
-
-  return fds_out;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

@@ -36,7 +36,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   /**
    * TODO(Julian)
    */
-  std::vector<FunctionalDependency> functional_dependencies() const override;
+  std::vector<FunctionalDependency> on_functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;
 

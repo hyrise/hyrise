@@ -123,7 +123,7 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
+std::vector<FunctionalDependency> StoredTableNode::on_functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& key_constraints = table->soft_key_constraints();

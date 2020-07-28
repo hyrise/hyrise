@@ -24,7 +24,7 @@ std::shared_ptr<LQPUniqueConstraints> DummyTableNode::unique_constraints() const
   return std::make_shared<LQPUniqueConstraints>();
 }
 
-std::vector<FunctionalDependency> DummyTableNode::functional_dependencies() const {
+std::vector<FunctionalDependency> DummyTableNode::on_functional_dependencies() const {
   return {};
 }
 
