@@ -35,10 +35,6 @@ std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
-std::vector<FunctionalDependency> AliasNode::on_functional_dependencies() const {
-  return left_input()->on_functional_dependencies();
-}
-
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {

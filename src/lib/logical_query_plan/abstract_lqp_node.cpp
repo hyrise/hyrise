@@ -331,6 +331,12 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   return fds_out;
 }
 
+std::vector<FunctionalDependency> AbstractLQPNode::on_functional_dependencies() const {
+  Assert(left_input() && !right_input(), "Expected single input node for implicit FD forwarding. Please override this"
+         " function.");
+  return left_input()->on_functional_dependencies();
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());

@@ -12,10 +12,6 @@ std::shared_ptr<LQPUniqueConstraints> ValidateNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
-std::vector<FunctionalDependency> ValidateNode::on_functional_dependencies() const {
-  return left_input()->on_functional_dependencies();
-}
-
 std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ValidateNode::make();
 }

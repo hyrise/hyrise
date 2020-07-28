@@ -17,8 +17,6 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
 
   // Forwards unique constraints from the left input node
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
-  // Forwards FDs from left input node
-  std::vector<FunctionalDependency> on_functional_dependencies() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
