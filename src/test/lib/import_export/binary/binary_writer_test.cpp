@@ -242,6 +242,43 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
+TEST_F(BinaryWriterTest, SortColumnDefinitions) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  // Chunk 0: a sorted ascending, b sorted descending
+  table->append({1, 3});
+  table->append({2, 2});
+  table->append({3, 1});
+  // Chunk 1: a not sorted, b sorted descending
+  table->append({1, 3});
+  table->append({2, 2});
+  table->append({1, 1});
+  // Chunk 2: a and b not sorted
+  table->append({1, 1});
+  table->append({2, 2});
+  table->append({1, 1});
+
+  table->last_chunk()->finalize();
+
+  // set sorted by information
+  const auto chunk_0_sort_definitions = std::vector<SortColumnDefinition>{
+      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+  const auto chunk_1_sort_definitions =
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+  table->get_chunk(ChunkID{0})->set_sorted_by(chunk_0_sort_definitions);
+  table->get_chunk(ChunkID{1})->set_sorted_by(chunk_1_sort_definitions);
+
+  BinaryWriter::write(*table, filename);
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
 // TEST_P for all supported encoding types
 
 TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {

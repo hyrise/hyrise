@@ -45,6 +45,8 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Row count                   | ChunkOffset                         | 4
+   * Sorted Column count         | uint32_t                            | 2
+   * Sorted Columns              | SortColumnDefinition                | Sorted Column count * 3
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
    * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, RunLengthSegment).

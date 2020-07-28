@@ -101,6 +101,16 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
 void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
+  // import sorted by information
+  const auto sorted_columns = _read_value<uint32_t>(file);
+  std::vector<SortColumnDefinition> sort_column_definitions;
+  for (ColumnID sorted_column_id{0}; sorted_column_id < sorted_columns; ++sorted_column_id) {
+    const auto column_id = _read_value<ColumnID>(file);
+    const auto sort_mode = _read_value<SortMode>(file);
+    const SortColumnDefinition sort_column_definition{column_id, sort_mode};
+    sort_column_definitions.emplace_back(sort_column_definition);
+  }
+
   Segments output_segments;
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     output_segments.push_back(
@@ -110,6 +120,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
   table->last_chunk()->finalize();
+  if (sorted_columns > 0) table->last_chunk()->set_sorted_by(sort_column_definitions);
 }
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,

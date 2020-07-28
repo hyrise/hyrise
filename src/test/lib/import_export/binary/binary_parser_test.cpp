@@ -6,7 +6,6 @@
 
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
-#include "import_export/binary/binary_writer.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
@@ -383,6 +382,44 @@ TEST_F(BinaryParserTest, TwoColumnsNoValues) {
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, SortColumnDefinitions) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  // Chunk 0: a sorted ascending, b sorted descending
+  expected_table->append({1, 3});
+  expected_table->append({2, 2});
+  expected_table->append({3, 1});
+  // Chunk 1: a not sorted, b sorted descending
+  expected_table->append({1, 3});
+  expected_table->append({2, 2});
+  expected_table->append({1, 1});
+  // Chunk 2: a and b not sorted
+  expected_table->append({1, 1});
+  expected_table->append({2, 2});
+  expected_table->append({1, 1});
+
+  expected_table->last_chunk()->finalize();
+
+  // set sorted by information
+  const auto chunk_0_sort_definitions = std::vector<SortColumnDefinition>{
+      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+  const auto chunk_1_sort_definitions =
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+  expected_table->get_chunk(ChunkID{0})->set_sorted_by(chunk_0_sort_definitions);
+  expected_table->get_chunk(ChunkID{1})->set_sorted_by(chunk_1_sort_definitions);
+
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->sorted_by(), chunk_0_sort_definitions);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->sorted_by(), chunk_1_sort_definitions);
+  EXPECT_TRUE(table->get_chunk(ChunkID{2})->sorted_by().empty());
 }
 
 }  // namespace opossum

@@ -128,6 +128,16 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
+  // export sort column definitions
+  const auto& sort_column_definitions = chunk->sorted_by();
+  const auto sorted_columns = sort_column_definitions.size();
+  export_value(ofstream, static_cast<uint32_t>(sorted_columns));
+  for (ColumnID sorted_column_id{0}; sorted_column_id < sorted_columns; ++sorted_column_id) {
+    const auto sort_column_definition = sort_column_definitions.at(sorted_column_id);
+    export_value(ofstream, sort_column_definition.column);
+    export_value(ofstream, sort_column_definition.sort_mode);
+  }
+
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     resolve_data_and_segment_type(
