@@ -274,8 +274,31 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // TODO(Julian) Create FDs from unique constraints?
-  const auto& fds_in = on_functional_dependencies();
+  auto fds_in = on_functional_dependencies();
+  const auto& output_expressions = this->output_expressions();
+
+  // Create FDs from unique constraints?
+  const auto unique_constraints = this->unique_constraints();
+  for(const auto& unique_constraint : *unique_constraints) {
+    auto determinants = unique_constraint.expressions;
+    // Check whether we already have an FD for the given determinants
+    if(std::find_if(fds_in.cbegin(), fds_in.cend(), [&determinants](const auto& fd) {
+      return fd.determinants == determinants;
+    }) != fds_in.cend()) {
+      continue;
+    }
+
+    auto dependents = ExpressionUnorderedSet();
+    for(const auto& output_expression : output_expressions) {
+      if(!determinants.contains(output_expression)) {
+        dependents.insert(output_expression);
+      }
+    }
+
+    if(!dependents.empty()) {
+      fds_in.emplace_back(determinants, dependents);
+    }
+  }
 
   // Currently, we do not support FDs in conjunction with null values in their determinant set.
   // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
@@ -283,7 +306,6 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   auto fds_out = std::vector<FunctionalDependency>();
 
   // Collect non-nullable columns
-  const auto& output_expressions = this->output_expressions();
   auto output_expressions_non_nullable = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
     if (!is_column_nullable(column_id)) {
