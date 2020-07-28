@@ -101,7 +101,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
 void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
-  // import column sort definitions
+  // import sort column definitions
   const auto sorted_columns = _read_value<uint32_t>(file);
   std::vector<SortColumnDefinition> sort_column_definitions;
   for (ColumnID sorted_column_id{0}; sorted_column_id < sorted_columns; ++sorted_column_id) {
