@@ -241,9 +241,9 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       const auto chunk = std::make_shared<Chunk>(output_segments);
       chunk->finalize();
 
-      const auto& sorted_by = chunk_in->sorted_by();
+      const auto& sorted_by = chunk_in->individually_sorted_by();
       if (!sorted_by.empty()) {
-        chunk->set_sorted_by(sorted_by);
+        chunk->set_individually_sorted_by(sorted_by);
       }
       output_chunks.emplace_back(chunk);
     }
