@@ -274,7 +274,7 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  auto fds_in = on_functional_dependencies();
+  auto fds_in = pass_functional_dependencies();
   const auto& output_expressions = this->output_expressions();
 
   // Create FDs from unique constraints?
@@ -328,14 +328,16 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_out.push_back(fd);
   }
 
+  //TODO(Julian) if debug duplicates
+
   return fds_out;
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::on_functional_dependencies() const {
+std::vector<FunctionalDependency> AbstractLQPNode::pass_functional_dependencies() const {
   if(left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this"
                            " function.");
-    return left_input()->on_functional_dependencies();
+    return left_input()->pass_functional_dependencies();
   } else {
     return {};
   }

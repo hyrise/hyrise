@@ -34,9 +34,9 @@ std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
-std::vector<FunctionalDependency> ExceptNode::on_functional_dependencies() const {
+std::vector<FunctionalDependency> ExceptNode::pass_functional_dependencies() const {
   // TODO(Julian) Assert equality?
-  return left_input()->on_functional_dependencies();
+  return left_input()->pass_functional_dependencies();
 }
 
 size_t ExceptNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

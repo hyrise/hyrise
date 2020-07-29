@@ -172,10 +172,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
-   *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
+   *         FDs come from two different sources: Primarily, they are derived from the current node's unique
+   *         constraints. Secondly, previous nodes might already have created some FDs which got passed up the LQP
+   *         tree.
    */
-  std::vector<FunctionalDependency> functional_dependencies() const;
-  virtual std::vector<FunctionalDependency> on_functional_dependencies() const;
+  virtual std::vector<FunctionalDependency> functional_dependencies() const final;
+
+  /**
+   * Helper function that passes FDs from the left input node. Some nodes may override this function to add
+   * additional FDs or specify FD forwarding in case of two input nodes.
+   */
+  virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
 
   /**
    * Perform a deep equality check

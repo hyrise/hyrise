@@ -18,7 +18,7 @@ std::shared_ptr<LQPUniqueConstraints> LogicalPlanRootNode::unique_constraints() 
   Fail("LogicalPlanRootNode is not expected to be queried for unique constraints.");
 }
 
-std::vector<FunctionalDependency> LogicalPlanRootNode::on_functional_dependencies() const {
+std::vector<FunctionalDependency> LogicalPlanRootNode::pass_functional_dependencies() const {
   Fail("LogicalPlanRootNode is not expected to be queried for functional dependencies.");
 }
 
