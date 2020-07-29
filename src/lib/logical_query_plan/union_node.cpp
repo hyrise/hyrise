@@ -65,14 +65,12 @@ std::vector<FunctionalDependency> UnionNode::pass_functional_dependencies() cons
     case SetOperationMode::All:
       Fail("Handling of functional dependencies is not yet specified for UNION ALL");
     case SetOperationMode::Positions:
-
       /**
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
-       * Therefore, we can forward the FDs of either the left or the right input node.
+       * Therefore, we can pass the FDs of either the left or the right input node.
        */
       DebugAssert(left_input()->pass_functional_dependencies() == right_input()->pass_functional_dependencies(),
-                  "Expected both input nodes to have the same FDs.");
-
+                  "Expected both input nodes to pass the same FDs.");
       return left_input()->pass_functional_dependencies();
   }
   Fail("Unhandled UnionMode");

@@ -127,7 +127,7 @@ std::vector<FunctionalDependency> JoinNode::pass_functional_dependencies() const
   /**
    * Due to the logic of joins, we might loose several unique constraints in this node. Consequently, upper nodes
    * will have less unique constraints to derive functional dependencies from.
-   * Consequently, we create functional dependencies from both input nodes to pass them up in the LQP tree.
+   * Consequently, we create functional dependencies from both input nodes to manually pass them up the LQP tree.
    */
   auto fds_in = left_input()->functional_dependencies();
   auto fds_right = right_input()->functional_dependencies();

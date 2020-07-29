@@ -307,24 +307,23 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // Currently, we do not support FDs in conjunction with null values in their determinant set.
-  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
-  // for compliance and discard them, if necessary.
+  // Therefore, we have to check all FDs for compliance before returning them.
   auto fds_out = std::vector<FunctionalDependency>();
 
-  // Collect non-nullable columns
+  // For the following check, we need to collect all non-nullable columns
   auto output_expressions_non_nullable = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
     if (!is_column_nullable(column_id)) {
       output_expressions_non_nullable.insert(output_expressions.at(column_id));
     }
   }
-
   for (const auto& fd : fds_in) {
     // Check whether the determinants are a subset of the current node's non-nullable output expressions
     if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
                     [&output_expressions_non_nullable](const auto& expression) {
                       return !output_expressions_non_nullable.contains(expression);
                     })) {
+      // Discard the FD
       continue;
     }
 

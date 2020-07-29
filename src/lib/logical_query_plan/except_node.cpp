@@ -35,7 +35,7 @@ std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> ExceptNode::pass_functional_dependencies() const {
-  // TODO(Julian) Assert equality?
+  // The right input node is used for filtering only and should not contribute any FDs to the LQP tree.
   return left_input()->pass_functional_dependencies();
 }
 

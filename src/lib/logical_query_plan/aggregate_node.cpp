@@ -23,7 +23,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 #if HYRISE_DEBUG
   for (const auto& aggregate_expression : aggregate_expressions) {
     Assert(aggregate_expression->type == ExpressionType::Aggregate,
-                "Expression used as aggregate expression must be of type AggregateExpression.");
+           "Expression used as aggregate expression must be of type AggregateExpression.");
   }
 #endif
 
@@ -116,7 +116,7 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
-  if(group_by_columns_count > 0) {
+  if (group_by_columns_count > 0) {
     ExpressionUnorderedSet group_by_columns(group_by_columns_count);
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));

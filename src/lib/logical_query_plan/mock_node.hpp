@@ -55,9 +55,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_key_constraints(const TableKeyConstraints& key_constraints);
   const TableKeyConstraints& key_constraints() const;
 
-  // Pure container functionality: MockNode does not use FDs internally.
-  // Also, unlike StoredTableNode, FDs are not generated from key constraints.
+  // Specify FDs that cannot be generated from the MockNode's key constraints.
   void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  // Passes the FDs specified via set_functional_dependencies()
   std::vector<FunctionalDependency> pass_functional_dependencies() const override;
 
   std::optional<std::string> name;

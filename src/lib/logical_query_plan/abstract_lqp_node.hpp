@@ -183,6 +183,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * However, some nodes may override this function to
    *  - add additional FDs or
    *  - to specify FD forwarding in case of two input nodes.
+   *
+   *  Please note: Do not add FDs that can be generated from unique constraints since functional_dependencies()
+   *  already takes care of that. However, in case unique constraints get discarded, it makes sense to do so because
+   *  they cannot be generated later on anymore. Think of joins for example.
    */
   virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
 
