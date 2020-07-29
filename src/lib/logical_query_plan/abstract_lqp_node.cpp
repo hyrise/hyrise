@@ -274,18 +274,19 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
+  // (1) Gather FDs from previous nodes
   auto fds_in = pass_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
     auto distinct_fds = std::vector<FunctionalDependency>();
     for (const auto& fd : fds_in) {
       Assert(std::none_of(distinct_fds.cbegin(), distinct_fds.cend(),
                           [&fd](const auto& distinct_fd) { return fd == distinct_fd; }),
-             "Did not expect LQP nodes to pass up duplicate FDs.");
+             "Did not expect LQP nodes to pass duplicate FDs.");
       distinct_fds.push_back(fd);
     }
   }
 
-  // Create additional FDs from unique constraints
+  // (2) Generate FDs from node's unique constraints
   const auto& output_expressions = this->output_expressions();
   const auto unique_constraints = this->unique_constraints();
   for (const auto& unique_constraint : *unique_constraints) {
@@ -306,8 +307,12 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // Currently, we do not support FDs in conjunction with null values in their determinant set.
-  // Therefore, we have to check all FDs for compliance before returning them.
+  /**
+   * (3) Remove invalid FDs:
+   *     Currently, we do not support FDs in conjunction with null values in their determinant set. Therefore, we
+   *     have to check all FDs for compliance before returning them.
+   *     The columns of the FD's dependents set are allowed to be nullable.
+   */
   auto fds_out = std::vector<FunctionalDependency>();
 
   // For the following check, we need to collect all non-nullable columns
@@ -327,9 +332,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
       continue;
     }
 
-    // We do not check the columns of the FD's dependents set since they are allowed to be nullable.
-
-    // FD remains valid, so add it to the output vector
+    // Add FD to the output
     fds_out.push_back(fd);
   }
 
@@ -338,8 +341,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 
 std::vector<FunctionalDependency> AbstractLQPNode::pass_functional_dependencies() const {
   if (left_input()) {
-    Assert(!right_input(),
-           "Expected single input node for implicit FD forwarding. Please override this function.");
+    Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->pass_functional_dependencies();
   } else {
     return {};

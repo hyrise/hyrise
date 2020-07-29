@@ -172,21 +172,21 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
-   *         FDs come from two different sources: Primarily, they are derived from the current node's unique
-   *         constraints. Secondly, previous nodes might already have created some FDs which got passed up the LQP
-   *         tree.
+   *         They are collected as follows:
+   *          (1) FDs are derived from the current node's unique constraints.
+   *          (2) FDs are provided by previous nodes by passing them up the LQP tree.
    */
   virtual std::vector<FunctionalDependency> functional_dependencies() const final;
 
   /**
-   * Helper function that passes distinct FDs to upper nodes. By default, it forwards FDs from the left input node.
-   * However, some nodes may override this function to
+   * Helper function that passes FDs to upper nodes. By default, it passes FDs from the left input node.
+   * Some nodes may override this function to
    *  - add additional FDs or
-   *  - to specify FD forwarding in case of two input nodes.
+   *  - to specify FD passing in case of two input nodes.
    *
-   *  Please note: Do not add FDs that can be generated from unique constraints since functional_dependencies()
-   *  already takes care of that. However, in case unique constraints get discarded, it makes sense to do so because
-   *  they cannot be generated later on anymore. Think of joins for example.
+   *  Please note: Do not pass FDs that can be generated from unique constraints because functional_dependencies()
+   *               already takes care of that. However, whenever unique constraints are discarded, it makes sense to
+   *               do so since FDs cannot be generated later on anymore.
    */
   virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
 
