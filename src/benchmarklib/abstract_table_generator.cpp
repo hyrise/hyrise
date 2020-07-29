@@ -282,9 +282,8 @@ void AbstractTableGenerator::_add_constraints(
 
 bool AbstractTableGenerator::_table_is_sorted_by(const std::shared_ptr<Table>& table,
                                                  const SortColumnDefinition& sort_definition) {
-  bool table_sorted = true;
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    const auto& sort_column_definitions =  table->get_chunk(chunk_id)->sorted_by();
+    const auto& sort_column_definitions = table->get_chunk(chunk_id)->sorted_by();
     if (sort_column_definitions.empty()) return false;
     bool chunk_sorted = false;
     for (const auto& sort_column_definition : sort_column_definitions) {
@@ -294,9 +293,9 @@ bool AbstractTableGenerator::_table_is_sorted_by(const std::shared_ptr<Table>& t
         chunk_sorted = true;
       }
     }
-    table_sorted &= chunk_sorted;
+    if (!chunk_sorted) return false;
   }
-  return table_sorted;
+  return true;
 }
 
 }  // namespace opossum
