@@ -85,14 +85,14 @@ void AbstractTableGenerator::generate_and_store() {
 
       if (is_sorted) {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
-        const SortColumnDefinition sort_definition{sort_column_id, sort_mode};
+        const SortColumnDefinition sort_column{sort_column_id, sort_mode};
 
-        if (_table_is_sorted_by(table, sort_definition)) continue;
+        if (_all_chunks_sorted_by(table, sort_column)) continue;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
-          Assert(chunk->sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
-          chunk->set_sorted_by(sort_definition);
+          Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
+          chunk->set_individually_sorted_by(sort_column);
         }
 
         continue;
@@ -127,7 +127,7 @@ void AbstractTableGenerator::generate_and_store() {
         }
         table->append_chunk(segments, mvcc_data);
         table->get_chunk(chunk_id)->finalize();
-        table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
+        table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
@@ -280,16 +280,15 @@ AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_
 void AbstractTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
 
-bool AbstractTableGenerator::_table_is_sorted_by(const std::shared_ptr<Table>& table,
-                                                 const SortColumnDefinition& sort_definition) {
+bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>& table,
+                                                   const SortColumnDefinition& sort_column) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    const auto& sort_column_definitions = table->get_chunk(chunk_id)->sorted_by();
-    if (sort_column_definitions.empty()) return false;
+    const auto& sorted_columns = table->get_chunk(chunk_id)->individually_sorted_by();
+    if (sorted_columns.empty()) return false;
     bool chunk_sorted = false;
-    for (const auto& sort_column_definition : sort_column_definitions) {
-      if (sort_column_definition.column == sort_definition.column) {
-        Assert(sort_column_definition.sort_mode == sort_definition.sort_mode,
-               "Column is already sorted by another SortMode");
+    for (const auto& sorted_column : sorted_columns) {
+      if (sorted_column.column == sort_column.column) {
+        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode");
         chunk_sorted = true;
       }
     }

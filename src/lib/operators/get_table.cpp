@@ -176,7 +176,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the output chunk.
-    const auto& input_chunk_sorted_by = stored_chunk->sorted_by();
+    const auto& input_chunk_sorted_by = stored_chunk->individually_sorted_by();
     std::optional<SortColumnDefinition> output_chunk_sorted_by;
 
     if (_pruned_column_ids.empty()) {
@@ -220,7 +220,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         // Finalizing the output chunk here is safe because this path is only taken for
         // a sorted chunk. Chunks should never be sorted when they are still mutable
         (*output_chunks_iter)->finalize();
-        (*output_chunks_iter)->set_sorted_by(*output_chunk_sorted_by);
+        (*output_chunks_iter)->set_individually_sorted_by(*output_chunk_sorted_by);
       }
 
       // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this

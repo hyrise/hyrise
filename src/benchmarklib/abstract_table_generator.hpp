@@ -78,7 +78,7 @@ class AbstractTableGenerator {
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 
-  static bool _table_is_sorted_by(const std::shared_ptr<Table>& table, const SortColumnDefinition& sort_definition);
+  static bool _all_chunks_sorted_by(const std::shared_ptr<Table>& table, const SortColumnDefinition& sort_column);
 };
 
 }  // namespace opossum

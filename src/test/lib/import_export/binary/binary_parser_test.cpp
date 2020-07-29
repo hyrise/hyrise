@@ -40,7 +40,7 @@ TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -55,7 +55,7 @@ TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -75,7 +75,7 @@ TEST_P(BinaryParserMultiEncodingTest, StringSegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -96,7 +96,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentSorted) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -117,7 +117,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentUnsorted) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -138,7 +138,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -157,7 +157,7 @@ TEST_P(BinaryParserMultiEncodingTest, EmptyStringsSegment) {
   expected_table->append({""});
   expected_table->append({""});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -180,7 +180,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesNullValues) {
   expected_table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -205,7 +205,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesAllNullValues) {
   expected_table->append(null_values);
   expected_table->append(null_values);
 
-  std::string reference_filename =
+  const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
 
@@ -405,21 +405,21 @@ TEST_F(BinaryParserTest, SortColumnDefinitions) {
 
   expected_table->last_chunk()->finalize();
 
-  // set sorted by information
-  const auto chunk_0_sort_definitions = std::vector<SortColumnDefinition>{
+  // Set sorted by information
+  const auto chunk_0_sorted_columns = std::vector<SortColumnDefinition>{
       SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
-  const auto chunk_1_sort_definitions =
+  const auto chunk_1_sorted_columns =
       std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
-  expected_table->get_chunk(ChunkID{0})->set_sorted_by(chunk_0_sort_definitions);
-  expected_table->get_chunk(ChunkID{1})->set_sorted_by(chunk_1_sort_definitions);
+  expected_table->get_chunk(ChunkID{0})->set_individually_sorted_by(chunk_0_sorted_columns);
+  expected_table->get_chunk(ChunkID{1})->set_individually_sorted_by(chunk_1_sorted_columns);
 
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->sorted_by(), chunk_0_sort_definitions);
-  EXPECT_EQ(table->get_chunk(ChunkID{1})->sorted_by(), chunk_1_sort_definitions);
-  EXPECT_TRUE(table->get_chunk(ChunkID{2})->sorted_by().empty());
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->individually_sorted_by(), chunk_0_sorted_columns);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->individually_sorted_by(), chunk_1_sorted_columns);
+  EXPECT_TRUE(table->get_chunk(ChunkID{2})->individually_sorted_by().empty());
 }
 
 }  // namespace opossum

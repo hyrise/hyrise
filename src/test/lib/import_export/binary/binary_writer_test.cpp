@@ -166,7 +166,7 @@ TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -187,7 +187,7 @@ TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -208,7 +208,7 @@ TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -236,7 +236,7 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -263,17 +263,17 @@ TEST_F(BinaryWriterTest, SortColumnDefinitions) {
 
   table->last_chunk()->finalize();
 
-  // set sorted by information
-  const auto chunk_0_sort_definitions = std::vector<SortColumnDefinition>{
+  // Set sorted by information
+  const auto chunk_0_sorted_columns = std::vector<SortColumnDefinition>{
       SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
-  const auto chunk_1_sort_definitions =
+  const auto chunk_1_sorted_columns =
       std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
-  table->get_chunk(ChunkID{0})->set_sorted_by(chunk_0_sort_definitions);
-  table->get_chunk(ChunkID{1})->set_sorted_by(chunk_1_sort_definitions);
+  table->get_chunk(ChunkID{0})->set_individually_sorted_by(chunk_0_sorted_columns);
+  table->get_chunk(ChunkID{1})->set_individually_sorted_by(chunk_1_sorted_columns);
 
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -315,7 +315,7 @@ TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -352,7 +352,7 @@ TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -377,7 +377,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -402,7 +402,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -426,7 +426,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -447,7 +447,7 @@ TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -473,7 +473,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -501,7 +501,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
@@ -522,7 +522,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
   ChunkEncoder::encode_all_chunks(table, GetParam());
   BinaryWriter::write(*table, filename);
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
