@@ -176,7 +176,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *          (1) FDs are derived from the current node's unique constraints.
    *          (2) FDs are provided by previous nodes by passing them up the LQP tree.
    */
-  virtual std::vector<FunctionalDependency> functional_dependencies() const final;
+  std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
    * Helper function that passes FDs to upper nodes. By default, it passes FDs from the left input node.

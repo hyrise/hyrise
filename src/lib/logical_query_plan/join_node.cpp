@@ -142,7 +142,7 @@ std::vector<FunctionalDependency> JoinNode::pass_functional_dependencies() const
   }
 
   return fds_in;
-};
+}
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
