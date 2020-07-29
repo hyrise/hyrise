@@ -275,27 +275,33 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
   auto fds_in = pass_functional_dependencies();
-  const auto& output_expressions = this->output_expressions();
-
-  // Create FDs from unique constraints?
-  const auto unique_constraints = this->unique_constraints();
-  for(const auto& unique_constraint : *unique_constraints) {
-    auto determinants = unique_constraint.expressions;
-    // Check whether we already have an FD for the given determinants
-    if(std::find_if(fds_in.cbegin(), fds_in.cend(), [&determinants](const auto& fd) {
-      return fd.determinants == determinants;
-    }) != fds_in.cend()) {
-      continue;
+  if constexpr (HYRISE_DEBUG) {
+    auto distinct_fds = std::vector<FunctionalDependency>();
+    for (const auto& fd : fds_in) {
+      Assert(std::none_of(distinct_fds.cbegin(), distinct_fds.cend(),
+                          [&fd](const auto& distinct_fd) { return fd == distinct_fd; }),
+             "Did not expect LQP nodes to pass up duplicate FDs.");
+      distinct_fds.push_back(fd);
     }
+  }
 
+  // Create additional FDs from unique constraints
+  const auto& output_expressions = this->output_expressions();
+  const auto unique_constraints = this->unique_constraints();
+  for (const auto& unique_constraint : *unique_constraints) {
+    auto determinants = unique_constraint.expressions;
     auto dependents = ExpressionUnorderedSet();
-    for(const auto& output_expression : output_expressions) {
-      if(!determinants.contains(output_expression)) {
+    for (const auto& output_expression : output_expressions) {
+      if (!determinants.contains(output_expression)) {
         dependents.insert(output_expression);
       }
     }
 
-    if(!dependents.empty()) {
+    // Add the FD to the output if not already existing
+    if (!dependents.empty() &&
+        std::find_if(fds_in.cbegin(), fds_in.cend(), [&determinants, &dependents](const auto& fd) {
+          return (fd.determinants == determinants) && (fd.dependents == dependents);
+        }) == fds_in.cend()) {
       fds_in.emplace_back(determinants, dependents);
     }
   }
@@ -328,15 +334,13 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_out.push_back(fd);
   }
 
-  //TODO(Julian) if debug duplicates
-
   return fds_out;
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::pass_functional_dependencies() const {
-  if(left_input()) {
-    Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this"
-                           " function.");
+  if (left_input()) {
+    Assert(!right_input(),
+           "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->pass_functional_dependencies();
   } else {
     return {};

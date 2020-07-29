@@ -179,8 +179,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::vector<FunctionalDependency> functional_dependencies() const final;
 
   /**
-   * Helper function that passes FDs from the left input node. Some nodes may override this function to add
-   * additional FDs or specify FD forwarding in case of two input nodes.
+   * Helper function that passes distinct FDs to upper nodes. By default, it forwards FDs from the left input node.
+   * However, some nodes may override this function to
+   *  - add additional FDs or
+   *  - to specify FD forwarding in case of two input nodes.
    */
   virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
 
