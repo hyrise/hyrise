@@ -124,8 +124,13 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> JoinNode::on_functional_dependencies() const {
-  auto fds_in = left_input()->on_functional_dependencies();
-  auto fds_right = right_input()->on_functional_dependencies();
+  /**
+   * Due to the logic of joins, we might loose several unique constraints in this node. Consequently, upper nodes
+   * will have less unique constraints to derive functional dependencies from.
+   * Consequently, we create functional dependencies from both input nodes to pass them up in the LQP tree.
+   */
+  auto fds_in = left_input()->functional_dependencies();
+  auto fds_right = right_input()->functional_dependencies();
 
   if (!fds_right.empty()) {
     for (const auto& fd_right : fds_right) {
