@@ -284,8 +284,10 @@ bool AbstractTableGenerator::_table_is_sorted_by(const std::shared_ptr<Table>& t
                                                  const SortColumnDefinition& sort_definition) {
   bool table_sorted = true;
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto& sort_column_definitions =  table->get_chunk(chunk_id)->sorted_by();
+    if (sort_column_definitions.empty()) return false;
     bool chunk_sorted = false;
-    for (const auto& sort_column_definition : table->get_chunk(chunk_id)->sorted_by()) {
+    for (const auto& sort_column_definition : sort_column_definitions) {
       if (sort_column_definition.column == sort_definition.column) {
         Assert(sort_column_definition.sort_mode == sort_definition.sort_mode,
                "Column is already sorted by another SortMode");
