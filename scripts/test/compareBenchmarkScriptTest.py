@@ -6,6 +6,7 @@ import subprocess
 # This helper test class takes two JSON result files, runs the compare_benchmarks.py script, and checks that the output
 # is as expected. It is called from benchmark tests such as hyriseBenchmarkTPCC_test.py.
 
+
 # The next two functions check for string matches instead of using math.isclose() since extracting values from
 # ANSI-colored text turned out to be too cumbersome.
 def assert_latency_equals(item_count, runtimes, latency_string):

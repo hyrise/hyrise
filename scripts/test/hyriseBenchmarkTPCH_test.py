@@ -2,7 +2,6 @@
 
 import json
 import os
-import pexpect
 import sys
 
 from compareBenchmarkScriptTest import CompareBenchmarkScriptTest
@@ -110,9 +109,6 @@ def main():
     return_error = check_json(
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
-
-    close_benchmark(benchmark_comparison)
-    check_exit_status(benchmark_comparison)
 
     CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename, output_filename).run()
 
