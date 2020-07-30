@@ -111,17 +111,10 @@ def main():
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
 
-    # Test that the output of the TPC-H benchmark does not cause crashes in the compare_benchmarks.py script. Since this
-    # script expects the path to the TPC-H benchmark as sys.argv[1], we need to traverse up to the root of Hyrise.
-    benchmark_comparison = pexpect.spawn(
-        f"{compare_benchmarks_path} {output_filename} {output_filename}",
-        maxread=1000000,
-        timeout=2,
-        dimensions=(200, 64),
-    )
-    benchmark_comparison.expect_exact(["warmup_duration", "Latency (ms/iter)", "TPC-H 13", "Geomean", "Sum"])
     close_benchmark(benchmark_comparison)
     check_exit_status(benchmark_comparison)
+
+    CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename, output_filename).run()
 
     # Run TPC-H and validate its output using pexpect and check if all queries were successfully verified with sqlite.
     arguments = {}

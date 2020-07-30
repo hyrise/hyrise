@@ -52,8 +52,8 @@ def calculate_and_format_p_value(old_durations, new_durations):
     elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
         is_significant = False
 
-        # in case we cannot decide whether the change is significant due to an insufficient number of measurements, the
-        # add_note_for_insufficient_pvalue_runs flag it set, for which a note is later added to the table output
+        # In case we cannot decide whether the change is significant due to an insufficient number of measurements, the
+        # add_note_for_insufficient_pvalue_runs flag it set, for which a note is later added to the table output.
         global add_note_for_insufficient_pvalue_runs
         add_note_for_insufficient_pvalue_runs = True
         return colored("˅", "yellow", attrs=["bold"])
@@ -103,9 +103,8 @@ def create_context_overview(old_config, new_config, github_format):
     table_output = str(table.table)
 
     if github_format:
-        # In case of github formatting, the table's usage of '+' for the tables lines is interpreted as an improvement.
-        # Thus, we prepend an additional space for all lines, except for diverging config lines which get a '-' to mark
-        # the line in red.
+        # For GitHub, the output is a fake diff, where a leading '-' marks a deletion and causes the line to be printed
+        # in red. We do that for all differing configuration lines. Other lines are prepended with ' '.
         new_output = ''
         for line in table_output.splitlines():
             marker = "-" if ("≠" in line or "!" in line) else " "
@@ -115,8 +114,9 @@ def create_context_overview(old_config, new_config, github_format):
     return table_output
 
 
-# Doubles the separators (can be | normal rows and + for horizontal separators within the table) given by the list
-# vertical_separators_to_duplicate. [0, 3] means that the first and fourth separator are doubled.
+# Doubles the separators (can be '|' for normal rows and '+' for horizontal separators within the table) given by the
+# list vertical_separators_to_duplicate. [0, 3] means that the first and fourth separator are doubled. Table contents
+# must not contain '|' for this to work.
 def double_vertical_separators(lines, vertical_separators_to_duplicate):
     for line_id, line in enumerate(lines):
         vertical_separator = line[0]

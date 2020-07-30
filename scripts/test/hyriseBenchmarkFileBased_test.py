@@ -18,7 +18,6 @@ def main():
     build_dir = initialize()
     compare_benchmarks_path = f"{build_dir}/../scripts/compare_benchmarks.py"
     output_filename_1 = f"{build_dir}/file_based_output_1.json"
-    output_filename_2 = f"{build_dir}/file_based_output_1.json"
 
     return_error = False
 
@@ -54,6 +53,8 @@ def main():
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)
+
+    output_filename_2 = f"{build_dir}/file_based_output_1.json"
 
     # Second run for compare_benchmark.py test
     arguments["--output"] = output_filename_2
