@@ -185,8 +185,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to specify FD passing in case of two input nodes.
    *
    *  Please note: Do not pass FDs that can be generated from unique constraints because functional_dependencies()
-   *               already takes care of that. However, whenever unique constraints are discarded, it makes sense to
-   *               do so since FDs cannot be generated later on anymore.
+   *               already takes care of that.
+   *               However, there is an exception: Some nodes, such as JoinNode, discard unique constraints.
+   *               Consequently, we lose FDs that can no longer be derived in upper nodes. To preserve them, we might
+   *               want to generate FDs from unique constraints prematurely to manually pass them up the LQP tree.
    */
   virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
 
