@@ -40,3 +40,13 @@ struct FunctionalDependency {
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::FunctionalDependency> {
+  size_t operator()(const opossum::FunctionalDependency& fd) const;
+};
+
+}  // namespace std
+

@@ -1,5 +1,7 @@
 #include "functional_dependency.hpp"
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet init_determinants,
@@ -51,3 +53,13 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
 }
 
 }  // namespace opossum
+
+namespace std {
+
+size_t hash<opossum::FunctionalDependency>::operator()(const opossum::FunctionalDependency& fd) const {
+  auto hash = boost::hash_range(fd.determinants.cbegin(), fd.determinants.cend());
+  boost::hash_combine(hash, boost::hash_range(fd.dependents.cbegin(), fd.dependents.cend()));
+  return hash;
+}
+
+}  // namespace std

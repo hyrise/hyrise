@@ -277,13 +277,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (1) Gather FDs from previous nodes
   auto fds_in = pass_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    auto distinct_fds = std::vector<FunctionalDependency>();
-    for (const auto& fd : fds_in) {
-      Assert(std::none_of(distinct_fds.cbegin(), distinct_fds.cend(),
-                          [&fd](const auto& distinct_fd) { return fd == distinct_fd; }),
-             "Did not expect LQP nodes to pass duplicate FDs.");
-      distinct_fds.push_back(fd);
-    }
+    const auto distinct_fds = std::unordered_set<FunctionalDependency>(fds_in.cbegin(), fds_in.cend());
+    Assert(distinct_fds.size() == fds_in.size(), "Did not expect LQP nodes to pass duplicate FDs.");
   }
 
   // (2) Generate FDs from node's unique constraints
