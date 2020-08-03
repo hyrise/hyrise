@@ -10,8 +10,8 @@ def main():
     output_filename_1 = f"{build_dir}/tpcc_output_1.json"
 
     # Not explicitly setting all parameters and not testing all lines of the output. Many are tested in the TPCH test
-    # and we want to avoid duplication. First test single-threaded, then multi-threaded, followed by a third run for
-    # compare_benchmark script tests.
+    # and we want to avoid duplication. First TPC-C execution is single-threaded, second is multi-threaded. The third
+    # execution is done to run the compare_benchmark script tests.
     arguments = {}
     arguments["--scale"] = "2"
     arguments["--time"] = "30"
