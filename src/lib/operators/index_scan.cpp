@@ -92,6 +92,8 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
 
     std::lock_guard<std::mutex> lock(output_mutex);
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
+    _out_table->last_chunk()->finalize();
+    _out_table->last_chunk()->set_sorted_by(chunk->sorted_by());
   });
 
   job_task->schedule();
@@ -198,6 +200,8 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
     matches_out[matches_position] = RowID{chunk_id, *range_begin};
     range_begin++;
   }
+
+  std::sort(matches_out.begin(), matches_out.end());
 
   return matches_out;
 }
