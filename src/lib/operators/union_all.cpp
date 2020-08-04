@@ -46,8 +46,10 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
       // adding newly filled chunk to the output table
       output_chunks[output_chunk_idx] = std::make_shared<Chunk>(output_segments);
-      output_chunks[output_chunk_idx]->finalize();
-      output_chunks[output_chunk_idx]->set_sorted_by(chunk->sorted_by());
+      if (!chunk->sorted_by().empty()) {
+        output_chunks[output_chunk_idx]->finalize();
+        output_chunks[output_chunk_idx]->set_sorted_by(chunk->sorted_by());
+      }
       ++output_chunk_idx;
     }
   }
