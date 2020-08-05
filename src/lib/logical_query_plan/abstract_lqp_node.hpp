@@ -180,8 +180,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * Helper function that passes FDs to upper nodes. By default, it passes FDs from the left input node.
-   * Some nodes may override this function to
-   *  - add additional FDs or
+   * Some nodes may override this function
+   *  - to add additional FDs that are not based on unique constraints
+   *    (e.g. a -> (a + 1) , which is not implemented yet)
    *  - to specify FD passing in case of two input nodes.
    *
    *  Please note: Do not pass FDs that can be generated from unique constraints because functional_dependencies()

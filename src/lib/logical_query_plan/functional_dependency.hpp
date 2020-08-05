@@ -49,4 +49,3 @@ struct hash<opossum::FunctionalDependency> {
 };
 
 }  // namespace std
-

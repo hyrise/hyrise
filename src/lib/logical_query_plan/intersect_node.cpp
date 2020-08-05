@@ -44,7 +44,7 @@ std::vector<FunctionalDependency> IntersectNode::pass_functional_dependencies() 
    * Future Work: Merge FDs from left and right input node.
    */
   Assert(left_input()->pass_functional_dependencies() != right_input()->pass_functional_dependencies(),
-              "Merging of FDs should be implemented.");
+         "Merging of FDs should be implemented.");
   return left_input()->pass_functional_dependencies();
 }
 
