@@ -22,13 +22,13 @@ EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons
   Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");  // NOLINT
 
-#if HYRISE_DEBUG
-  // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
-  // _num_vertices
-  for (const auto& edge : _edges) {
-    Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex Index out of range");
+  if constexpr (HYRISE_DEBUG) {
+    // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
+    // _num_vertices
+    for (const auto& edge : _edges) {
+      Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex Index out of range");
+    }
   }
-#endif
 }
 
 std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::operator()() {
@@ -61,28 +61,28 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
     }
   }
 
-#if HYRISE_DEBUG
-  // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
-  // subsets, i.e., that the enumeration order is correct
+  if constexpr (HYRISE_DEBUG) {
+    // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
+    // subsets, i.e., that the enumeration order is correct
 
-  std::set<JoinGraphVertexSet> enumerated_subsets;
-  std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
+    std::set<JoinGraphVertexSet> enumerated_subsets;
+    std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
 
-  for (auto csg_cmp_pair : _csg_cmp_pairs) {
-    // Components must be either single-vertex or must have been enumerated as the vertex set of a previously enumerated
-    // CCP
-    Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
-           "CSG not yet enumerated");
-    Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,
-           "CSG not yet enumerated");
+    for (auto csg_cmp_pair : _csg_cmp_pairs) {
+      // Components must be either single-vertex or must have been enumerated as the vertex set of a previously enumerated
+      // CCP
+      Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
+             "CSG not yet enumerated");
+      Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,
+             "CSG not yet enumerated");
 
-    enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
+      enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
 
-    Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
-    std::swap(csg_cmp_pair.first, csg_cmp_pair.second);
-    Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+      std::swap(csg_cmp_pair.first, csg_cmp_pair.second);
+      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+    }
   }
-#endif
 
   return _csg_cmp_pairs;
 }

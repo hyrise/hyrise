@@ -20,12 +20,12 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
     : AbstractLQPNode(LQPNodeType::Aggregate, {/* Expressions added below*/}),
       aggregate_expressions_begin_idx{group_by_expressions.size()} {
-#if HYRISE_DEBUG
-  for (const auto& aggregate_expression : aggregate_expressions) {
-    Assert(aggregate_expression->type == ExpressionType::Aggregate,
-           "Expression used as aggregate expression must be of type AggregateExpression.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& aggregate_expression : aggregate_expressions) {
+      Assert(aggregate_expression->type == ExpressionType::Aggregate,
+             "Expression used as aggregate expression must be of type AggregateExpression.");
+    }
   }
-#endif
 
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
   std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
