@@ -69,8 +69,8 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
     std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
 
     for (auto csg_cmp_pair : _csg_cmp_pairs) {
-      // Components must be either single-vertex or must have been enumerated as the vertex set of a previously enumerated
-      // CCP
+      // Components must be either single-vertex or must have been enumerated as the vertex set of a previously
+      // enumerated CCP
       Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
              "CSG not yet enumerated");
       Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,

@@ -269,9 +269,9 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   if constexpr (HYRISE_DEBUG) {
     /**
-   * Make sure all chunks have the same ColumnClusters and actually reference the tables and column_ids that the
-   * segments in the first chunk of the left input table reference
-   */
+     * Make sure all chunks have the same ColumnClusters and actually reference the tables and column_ids that the
+     * segments in the first chunk of the left input table reference
+     */
     const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         auto current_pos_list = std::shared_ptr<const AbstractPosList>();
