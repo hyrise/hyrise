@@ -21,6 +21,7 @@
 #include "utils/load_table.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -35,7 +36,7 @@ constexpr auto CHUNK_SIZE = size_t{1'000'000};
 //constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
 constexpr auto SORT_MODE = SortMode::Ascending;
-constexpr auto EXECUTION_COUNT = 1;
+constexpr auto EXECUTION_COUNT = 50;
 
 //Chunk encodings copied from ping data micro benchmark 
 const auto CHUNK_ENCODINGS = std::vector{
@@ -174,7 +175,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
  * Takes a pair of an LQP-based query and the frequency, partially optimizes the query (only chunk and column pruning
  * for now), translates the query, and executes the query (single-threaded).
  */
-float partially_optimize_translate_and_execute_query(const std::shared_ptr<AbstractLQPNode>& lqp_query) {
+float partially_optimize_translate_and_execute_query(const std::shared_ptr<AbstractLQPNode>& lqp_query, const std::string conf_name, const std::string query_id) {
 
   //std::cout << "LQP Query" << std::endl;
   //std::cout << *lqp_query << std::endl;
@@ -210,6 +211,13 @@ float partially_optimize_translate_and_execute_query(const std::shared_ptr<Abstr
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
     const auto runtime = static_cast<size_t>(timer.lap().count());
     runtimes.push_back(runtime);
+
+    // visualize pqp
+    //auto pqps = {pqp};
+    //GraphvizConfig graphviz_config;
+    //graphviz_config.format = "svg";
+    //std::string path = conf_name + "_" + query_id + "_pqp.svg";
+    //PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, path);
   }
 
   auto runtime_accumulated = size_t{0};
@@ -353,7 +361,7 @@ int main() {
     std::cout << "Execute benchmark queries ... ";
     auto query_id = size_t{0};
     for (auto const& query : queries) {
-      const auto query_runtime = partially_optimize_translate_and_execute_query(query);
+      const auto query_runtime = partially_optimize_translate_and_execute_query(query, conf_name, std::to_string(query_id));
       performance_csv_file << conf_name << "," << query_id << "," << query_runtime << "\n";
       query_id += 1;
     }
