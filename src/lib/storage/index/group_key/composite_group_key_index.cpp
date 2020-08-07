@@ -29,13 +29,13 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
-    [[maybe_unused]] auto all_segments_have_same_size =
+    auto all_segments_have_same_size =
         std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
                     [first_size](const auto& segment) { return segment->size() == first_size; });
 
-    DebugAssert(all_segments_have_same_size,
+    Assert(all_segments_have_same_size,
                 "CompositeGroupKey requires same length of all segments that should be indexed.");
   }
 

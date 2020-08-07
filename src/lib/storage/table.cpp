@@ -47,14 +47,14 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) continue;
 
-      DebugAssert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
+      Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
                   "Empty chunk other than mutable chunk at the end was found");
-      DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
+      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
                   "Supply MvccData for Chunks iff Table uses MVCC");
-      DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
+      Assert(chunk->column_count() == column_count(), "Invalid Chunk column count");
 
       for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
-        DebugAssert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id),
+        Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id),
                     "Invalid Segment DataType");
       }
     }
