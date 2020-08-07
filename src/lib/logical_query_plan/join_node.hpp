@@ -39,7 +39,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   // Generates FDs for both input nodes and passes them as a distinct set
-  std::vector<FunctionalDependency> pass_functional_dependencies() const override;
+  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 

@@ -123,7 +123,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   return unique_constraints;
 }
 
-std::vector<FunctionalDependency> JoinNode::pass_functional_dependencies() const {
+std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
   /**
    * Due to the logic of joins, we might lose several unique constraints in this node. Consequently, upper nodes
    * will have less unique constraints to derive functional dependencies from.

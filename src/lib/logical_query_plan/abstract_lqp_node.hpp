@@ -191,7 +191,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *               Consequently, we lose FDs that can no longer be derived in upper nodes. To preserve them, we might
    *               want to generate FDs from unique constraints prematurely to manually pass them up the LQP tree.
    */
-  virtual std::vector<FunctionalDependency> pass_functional_dependencies() const;
+  virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 
   /**
    * Perform a deep equality check

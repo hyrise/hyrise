@@ -275,7 +275,7 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
   // (1) Gather FDs from previous nodes that cannot be derived from unique constraints
-  auto fds_in = pass_functional_dependencies();
+  auto fds_in = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
     const auto distinct_fds = std::unordered_set<FunctionalDependency>(fds_in.cbegin(), fds_in.cend());
     Assert(distinct_fds.size() == fds_in.size(), "Did not expect LQP nodes to pass duplicate FDs.");
@@ -334,10 +334,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   return fds_out;
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::pass_functional_dependencies() const {
+std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
-    return left_input()->pass_functional_dependencies();
+    return left_input()->non_trivial_functional_dependencies();
   } else {
     return {};
   }

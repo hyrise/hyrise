@@ -133,7 +133,7 @@ void MockNode::set_functional_dependencies(const std::vector<FunctionalDependenc
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::pass_functional_dependencies() const { return _functional_dependencies; }
+std::vector<FunctionalDependency> MockNode::non_trivial_functional_dependencies() const { return _functional_dependencies; }
 
 size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);

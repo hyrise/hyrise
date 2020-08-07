@@ -39,13 +39,13 @@ std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const 
   return _forward_left_unique_constraints();
 }
 
-std::vector<FunctionalDependency> IntersectNode::pass_functional_dependencies() const {
+std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependencies() const {
   /**
    * Future Work: Merge FDs from left and right input node.
    */
-  Assert(left_input()->pass_functional_dependencies() != right_input()->pass_functional_dependencies(),
+  Assert(left_input()->non_trivial_functional_dependencies() != right_input()->non_trivial_functional_dependencies(),
          "Merging of FDs should be implemented.");
-  return left_input()->pass_functional_dependencies();
+  return left_input()->non_trivial_functional_dependencies();
 }
 
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

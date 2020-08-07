@@ -59,7 +59,7 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   Fail("Unhandled UnionMode");
 }
 
-std::vector<FunctionalDependency> UnionNode::pass_functional_dependencies() const {
+std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::All:
@@ -69,9 +69,9 @@ std::vector<FunctionalDependency> UnionNode::pass_functional_dependencies() cons
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
-      DebugAssert(left_input()->pass_functional_dependencies() == right_input()->pass_functional_dependencies(),
+      DebugAssert(left_input()->non_trivial_functional_dependencies() == right_input()->non_trivial_functional_dependencies(),
                   "Expected both input nodes to pass the same FDs.");
-      return left_input()->pass_functional_dependencies();
+      return left_input()->non_trivial_functional_dependencies();
   }
   Fail("Unhandled UnionMode");
 }
