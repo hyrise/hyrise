@@ -291,6 +291,21 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
+TEST_P(OperatorsTableScanTest, SingleScanWithReferencedSortedSegmentEquals) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered.tbl", 1);
+
+  auto table = get_int_sorted_op();
+  auto referenced_table = std::make_shared<TableWrapper>(to_simple_reference_table(table->get_output()));
+  referenced_table->execute();
+
+  auto scan = create_table_scan(referenced_table, ColumnID{0}, PredicateCondition::Equals, 2);
+  scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+// Todo(JK): add test for EntireChunkPosList. Adapt to_simple_reference_table...
+
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqualNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", 1);
 
