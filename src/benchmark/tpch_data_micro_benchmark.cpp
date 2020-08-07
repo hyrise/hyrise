@@ -1,6 +1,7 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -15,6 +16,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -31,10 +33,11 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 0.01f;
+    const auto scale_factor = 1.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
+    benchmark_config.cache_binary_tables = true;
     // TODO(anyone): setup benchmark_config with the given default_encoding
     // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
@@ -122,6 +125,44 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<LQPColumnExpression> _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   std::shared_ptr<LQPColumnExpression> _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHValidateAfter)(benchmark::State& state) {
+  auto& sm = Hyrise::get().storage_manager;
+  auto lineitem_table = sm.get_table("lineitem");
+
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+
+  const auto shipdate_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
+                                                lineitem_table->column_is_nullable(ColumnID{10}), "");
+  const auto shipdate_predicate = std::make_shared<BinaryPredicateExpression>(
+        PredicateCondition::LessThanEquals, shipdate_operand, value_("1998-10-02"));
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), shipdate_predicate);
+    table_scan->execute();
+    const auto validate = std::make_shared<Validate>(table_scan);
+    validate->set_transaction_context(context);
+    validate->execute();
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHValidateBefore)(benchmark::State& state) {
+  auto& sm = Hyrise::get().storage_manager;
+  auto lineitem_table = sm.get_table("lineitem");
+
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+
+  const auto shipdate_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
+                                                lineitem_table->column_is_nullable(ColumnID{10}), "");
+  const auto shipdate_predicate = std::make_shared<BinaryPredicateExpression>(
+        PredicateCondition::LessThanEquals, shipdate_operand, value_("1998-10-02"));
+  for (auto _ : state) {
+    const auto validate = std::make_shared<Validate>(_table_wrapper_map.at("lineitem"));
+    validate->set_transaction_context(context);
+    validate->execute();
+    const auto table_scan = std::make_shared<TableScan>(validate, shipdate_predicate);
+    table_scan->execute();
+  }
+}
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
