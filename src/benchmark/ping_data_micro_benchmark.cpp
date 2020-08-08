@@ -397,8 +397,14 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)(benchmark:
   if (scan_column_index == 4) { right_values = {BM_VAL_CAPTAIN_STATUS[search_value_index]}; }
 
   const std::vector<ColumnID> scan_column_ids = {scan_column_id};
+  std::vector<ChunkID> indexed_chunks;
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    indexed_chunks.emplace_back(chunk_id);
+  }
+
   for (auto _ : state) {
     const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::LessThanEquals, right_values);
+    index_scan->included_chunk_ids = indexed_chunks;
     index_scan->execute();
   }
 }
@@ -488,10 +494,15 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenIndexScan)(ben
     right_values2 = {BM_BETWEEN_VAL_CAPTAIN_STATUS[search_value_index][1]};
   }
 
-  
   const std::vector<ColumnID> scan_column_ids = {scan_column_id};
+  std::vector<ChunkID> indexed_chunks;
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    indexed_chunks.emplace_back(chunk_id);
+  }
+
   for (auto _ : state) {
     const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::BetweenInclusive, right_values, right_values2);
+    index_scan->included_chunk_ids = indexed_chunks;
     index_scan->execute();
   }
 }
