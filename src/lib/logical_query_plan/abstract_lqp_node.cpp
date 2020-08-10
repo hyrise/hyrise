@@ -324,19 +324,19 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
     // Checks: a) whether determinant expressions are part of the node's output expressions
     //         b) whether determinant expressions are non-nullable
     for (const auto& fd_determinant_expression : fd.determinants) {
-      if (!output_expressions_set.contains(fd_determinant_expression) ||
-          !is_column_nullable(get_column_id(*fd_determinant_expression))) {
+      if (!output_expressions_set.contains(fd_determinant_expression)
+          || is_column_nullable(get_column_id(*fd_determinant_expression))) {
         return true;
       }
     }
     // Check whether all dependents are part of the node's output expressions
-    for (const auto& fd_dependent_expression : fd.determinants) {
+    for (const auto& fd_dependent_expression : fd.dependents) {
       if (!output_expressions_set.contains(fd_dependent_expression)) {
         return true;
       }
     }
     return false;
-  }));
+  }), fds.end());
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
