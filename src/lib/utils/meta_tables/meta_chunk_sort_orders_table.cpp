@@ -25,7 +25,9 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      const auto& sorted_by = chunk->sorted_by();
+      if (!chunk) continue;  // Skip physically deleted chunks
+
+      const auto& sorted_by = chunk->individually_sorted_by();
       if (!sorted_by.empty()) {
         for (const auto& [sorted_by_column_id, sort_mode] : sorted_by) {
           std::stringstream sort_mode_stream;

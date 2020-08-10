@@ -10,6 +10,7 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
@@ -304,6 +305,53 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
+}
+
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                               const std::unordered_set<ColumnID>& column_ids) {
+  DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
+                  lqp_node.type == LQPNodeType::Mock,
+              "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
+
+  const auto& output_expressions = lqp_node.output_expressions();
+  auto column_expressions = ExpressionUnorderedSet{};
+  column_expressions.reserve(column_ids.size());
+
+  for (const auto& output_expression : output_expressions) {
+    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+    if (column_expression && column_ids.contains(column_expression->original_column_id) &&
+        *column_expression->original_node.lock() == lqp_node) {
+      if constexpr (HYRISE_DEBUG) {
+        const auto [_, success] = column_expressions.emplace(column_expression);
+        Assert(success, "Did not expect multiple column expressions for the same column id.");
+      } else {
+        column_expressions.emplace(column_expression);
+      }
+    }
+  }
+
+  return column_expressions;
+}
+
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+                                         const ExpressionUnorderedSet& expressions) {
+  DebugAssert(!unique_constraints->empty(), "Invalid input: Set of unique constraints should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
+
+  // Look for a unique constraint that is based on a subset of the given expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (unique_constraint.expressions.size() <= expressions.size() &&
+        std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
+                    [&expressions](const auto unique_constraint_expression) {
+                      return expressions.contains(unique_constraint_expression);
+                    })) {
+      // Found a matching unique constraint
+      return true;
+    }
+  }
+  // Did not find a unique constraint for the given expressions
+  return false;
 }
 
 }  // namespace opossum

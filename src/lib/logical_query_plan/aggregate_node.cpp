@@ -77,6 +77,68 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   return output_expressions;
 }
 
+std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+
+  /**
+   * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.
+   *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
+   *     However, ANY() is a pseudo aggregate function that does not change any values.
+   *     (cf. DependentGroupByReductionRule)
+   *     Therefore, ANY()-wrapped columns can be interpreted as group-by columns.
+   *
+   *     Future Work:
+   *     Some aggregation functions maintain the uniqueness of their input expressions. For example, if {a} is unique,
+   *     so is MAX(a), independently of the group by columns. We could create these new constraints as shown in the
+   *     following example:
+   *
+   *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique constraints:
+   *       - LQPUniqueConstraint for {a, c}.
+   *       - LQPUniqueConstraint for {b, d}.
+   *     An AggregateNode which follows defines the following:
+   *       - COUNT(a), MAX(b)
+   *       - Group By {c, d}
+   *     => The unique constraint for {a, c} has to be discarded because of the COUNT(a) aggregate.
+   *     => The unique constraint for {b, d} can be reformulated as { MAX(b), d }
+   *
+   *     Furthermore, for AggregateNodes without group by columns, where only one row is generated, all columns are
+   *     unique. We are not yet sure if this should be modeled as a unique constraint.
+   */
+
+  // Check each constraint for applicability
+  const auto& input_unique_constraints = left_input()->unique_constraints();
+  for (const auto& input_unique_constraint : *input_unique_constraints) {
+    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
+
+    // Forward constraint
+    unique_constraints->emplace_back(input_unique_constraint);
+  }
+
+  // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
+  const auto group_by_columns_count = aggregate_expressions_begin_idx;
+  ExpressionUnorderedSet group_by_columns(group_by_columns_count);
+  std::copy_n(node_expressions.begin(), group_by_columns_count,
+              std::inserter(group_by_columns, group_by_columns.begin()));
+
+  // Make sure, we do not add an already existing or a superset unique constraint.
+  if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
+    unique_constraints->emplace_back(group_by_columns);
+  }
+
+  /**
+   * Future Work:
+   * Under some circumstances, the DependentGroupByReductionRule reduces the number of group-by columns. Consequently,
+   * we might be able to create shorter unique constraints after the optimizer rule has been run.
+   * (shorter unique constraints are always preferred)
+   * However, it would be great if this function could return the shortest unique constraints possible,
+   * without having to rely on the execution of the optimizer rule.
+   * Fortunately, we can shorten unique constraints ourselves by looking at the available functional dependencies.
+   * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
+   */
+
+  return unique_constraints;
+}
+
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
   Assert(left_input(), "Need left input to determine nullability");

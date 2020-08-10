@@ -27,6 +27,8 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   return true;
 }
 
+bool FunctionalDependency::operator!=(const FunctionalDependency& other) const { return !(other == *this); }
+
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {
   stream << "{";
   auto determinants_vector =

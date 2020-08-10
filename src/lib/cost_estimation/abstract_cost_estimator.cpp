@@ -66,7 +66,7 @@ void AbstractCostEstimator::guarantee_bottom_up_construction() {
 std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     const std::shared_ptr<AbstractLQPNode>& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const {
   /**
-   * Look up this subplan in cache, if a cache is present.
+   * Look up this subplan in cache if a cache is present.
    * Needs to pay special attention to diamond shapes in the LQP to avoid costing nodes multiple times.
    */
   if (!cost_estimation_by_lqp_cache) {

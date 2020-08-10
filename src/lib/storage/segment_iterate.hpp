@@ -18,7 +18,7 @@
  * segment.
  *
  * The template parameter T is either (if known to the caller) the DataType of the values contained in the segment, or
- * ResolveDataTypeTag, if the type is unknown to the caller. ALWAYS pass in the DataType of the Segment if is already
+ * ResolveDataTypeTag if the type is unknown to the caller. ALWAYS pass in the DataType of the Segment if is already
  * known in order to avoid unnecessary code generation.
  *
  * The template parameter EraseTypes specifies if type erasure should be used, which reduces compile

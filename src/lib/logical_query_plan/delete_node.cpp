@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-DeleteNode::DeleteNode() : AbstractLQPNode(LQPNodeType::Delete) {}
+DeleteNode::DeleteNode() : AbstractNonQueryNode(LQPNodeType::Delete) {}
 
 std::string DeleteNode::description(const DescriptionMode mode) const { return "[Delete]"; }
 

@@ -152,9 +152,9 @@ class Chunk : private Noncopyable {
    * Sort orders are currently exploited in several scan implementations (e.g., ColumnVsValue, ColumnIsNull,
    * ColumnBetweenScan) and selected other operators (e.g., AggregateSort). See #1519 for more details.
    */
-  const std::vector<SortColumnDefinition>& sorted_by() const;
-  void set_sorted_by(const SortColumnDefinition& sorted_by);
-  void set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by);
+  const std::vector<SortColumnDefinition>& individually_sorted_by() const;
+  void set_individually_sorted_by(const SortColumnDefinition& sorted_by);
+  void set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by);
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.

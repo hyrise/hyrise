@@ -22,6 +22,8 @@ std::shared_ptr<Table> MetaChunksTable::_on_generate() const {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
+      if (!chunk) continue;  // Skip physically deleted chunks
+
       const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
                                          ? AllTypeVariant{static_cast<int64_t>(*chunk->get_cleanup_commit_id())}
                                          : NULL_VALUE;
