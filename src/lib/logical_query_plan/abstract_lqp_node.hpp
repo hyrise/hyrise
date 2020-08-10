@@ -179,17 +179,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
-   * Helper function that passes FDs to upper nodes. By default, it passes FDs from the left input node.
-   * Some nodes may override this function
-   *  - to add additional FDs that are not based on unique constraints
-   *    (e.g. a -> (a + 1) , which is not implemented yet)
-   *  - to specify FD passing in case of two input nodes.
+   * Helper function that returns non-trivial FDs valid for the current node.
+   * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
    *
-   *  Please note: Do not pass FDs that can be generated from unique constraints because functional_dependencies()
-   *               already takes care of that.
-   *               However, there is an exception: Some nodes, such as JoinNode, discard unique constraints.
-   *               Consequently, we lose FDs that can no longer be derived in upper nodes. To preserve them, we might
-   *               want to generate FDs from unique constraints prematurely to manually pass them up the LQP tree.
+   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
+   * an empty vector.
+   *
+   * Nodes should override this function
+   *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
+   *  - to specify forwarding of non-trivial FDs in case of two input nodes.
+   *
+   *  Please note: Some nodes, such as JoinNode, might discard unique constraints. Consequently, trivial FDs might
+   *               become non-trivial since they cannot be generated from unique constraints later on anymore. Nodes
+   *               should override this function to save those kinds of FDs.
    */
   virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 
@@ -251,6 +253,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::vector<FunctionalDependency> _fds_from_unique_constraints(const std::vector<LQPUniqueConstraint>&
       unique_constraints) const;
+
+  /**
+   * This is a helper method to TODO(Julian) removes FDs when expressions are missing
+   * @return TODO
+   */
+  void _remove_invalid_fds(std::vector<FunctionalDependency>& fds) const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <utility>
 
 #include "boost/functional/hash.hpp"
 #include "expression/abstract_expression.hpp"
@@ -274,64 +275,69 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // (1) Gather FDs from previous nodes that cannot be derived from unique constraints
-  auto fds_in = non_trivial_functional_dependencies();
+  // (1) Gather non-trivial FDs from previous, which cannot be derived from unique constraints
+  auto non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    const auto distinct_fds = std::unordered_set<FunctionalDependency>(fds_in.cbegin(), fds_in.cend());
-    Assert(distinct_fds.size() == fds_in.size(), "Did not expect LQP nodes to pass duplicate FDs.");
-  }
+    const auto distinct_fds = std::unordered_set<FunctionalDependency>(non_trivial_fds.cbegin(), non_trivial_fds.cend());
+    Assert(distinct_fds.size() == non_trivial_fds.size(), "Did not expect LQP nodes to return duplicate FDs.");
 
-  // (2) Generate FDs from node's unique constraints
-  const auto& output_expressions = this->output_expressions();
-  const auto unique_constraints = this->unique_constraints();
-  for (const auto& unique_constraint : *unique_constraints) {
-    auto determinants = unique_constraint.expressions;
-    auto dependents = ExpressionUnorderedSet();
-    for (const auto& output_expression : output_expressions) {
-      if (!determinants.contains(output_expression)) {
-        dependents.insert(output_expression);
+    const auto& output_expressions = this->output_expressions();
+    const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+    for(const auto& fd : distinct_fds) {
+      for(const auto& fd_determinant_expression : fd.determinants) {
+        Assert(output_expressions_set.contains(fd_determinant_expression),
+               "Expected FD's determinant expressions to be a subset of the node's output expressions.");
+        Assert(!output_expressions_set.contains(fd_determinant_expression) ||
+                is_column_nullable(get_column_id(*fd_determinant_expression)),
+               "Expected FD's determinant expressions to be non-nullable.");
+      }
+      for(const auto& fd_dependent_expression : fd.dependents) {
+        Assert(output_expressions_set.contains(fd_dependent_expression),
+               "Expected FD's dependent expressions to be a subset of the node's output expressions.");
       }
     }
+  }
 
-    // Add the FD to the output if not already existing
-    if (!dependents.empty() &&
-        std::find_if(fds_in.cbegin(), fds_in.cend(), [&determinants, &dependents](const auto& fd) {
-          return (fd.determinants == determinants) && (fd.dependents == dependents);
-        }) == fds_in.cend()) {
-      fds_in.emplace_back(determinants, dependents);
+  // (2) Generate FDs from current node's unique constraints
+  auto generated_fds = _fds_from_unique_constraints(*this->unique_constraints());
+  if constexpr (HYRISE_DEBUG) {
+    const auto generated_fds_set = std::unordered_set{generated_fds.cbegin(), generated_fds.cend()};
+    for(const auto& non_trivial_fd : non_trivial_fds) {
+      Assert(!generated_fds_set.contains(non_trivial_fd),
+             "Did not expect to generate non-trivial FD from unique constraints.");
     }
   }
 
-  /**
-   * (3) Remove invalid FDs:
-   *     Currently, we do not support FDs in conjunction with null values in their determinant set. Therefore, we
-   *     have to check all FDs for compliance before returning them.
-   *     The columns of the FD's dependents set are allowed to be nullable.
-   */
-  auto fds_out = std::vector<FunctionalDependency>();
+  // (3) Merge FDs
+  auto output_fds = non_trivial_fds;
+  output_fds.reserve(non_trivial_fds.size() + generated_fds.size());
+  std::move(generated_fds.begin(), generated_fds.end(), std::back_inserter(output_fds));
 
-  // For the following check, we need to collect all non-nullable columns
-  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (!is_column_nullable(column_id)) {
-      output_expressions_non_nullable.insert(output_expressions.at(column_id));
-    }
-  }
-  for (const auto& fd : fds_in) {
-    // Check whether the determinants are a subset of the current node's non-nullable output expressions
-    if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                    [&output_expressions_non_nullable](const auto& expression) {
-                      return !output_expressions_non_nullable.contains(expression);
-                    })) {
-      // Discard the FD
-      continue;
-    }
+  return output_fds;
+}
 
-    // Add FD to the output
-    fds_out.push_back(fd);
-  }
+void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
+  const auto& output_expressions = this->output_expressions();
+  const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+  std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd){
+      // Checks
+      //  a) whether determinant expressions are part of the node's output expressions
+      //  b) whether determinant expressions are non-nullable
+      for(const auto& fd_determinant_expression : fd.determinants) {
+        if(!output_expressions_set.contains(fd_determinant_expression) || !is_column_nullable(get_column_id
+                                                                                               (*fd_determinant_expression))) {
+          return false;
+        }
+      }
 
-  return fds_out;
+      // Check whether all dependents are part of the node's output expressions
+      for(const auto& fd_dependent_expression : fd.determinants) {
+        if(!output_expressions_set.contains(fd_dependent_expression)) {
+          return false;
+        }
+      }
+      return true;
+    });
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
