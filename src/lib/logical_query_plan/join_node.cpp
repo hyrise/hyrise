@@ -124,24 +124,33 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
-  /**
-   * Due to the logic of joins, we might lose several unique constraints in this node. Consequently, upper nodes
-   * will have less unique constraints to derive functional dependencies from.
-   * Therefore, we create functional dependencies from both input nodes to manually pass them up the LQP tree.
-   */
-  auto fds_in = left_input()->functional_dependencies();
-  auto fds_right = right_input()->functional_dependencies();
 
-  if (!fds_right.empty()) {
-    for (const auto& fd_right : fds_right) {
-      // Do not add duplicate FDs
-      if (!std::any_of(fds_in.begin(), fds_in.end(), [&fd_right](const auto& fd) { return fd == fd_right; })) {
-        fds_in.push_back(fd_right);
+  /**
+   * Due to the logic of joins, we might lose several unique constraints in this node. In consequence, some FDs become
+   * non-trivial and have to be returned by this function.
+   */
+  auto non_trivial_fds = _fds_from_unique_constraints(_discarded_unique_constraints());
+
+  // Merge with child nodes' non-trivial FDs output vector
+  auto non_trivial_fds_left = left_input()->non_trivial_functional_dependencies();
+  auto fds_out = std::vector<FunctionalDependency>(non_trivial_fds.size() + non_trivial_fds_left.size());
+  std::move(non_trivial_fds.begin(), non_trivial_fds.end(), std::back_inserter(fds_out));
+  std::move(non_trivial_fds_left.begin(), non_trivial_fds_left.end(), std::back_inserter(fds_out));
+
+  // We also merge the right table's FDs (except for Semi- & Anti-Joins)
+  if(join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsFalse && join_mode != JoinMode::AntiNullAsTrue) {
+    auto non_trivial_fds_right = left_input()->non_trivial_functional_dependencies();
+    for(const auto& fd_right : non_trivial_fds_right) {
+      // We do not want to add duplicate FDs
+      if(std::none_of(non_trivial_fds_left.cbegin(), non_trivial_fds_left.cend(), [&fd_right](const auto& fd_left){
+            return fd_left == fd_right;
+          })) {
+        fds_out.push_back(fd_right);
       }
     }
   }
 
-  return fds_in;
+  return fds_out;
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {

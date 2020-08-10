@@ -239,6 +239,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
 
+  /**
+   * This is a helper method to identify input unique constraints that get discarded by the current node.
+   * @return Unique constraints from the left and right input nodes which are not returned by the current node.
+   */
+  std::vector<LQPUniqueConstraint> _discarded_unique_constraints() const;
+
+  /**
+   * This is a helper method to TODO(Julian)
+   * @return TODO
+   */
+  std::vector<FunctionalDependency> _fds_from_unique_constraints(const std::vector<LQPUniqueConstraint>&
+      unique_constraints) const;
+
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
    */
