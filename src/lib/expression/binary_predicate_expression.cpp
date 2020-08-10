@@ -21,7 +21,7 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
     const auto* const it =
         std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
     Assert(it != valid_predicate_conditions.end(),
-                "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
+           "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
   }
 }
 

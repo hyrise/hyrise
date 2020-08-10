@@ -36,7 +36,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
                     [first_size](const auto& segment) { return segment->size() == first_size; });
 
     Assert(all_segments_have_same_size,
-                "CompositeGroupKey requires same length of all segments that should be indexed.");
+           "CompositeGroupKey requires same length of all segments that should be indexed.");
   }
 
   // cast and check segments

@@ -84,14 +84,14 @@ void AbstractOperator::execute() {
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
         Assert(_output->column_count() == lqp_expressions.size(),
-                    std::string{"Mismatching number of output columns for "} + name());
+               std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           if (_type != OperatorType::Alias) {
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
             const auto pqp_name = _output->column_name(column_id);
             Assert(pqp_type == lqp_type,
-                        std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
         }
       }

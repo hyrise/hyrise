@@ -278,20 +278,21 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (1) Gather non-trivial FDs from previous, which cannot be derived from unique constraints
   auto non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    const auto distinct_fds = std::unordered_set<FunctionalDependency>(non_trivial_fds.cbegin(), non_trivial_fds.cend());
+    const auto distinct_fds =
+        std::unordered_set<FunctionalDependency>(non_trivial_fds.cbegin(), non_trivial_fds.cend());
     Assert(distinct_fds.size() == non_trivial_fds.size(), "Did not expect LQP nodes to return duplicate FDs.");
 
     const auto& output_expressions = this->output_expressions();
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-    for(const auto& fd : distinct_fds) {
-      for(const auto& fd_determinant_expression : fd.determinants) {
+    for (const auto& fd : distinct_fds) {
+      for (const auto& fd_determinant_expression : fd.determinants) {
         Assert(output_expressions_set.contains(fd_determinant_expression),
                "Expected FD's determinant expressions to be a subset of the node's output expressions.");
         Assert(!output_expressions_set.contains(fd_determinant_expression) ||
-                is_column_nullable(get_column_id(*fd_determinant_expression)),
+                   is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      for(const auto& fd_dependent_expression : fd.dependents) {
+      for (const auto& fd_dependent_expression : fd.dependents) {
         Assert(output_expressions_set.contains(fd_dependent_expression),
                "Expected FD's dependent expressions to be a subset of the node's output expressions.");
       }
@@ -301,9 +302,9 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (2) Generate FDs from current node's unique constraints
   auto generated_fds = _fds_from_unique_constraints(*this->unique_constraints());
   if constexpr (HYRISE_DEBUG) {
-    const auto generated_fds_set = std::unordered_set<FunctionalDependency>{generated_fds.cbegin(),
-                                                                            generated_fds.cend()};
-    for(const auto& non_trivial_fd : non_trivial_fds) {
+    const auto generated_fds_set =
+        std::unordered_set<FunctionalDependency>{generated_fds.cbegin(), generated_fds.cend()};
+    for (const auto& non_trivial_fd : non_trivial_fds) {
       Assert(!generated_fds_set.contains(non_trivial_fd),
              "Did not expect to generate non-trivial FD from unique constraints.");
     }
@@ -320,25 +321,25 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
   const auto& output_expressions = this->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-  std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd){
-      // Checks
-      //  a) whether determinant expressions are part of the node's output expressions
-      //  b) whether determinant expressions are non-nullable
-      for(const auto& fd_determinant_expression : fd.determinants) {
-        if(!output_expressions_set.contains(fd_determinant_expression) || !is_column_nullable(get_column_id
-                                                                                               (*fd_determinant_expression))) {
-          return false;
-        }
+  std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd) {
+    // Checks
+    //  a) whether determinant expressions are part of the node's output expressions
+    //  b) whether determinant expressions are non-nullable
+    for (const auto& fd_determinant_expression : fd.determinants) {
+      if (!output_expressions_set.contains(fd_determinant_expression) ||
+          !is_column_nullable(get_column_id(*fd_determinant_expression))) {
+        return false;
       }
+    }
 
-      // Check whether all dependents are part of the node's output expressions
-      for(const auto& fd_dependent_expression : fd.determinants) {
-        if(!output_expressions_set.contains(fd_dependent_expression)) {
-          return false;
-        }
+    // Check whether all dependents are part of the node's output expressions
+    for (const auto& fd_dependent_expression : fd.determinants) {
+      if (!output_expressions_set.contains(fd_dependent_expression)) {
+        return false;
       }
-      return true;
-    });
+    }
+    return true;
+  });
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
@@ -429,13 +430,13 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
 }
 
 std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints() const {
-  if(!left_input() && !right_input()) return {};
+  if (!left_input() && !right_input()) return {};
 
   // Collect unique constraints from input nodes
   auto input_unique_constraints = left_input()->unique_constraints();
-  auto input_unique_constraints_set = std::unordered_set<LQPUniqueConstraint>{input_unique_constraints->begin(),
-                                                                              input_unique_constraints->end()};
-  if(right_input()) {
+  auto input_unique_constraints_set =
+      std::unordered_set<LQPUniqueConstraint>{input_unique_constraints->begin(), input_unique_constraints->end()};
+  if (right_input()) {
     const auto& unique_constraints_right = right_input()->unique_constraints();
     input_unique_constraints_set.insert(unique_constraints_right->cbegin(), unique_constraints_right->cend());
   }
@@ -443,8 +444,8 @@ std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints(
   // Collect discarded unique constraints
   auto discarded_unique_constraints = std::vector<LQPUniqueConstraint>{};
   const auto& unique_constraints = this->unique_constraints();
-  for(const auto& unique_constraint : *unique_constraints) {
-    if(!input_unique_constraints_set.contains(unique_constraint)) {
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (!input_unique_constraints_set.contains(unique_constraint)) {
       discarded_unique_constraints.push_back(unique_constraint);
     }
   }
@@ -452,8 +453,8 @@ std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints(
   return discarded_unique_constraints;
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(const std::vector<LQPUniqueConstraint>&
-unique_constraints) const {
+std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
+    const std::vector<LQPUniqueConstraint>& unique_constraints) const {
   auto fds = std::vector<FunctionalDependency>{};
 
   // Collect non-nullable output expressions
@@ -469,10 +470,10 @@ unique_constraints) const {
     auto determinants = unique_constraint.expressions;
 
     // (1) Verify whether we can create an FD from the given unique constraint
-    if(!std::all_of(determinants.cbegin(), determinants.cend(), [&output_expressions_non_nullable](const auto&
-                                                                                                       determinant_expression) {
-            return output_expressions_non_nullable.contains(determinant_expression);
-        })) {
+    if (!std::all_of(determinants.cbegin(), determinants.cend(),
+                     [&output_expressions_non_nullable](const auto& determinant_expression) {
+                       return output_expressions_non_nullable.contains(determinant_expression);
+                     })) {
       continue;
     }
     // (2) Collect the dependent output expressions
@@ -483,10 +484,12 @@ unique_constraints) const {
       }
     }
     // (3) Add FD to output
-    if (!dependents.empty()){
-      DebugAssert(std::find_if(fds.cbegin(), fds.cend(), [&determinants, &dependents](const auto& fd) {
-        return (fd.determinants == determinants) && (fd.dependents == dependents);
-      }) == fds.cend(), "Creating duplicate functional dependencies is unexpected.");
+    if (!dependents.empty()) {
+      DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
+                               [&determinants, &dependents](const auto& fd) {
+                                 return (fd.determinants == determinants) && (fd.dependents == dependents);
+                               }) == fds.cend(),
+                  "Creating duplicate functional dependencies is unexpected.");
 
       fds.emplace_back(determinants, dependents);
     }

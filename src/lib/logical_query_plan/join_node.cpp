@@ -124,7 +124,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
-
   /**
    * Due to the logic of joins, we might lose several unique constraints in this node. In consequence, some FDs become
    * non-trivial and have to be returned by this function.
@@ -139,13 +138,12 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   std::move(non_trivial_fds_left.begin(), non_trivial_fds_left.end(), std::back_inserter(fds_out));
 
   // We also merge the right table's FDs (except for Semi- & Anti-Joins)
-  if(join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsFalse && join_mode != JoinMode::AntiNullAsTrue) {
+  if (join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsFalse && join_mode != JoinMode::AntiNullAsTrue) {
     auto non_trivial_fds_right = left_input()->non_trivial_functional_dependencies();
-    for(const auto& fd_right : non_trivial_fds_right) {
+    for (const auto& fd_right : non_trivial_fds_right) {
       // We do not want to add duplicate FDs
-      if(std::none_of(non_trivial_fds_left.cbegin(), non_trivial_fds_left.cend(), [&fd_right](const auto& fd_left){
-            return fd_left == fd_right;
-          })) {
+      if (std::none_of(non_trivial_fds_left.cbegin(), non_trivial_fds_left.cend(),
+                       [&fd_right](const auto& fd_left) { return fd_left == fd_right; })) {
         fds_out.push_back(fd_right);
       }
     }

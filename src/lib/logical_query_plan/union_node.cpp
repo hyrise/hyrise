@@ -69,8 +69,9 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
-      DebugAssert(left_input()->non_trivial_functional_dependencies() == right_input()->non_trivial_functional_dependencies(),
-                  "Expected both input nodes to pass the same FDs.");
+      DebugAssert(
+          left_input()->non_trivial_functional_dependencies() == right_input()->non_trivial_functional_dependencies(),
+          "Expected both input nodes to pass the same FDs.");
       return left_input()->non_trivial_functional_dependencies();
   }
   Fail("Unhandled UnionMode");
