@@ -129,7 +129,7 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
 
 const TableKeyConstraints& MockNode::key_constraints() const { return _table_key_constraints; }
 
-void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
   _functional_dependencies = fds;
 }
 
@@ -153,7 +153,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
-  mock_node->set_functional_dependencies(_functional_dependencies);
+  mock_node->set_non_trivial_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }

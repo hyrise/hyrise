@@ -217,12 +217,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   const auto a = mock_node_a->get_column("a");
   const auto b = mock_node_a->get_column("b");
   const auto fd_ab = FunctionalDependency{{a}, {b}};
-  mock_node_a->set_functional_dependencies({fd_ab});
+  mock_node_a->set_non_trivial_functional_dependencies({fd_ab});
 
   const auto x = mock_node_b->get_column("x");
   const auto y = mock_node_b->get_column("y");
   const auto fd_xy = FunctionalDependency{{x}, {y}};
-  mock_node_b->set_functional_dependencies({fd_xy});
+  mock_node_b->set_non_trivial_functional_dependencies({fd_xy});
 
   // Prepare JoinNodes
   const auto join_column_a = a;

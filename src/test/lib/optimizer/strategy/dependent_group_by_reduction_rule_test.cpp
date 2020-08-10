@@ -295,7 +295,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   auto e = mock_node->get_column("e");
   auto fd1 = FunctionalDependency{{a}, {b}};
   auto fd2 = FunctionalDependency{{c}, {d}};
-  mock_node->set_functional_dependencies({fd1, fd2});
+  mock_node->set_non_trivial_functional_dependencies({fd1, fd2});
 
   // clang-format off
   auto lqp =
