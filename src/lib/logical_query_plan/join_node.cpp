@@ -137,9 +137,9 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   std::move(non_trivial_fds.begin(), non_trivial_fds.end(), std::back_inserter(fds_out));
   std::move(non_trivial_fds_left.begin(), non_trivial_fds_left.end(), std::back_inserter(fds_out));
 
-  // We also merge the right table's FDs (except for Semi- & Anti-Joins)
+  // In most cases, we also want to forward the right table's non-trivial FDs (except for Semi- & Anti-Joins)
   if (join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsFalse && join_mode != JoinMode::AntiNullAsTrue) {
-    auto non_trivial_fds_right = left_input()->non_trivial_functional_dependencies();
+    auto non_trivial_fds_right = right_input()->non_trivial_functional_dependencies();
     for (const auto& fd_right : non_trivial_fds_right) {
       // We do not want to add duplicate FDs
       if (std::none_of(non_trivial_fds_left.cbegin(), non_trivial_fds_left.cend(),
@@ -147,6 +147,11 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
         fds_out.push_back(fd_right);
       }
     }
+  }
+
+  // Outer joins lead to nullable columns invalidating some FDs
+  if(join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
+    _remove_invalid_fds(fds_out);
   }
 
   return fds_out;

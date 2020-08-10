@@ -288,8 +288,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
       for (const auto& fd_determinant_expression : fd.determinants) {
         Assert(output_expressions_set.contains(fd_determinant_expression),
                "Expected FD's determinant expressions to be a subset of the node's output expressions.");
-        Assert(!output_expressions_set.contains(fd_determinant_expression) ||
-                   is_column_nullable(get_column_id(*fd_determinant_expression)),
+        Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
       for (const auto& fd_dependent_expression : fd.dependents) {
@@ -321,25 +320,23 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
   const auto& output_expressions = this->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-  std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd) {
-    // Checks
-    //  a) whether determinant expressions are part of the node's output expressions
-    //  b) whether determinant expressions are non-nullable
+  fds.erase(std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd) {
+    // Checks: a) whether determinant expressions are part of the node's output expressions
+    //         b) whether determinant expressions are non-nullable
     for (const auto& fd_determinant_expression : fd.determinants) {
       if (!output_expressions_set.contains(fd_determinant_expression) ||
           !is_column_nullable(get_column_id(*fd_determinant_expression))) {
-        return false;
+        return true;
       }
     }
-
     // Check whether all dependents are part of the node's output expressions
     for (const auto& fd_dependent_expression : fd.determinants) {
       if (!output_expressions_set.contains(fd_dependent_expression)) {
-        return false;
+        return true;
       }
     }
-    return true;
-  });
+    return false;
+  }));
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
@@ -440,6 +437,9 @@ std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints(
     const auto& unique_constraints_right = right_input()->unique_constraints();
     input_unique_constraints_set.insert(unique_constraints_right->cbegin(), unique_constraints_right->cend());
   }
+
+  // Early exit
+  if (input_unique_constraints_set.empty()) return {};
 
   // Collect discarded unique constraints
   auto discarded_unique_constraints = std::vector<LQPUniqueConstraint>{};
