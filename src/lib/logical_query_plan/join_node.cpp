@@ -133,7 +133,8 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
 
   // Merge with child nodes' non-trivial FDs output vector
   auto non_trivial_fds_left = left_input()->non_trivial_functional_dependencies();
-  auto fds_out = std::vector<FunctionalDependency>(non_trivial_fds.size() + non_trivial_fds_left.size());
+  auto fds_out = std::vector<FunctionalDependency>();
+  fds_out.reserve(non_trivial_fds.size() + non_trivial_fds_left.size());
   std::move(non_trivial_fds.begin(), non_trivial_fds.end(), std::back_inserter(fds_out));
   std::move(non_trivial_fds_left.begin(), non_trivial_fds_left.end(), std::back_inserter(fds_out));
 

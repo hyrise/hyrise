@@ -301,7 +301,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (2) Generate FDs from current node's unique constraints
   auto generated_fds = _fds_from_unique_constraints(*this->unique_constraints());
   if constexpr (HYRISE_DEBUG) {
-    const auto generated_fds_set = std::unordered_set{generated_fds.cbegin(), generated_fds.cend()};
+    const auto generated_fds_set = std::unordered_set<FunctionalDependency>{generated_fds.cbegin(),
+                                                                            generated_fds.cend()};
     for(const auto& non_trivial_fd : non_trivial_fds) {
       Assert(!generated_fds_set.contains(non_trivial_fd),
              "Did not expect to generate non-trivial FD from unique constraints.");
@@ -431,19 +432,19 @@ std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints(
   if(!left_input() && !right_input()) return {};
 
   // Collect unique constraints from input nodes
-  const auto& unique_constraints_left = left_input()->unique_constraints();
-  auto input_unique_constraints = std::unordered_set<LQPUniqueConstraint>{};
-  input_unique_constraints.insert(unique_constraints_left->cbegin(), unique_constraints_left->cend());
+  auto input_unique_constraints = left_input()->unique_constraints();
+  auto input_unique_constraints_set = std::unordered_set<LQPUniqueConstraint>{input_unique_constraints->begin(),
+                                                                              input_unique_constraints->end()};
   if(right_input()) {
     const auto& unique_constraints_right = right_input()->unique_constraints();
-    input_unique_constraints.insert(unique_constraints_right->cbegin(), unique_constraints_right->cend());
+    input_unique_constraints_set.insert(unique_constraints_right->cbegin(), unique_constraints_right->cend());
   }
 
   // Collect discarded unique constraints
   auto discarded_unique_constraints = std::vector<LQPUniqueConstraint>{};
   const auto& unique_constraints = this->unique_constraints();
   for(const auto& unique_constraint : *unique_constraints) {
-    if(!input_unique_constraints.contains(unique_constraint)) {
+    if(!input_unique_constraints_set.contains(unique_constraint)) {
       discarded_unique_constraints.push_back(unique_constraint);
     }
   }
