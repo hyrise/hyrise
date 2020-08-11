@@ -426,34 +426,6 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
   return input_unique_constraints;
 }
 
-std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints() const {
-  if (!left_input() && !right_input()) return {};
-
-  // Collect unique constraints from input nodes
-  auto input_unique_constraints = left_input()->unique_constraints();
-  if (right_input()) {
-    const auto& unique_constraints_right = right_input()->unique_constraints();
-    input_unique_constraints->insert(input_unique_constraints->end(), unique_constraints_right->cbegin(),
-                                     unique_constraints_right->cend());
-  }
-
-  // Early exit
-  if (input_unique_constraints->empty()) return {};
-
-  // Collect discarded unique constraints
-  auto discarded_unique_constraints = std::vector<LQPUniqueConstraint>{};
-  const auto& unique_constraints = this->unique_constraints();
-  const auto unique_constraints_set = std::unordered_set<LQPUniqueConstraint>{unique_constraints->cbegin(),
-                                                                              unique_constraints->cend()};
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!unique_constraints_set.contains(input_unique_constraint)) {
-      discarded_unique_constraints.push_back(input_unique_constraint);
-    }
-  }
-
-  return discarded_unique_constraints;
-}
-
 std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
     const std::vector<LQPUniqueConstraint>& unique_constraints) const {
   auto fds = std::vector<FunctionalDependency>{};

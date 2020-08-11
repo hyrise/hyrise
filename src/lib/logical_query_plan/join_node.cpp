@@ -124,37 +124,38 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
-  /**
-   * Due to the logic of joins, we might lose several unique constraints in this node. In consequence, some FDs become
-   * non-trivial and have to be returned by this function.
-   */
-  auto non_trivial_fds = _fds_from_unique_constraints(_discarded_unique_constraints());
+  if (join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse) {
+    /**
+     * In the course of inner/outer joins,
+     *  (a) some unique constraints and therefore some trivial FDs of the JoinNode's input nodes might become lost.
+     *  (b) some unique constraints might stay valid. Due to the increased number of output expressions, however,
+     *      derived FDs become longer. For example: - Table A: (UNIQUE(a), b) leads to the FD {a} -> {b}
+     *                                              - Table B: (x, y)
+     *                                              After joining both tables, we may end up with
+     *                                              - (UNIQUE(a), b, x, y) which leads to the FD {a} -> {b, x, y}
+     *                                              Nevertheless, shorter FDs are always preferred.
+     *
+     * In conclusion: All input tables' FDs become non-trivial after the inner/outer join operation. To preserve
+     * them, we need to generate and return them via this function.
+     */
+    auto fds_left = left_input()->functional_dependencies();
+    auto fds_right = right_input()->functional_dependencies();
 
-  // Merge with child nodes' non-trivial FDs output vector
-  auto non_trivial_fds_left = left_input()->non_trivial_functional_dependencies();
-  auto fds_out = std::vector<FunctionalDependency>();
-  fds_out.reserve(non_trivial_fds.size() + non_trivial_fds_left.size());
-  std::move(non_trivial_fds.begin(), non_trivial_fds.end(), std::back_inserter(fds_out));
-  std::move(non_trivial_fds_left.begin(), non_trivial_fds_left.end(), std::back_inserter(fds_out));
+    // Prevent duplicates in the output
+    auto fds_out_set = std::unordered_set<FunctionalDependency>(fds_left.begin(), fds_left.end());
+    for (const auto& fd_right : fds_right) {
+        fds_out_set.insert(fd_right);
+    }
+    auto fds_out = std::vector<FunctionalDependency>(fds_out_set.begin(), fds_out_set.end());
 
-  // In most cases, we also want to forward the right table's non-trivial FDs (except for Semi- & Anti-Joins)
-  if (join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsFalse && join_mode != JoinMode::AntiNullAsTrue) {
-    auto non_trivial_fds_right = right_input()->non_trivial_functional_dependencies();
-    for (const auto& fd_right : non_trivial_fds_right) {
-      // We do not want to add duplicate FDs
-      if (std::none_of(non_trivial_fds_left.cbegin(), non_trivial_fds_left.cend(),
-                       [&fd_right](const auto& fd_left) { return fd_left == fd_right; })) {
-        fds_out.push_back(fd_right);
-      }
+    // Outer joins lead to nullable columns, which may invalidate some FDs
+    if(join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
+      _remove_invalid_fds(fds_out);
     }
   }
-
-  // Outer joins lead to nullable columns invalidating some FDs
-  if(join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
-    _remove_invalid_fds(fds_out);
-  }
-
-  return fds_out;
+  // In case of Semi- & Anti-Joins, this node acts as a pure filter for the left input node. Therefore, we only have to
+  // forward non-trivial FDs as follows:
+  return left_input()->non_trivial_functional_dependencies();
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
