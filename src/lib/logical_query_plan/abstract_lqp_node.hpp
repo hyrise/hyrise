@@ -245,8 +245,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method to TODO(Julian)
    * @return TODO
    */
-  std::vector<FunctionalDependency> _fds_from_unique_constraints(
-      const std::vector<LQPUniqueConstraint>& unique_constraints) const;
+  std::vector<FunctionalDependency> _fds_from_unique_constraints() const;
 
   /**
    * This is a helper method to TODO(Julian) removes FDs when expressions are missing

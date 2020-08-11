@@ -299,7 +299,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // (2) Generate FDs from current node's unique constraints
-  auto generated_fds = _fds_from_unique_constraints(*this->unique_constraints());
+  auto generated_fds = _fds_from_unique_constraints();
   if constexpr (HYRISE_DEBUG) {
     const auto generated_fds_set =
         std::unordered_set<FunctionalDependency>{generated_fds.cbegin(), generated_fds.cend()};
@@ -426,8 +426,10 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
   return input_unique_constraints;
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
-    const std::vector<LQPUniqueConstraint>& unique_constraints) const {
+std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints() const {
+  const auto unique_constraints = this->unique_constraints();
+  if(unique_constraints->empty()) return {};
+
   auto fds = std::vector<FunctionalDependency>{};
 
   // Collect non-nullable output expressions
@@ -439,7 +441,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
     }
   }
 
-  for (const auto& unique_constraint : unique_constraints) {
+  for (const auto& unique_constraint : *unique_constraints) {
     auto determinants = unique_constraint.expressions;
 
     // (1) Verify whether we can create an FD from the given unique constraint

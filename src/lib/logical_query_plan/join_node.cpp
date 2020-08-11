@@ -152,6 +152,8 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     if(join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
       _remove_invalid_fds(fds_out);
     }
+
+    return fds_out;
   }
   // In case of Semi- & Anti-Joins, this node acts as a pure filter for the left input node. Therefore, we only have to
   // forward non-trivial FDs as follows:

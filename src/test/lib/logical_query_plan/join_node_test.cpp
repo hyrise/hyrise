@@ -259,8 +259,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // Actual tests
   const auto inner_join_fds = inner_join_node->functional_dependencies();
   EXPECT_EQ(inner_join_fds.size(), 2);
-  EXPECT_EQ(inner_join_fds.at(0), fd_ab);
-  EXPECT_EQ(inner_join_fds.at(1), fd_xy);
+  EXPECT_EQ(inner_join_fds.at(0), fd_xy);
+  EXPECT_EQ(inner_join_fds.at(1), fd_ab);
 
   const auto left_join_fds = left_join_node->functional_dependencies();
   EXPECT_EQ(left_join_fds.size(), 1);
