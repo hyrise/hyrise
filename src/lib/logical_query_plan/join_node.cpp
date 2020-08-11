@@ -144,17 +144,18 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     // Prevent duplicates in the output
     auto fds_out_set = std::unordered_set<FunctionalDependency>(fds_left.begin(), fds_left.end());
     for (const auto& fd_right : fds_right) {
-        fds_out_set.insert(fd_right);
+      fds_out_set.insert(fd_right);
     }
     auto fds_out = std::vector<FunctionalDependency>(fds_out_set.begin(), fds_out_set.end());
 
     // Outer joins lead to nullable columns, which may invalidate some FDs
-    if(join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
+    if (join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right) {
       _remove_invalid_fds(fds_out);
     }
 
     return fds_out;
   }
+
   // In case of Semi- & Anti-Joins, this node acts as a pure filter for the left input node. Therefore, we only have to
   // forward non-trivial FDs as follows:
   return left_input()->non_trivial_functional_dependencies();

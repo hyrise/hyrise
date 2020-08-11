@@ -291,10 +291,11 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
         Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      for (const auto& fd_dependent_expression : fd.dependents) {
-        Assert(output_expressions_set.contains(fd_dependent_expression),
-               "Expected FD's dependent expressions to be a subset of the node's output expressions.");
-      }
+      Assert(std::any_of(fd.dependents.cbegin(), fd.dependents.cend(),
+                         [&output_expressions_set](const auto& fd_dependent_expression) {
+                           return output_expressions_set.contains(fd_dependent_expression);
+                         }),
+             "Expected at least one FD's dependent expressions to be a subset of the node's output expressions.");
     }
   }
 
@@ -308,7 +309,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
              "Did not expect to generate non-trivial FD from unique constraints.");
     }
   }
-  if(generated_fds.empty()) return non_trivial_fds;
+  if (generated_fds.empty()) return non_trivial_fds;
 
   // (3) Create single output vector
   auto output_fds = non_trivial_fds;
@@ -318,25 +319,29 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 }
 
 void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
+  if (fds.empty()) return;
   const auto& output_expressions = this->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-  fds.erase(std::remove_if(fds.begin(), fds.end(), [this, &output_expressions_set](const auto& fd) {
-    // Checks: a) whether determinant expressions are part of the node's output expressions
-    //         b) whether determinant expressions are non-nullable
-    for (const auto& fd_determinant_expression : fd.determinants) {
-      if (!output_expressions_set.contains(fd_determinant_expression)
-          || is_column_nullable(get_column_id(*fd_determinant_expression))) {
-        return true;
-      }
-    }
-    // Check whether all dependents are part of the node's output expressions
-    for (const auto& fd_dependent_expression : fd.dependents) {
-      if (!output_expressions_set.contains(fd_dependent_expression)) {
-        return true;
-      }
-    }
-    return false;
-  }), fds.end());
+  fds.erase(std::remove_if(fds.begin(), fds.end(),
+                           [this, &output_expressions_set](const auto& fd) {
+                             // Checks: a) whether determinant expressions are part of the node's output expressions
+                             //         b) whether determinant expressions are non-nullable
+                             for (const auto& fd_determinant_expression : fd.determinants) {
+                               if (!output_expressions_set.contains(fd_determinant_expression) ||
+                                   is_column_nullable(get_column_id(*fd_determinant_expression))) {
+                                 return true;
+                               }
+                             }
+                             // Check whether at least one dependent is part of the node's output expressions. Otherwise, there is no value in
+                             // keeping the FD.
+                             for (const auto& fd_dependent_expression : fd.dependents) {
+                               if (output_expressions_set.contains(fd_dependent_expression)) {
+                                 return false;
+                               }
+                             }
+                             return true;
+                           }),
+            fds.end());
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
@@ -344,6 +349,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_depend
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
   } else {
+    // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
     return {};
   }
 }
@@ -428,7 +434,7 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
 
 std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints() const {
   const auto unique_constraints = this->unique_constraints();
-  if(unique_constraints->empty()) return {};
+  if (unique_constraints->empty()) return {};
 
   auto fds = std::vector<FunctionalDependency>{};
 
