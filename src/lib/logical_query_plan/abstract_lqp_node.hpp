@@ -189,9 +189,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    *
-   *  Please note: Some nodes, such as JoinNode, might discard unique constraints. Consequently, trivial FDs might
-   *               become non-trivial since they cannot be generated from unique constraints later on anymore. Nodes
-   *               should override this function to save those kinds of FDs.
+   *  Please note: Some nodes, such as JoinNode, might
+   *                a) discard unique constraints and/or
+   *                b) make trivial FDs non-trivial.
+   *               In either case, nodes should override this function to preserve all FDs.
    */
   virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 

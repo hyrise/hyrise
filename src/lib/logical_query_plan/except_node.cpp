@@ -35,7 +35,7 @@ std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
 }
 
 std::vector<FunctionalDependency> ExceptNode::non_trivial_functional_dependencies() const {
-  // The right input node is used for filtering only and should not contribute any FDs to the LQP tree.
+  // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();
 }
 
