@@ -36,7 +36,7 @@ constexpr auto CHUNK_SIZE = size_t{1'000'000};
 //constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
 constexpr auto SORT_MODE = SortMode::Ascending;
-constexpr auto EXECUTION_COUNT = 50;
+constexpr auto EXECUTION_COUNT = 100;
 
 //Chunk encodings copied from ping data micro benchmark 
 const auto CHUNK_ENCODINGS = std::vector{
