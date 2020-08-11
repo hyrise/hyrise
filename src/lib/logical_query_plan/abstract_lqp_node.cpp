@@ -308,12 +308,12 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
              "Did not expect to generate non-trivial FD from unique constraints.");
     }
   }
+  if(generated_fds.empty()) return non_trivial_fds;
 
-  // (3) Merge FDs
+  // (3) Create single output vector
   auto output_fds = non_trivial_fds;
   output_fds.reserve(non_trivial_fds.size() + generated_fds.size());
   std::move(generated_fds.begin(), generated_fds.end(), std::back_inserter(output_fds));
-
   return output_fds;
 }
 
@@ -431,22 +431,23 @@ std::vector<LQPUniqueConstraint> AbstractLQPNode::_discarded_unique_constraints(
 
   // Collect unique constraints from input nodes
   auto input_unique_constraints = left_input()->unique_constraints();
-  auto input_unique_constraints_set =
-      std::unordered_set<LQPUniqueConstraint>{input_unique_constraints->begin(), input_unique_constraints->end()};
   if (right_input()) {
     const auto& unique_constraints_right = right_input()->unique_constraints();
-    input_unique_constraints_set.insert(unique_constraints_right->cbegin(), unique_constraints_right->cend());
+    input_unique_constraints->insert(input_unique_constraints->end(), unique_constraints_right->cbegin(),
+                                     unique_constraints_right->cend());
   }
 
   // Early exit
-  if (input_unique_constraints_set.empty()) return {};
+  if (input_unique_constraints->empty()) return {};
 
   // Collect discarded unique constraints
   auto discarded_unique_constraints = std::vector<LQPUniqueConstraint>{};
   const auto& unique_constraints = this->unique_constraints();
-  for (const auto& unique_constraint : *unique_constraints) {
-    if (!input_unique_constraints_set.contains(unique_constraint)) {
-      discarded_unique_constraints.push_back(unique_constraint);
+  const auto unique_constraints_set = std::unordered_set<LQPUniqueConstraint>{unique_constraints->cbegin(),
+                                                                              unique_constraints->cend()};
+  for (const auto& input_unique_constraint : *input_unique_constraints) {
+    if (!unique_constraints_set.contains(input_unique_constraint)) {
+      discarded_unique_constraints.push_back(input_unique_constraint);
     }
   }
 
