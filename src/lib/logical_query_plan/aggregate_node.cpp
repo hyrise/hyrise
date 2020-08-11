@@ -77,6 +77,12 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   return output_expressions;
 }
 
+bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < node_expressions.size(), "ColumnID out of range");
+  Assert(left_input(), "Need left input to determine nullability");
+  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+}
+
 std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
@@ -141,11 +147,17 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   return unique_constraints;
 }
 
-bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(column_id < node_expressions.size(), "ColumnID out of range");
-  Assert(left_input(), "Need left input to determine nullability");
-  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {
+    auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+
+    // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
+    // all FDs whose expressions are no longer part of the node's output expressions.
+    _remove_invalid_fds(non_trivial_fds);
+
+    return non_trivial_fds;
 }
+
+size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
@@ -158,8 +170,6 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping&
       expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
       expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));
 }
-
-size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
