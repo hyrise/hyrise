@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include "boost/functional/hash.hpp"
@@ -324,22 +325,27 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
   fds.erase(std::remove_if(fds.begin(), fds.end(),
                            [this, &output_expressions_set](const auto& fd) {
-                             // Checks: a) whether determinant expressions are part of the node's output expressions
-                             //         b) whether determinant expressions are non-nullable
+                             /**
+                              * Remove FDs with determinant expressions that are
+                              *  a) not part of the node's output expressions
+                              *  b) are nullable
+                              */
                              for (const auto& fd_determinant_expression : fd.determinants) {
                                if (!output_expressions_set.contains(fd_determinant_expression) ||
                                    is_column_nullable(get_column_id(*fd_determinant_expression))) {
                                  return true;
                                }
                              }
-                             // Check whether at least one dependent is part of the node's output expressions. Otherwise, there is no value in
-                             // keeping the FD.
-                             for (const auto& fd_dependent_expression : fd.dependents) {
-                               if (output_expressions_set.contains(fd_dependent_expression)) {
-                                 return false;
-                               }
-                             }
-                             return true;
+
+                             // Remove dependents that are not part of the node's output expressions
+                             auto part_of_output_expressions =
+                                 [&output_expressions_set](const auto& fd_dependent_expression) {
+                                   return !output_expressions_set.contains(fd_dependent_expression);
+                             };
+                             std::erase_if(fd.dependents, part_of_output_expressions);
+
+                             // If there are no dependents left, we can discard the FD altogether
+                             return fd.dependents.size() == 0;
                            }),
             fds.end());
 }
@@ -450,7 +456,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
   for (const auto& unique_constraint : *unique_constraints) {
     auto determinants = unique_constraint.expressions;
 
-    // (1) Verify whether we can create an FD from the given unique constraint
+    // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)
     if (!std::all_of(determinants.cbegin(), determinants.cend(),
                      [&output_expressions_non_nullable](const auto& determinant_expression) {
                        return output_expressions_non_nullable.contains(determinant_expression);
