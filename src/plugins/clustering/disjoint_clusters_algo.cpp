@@ -347,6 +347,15 @@ void DisjointClustersAlgo::_perform_clustering() {
       }
     }
 
+    // finalize the new chunks
+    for (const auto& [cluster_key, chunk_ids] : chunk_ids_per_cluster) {
+      for (const auto chunk_id : chunk_ids) {
+        const auto& chunk = _table->get_chunk(chunk_id);
+        Assert(chunk, "chunk disappeared");
+        chunk->finalize();
+      }
+    }
+
     const auto partition_duration = per_step_timer.lap();
     std::cout << "-   Partitioning done (" << format_duration(partition_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["partition"] = partition_duration.count();
@@ -391,6 +400,13 @@ void DisjointClustersAlgo::_perform_clustering() {
         }
 
         cluster_idx++;
+      }
+
+      // finalize merge chunks
+      for (const auto chunk_id : chunk_ids_per_cluster[MERGE_CLUSTER]) {
+        const auto& chunk = _table->get_chunk(chunk_id);
+        Assert(chunk, "chunk disappeared");
+        chunk->finalize();
       }
 
       const auto merge_duration = per_step_timer.lap();

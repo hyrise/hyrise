@@ -18,7 +18,7 @@ ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>
       for (const auto chunk_id : _chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
-        //Assert(!chunk->is_mutable(), "ClusteringSorter expects only immutable chunks");
+        Assert(!chunk->is_mutable(), "ClusteringSorter expects only immutable chunks");
         _expected_num_locks += chunk->size() - chunk->invalid_row_count();
       }
     }
@@ -80,17 +80,17 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
       return nullptr;
     }
 
-    if (_num_locks != _expected_num_locks) {
-      // potential race condition: Some row might be invalidated, but the chunk's invalid row counter not yet increased.
-      // Thus, comparing the invalid row counters is not sufficient to detect the invalidation, and this operator would unintentionally restore an invalidated row.
-      // Fix: a row that is invalidated is also locked - so we can check if we got exactly the expected number of locks
-      Assert(_num_locks < _expected_num_locks, "Bug");
-      std::cout << "Race condition detected and handled: row was invalidated, but the invalid row counter not yet increased." << std::endl;
-      _mark_as_failed();
-      return nullptr;
-    }
-
     invalid_row_index++;
+  }
+
+  if (_num_locks != _expected_num_locks) {
+    // potential race condition: Some row might be invalidated, but the chunk's invalid row counter not yet increased.
+    // Thus, comparing the invalid row counters is not sufficient to detect the invalidation, and this operator would unintentionally restore an invalidated row.
+    // Fix: a row that is invalidated is also locked - so we can check if we got exactly the expected number of locks
+    Assert(_num_locks < _expected_num_locks, "Bug");
+    std::cout << "Race condition detected and handled: row was invalidated, but the invalid row counter not yet increased. Expected " << _expected_num_locks  << " locks, but got " << _num_locks << std::endl;
+    _mark_as_failed();
+    return nullptr;
   }
 
   // no need to get locks for the sorted chunks, as they get inserted as completely new chunks
