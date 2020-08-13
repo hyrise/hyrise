@@ -324,7 +324,7 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
   const auto& output_expressions = this->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
   fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [this, &output_expressions_set](const auto& fd) {
+                           [this, &output_expressions_set](auto& fd) {
                              /**
                               * Remove FDs with determinant expressions that are
                               *  a) not part of the node's output expressions
