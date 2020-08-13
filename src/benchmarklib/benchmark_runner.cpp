@@ -83,8 +83,12 @@ void BenchmarkRunner::run() {
     // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
     // supported.
     SQLPipelineBuilder{
-        "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+        "CREATE TABLE IF NOT EXISTS benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
         "meta_system_utilization"}
+        .create_pipeline()
+        .get_result_table();
+    SQLPipelineBuilder{
+        "DELETE FROM benchmark_system_utilization_log"}
         .create_pipeline()
         .get_result_table();
 
