@@ -52,14 +52,33 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
   return stream;
 }
 
+std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+                                            const std::vector<FunctionalDependency>& fds_b) {
+  DebugAssert(!fds_a.empty() && !fds_b.empty(), "Did not expect empty FD vector(s).");
+
+  auto fds_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
+  DebugAssert(fds_a.size() == fds_set.size(),
+              "Did not expect input vector to contain multiple FDs with the same determinant expressions");
+
+  for(auto& fd : fds_b) {
+    auto [existing_fd, inserted] = fds_set.insert(fd);
+    if(!inserted) {
+      // An FD with the same determinant expressions already exists. Therefore, we only have to merge the dependent
+      // expressions
+      existing_fd->dependents.insert(fd.dependents.begin(), fd.dependents.end());
+      // TODO Add to existing_fd.dependents – what is the problem here?
+    }
+  }
+
+  return std::vector<FunctionalDependency>(fds_set.begin(), fds_set.end());
+}
+
 }  // namespace opossum
 
 namespace std {
 
 size_t hash<opossum::FunctionalDependency>::operator()(const opossum::FunctionalDependency& fd) const {
-  auto hash = boost::hash_range(fd.determinants.cbegin(), fd.determinants.cend());
-  boost::hash_combine(hash, boost::hash_range(fd.dependents.cbegin(), fd.dependents.cend()));
-  return hash;
+  return boost::hash_range(fd.determinants.cbegin(), fd.determinants.cend());
 }
 
 }  // namespace std

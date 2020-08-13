@@ -39,10 +39,17 @@ struct FunctionalDependency {
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
+// TODO Doc
+std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+                                            const std::vector<FunctionalDependency>& fds_b);
+
 }  // namespace opossum
 
 namespace std {
 
+/**
+ * TODO we hash by determinants only
+ */
 template <>
 struct hash<opossum::FunctionalDependency> {
   size_t operator()(const opossum::FunctionalDependency& fd) const;

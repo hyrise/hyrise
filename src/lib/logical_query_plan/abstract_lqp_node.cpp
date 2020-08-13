@@ -279,44 +279,38 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (1) Gather non-trivial FDs from previous, which cannot be derived from unique constraints
   auto non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    const auto distinct_fds =
-        std::unordered_set<FunctionalDependency>(non_trivial_fds.cbegin(), non_trivial_fds.cend());
-    Assert(distinct_fds.size() == non_trivial_fds.size(), "Did not expect LQP nodes to return duplicate FDs.");
-
+    auto fds_set = std::unordered_set<FunctionalDependency>{};
     const auto& output_expressions = this->output_expressions();
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-    for (const auto& fd : distinct_fds) {
+
+    for (const auto& fd : non_trivial_fds) {
+      auto [_, success] = fds_set.insert(fd);
+      Assert(success, "FDs with the same set of determinant expressions should be merged.");
+
       for (const auto& fd_determinant_expression : fd.determinants) {
         Assert(output_expressions_set.contains(fd_determinant_expression),
                "Expected FD's determinant expressions to be a subset of the node's output expressions.");
         Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      Assert(std::any_of(fd.dependents.cbegin(), fd.dependents.cend(),
+      Assert(std::all_of(fd.dependents.cbegin(), fd.dependents.cend(),
                          [&output_expressions_set](const auto& fd_dependent_expression) {
                            return output_expressions_set.contains(fd_dependent_expression);
                          }),
-             "Expected at least one FD's dependent expressions to be a subset of the node's output expressions.");
+             "Expected the FD's dependent expressions to be a subset of the node's output expressions.");
     }
   }
 
   // (2) Generate FDs from current node's unique constraints
   auto generated_fds = _fds_from_unique_constraints();
-  if constexpr (HYRISE_DEBUG) {
-    const auto generated_fds_set =
-        std::unordered_set<FunctionalDependency>{generated_fds.cbegin(), generated_fds.cend()};
-    for (const auto& non_trivial_fd : non_trivial_fds) {
-      Assert(!generated_fds_set.contains(non_trivial_fd),
-             "Did not expect to generate non-trivial FD from unique constraints.");
-    }
-  }
-  if (generated_fds.empty()) return non_trivial_fds;
 
-  // (3) Create single output vector
-  auto output_fds = non_trivial_fds;
-  output_fds.reserve(non_trivial_fds.size() + generated_fds.size());
-  std::move(generated_fds.begin(), generated_fds.end(), std::back_inserter(output_fds));
-  return output_fds;
+  // (3) Merge FDs, if necessary
+  if (non_trivial_fds.empty()) {
+    return generated_fds;
+  } else if (generated_fds.empty()) {
+    return non_trivial_fds;
+  }
+  return merge_fds(non_trivial_fds, generated_fds);
 }
 
 void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
