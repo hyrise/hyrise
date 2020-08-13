@@ -14,12 +14,12 @@
 namespace opossum {
 
 ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id)
-    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sort_column_id{sort_column_id}, _num_locks{0}, _transaction_id{0} {
-      size_t num_rows = 0;
+    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sort_column_id{sort_column_id}, _num_locks{0}, _expected_num_locks{0}, _transaction_id{0} {
       for (const auto chunk_id : _chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
-        num_rows += chunk->size();
+        //Assert(!chunk->is_mutable(), "ClusteringSorter expects only immutable chunks");
+        _expected_num_locks += chunk->size() - chunk->invalid_row_count();
       }
     }
 
@@ -79,6 +79,17 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
       _mark_as_failed();
       return nullptr;
     }
+
+    if (_num_locks != _expected_num_locks) {
+      // potential race condition: Some row might be invalidated, but the chunk's invalid row counter not yet increased.
+      // Thus, comparing the invalid row counters is not sufficient to detect the invalidation, and this operator would unintentionally restore an invalidated row.
+      // Fix: a row that is invalidated is also locked - so we can check if we got exactly the expected number of locks
+      Assert(_num_locks < _expected_num_locks, "Bug");
+      std::cout << "Race condition detected and handled: row was invalidated, but the invalid row counter not yet increased." << std::endl;
+      _mark_as_failed();
+      return nullptr;
+    }
+
     invalid_row_index++;
   }
 

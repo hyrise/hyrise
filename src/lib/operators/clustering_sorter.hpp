@@ -39,6 +39,7 @@ class ClusteringSorter : public AbstractReadWriteOperator {
   const ColumnID _sort_column_id;
 
   size_t _num_locks;
+  size_t _expected_num_locks;
   TransactionID _transaction_id;
   std::shared_ptr<const Table> _sorted_table;
 };
