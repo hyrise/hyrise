@@ -98,6 +98,17 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   const auto& left_unique_constraints = left_input()->unique_constraints();
   const auto& right_unique_constraints = right_input()->unique_constraints();
 
+  return _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
+}
+
+std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
+    const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
+    const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
+
+  // TODO(Julian) Assert – no CrossJoin, Multi-Predicate-Joins etc.
+
+  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+
   // Check uniqueness of join columns
   bool left_operand_is_unique =
       !left_unique_constraints->empty() &&
@@ -108,12 +119,11 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
-    for (const auto& unique_constraint : *left_unique_constraints) {
-      unique_constraints->emplace_back(unique_constraint);
-    }
-    for (const auto& unique_constraint : *right_unique_constraints) {
-      unique_constraints->emplace_back(unique_constraint);
-    }
+    auto& unique_constraints = std::make_shared<LQPUniqueConstraints>{left_unique_constraints.begin(),
+                                                                     left_unique_constraints.end()};
+    std::copy(right_unique_constraints->begin(), right_unique_constraints->end(), std::back_inserter
+              (*unique_constraints));
+    return unique_constraints; // TODO Continue here 14.08. 17:13 Uhr
 
   } else if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
@@ -123,9 +133,8 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     // Uniqueness on the right prevents duplication of records on the left
     return left_unique_constraints;
   }
-
-  return unique_constraints;
 }
+
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
   /**

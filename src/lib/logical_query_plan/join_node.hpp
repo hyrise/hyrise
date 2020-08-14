@@ -49,6 +49,17 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   JoinMode join_mode;
 
  protected:
+
+  /**
+   * TODO(Julian) return vector of unique constraints that remains valid after the join operation
+   * @param left_unique_constraints
+   * @param right_unique_constraints
+   * @return
+   */
+  std::shared_ptr<LQPUniqueConstraints> _valid_unique_constraints(
+      const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
+      const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const;
+
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
