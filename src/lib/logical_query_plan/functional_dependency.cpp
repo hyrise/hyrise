@@ -59,16 +59,15 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
     auto fds_a_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
     auto fds_b_set = std::unordered_set<FunctionalDependency>(fds_b.begin(), fds_b.end());
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
-              "Did not expect input vector to contain multiple FDs with the same determinant expressions");
+           "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
 
   auto fds_merged = std::vector<FunctionalDependency>(fds_a.begin(), fds_a.end());
 
   for (auto& fd_to_add : fds_b) {
-    auto existing_fd = std::find_if(fds_merged.begin(), fds_merged.end(), [&fd_to_add](auto& fd) {
-      return fd.determinants == fd_to_add.determinants;
-    });
-    if(existing_fd == fds_merged.end()) {
+    auto existing_fd = std::find_if(fds_merged.begin(), fds_merged.end(),
+                                    [&fd_to_add](auto& fd) { return fd.determinants == fd_to_add.determinants; });
+    if (existing_fd == fds_merged.end()) {
       fds_merged.push_back(fd_to_add);
     } else {
       // An FD with the same determinant expressions already exists. Therefore, we only have to add to the dependent

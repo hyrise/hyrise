@@ -148,13 +148,13 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 }
 
 std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {
-    auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+  auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
-    // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
-    // all FDs whose expressions are no longer part of the node's output expressions.
-    _remove_invalid_fds(non_trivial_fds);
+  // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
+  // all FDs whose expressions are no longer part of the node's output expressions.
+  _remove_invalid_fds(non_trivial_fds);
 
-    return non_trivial_fds;
+  return non_trivial_fds;
 }
 
 size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }

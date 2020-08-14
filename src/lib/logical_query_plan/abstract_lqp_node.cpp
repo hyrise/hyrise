@@ -335,7 +335,7 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
                              auto part_of_output_expressions =
                                  [&output_expressions_set](const auto& fd_dependent_expression) {
                                    return !output_expressions_set.contains(fd_dependent_expression);
-                             };
+                                 };
                              std::erase_if(fd.dependents, part_of_output_expressions);
 
                              // If there are no dependents left, we can discard the FD altogether

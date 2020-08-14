@@ -134,17 +134,17 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
 
     // Prevent FDs with duplicate determinant expressions in the output vector
     auto fds_out = std::vector<FunctionalDependency>();
-    if(!fds_left.empty() && !fds_right.empty()) {
+    if (!fds_left.empty() && !fds_right.empty()) {
       fds_out = merge_fds(fds_left, fds_right);
     } else if (fds_left.empty()) {
       fds_out = fds_right;
-    } else if(fds_right.empty()) {
+    } else if (fds_right.empty()) {
       fds_out = fds_left;
     }
 
     // Outer joins lead to nullable columns, which may invalidate some FDs
-    if (!fds_out.empty() && (join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left
-                             || join_mode == JoinMode::Right)) {
+    if (!fds_out.empty() &&
+        (join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right)) {
       _remove_invalid_fds(fds_out);
     }
 
