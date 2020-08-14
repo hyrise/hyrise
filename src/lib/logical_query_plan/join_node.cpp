@@ -127,12 +127,12 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   if (join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse) {
     /**
      * In the course of inner/outer joins, we may lose some unique constraints and therefore some trivial FDs from
-     * the input nodes. To preserve them, we have to generate and output them add them via this function.
+     * the input nodes. To preserve them, we have to generate and output them via this function.
      */
     auto fds_left = left_input()->functional_dependencies();
     auto fds_right = right_input()->functional_dependencies();
 
-    // Prevent FDs with duplicate determinant expressions in the output
+    // Prevent FDs with duplicate determinant expressions in the output vector
     auto fds_out = std::vector<FunctionalDependency>();
     if(!fds_left.empty() && !fds_right.empty()) {
       fds_out = merge_fds(fds_left, fds_right);
