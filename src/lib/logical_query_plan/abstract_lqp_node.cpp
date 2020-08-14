@@ -457,23 +457,22 @@ std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
                      })) {
       continue;
     }
+
     // (2) Collect the dependent output expressions
     auto dependents = ExpressionUnorderedSet();
     for (const auto& output_expression : output_expressions) {
-      if (!determinants.contains(output_expression)) {
-        dependents.insert(output_expression);
-      }
+      if (determinants.contains(output_expression)) continue;
+      dependents.insert(output_expression);
     }
+
     // (3) Add FD to output
-    if (!dependents.empty()) {
-      DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
+    if (dependents.empty()) continue;
+    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
                                [&determinants, &dependents](const auto& fd) {
                                  return (fd.determinants == determinants) && (fd.dependents == dependents);
                                }) == fds.cend(),
                   "Creating duplicate functional dependencies is unexpected.");
-
-      fds.emplace_back(determinants, dependents);
-    }
+    fds.emplace_back(determinants, dependents);
   }
   return fds;
 }
