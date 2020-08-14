@@ -218,4 +218,36 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoSupersets) {
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_constraints));
 }
 
+TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
+  // Preparations
+  const auto fd_a = FunctionalDependency{{_a}, {_c}};
+  const auto fd_b_two_dependents = FunctionalDependency{{_b}, {_a, _c}};
+  _mock_node->set_non_trivial_functional_dependencies({fd_a, fd_b_two_dependents});
+  EXPECT_EQ(_mock_node->functional_dependencies().size(), 2);
+
+  const auto aggregate1 = sum_(add_(_a, _b));
+  const auto aggregate2 = sum_(add_(_a, _c));
+
+  // Tests – For simplicity, we use non_trivial_functional_dependencies() to ignore the FD created by AggregateNode
+  //         (unique constraint, group-by columns)
+
+  // All determinant and dependent expressions are missing.
+  const auto& agg_node_a =
+      AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
+  EXPECT_TRUE(agg_node_a->non_trivial_functional_dependencies().empty());
+
+  // All determinant and dependent expressions are part of the output -> expect FD forwarding
+  const auto& agg_node_b =
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(aggregate1, aggregate2), _mock_node);
+  EXPECT_EQ(agg_node_b->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(agg_node_b->non_trivial_functional_dependencies().at(0), fd_a);
+
+  // Special case: All determinant expressions, but only some of the dependent expressions are part of the output
+  const auto& agg_node_c =
+      AggregateNode::make(expression_vector(_b, _c), expression_vector(aggregate1, aggregate2), _mock_node);
+  const auto expected_fd = FunctionalDependency{{_b}, {_c}};
+  EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().at(0), expected_fd);
+}
+
 }  // namespace opossum

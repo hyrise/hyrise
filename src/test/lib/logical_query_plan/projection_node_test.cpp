@@ -138,7 +138,7 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   }
 }
 
-TEST_F(ProjectionNodeTest, FunctionalDependenciesRemoval) {
+TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
   // Preparations
   const auto fd_a = FunctionalDependency{{_a}, {_c}};
   const auto fd_b = FunctionalDependency{{_b}, {_c}};
