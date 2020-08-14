@@ -48,7 +48,7 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
 namespace std {
 
 /**
- * TODO we hash by determinants only
+ * TODO(Julian) we hash by determinants only
  */
 template <>
 struct hash<opossum::FunctionalDependency> {

@@ -276,7 +276,7 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // (1) Gather non-trivial FDs from previous, which cannot be derived from unique constraints
+  // (1) Gather non-trivial FDs from previous nodes, which cannot be derived from unique constraints
   auto non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
     auto fds_set = std::unordered_set<FunctionalDependency>{};

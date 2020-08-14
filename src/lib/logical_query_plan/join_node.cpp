@@ -133,8 +133,9 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   }
 
   /**
-   * In the course of inner/outer joins, we may lose some unique constraints and therefore some trivial FDs from
-   * the input nodes. To preserve them, we have to generate and output them via this function.
+   * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
+   * less trivial FDs that we can generate from unique constraints in following nodes. To preserve all FDs possible, we
+   * generate and return all FDs from both input nodes.
    */
   auto fds_left = left_input()->functional_dependencies();
   auto fds_right = right_input()->functional_dependencies();
