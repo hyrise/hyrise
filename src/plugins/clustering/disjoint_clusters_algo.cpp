@@ -67,6 +67,7 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
   bool cluster_full = false;
   size_t bin_id{0};
   for (; bin_id < histogram->bin_count(); bin_id++) {
+    bool is_last_bin = bin_id == histogram->bin_count() - 1;
     if (!lower_bound_set) {
       lower_bound = histogram->bin_minimum(bin_id);
       lower_bound_set = true;
@@ -81,11 +82,11 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     if (rows_in_cluster + bin_size < ideal_rows_per_cluster) {
       // cluster has not yet reached its target size
       rows_in_cluster += bin_size;
-      upper_bound = histogram->bin_maximum(bin_id);
+      upper_bound = is_last_bin ? AllTypeVariant{} : histogram->bin_minimum(bin_id + 1);
     } else if (rows_in_cluster + bin_size - ideal_rows_per_cluster < ideal_rows_per_cluster - rows_in_cluster) {
       // cluster gets larger than the target size with this bin, but it is still closer to the target size than without the bin
       // no point in increasing rows_in_cluster, if the cluster is full it will be reset automatically
-      upper_bound = histogram->bin_maximum(bin_id);
+      upper_bound = is_last_bin ? AllTypeVariant{} : histogram->bin_minimum(bin_id + 1);
       cluster_full = true;
     } else {
       // cluster would get larger than intended - process the bin again in the next cluster
@@ -99,7 +100,6 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
       lower_bound_set = false;
       rows_in_cluster = 0;
       cluster_full = false;
-      bool is_last_bin = bin_id == histogram->bin_count() - 1;
       if (!is_last_bin) {
         boundaries.push_back(std::make_pair(AllTypeVariant{}, AllTypeVariant{}));
       }
@@ -123,16 +123,18 @@ size_t _get_cluster_index(const ClusterBoundaries& cluster_boundaries, const std
     const ColumnDataType& value = *optional_value;
     
     for (const std::pair<AllTypeVariant, AllTypeVariant>& boundary : cluster_boundaries) {
-      if (variant_is_null(boundary.first) || variant_is_null(boundary.second)) {
+      if (variant_is_null(boundary.first) && variant_is_null(boundary.second)) {
         // null values are handled above
         cluster_index++;
         continue;
       }
 
       const auto low = boost::get<ColumnDataType>(boundary.first);
-      const auto high = boost::get<ColumnDataType>(boundary.second);
-      if (low <= value && value <= high) {
-        break;                
+
+      if (low <= value) {
+        if (variant_is_null(boundary.second) || value < boost::get<ColumnDataType>(boundary.second)) {
+          break;
+        }
       }
       cluster_index++;
     }
