@@ -99,8 +99,10 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   const auto& right_unique_constraints = right_input()->unique_constraints();
 
   // Check uniqueness of join columns
-  bool left_operand_is_unique = left_input()->has_matching_unique_constraint({join_predicate->left_operand()});
-  bool right_operand_is_unique = right_input()->has_matching_unique_constraint({join_predicate->right_operand()});
+  bool left_operand_is_unique = contains_matching_unique_constraint(left_unique_constraints,
+                                                                    {join_predicate->left_operand()});
+  bool right_operand_is_unique = contains_matching_unique_constraint(right_unique_constraints,
+                                                                     {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
