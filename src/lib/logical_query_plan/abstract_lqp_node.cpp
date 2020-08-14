@@ -468,10 +468,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints(
     // (3) Add FD to output
     if (dependents.empty()) continue;
     DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
-                               [&determinants, &dependents](const auto& fd) {
-                                 return (fd.determinants == determinants) && (fd.dependents == dependents);
-                               }) == fds.cend(),
-                  "Creating duplicate functional dependencies is unexpected.");
+                             [&determinants, &dependents](const auto& fd) {
+                               return (fd.determinants == determinants) && (fd.dependents == dependents);
+                             }) == fds.cend(),
+                "Creating duplicate functional dependencies is unexpected.");
     fds.emplace_back(determinants, dependents);
   }
   return fds;
