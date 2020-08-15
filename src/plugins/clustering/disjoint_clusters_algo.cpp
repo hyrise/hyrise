@@ -418,10 +418,11 @@ void DisjointClustersAlgo::_perform_clustering() {
 
 
     // phase 2: sort within clusters
+    std::unordered_set<ChunkID> new_chunk_ids;
     std::cout << "-   Sorting clusters" << std::endl;
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
       auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id);
+      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id, new_chunk_ids);
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
 
@@ -438,7 +439,18 @@ void DisjointClustersAlgo::_perform_clustering() {
     _runtime_statistics[table_name]["steps"]["sort"] = sort_duration.count();
 
 
-    // phase 2.5: pretend mvcc plugin were active and remove invalidated chunks
+    // phase 2.5: encode chunks
+    std::cout << "-   Encoding clusters" << std::endl;
+    for (const auto chunk_id : new_chunk_ids) {
+      const auto &chunk = _table->get_chunk(chunk_id);
+      Assert(chunk, "chunk must not be deleted");
+      ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), EncodingType::Dictionary);
+    }
+    const auto encode_duration = per_step_timer.lap();
+    std::cout << "Encoding clusters done (" << format_duration(encode_duration) << ")" << std::endl;
+    _runtime_statistics[table_name]["steps"]["encode"] = encode_duration.count();
+
+    // phase 3: pretend mvcc plugin were active and remove invalidated chunks
     std::cout << "-   Clean up" << std::endl;
     size_t num_invalid_chunks = 0;
     size_t num_removed_chunks = 0;

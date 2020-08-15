@@ -16,7 +16,7 @@ namespace opossum {
  */
 class ClusteringSorter : public AbstractReadWriteOperator {
  public:
-  explicit ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id);
+  explicit ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids);
 
   const std::string& name() const override;
 
@@ -37,6 +37,7 @@ class ClusteringSorter : public AbstractReadWriteOperator {
   const std::shared_ptr<Table> _table;
   const std::set<ChunkID> _chunk_ids;
   const ColumnID _sort_column_id;
+  std::unordered_set<ChunkID>& _new_chunk_ids;
 
   size_t _num_locks;
   size_t _expected_num_locks;

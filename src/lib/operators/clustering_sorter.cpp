@@ -1,6 +1,7 @@
 #include "clustering_sorter.hpp"
 
 #include <memory>
+#include <unordered_set>
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
@@ -13,8 +14,8 @@
 
 namespace opossum {
 
-ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id)
-    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sort_column_id{sort_column_id}, _num_locks{0}, _expected_num_locks{0}, _transaction_id{0} {
+ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids)
+    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sort_column_id{sort_column_id}, _new_chunk_ids{new_chunk_ids}, _num_locks{0}, _expected_num_locks{0}, _transaction_id{0} {
       for (const auto chunk_id : _chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
@@ -182,6 +183,8 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     std::shared_ptr<Chunk> table_chunk;
     {
       const auto append_lock = _table->acquire_append_mutex();
+      const auto new_chunk_id = _table->chunk_count();
+      _new_chunk_ids.insert(new_chunk_id);
       _table->append_chunk(segments, mvcc_data);
       table_chunk = _table->last_chunk();
       Assert(table_chunk, "Chunk disappeared");
@@ -191,11 +194,6 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
 
     Assert(!chunk->sorted_by().empty(), "chunk has no sorting information");
     table_chunk->set_sorted_by(chunk->sorted_by());
-
-    // TODO (maybe): move encoding to disjoint_clusters_algo
-    ChunkEncoder::encode_chunk(table_chunk, _table->column_data_types(), EncodingType::Dictionary);
-    //Assert(chunk->pruning_statistics(), "chunk has no pruning statistics");
-    //table_chunk->set_pruning_statistics(*chunk->pruning_statistics());
   }
 
   for (const auto chunk_id : _chunk_ids) {
