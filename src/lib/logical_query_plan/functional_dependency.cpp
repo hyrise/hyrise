@@ -60,9 +60,9 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
-  if(fds_a.empty() && fds_b.empty()) return {};
-  if(fds_a.empty()) return fds_b;
-  if(fds_b.empty()) return fds_a;
+  if (fds_a.empty() && fds_b.empty()) return {};
+  if (fds_a.empty()) return fds_b;
+  if (fds_b.empty()) return fds_a;
 
   auto fds_merged = std::vector<FunctionalDependency>();
   fds_merged.reserve(fds_a.size() + fds_b.size());

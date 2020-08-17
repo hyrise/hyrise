@@ -301,48 +301,90 @@ TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
 TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
   const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
   const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
+  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
   const auto join_column_a = _t_a_a;
   const auto join_column_x = _t_b_x;
 
-  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter,
-                               JoinMode::Cross}) {
-    const auto& join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x),
-                                           _mock_node_a,
-                                           _mock_node_b);
+  for (const auto join_mode :
+       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+    auto join_node = std::shared_ptr<JoinNode>();
+    if (join_mode == JoinMode::Cross) {
+      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    } else {
+      join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x), _mock_node_a, _mock_node_b);
+    }
 
     // Left input Node has non-trivial FDs
     _mock_node_a->set_key_constraints({});
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({});
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
+    } else {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    }
 
     // Right input Node has non-trivial FDs
     _mock_node_a->set_key_constraints({});
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+    if (join_mode == JoinMode::Left || join_mode == JoinMode::FullOuter) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
+    } else {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+    }
 
     // Both input nodes have non-trivial FDs
     _mock_node_a->set_key_constraints({});
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+    if (join_mode == JoinMode::FullOuter) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
+    } else if (join_mode == JoinMode::Left) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    } else if (join_mode == JoinMode::Right) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+    } else {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+    }
 
-    // Since we are testing non-outer joins, we do not expect non-trivial FDs from unique constraints
+    /**
+     * Test, whether FD forwarding still works when FDs from unique constraints are added to the output:
+     *  - We specify unique constraints for both input tables
+     *  - We do not provide uniqueness guarantees for the join columns a and x to enforce the dismissal of unique
+     *    constraints for all join modes. Therefore, we can always expect derived, non-trivial FDs in the output.
+     */
     _mock_node_a->set_key_constraints({*_key_constraint_b_c});
     _mock_node_b->set_key_constraints({*_key_constraint_y});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+    if (join_mode == JoinMode::FullOuter) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
+    } else if (join_mode == JoinMode::Left) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_b_c);
+    } else if (join_mode == JoinMode::Right) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_y);
+    } else {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 4);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_b_c);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(2), fd_x);
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(3), generated_fd_y);
+    }
   }
 
 }

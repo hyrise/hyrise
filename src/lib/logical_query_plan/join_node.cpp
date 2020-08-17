@@ -153,10 +153,10 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   const auto& valid_unique_constraints = _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
   if (valid_unique_constraints->empty()) {
     // All unique constraints become discarded
-    if(!left_unique_constraints->empty()) {
+    if (!left_unique_constraints->empty()) {
       fds_left = merge_fds(fds_left, fds_from_unique_constraints(left_input(), left_unique_constraints));
     }
-    if(!right_unique_constraints->empty()) {
+    if (!right_unique_constraints->empty()) {
       fds_right = merge_fds(fds_right, fds_from_unique_constraints(right_input(), right_unique_constraints));
     }
   } else if (valid_unique_constraints == right_unique_constraints && !left_unique_constraints->empty()) {
