@@ -208,26 +208,30 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
-  // Create two MockNodes of 2 columns each
+TEST_F(JoinNodeTest, FunctionalDependenciesOuterJoinsNullableColumns) {
+  // Outer Joins lead to nullable columns. This test checks whether FDs with nullable determinant expressions become
+  // discarded.
+
+  // Prepare MockNodes with two columns each
   const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
   const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-
-  // Create and set FDs for both MockNodes
+  // Add one FD per MockNode
   const auto a = mock_node_a->get_column("a");
   const auto b = mock_node_a->get_column("b");
   const auto fd_a = FunctionalDependency{{a}, {b}};
   mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-
+  EXPECT_EQ(mock_node_a->functional_dependencies().size(), 1);
+  EXPECT_EQ(mock_node_a->functional_dependencies().at(0), fd_a);
   const auto x = mock_node_b->get_column("x");
   const auto y = mock_node_b->get_column("y");
   const auto fd_x = FunctionalDependency{{x}, {y}};
   mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+  EXPECT_EQ(mock_node_b->functional_dependencies().size(), 1);
+  EXPECT_EQ(mock_node_b->functional_dependencies().at(0), fd_x);
 
   // Prepare JoinNodes
   const auto join_column_a = a;
   const auto join_column_x = x;
-
   // clang-format off
   const auto inner_join_node =
   JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_x),
@@ -249,12 +253,6 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
     mock_node_a,
     mock_node_b);
   // clang-format on
-
-  // Prerequisite
-  EXPECT_EQ(mock_node_a->functional_dependencies().size(), 1);
-  EXPECT_EQ(mock_node_a->functional_dependencies().at(0), fd_a);
-  EXPECT_EQ(mock_node_b->functional_dependencies().size(), 1);
-  EXPECT_EQ(mock_node_b->functional_dependencies().at(0), fd_x);
 
   // Actual tests
   const auto inner_join_fds = inner_join_node->functional_dependencies();
@@ -300,6 +298,54 @@ TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
   }
 }
 
+TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  const auto join_column_a = _t_a_a;
+  const auto join_column_x = _t_b_x;
+
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter,
+                               JoinMode::Cross}) {
+    const auto& join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x),
+                                           _mock_node_a,
+                                           _mock_node_b);
+
+    // Left input Node has non-trivial FDs
+    _mock_node_a->set_key_constraints({});
+    _mock_node_b->set_key_constraints({});
+    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+    _mock_node_b->set_non_trivial_functional_dependencies({});
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+
+    // Right input Node has non-trivial FDs
+    _mock_node_a->set_key_constraints({});
+    _mock_node_b->set_key_constraints({});
+    _mock_node_a->set_non_trivial_functional_dependencies({});
+    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+
+    // Both input nodes have non-trivial FDs
+    _mock_node_a->set_key_constraints({});
+    _mock_node_b->set_key_constraints({});
+    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+
+    // Since we are testing non-outer joins, we do not expect non-trivial FDs from unique constraints
+    _mock_node_a->set_key_constraints({*_key_constraint_b_c});
+    _mock_node_b->set_key_constraints({*_key_constraint_y});
+    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+  }
+
+}
 TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
