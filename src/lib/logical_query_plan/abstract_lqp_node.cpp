@@ -303,7 +303,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 
   // (2) Generate FDs from current node's unique constraints
   const auto& unique_constraints = this->unique_constraints();
-  if(unique_constraints->empty()) return non_trivial_fds;
+  if (unique_constraints->empty()) return non_trivial_fds;
 
   auto generated_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
 

@@ -87,7 +87,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
     const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
     const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
-
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins
@@ -95,7 +94,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
   }
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
-              join_mode == JoinMode::FullOuter,
+                  join_mode == JoinMode::FullOuter,
               "Unhandled JoinMode");
 
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
@@ -114,10 +113,10 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
-    auto unique_constraints = std::make_shared<LQPUniqueConstraints>(left_unique_constraints->begin(),
-                                                                     left_unique_constraints->end());
-    std::copy(right_unique_constraints->begin(), right_unique_constraints->end(), std::back_inserter
-              (*unique_constraints));
+    auto unique_constraints =
+        std::make_shared<LQPUniqueConstraints>(left_unique_constraints->begin(), left_unique_constraints->end());
+    std::copy(right_unique_constraints->begin(), right_unique_constraints->end(),
+              std::back_inserter(*unique_constraints));
     return unique_constraints;
 
   } else if (left_operand_is_unique) {
@@ -130,7 +129,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
   return left_unique_constraints;
 }
 
-
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
   /**
    * In case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
@@ -139,7 +137,6 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
     return left_input()->non_trivial_functional_dependencies();
   }
-
 
   /**
    * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
@@ -153,7 +150,7 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   const auto& left_unique_constraints = left_input()->unique_constraints();
   const auto& right_unique_constraints = right_input()->unique_constraints();
   const auto& valid_unique_constraints = _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
-  if(valid_unique_constraints->empty()) {
+  if (valid_unique_constraints->empty()) {
     fds_left = fds_from_unique_constraints(left_input(), left_unique_constraints);
   }
 

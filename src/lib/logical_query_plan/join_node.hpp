@@ -49,7 +49,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   JoinMode join_mode;
 
  protected:
-
   /**
    * TODO(Julian) return vector of unique constraints that remains valid after the join operation
    * @param left_unique_constraints

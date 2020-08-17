@@ -350,8 +350,9 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
   return false;
 }
 
-std::vector<FunctionalDependency> fds_from_unique_constraints(const std::shared_ptr<AbstractLQPNode>& lqp, const
-std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+std::vector<FunctionalDependency> fds_from_unique_constraints(
+    const std::shared_ptr<const AbstractLQPNode>& lqp,
+    const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
   Assert(!unique_constraints->empty(), "Did not expect empty vector of unique constraints");
 
   auto fds = std::vector<FunctionalDependency>{};

@@ -184,7 +184,7 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
  * This is a helper method to TODO(Julian)
  * @return TODO
  */
-std::vector<FunctionalDependency> fds_from_unique_constraints(const std::shared_ptr<const AbstractLQPNode>& lqp, const
-                                              std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
+std::vector<FunctionalDependency> fds_from_unique_constraints(
+    const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
 
 }  // namespace opossum
