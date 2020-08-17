@@ -301,7 +301,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // (2) Generate FDs from current node's unique constraints
+  // (2) Generate trivial FDs from current node's unique constraints
   const auto& unique_constraints = this->unique_constraints();
   // Early exit, if there are no unique constraints
   if (unique_constraints->empty()) return non_trivial_fds;
@@ -321,8 +321,21 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
   if (fds.empty()) return;
   const auto& output_expressions = this->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+
+  // Adjust FDs: Remove dependents that are not part of the node's output expressions
+  auto part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
+    return !output_expressions_set.contains(fd_dependent_expression);
+  };
+  for (auto& fd : fds) {
+    std::erase_if(fd.dependents, part_of_output_expressions);
+  }
+
+  // Remove invalid FDs
   fds.erase(std::remove_if(fds.begin(), fds.end(),
                            [this, &output_expressions_set](auto& fd) {
+                             // If there are no dependents left, we can discard the FD altogether
+                             if (fd.dependents.size() == 0) return true;
+
                              /**
                               * Remove FDs with determinant expressions that are
                               *  a) not part of the node's output expressions
@@ -334,16 +347,7 @@ void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds
                                  return true;
                                }
                              }
-
-                             // Remove dependents that are not part of the node's output expressions
-                             auto part_of_output_expressions =
-                                 [&output_expressions_set](const auto& fd_dependent_expression) {
-                                   return !output_expressions_set.contains(fd_dependent_expression);
-                                 };
-                             std::erase_if(fd.dependents, part_of_output_expressions);
-
-                             // If there are no dependents left, we can discard the FD altogether
-                             return fd.dependents.size() == 0;
+                             return false;
                            }),
             fds.end());
 }

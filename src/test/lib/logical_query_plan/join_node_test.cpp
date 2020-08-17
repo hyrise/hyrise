@@ -325,7 +325,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
   }
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin)   {
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin) {
   // Set unique constraints on both join columns so that unique constraints get forwarded. Consequently, derived FDs
   // remain trivial despite the join operation.
   const auto join_column_a = _t_a_a;
