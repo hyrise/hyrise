@@ -323,8 +323,44 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(3), generated_fd_y);
     }
   }
-
 }
+
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin)   {
+  // Set unique constraints on both join columns so that unique constraints get forwarded. Consequently, derived FDs
+  // remain trivial despite the join operation.
+  const auto join_column_a = _t_a_a;
+  _mock_node_a->set_key_constraints({*_key_constraint_a});
+  const auto join_column_x = _t_b_x;
+  _mock_node_b->set_key_constraints({*_key_constraint_x});
+
+  // MockNode with non-trivial FDs
+  const auto fd_b = FunctionalDependency{{_t_a_b}, {_t_a_a}};
+  const auto fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
+  _mock_node_a->set_non_trivial_functional_dependencies({fd_b});
+  _mock_node_b->set_non_trivial_functional_dependencies({fd_y});
+
+  // Inner Join
+  // clang-format off
+  const auto& join_node =
+  JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  // Tests
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_b);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_y);
+
+  EXPECT_EQ(join_node->functional_dependencies().size(), 4);
+  EXPECT_EQ(join_node->functional_dependencies().at(0), fd_b);
+  EXPECT_EQ(join_node->functional_dependencies().at(1), fd_y);
+  const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c, _t_b_x, _t_b_y}};
+  EXPECT_EQ(join_node->functional_dependencies().at(2), generated_fd_a);
+  const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y, _t_a_a, _t_a_b, _t_a_c}};
+  EXPECT_EQ(join_node->functional_dependencies().at(3), generated_fd_x);
+}
+
 TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
