@@ -55,14 +55,18 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
 std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
                                             const std::vector<FunctionalDependency>& fds_b) {
   if constexpr (HYRISE_DEBUG) {
-    Assert(!fds_a.empty() && !fds_b.empty(), "Did not expect empty input vector(s).");
     auto fds_a_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
     auto fds_b_set = std::unordered_set<FunctionalDependency>(fds_b.begin(), fds_b.end());
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
+  if(fds_a.empty() && fds_b.empty()) return {};
+  if(fds_a.empty()) return fds_b;
+  if(fds_b.empty()) return fds_a;
 
-  auto fds_merged = std::vector<FunctionalDependency>(fds_a.begin(), fds_a.end());
+  auto fds_merged = std::vector<FunctionalDependency>();
+  fds_merged.reserve(fds_a.size() + fds_b.size());
+  fds_merged.insert(fds_merged.end(), fds_a.begin(), fds_a.end());
 
   for (auto& fd_to_add : fds_b) {
     auto existing_fd = std::find_if(fds_merged.begin(), fds_merged.end(),

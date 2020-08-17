@@ -139,31 +139,32 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     return left_input()->non_trivial_functional_dependencies();
   }
 
+  auto fds_left = left_input()->non_trivial_functional_dependencies();
+  auto fds_right = right_input()->non_trivial_functional_dependencies();
+
   /**
    * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
    * less trivial FDs that we can generate from unique constraints in following nodes. To preserve all FDs possible, we
    * generate and return all FDs from both input nodes.
+   * In the following, we determine the unique constraints that become discarded and built FDs from them.
    */
-  auto fds_left = std::vector<FunctionalDependency>();
-  auto fds_right = std::vector<FunctionalDependency>();
-
-  // Determine which unique constraints are discarded
   const auto& left_unique_constraints = left_input()->unique_constraints();
   const auto& right_unique_constraints = right_input()->unique_constraints();
   const auto& valid_unique_constraints = _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
   if (valid_unique_constraints->empty()) {
-    fds_left = fds_from_unique_constraints(left_input(), left_unique_constraints);
+    // All unique constraints become discarded
+    fds_left = merge_fds(fds_left, fds_from_unique_constraints(left_input(), left_unique_constraints));
+    fds_right = merge_fds(fds_right, fds_from_unique_constraints(right_input(), right_unique_constraints));
+  } else if (valid_unique_constraints == right_unique_constraints) {
+    // Left input node's unique constraints become discarded
+    fds_left = merge_fds(fds_left, fds_from_unique_constraints(left_input(), left_unique_constraints));
+  } else if (valid_unique_constraints == left_unique_constraints) {
+    // Right input node's unique constraints become discarded
+    fds_right = merge_fds(fds_right, fds_from_unique_constraints(right_input(), right_unique_constraints));
   }
 
   // Prevent FDs with duplicate determinant expressions in the output vector
-  auto fds_out = std::vector<FunctionalDependency>();
-  if (!fds_left.empty() && !fds_right.empty()) {
-    fds_out = merge_fds(fds_left, fds_right);
-  } else if (fds_left.empty()) {
-    fds_out = fds_right;
-  } else if (fds_right.empty()) {
-    fds_out = fds_left;
-  }
+  auto fds_out = merge_fds(fds_left, fds_right);
 
   // Outer joins lead to nullable columns, which may invalidate some FDs
   if (!fds_out.empty() &&
