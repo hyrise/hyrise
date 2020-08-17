@@ -122,11 +122,12 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
   } else if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
     return right_unique_constraints;
+  } else if (right_operand_is_unique) {
+    // Uniqueness on the right prevents duplication of records on the left
+    return left_unique_constraints;
   }
 
-  DebugAssert(right_operand_is_unique, "Unexpected case.");
-  // Uniqueness on the right prevents duplication of records on the left
-  return left_unique_constraints;
+  return std::make_shared<LQPUniqueConstraints>();
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
