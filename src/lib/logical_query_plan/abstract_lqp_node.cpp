@@ -302,7 +302,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // (2) Generate FDs from current node's unique constraints
-  auto generated_fds = _fds_from_unique_constraints();
+  const auto& unique_constraints = this->unique_constraints();
+  if(unique_constraints->empty()) return non_trivial_fds;
+
+  auto generated_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
 
   // (3) Merge FDs, if necessary
   if (non_trivial_fds.empty()) {
@@ -430,51 +433,6 @@ std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_cons
     }
   }
   return input_unique_constraints;
-}
-
-std::vector<FunctionalDependency> AbstractLQPNode::_fds_from_unique_constraints() const {
-  const auto unique_constraints = this->unique_constraints();
-  if (unique_constraints->empty()) return {};
-
-  auto fds = std::vector<FunctionalDependency>{};
-
-  // Collect non-nullable output expressions
-  const auto& output_expressions = this->output_expressions();
-  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (!is_column_nullable(column_id)) {
-      output_expressions_non_nullable.insert(output_expressions.at(column_id));
-    }
-  }
-
-  for (const auto& unique_constraint : *unique_constraints) {
-    auto determinants = unique_constraint.expressions;
-
-    // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)
-    if (!std::all_of(determinants.cbegin(), determinants.cend(),
-                     [&output_expressions_non_nullable](const auto& determinant_expression) {
-                       return output_expressions_non_nullable.contains(determinant_expression);
-                     })) {
-      continue;
-    }
-
-    // (2) Collect the dependent output expressions
-    auto dependents = ExpressionUnorderedSet();
-    for (const auto& output_expression : output_expressions) {
-      if (determinants.contains(output_expression)) continue;
-      dependents.insert(output_expression);
-    }
-
-    // (3) Add FD to output
-    if (dependents.empty()) continue;
-    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
-                             [&determinants, &dependents](const auto& fd) {
-                               return (fd.determinants == determinants) && (fd.dependents == dependents);
-                             }) == fds.cend(),
-                "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace_back(determinants, dependents);
-  }
-  return fds;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

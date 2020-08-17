@@ -350,4 +350,49 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
   return false;
 }
 
+std::vector<FunctionalDependency> fds_from_unique_constraints(const std::shared_ptr<AbstractLQPNode>& lqp, const
+std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+  Assert(!unique_constraints->empty(), "Did not expect empty vector of unique constraints");
+
+  auto fds = std::vector<FunctionalDependency>{};
+
+  // Collect non-nullable output expressions
+  const auto& output_expressions = lqp->output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (!lqp->is_column_nullable(column_id)) {
+      output_expressions_non_nullable.insert(output_expressions.at(column_id));
+    }
+  }
+
+  for (const auto& unique_constraint : *unique_constraints) {
+    auto determinants = unique_constraint.expressions;
+
+    // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)
+    if (!std::all_of(determinants.cbegin(), determinants.cend(),
+                     [&output_expressions_non_nullable](const auto& determinant_expression) {
+                       return output_expressions_non_nullable.contains(determinant_expression);
+                     })) {
+      continue;
+    }
+
+    // (2) Collect the dependent output expressions
+    auto dependents = ExpressionUnorderedSet();
+    for (const auto& output_expression : output_expressions) {
+      if (determinants.contains(output_expression)) continue;
+      dependents.insert(output_expression);
+    }
+
+    // (3) Add FD to output
+    if (dependents.empty()) continue;
+    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
+                             [&determinants, &dependents](const auto& fd) {
+                               return (fd.determinants == determinants) && (fd.dependents == dependents);
+                             }) == fds.cend(),
+                "Creating duplicate functional dependencies is unexpected.");
+    fds.emplace_back(determinants, dependents);
+  }
+  return fds;
+}
+
 }  // namespace opossum

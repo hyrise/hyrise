@@ -78,23 +78,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
     return _forward_left_unique_constraints();
   }
 
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
-  const auto predicates = join_predicates();
-  if (predicates.empty() || predicates.size() > 1) {
-    // No guarantees implemented yet for Cross Joins and multi-predicate joins
-    return unique_constraints;
-  }
-
-  DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
-                  join_mode == JoinMode::FullOuter,
-              "Unhandled JoinMode");
-
-  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
-  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
-    // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)
-    return unique_constraints;
-  }
-
   const auto& left_unique_constraints = left_input()->unique_constraints();
   const auto& right_unique_constraints = right_input()->unique_constraints();
 
@@ -105,9 +88,21 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
     const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
     const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
 
-  // TODO(Julian) Assert – no CrossJoin, Multi-Predicate-Joins etc.
+  const auto predicates = join_predicates();
+  if (predicates.empty() || predicates.size() > 1) {
+    // No guarantees implemented yet for Cross Joins and multi-predicate joins
+    return std::make_shared<LQPUniqueConstraints>();
+  }
+
+  DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
+              join_mode == JoinMode::FullOuter,
+              "Unhandled JoinMode");
 
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
+    // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)
+    return std::make_shared<LQPUniqueConstraints>();
+  }
 
   // Check uniqueness of join columns
   bool left_operand_is_unique =
@@ -119,20 +114,20 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
-    auto& unique_constraints = std::make_shared<LQPUniqueConstraints>{left_unique_constraints.begin(),
-                                                                     left_unique_constraints.end()};
+    auto unique_constraints = std::make_shared<LQPUniqueConstraints>(left_unique_constraints->begin(),
+                                                                     left_unique_constraints->end());
     std::copy(right_unique_constraints->begin(), right_unique_constraints->end(), std::back_inserter
               (*unique_constraints));
-    return unique_constraints; // TODO Continue here 14.08. 17:13 Uhr
+    return unique_constraints;
 
   } else if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
     return right_unique_constraints;
-
-  } else if (right_operand_is_unique) {
-    // Uniqueness on the right prevents duplication of records on the left
-    return left_unique_constraints;
   }
+
+  DebugAssert(right_operand_is_unique, "Unexpected case.");
+  // Uniqueness on the right prevents duplication of records on the left
+  return left_unique_constraints;
 }
 
 
@@ -145,13 +140,22 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     return left_input()->non_trivial_functional_dependencies();
   }
 
+
   /**
    * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
    * less trivial FDs that we can generate from unique constraints in following nodes. To preserve all FDs possible, we
    * generate and return all FDs from both input nodes.
    */
-  auto fds_left = left_input()->functional_dependencies();
-  auto fds_right = right_input()->functional_dependencies();
+  auto fds_left = std::vector<FunctionalDependency>();
+  auto fds_right = std::vector<FunctionalDependency>();
+
+  // Determine which unique constraints are discarded
+  const auto& left_unique_constraints = left_input()->unique_constraints();
+  const auto& right_unique_constraints = right_input()->unique_constraints();
+  const auto& valid_unique_constraints = _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
+  if(valid_unique_constraints->empty()) {
+    fds_left = fds_from_unique_constraints(left_input(), left_unique_constraints);
+  }
 
   // Prevent FDs with duplicate determinant expressions in the output vector
   auto fds_out = std::vector<FunctionalDependency>();
