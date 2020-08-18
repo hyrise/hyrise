@@ -39,12 +39,6 @@ struct FunctionalDependency {
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
-/**
- * TODO(Julian) Doc
- */
-std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
-                                            const std::vector<FunctionalDependency>& fds_b);
-
 }  // namespace opossum
 
 namespace std {

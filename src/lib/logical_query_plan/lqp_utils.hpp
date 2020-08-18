@@ -187,4 +187,17 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
 std::vector<FunctionalDependency> fds_from_unique_constraints(
     const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
 
+/**
+ *
+ * @param lqp
+ * @param fds
+ */
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+
+/**
+ * TODO(Julian) Doc
+ */
+std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+                                            const std::vector<FunctionalDependency>& fds_b);
+
 }  // namespace opossum

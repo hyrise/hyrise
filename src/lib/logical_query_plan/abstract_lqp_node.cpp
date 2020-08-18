@@ -317,41 +317,6 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   return merge_fds(non_trivial_fds, generated_fds);
 }
 
-void AbstractLQPNode::_remove_invalid_fds(std::vector<FunctionalDependency>& fds) const {
-  if (fds.empty()) return;
-  const auto& output_expressions = this->output_expressions();
-  const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
-
-  // Adjust FDs: Remove dependents that are not part of the node's output expressions
-  auto part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
-    return !output_expressions_set.contains(fd_dependent_expression);
-  };
-  for (auto& fd : fds) {
-    std::erase_if(fd.dependents, part_of_output_expressions);
-  }
-
-  // Remove invalid FDs
-  fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [this, &output_expressions_set](auto& fd) {
-                             // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.size() == 0) return true;
-
-                             /**
-                              * Remove FDs with determinant expressions that are
-                              *  a) not part of the node's output expressions
-                              *  b) are nullable
-                              */
-                             for (const auto& fd_determinant_expression : fd.determinants) {
-                               if (!output_expressions_set.contains(fd_determinant_expression) ||
-                                   is_column_nullable(get_column_id(*fd_determinant_expression))) {
-                                 return true;
-                               }
-                             }
-                             return false;
-                           }),
-            fds.end());
-}
-
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
