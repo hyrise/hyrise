@@ -61,7 +61,9 @@ int main() {
   }
 
   lqp_generator.generate_joins(tables);
+
   const auto lqps = lqp_generator.get_lqps();
+  auto _benchmark_start = std::chrono::system_clock::now();
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
@@ -70,6 +72,11 @@ int main() {
     // Export PQP directly after generation
     feature_exporter.export_to_csv(pqp);
   }
+
+  const auto timestamp =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start).count();
+
+  std::cout << timestamp << std::endl;
 
   std::cout << "- Exporting training data" << std::endl;
 

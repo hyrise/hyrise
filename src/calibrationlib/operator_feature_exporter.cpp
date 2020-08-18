@@ -1,6 +1,7 @@
 #include "operator_feature_exporter.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include <magic_enum.hpp>
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -53,7 +54,7 @@ const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporte
 
   operator_info.output_rows = static_cast<int64_t>(op->performance_data->output_row_count);
   operator_info.walltime = static_cast<int64_t>(op->performance_data->walltime.count());
-  operator_info.output_columns = static_cast<int32_t>(op->->performance_data->output_column_count);
+  operator_info.output_columns = static_cast<int32_t>(op->performance_data->output_column_count);
 
   return operator_info;
 }
@@ -140,7 +141,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   const auto join_mode = pmr_string{join_mode_to_string.left.at(op->mode())};
   _export_join_stages(op);
 
-  const auto output_row = std::vector<AllTypeVariant>{static_cast<int32_t>(_current_join_id),
+  const auto output_row = std::vector<AllTypeVariant>{_current_join_id,
                                                       operator_info.name,
                                                       join_mode,
                                                       operator_info.left_input_rows,

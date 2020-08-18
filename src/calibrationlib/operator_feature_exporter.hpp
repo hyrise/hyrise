@@ -66,7 +66,7 @@ class OperatorFeatureExporter {
                                                      {"INPUT_COLUMNS_LEFT", DataType::Int, false},
                                                      {"INPUT_COLUMNS_RIGHT", DataType::Int, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
-                                                     {"OUTPUT_COLUMNS", DataType::Long, false},
+                                                     {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
                                                      {"LEFT_TABLE_NAME", DataType::String, true},
                                                      {"RIGHT_TABLE_NAME", DataType::String, true},
@@ -84,7 +84,7 @@ class OperatorFeatureExporter {
   const std::string _join_output_path;
   const std::string _join_stages_output_path;
 
-  size_t _current_join_id{0};
+  int32_t _current_join_id{0};
   mutable std::mutex _mutex;
 };
 }  // namespace opossum

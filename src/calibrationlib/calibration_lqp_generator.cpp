@@ -8,6 +8,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
 
@@ -37,11 +38,13 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
 
 void CalibrationLQPGenerator::generate_joins(
     const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables) {
+  std::cout << "before joins " << _generated_lqps.size() << std::endl;
   for (auto left_table : tables) {
     for (auto right_table : tables) {
       _generate_joins(left_table, right_table);
     }
   }
+  std::cout << "after joins " << _generated_lqps.size() << std::endl;
 }
 
 void CalibrationLQPGenerator::_generate_table_scans(
@@ -164,18 +167,22 @@ void CalibrationLQPGenerator::_generate_joins(
         const auto right_column_expression = std::make_shared<LQPColumnExpression>(right_stored_table_node, column_id);
         const auto join_predicate =
             std::make_shared<BinaryPredicateExpression>(predicate, left_column_expression, right_column_expression);
-        boost::hana::for_each(JOIN_OPERATORS, [&](const auto join_operator_t) {
-          const auto join_type = join_types.at(join_type_index);
-          join_type_index = (join_type_index + 1) % join_types.size();
 
-          using JoinOperator = typename decltype(join_operator_t)::type;
-          if (JoinOperator::supports({join_mode, predicate, left_table->column_data_type(column_id),
-                                      right_table->column_data_type(column_id), false})) {
-            const auto join_node = JoinNode::make(join_mode, join_predicate);
-            join_node->preffered_join_type = join_type;
-            _generated_lqps.push_back(join_node);
-          }
-        });
+        if (OperatorJoinPredicate::from_expression(*join_predicate, *left_stored_table_node,
+                                                   *right_stored_table_node)) {
+          boost::hana::for_each(JOIN_OPERATORS, [&](const auto join_operator_t) {
+            const auto join_type = join_types.at(join_type_index);
+            join_type_index = (join_type_index + 1) % join_types.size();
+
+            using JoinOperator = typename decltype(join_operator_t)::type;
+            if (JoinOperator::supports({join_mode, predicate, left_table->column_data_type(column_id),
+                                        right_table->column_data_type(column_id), false})) {
+              const auto join_node =
+                  JoinNode::make(join_mode, join_predicate, join_type, left_stored_table_node, right_stored_table_node);
+              _generated_lqps.push_back(join_node);
+            }
+          });
+        }
       }
     }
   }
