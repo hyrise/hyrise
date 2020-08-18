@@ -431,6 +431,4 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
             fds.end());
 }
 
-
-
 }  // namespace opossum

@@ -13,6 +13,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -173,7 +174,7 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   // Outer joins lead to nullable columns, which may invalidate some FDs
   if (!fds_out.empty() &&
       (join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right)) {
-    _remove_invalid_fds(fds_out);
+    remove_invalid_fds(shared_from_this(), fds_out);
   }
 
   return fds_out;

@@ -10,6 +10,7 @@
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -152,7 +153,7 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
 
   // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
   // all FDs whose expressions are no longer part of the node's output expressions.
-  _remove_invalid_fds(non_trivial_fds);
+  remove_invalid_fds(shared_from_this(), non_trivial_fds);
 
   return non_trivial_fds;
 }

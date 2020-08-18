@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "expression/expression_utils.hpp"
+#include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
@@ -57,7 +58,7 @@ std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_depende
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
   // Currently, we remove non-trivial FDs whose expressions are no longer part of the node's output expressions.
-  _remove_invalid_fds(non_trivial_fds);
+  remove_invalid_fds(shared_from_this(), non_trivial_fds);
 
   /**
    * Future Work: By analyzing the output expressions in more depth, we can save some of the input FDs. For example:
