@@ -257,10 +257,10 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
   const auto& fds = _aggregate_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 1);
   const auto& fd = fds.at(0);
-  const auto expected_determinants = ExpressionUnorderedSet{_group_by_expressions.cbegin(),
-                                                                 _group_by_expressions.cend()};
-  const auto expected_dependents = ExpressionUnorderedSet{_aggregate_expressions.cbegin(),
-                                                          _aggregate_expressions.cend()};
+  const auto expected_determinants =
+      ExpressionUnorderedSet{_group_by_expressions.cbegin(), _group_by_expressions.cend()};
+  const auto expected_dependents =
+      ExpressionUnorderedSet{_aggregate_expressions.cbegin(), _aggregate_expressions.cend()};
   EXPECT_EQ(fd.determinants, expected_determinants);
   EXPECT_EQ(fd.dependents, expected_dependents);
 }

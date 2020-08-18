@@ -140,32 +140,38 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     return left_input()->non_trivial_functional_dependencies();
   }
 
-  auto fds_left = left_input()->non_trivial_functional_dependencies();
-  auto fds_right = right_input()->non_trivial_functional_dependencies();
-
   /**
    * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
-   * less trivial FDs that we can generate from unique constraints in upper nodes. To preserve all FDs possible, we
-   * generate and return all FDs from both input nodes.
-   * In the following, we determine the unique constraints that become discarded and built FDs from them.
+   * fewer trivial FDs that we can generate from unique constraints in upper nodes.
+   * To preserve all FDs possible, we manually forward all FDs from input nodes, which unique constraints become
+   * discarded.
    */
-  const auto& left_unique_constraints = left_input()->unique_constraints();
-  const auto& right_unique_constraints = right_input()->unique_constraints();
+  auto fds_left = std::vector<FunctionalDependency>();
+  auto fds_right = std::vector<FunctionalDependency>();
+
+  const auto left_unique_constraints = left_input()->unique_constraints();
+  const auto right_unique_constraints = right_input()->unique_constraints();
   const auto& valid_unique_constraints = _valid_unique_constraints(left_unique_constraints, right_unique_constraints);
+
   if (valid_unique_constraints->empty()) {
-    // All unique constraints become discarded
-    if (!left_unique_constraints->empty()) {
-      fds_left = merge_fds(fds_left, fds_from_unique_constraints(left_input(), left_unique_constraints));
-    }
-    if (!right_unique_constraints->empty()) {
-      fds_right = merge_fds(fds_right, fds_from_unique_constraints(right_input(), right_unique_constraints));
-    }
-  } else if (valid_unique_constraints == right_unique_constraints && !left_unique_constraints->empty()) {
-    // Left input node's unique constraints become discarded
-    fds_left = merge_fds(fds_left, fds_from_unique_constraints(left_input(), left_unique_constraints));
-  } else if (valid_unique_constraints == left_unique_constraints && !right_unique_constraints->empty()) {
-    // Right input node's unique constraints become discarded
-    fds_right = merge_fds(fds_right, fds_from_unique_constraints(right_input(), right_unique_constraints));
+    // All unique constraints become discarded, so we have to manually forward all FDs from both input nodes.
+    fds_left = left_input()->functional_dependencies();
+    fds_right = right_input()->functional_dependencies();
+  } else if (valid_unique_constraints == right_unique_constraints) {
+    // Left input node's unique constraints become discarded.
+    fds_left = left_input()->functional_dependencies();
+    fds_right = right_input()->non_trivial_functional_dependencies();
+  } else if (valid_unique_constraints == left_unique_constraints) {
+    // Right input node's unique constraints become discarded.
+    fds_left = left_input()->non_trivial_functional_dependencies();
+    fds_right = right_input()->functional_dependencies();
+  } else {
+    // All unique constraints from both input nodes remain valid, so we only have to forward non-trivial FDs.
+    DebugAssert(
+        valid_unique_constraints->size() == (left_unique_constraints->size() + right_unique_constraints->size()),
+        "Unexpected number of unique constraints.");
+    fds_left = left_input()->non_trivial_functional_dependencies();
+    fds_right = right_input()->non_trivial_functional_dependencies();
   }
 
   // Prevent FDs with duplicate determinant expressions in the output vector
