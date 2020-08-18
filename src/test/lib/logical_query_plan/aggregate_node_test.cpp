@@ -27,12 +27,14 @@ class AggregateNodeTest : public BaseTest {
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
-    _aggregate_node = AggregateNode::make(expression_vector(_a, _c),
-                                          expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+    _group_by_expressions = expression_vector(_a, _c);
+    _aggregate_expressions = expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c)));
+    _aggregate_node = AggregateNode::make(_group_by_expressions, _aggregate_expressions, _mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
+  std::vector<std::shared_ptr<AbstractExpression>> _group_by_expressions, _aggregate_expressions;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
@@ -228,9 +230,6 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
   const auto aggregate1 = sum_(add_(_a, _b));
   const auto aggregate2 = sum_(add_(_a, _c));
 
-  // Tests – For simplicity, we use non_trivial_functional_dependencies() to ignore the FD created by AggregateNode
-  //         (unique constraint, group-by columns)
-
   // All determinant and dependent expressions are missing.
   const auto& agg_node_a =
       AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
@@ -249,5 +248,22 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
   EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().size(), 1);
   EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().at(0), expected_fd);
 }
+
+TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
+  // The group-by columns form a new candidate key / unique constraint from which we should derive a trivial FD.
+  _mock_node->set_key_constraints({});
+  _mock_node->set_non_trivial_functional_dependencies({});
+
+  const auto& fds = _aggregate_node->functional_dependencies();
+  EXPECT_EQ(fds.size(), 1);
+  const auto& fd = fds.at(0);
+  const auto expected_determinants = ExpressionUnorderedSet{_group_by_expressions.cbegin(),
+                                                                 _group_by_expressions.cend()};
+  const auto expected_dependents = ExpressionUnorderedSet{_aggregate_expressions.cbegin(),
+                                                          _aggregate_expressions.cend()};
+  EXPECT_EQ(fd.determinants, expected_determinants);
+  EXPECT_EQ(fd.dependents, expected_dependents);
+}
+
 
 }  // namespace opossum
