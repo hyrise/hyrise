@@ -177,6 +177,12 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     remove_invalid_fds(shared_from_this(), fds_out);
   }
 
+  /**
+   * Future Work: In some cases, it is possible to create FDs from the join columns.
+   *              For example: a) {join_column_a} => {join_column_b}
+   *                           b) {join_column_b} => {join_column_a}
+   */
+
   return fds_out;
 }
 

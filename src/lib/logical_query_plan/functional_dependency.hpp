@@ -46,6 +46,15 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
 std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
                                             const std::vector<FunctionalDependency>& fds_b);
 
+/**
+ * Future Work: Transitive FDs
+ * Given two or more FDs, it might become possible to derive transitive FDs from them.
+ * For example: {a} => {b} and
+ *              {b} => {c} lead to the following transitive FD: {a} => {c}
+ * To check for transitive FDs, we could provide a function called `fds_apply(fds, dependent, dependee)` that takes a
+ * set of FDs and two expressions to see if dependee is dependent on dependent.
+ */
+
 }  // namespace opossum
 
 namespace std {
