@@ -8,6 +8,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
@@ -48,7 +49,7 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
-  constexpr auto SCALE_FACTOR = 1.0f;
+  auto SCALE_FACTOR = 10.0f;
 
   auto start_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
   start_config->max_runs = 5;
@@ -193,7 +194,6 @@ int main(int argc, const char* argv[]) {
   config->cache_binary_tables = true;
 
   constexpr auto USE_PREPARED_STATEMENTS = false;
-  auto SCALE_FACTOR = 17.0f;  // later overwritten
 
 
   //
@@ -257,6 +257,4 @@ int main(int argc, const char* argv[]) {
   //
 
   return 0;
-  return 0;
-
 }
