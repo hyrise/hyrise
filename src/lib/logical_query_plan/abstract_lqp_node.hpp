@@ -172,14 +172,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
-   *         They are collected as follows:
-   *          (1) FDs are derived from the current node's unique constraints.
-   *          (2) FDs are provided by previous nodes by passing them up the LQP tree.
+   *         They are collected from two different sources:
+   *          (1) FDs derived from the node's unique constraints. (trivial FDs)
+   *          (2) FDs provided by the child nodes (non-trivial FDs)
    */
   std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
-   * Helper function that returns non-trivial FDs valid for the current node.
+   * This is a helper method that returns non-trivial FDs valid for the current node.
    * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
    *
    * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
@@ -187,12 +187,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *
    * Nodes should override this function
    *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
+   *  - to discard non-trivial FDs from the input nodes, if necessary.
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
-   *
-   *  Please note: Some nodes, such as JoinNode, might
-   *                a) discard unique constraints and/or
-   *                b) make trivial FDs non-trivial.
-   *               In either case, nodes should override this function to preserve all FDs.
    */
   virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 

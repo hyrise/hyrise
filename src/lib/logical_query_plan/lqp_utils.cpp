@@ -409,7 +409,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
     std::erase_if(fd.dependents, part_of_output_expressions);
   }
 
-  // Remove invalid FDs
+  // Remove invalid or unnecessary FDs
   fds.erase(std::remove_if(fds.begin(), fds.end(),
                            [&lqp, &output_expressions_set](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether

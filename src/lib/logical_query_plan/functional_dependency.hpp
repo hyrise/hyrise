@@ -60,8 +60,8 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
 namespace std {
 
 /**
- * Please note: The hash for FDs is based on the determinant expressions only. Multiple FDs with the same determinant
- * expressions should not exist as they can be merged into one.
+ * Please note: FDs with the same determinant expressions are expected to be merged into single FD objects (e.g. for
+ * unordered sets). Therefore, we hash the determinant expressions only.
  */
 template <>
 struct hash<opossum::FunctionalDependency> {

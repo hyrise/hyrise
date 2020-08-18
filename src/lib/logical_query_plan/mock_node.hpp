@@ -55,9 +55,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_key_constraints(const TableKeyConstraints& key_constraints);
   const TableKeyConstraints& key_constraints() const;
 
-  // Specify FDs that cannot be generated from the MockNode's key constraints.
   void set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds);
-  // Passes the FDs specified via set_non_trivial_functional_dependencies()
+  // Returns the specified set of non-trivial FDs.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
   std::optional<std::string> name;

@@ -265,5 +265,4 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
   EXPECT_EQ(fd.dependents, expected_dependents);
 }
 
-
 }  // namespace opossum

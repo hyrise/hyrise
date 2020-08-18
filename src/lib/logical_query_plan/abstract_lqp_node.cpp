@@ -301,20 +301,15 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // (2) Generate trivial FDs from current node's unique constraints
+  // (2) Derive trivial FDs from the node's unique constraints
   const auto& unique_constraints = this->unique_constraints();
   // Early exit, if there are no unique constraints
   if (unique_constraints->empty()) return non_trivial_fds;
 
-  auto generated_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
+  auto trivial_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
 
-  // (3) Merge FDs, if necessary
-  if (non_trivial_fds.empty()) {
-    return generated_fds;
-  } else if (generated_fds.empty()) {
-    return non_trivial_fds;
-  }
-  return merge_fds(non_trivial_fds, generated_fds);
+  // (3) Merge and return FDs
+  return merge_fds(non_trivial_fds, trivial_fds);
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {

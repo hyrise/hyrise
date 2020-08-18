@@ -39,8 +39,10 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   /**
-   * (a) Semi- & Anti-Joins: Returns left input node's non-trivial FDs
-   * (b) Inner-/Outer-Joins: Generates, merges and returns all FDs from both input nodes
+   * (a) Semi- & Anti-Joins: Forwards left input node's non-trivial FDs
+   * (b) Inner-/Outer-/Cross-Joins:
+   *      - Forwards non-trivial FDs from both input nodes that stay valid.
+   *      - Returns derived, non-trivial FDs from input unique constraints that become discarded due to the join.
    */
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
@@ -50,11 +52,15 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   /**
-   * This function can be called for all join types, except for Semi- and Anti-Joins.
-   * @param left_unique_constraints The left input node's unique constraints.
-   * @param right_unique_constraints The right input node's unique constraints.
-   * @return A subset of the given LQPUniqueConstraints which remains valid despite the join operation. Depending on
-   *         the join columns, the left, right, both or none of the given unique constraint sets are returned.
+   * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
+   *         right_unique_constraints that remains valid despite the join operation.
+   *         Depending on the join columns,
+   *          (a) the left,
+   *          (b) the right,
+   *          (c) both or
+   *          (d) none
+   *         of the given unique constraint sets are returned.
+   * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
   std::shared_ptr<LQPUniqueConstraints> _valid_unique_constraints(
       const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,

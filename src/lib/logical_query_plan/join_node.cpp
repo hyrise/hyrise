@@ -133,7 +133,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_valid_unique_constraints(
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
   /**
-   * In case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
+   * In the case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
    * expressions does not change and therefore we should forward non-trivial FDs as follows:
    */
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
@@ -145,7 +145,7 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
 
   /**
    * When joining tables, we usually lose some or even all unique constraints from both input tables. This leads to
-   * less trivial FDs that we can generate from unique constraints in following nodes. To preserve all FDs possible, we
+   * less trivial FDs that we can generate from unique constraints in upper nodes. To preserve all FDs possible, we
    * generate and return all FDs from both input nodes.
    * In the following, we determine the unique constraints that become discarded and built FDs from them.
    */
