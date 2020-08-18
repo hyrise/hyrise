@@ -39,12 +39,20 @@ struct FunctionalDependency {
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
+/**
+ * @return A merger FD set from the given input @param fds_a and @param fds_b. FDs with the same determinant
+ *         expressions are merged into single objects by merging their dependent expressions.
+ */
+std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+                                            const std::vector<FunctionalDependency>& fds_b);
+
 }  // namespace opossum
 
 namespace std {
 
 /**
- * TODO(Julian) we hash by determinants only
+ * Please note: The hash for FDs is based on the determinant expressions only. Multiple FDs with the same determinant
+ * expressions should not exist as they can be merged into one.
  */
 template <>
 struct hash<opossum::FunctionalDependency> {

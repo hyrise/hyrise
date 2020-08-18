@@ -50,10 +50,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   /**
-   * TODO(Julian) return vector of unique constraints that remains valid after the join operation
-   * @param left_unique_constraints
-   * @param right_unique_constraints
-   * @return
+   * This function can be called for all join types, except for Semi- and Anti-Joins.
+   * @param left_unique_constraints The left input node's unique constraints.
+   * @param right_unique_constraints The right input node's unique constraints.
+   * @return A subset of the given LQPUniqueConstraints which remains valid despite the join operation. Depending on
+   *         the join columns, the left, right, both or none of the given unique constraint sets are returned.
    */
   std::shared_ptr<LQPUniqueConstraints> _valid_unique_constraints(
       const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,

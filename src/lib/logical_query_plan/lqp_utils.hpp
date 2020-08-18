@@ -181,23 +181,16 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
                                          const ExpressionUnorderedSet& expressions);
 
 /**
- * This is a helper method to TODO(Julian)
- * @return TODO
+ * @return A set of FDs, derived from the given @param unique_constraints and based on the output expressions of the
+ *         given @param lqp node.
  */
 std::vector<FunctionalDependency> fds_from_unique_constraints(
     const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
 
 /**
- *
- * @param lqp
- * @param fds
+ * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
+ * the @param lqp node's output expressions.
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
-
-/**
- * TODO(Julian) Doc
- */
-std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
-                                            const std::vector<FunctionalDependency>& fds_b);
 
 }  // namespace opossum
