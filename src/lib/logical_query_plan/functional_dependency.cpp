@@ -69,8 +69,20 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
   fds_merged.insert(fds_merged.end(), fds_a.begin(), fds_a.end());
 
   for (const auto& fd_to_add : fds_b) {
-    auto existing_fd = std::find_if(fds_merged.begin(), fds_merged.end(),
-                                    [&fd_to_add](auto& fd) { return fd.determinants == fd_to_add.determinants; });
+    auto existing_fd = std::find_if(fds_merged.begin(), fds_merged.end(), [&fd_to_add](auto& fd) {
+      // Cannot use unordered_set::operator== because it ignores the custom equality function.
+      // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
+
+      // Quick check for cardinality
+      if (fd.determinants.size() != fd_to_add.determinants.size()) return false;
+
+      // Compare determinants
+      for (const auto& expression : fd_to_add.determinants) {
+        if (!fd.determinants.contains(expression)) return false;
+      }
+
+      return true;
+    });
     if (existing_fd == fds_merged.end()) {
       fds_merged.push_back(fd_to_add);
     } else {
