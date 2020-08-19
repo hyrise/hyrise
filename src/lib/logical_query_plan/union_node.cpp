@@ -63,7 +63,13 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::All:
+      return {};
       Fail("Handling of functional dependencies is not yet specified for UNION ALL");
+      // TODO(Julian)
+      // - LQP Unique Constraints get lost
+      //    -> create all FDs from previous LQP Unique Constraints
+      //    -> is_column_nullable
+      // - intersect non_trivial FDs from both sides?
     case SetOperationMode::Positions:
       /**
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
