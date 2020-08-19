@@ -162,17 +162,18 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
     // Left and Right unique constraints become discarded, so we have to manually forward all FDs from the input nodes.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->functional_dependencies();
-  } else if (output_unique_constraints == right_unique_constraints && !left_unique_constraints->empty()) {
-    // Left unique constraints become discarded, so we have to manually forward all FDs for the left input node.
+  } else if ((output_unique_constraints->empty() || output_unique_constraints == right_unique_constraints) &&
+             !left_unique_constraints->empty()) {
+    // Left unique constraints become discarded, so we have to manually forward all left input node's FDs
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();
-  } else if (output_unique_constraints == left_unique_constraints && !right_unique_constraints->empty()) {
-    // Right unique constraints become discarded, so we have to manually forward all FDs for the right input node.
+  } else if ((output_unique_constraints->empty() || output_unique_constraints == left_unique_constraints) &&
+             !right_unique_constraints->empty()) {
+    // Right unique constraints become discarded, so we have to manually forward all right input node's FDs
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->functional_dependencies();
   } else {
-    // No unique constraints become discarded or the input nodes do not have any. Consequently, we only have to
-    // forward non-trivial FDs
+    // No unique constraints become discarded. We only have to forward non-trivial FDs.
     DebugAssert(
         output_unique_constraints->size() == (left_unique_constraints->size() + right_unique_constraints->size()),
         "Unexpected number of unique constraints.");
