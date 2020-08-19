@@ -275,7 +275,6 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialRight) {
     EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
     EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
-
     if (join_mode == JoinMode::Left || join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
     } else {
@@ -343,7 +342,6 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialBothAndDerive) {
     _mock_node_b->set_key_constraints({*_key_constraint_y});
     const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
     const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
-
 
     if (join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
