@@ -88,7 +88,7 @@ def create_context_overview(old_config, new_config, github_format):
 
         table_lines.append([colored(marker + key, color), old_value, new_value])
 
-    # print keys that are not present in both contexts
+    # Print keys that are not present in both contexts
     for key in sorted(old_context_keys - common_context_keys):
         value = old_config["context"][key]
         table_lines.append([colored("≠" + key, "red"), value, "undefined"])
@@ -188,12 +188,14 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
         diff_throughput = float("nan")
 
     # Format the diffs (add colors and percentage output) and calculate p-value
-    diff_throughput_formatted = color_diff(diff_throughput)
     diff_duration_formatted = color_diff(diff_duration, True)
+    diff_throughput_formatted = color_diff(diff_throughput)
     p_value_formatted = calculate_and_format_p_value(old_successful_durations, new_successful_durations)
 
     old_iteration_count = len(old_successful_durations) + len(old_unsuccessful_durations)
     new_iteration_count = len(new_successful_durations) + len(new_unsuccessful_durations)
+
+    # Check if number of runs reached max_runs
     if (old_data["context"]["max_runs"] > 0 or new_data["context"]["max_runs"] > 0) and (
         old_iteration_count == old_data["context"]["max_runs"] or new_iteration_count == new_data["context"]["max_runs"]
     ):
@@ -202,8 +204,9 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     else:
         note = " "
 
-    # We use column widths of 7 (latency) and 8 (throughput) for printing to ensure that we have enough space to
-    # replace the latency/throughput marker with a column header spanning multiple columns.
+    # Add table row for succesful executions. We use column widths of 7 (latency) and 8 (throughput) for printing to
+    # ensure that we have enough space to replace the latency/throughput marker with a column header spanning multiple
+    # columns.
     table_data.append(
         [
             name,
@@ -229,22 +232,22 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
                 float(new_data["summary"]["total_duration"]) / 1e9
             )
 
-        old_avg_unsuccessful_iteration = np.mean(old_unsuccessful_durations)
-        new_avg_unsuccessful_iteration = np.mean(new_unsuccessful_durations)
+        old_avg_unsuccessful_duration = np.mean(old_unsuccessful_durations)
+        new_avg_unsuccessful_duration = np.mean(new_unsuccessful_durations)
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
             diff_throughput_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
-            diff_duration_unsuccessful = new_avg_unsuccessful_iteration / old_avg_unsuccessful_iteration
+            diff_duration_unsuccessful = new_avg_unsuccessful_duration / old_avg_unsuccessful_duration
         else:
             diff_throughput_unsuccessful = float("nan")
             diff_duration_unsuccessful = float("nan")
 
         unsuccessful_info = [
             "   unsucc.:",
-            f"{(old_avg_unsuccessful_iteration / 1e6):>7.1f}"
-            if not math.isnan(old_avg_unsuccessful_iteration)
+            f"{(old_avg_unsuccessful_duration / 1e6):>7.1f}"
+            if not math.isnan(old_avg_unsuccessful_duration)
             else "nan",
-            f"{(new_avg_unsuccessful_iteration / 1e6):>7.1f}"
-            if not math.isnan(new_avg_unsuccessful_iteration)
+            f"{(new_avg_unsuccessful_duration / 1e6):>7.1f}"
+            if not math.isnan(new_avg_unsuccessful_duration)
             else "nan",
             format_diff(diff_duration_unsuccessful) + " " if not math.isnan(diff_duration_unsuccessful) else " ",
             f"{old_unsuccessful_per_second:>.2f}",
@@ -255,6 +258,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
         unsuccessful_info_colored = [colored(text, attrs=["dark"]) for text in unsuccessful_info]
         table_data.append(unsuccessful_info_colored)
 
+# Add a summary of all benchmark items to the final table, including (1) the change of the accumulated sum of all queries' average
+# runtimes and (2) the geometric mean of the percentage changes.
 table_data.append(
     [
         "Sum",
@@ -269,10 +274,10 @@ table = AsciiTable(table_data)
 for column_index in range(1, len(table_data[0])):  # all columns justified to right, except for item name
     table.justify_columns[column_index] = "right"
 
-result = str(table.table)
+table_string = str(table.table)
 
-new_result = ""
-lines = result.splitlines()
+table_string_reformatted = ""
+lines = table_string.splitlines()
 
 
 # Double the vertical line between the item names and the two major measurements.
@@ -302,9 +307,9 @@ lines[2], lines[3] = lines[3], lines[2]
 for (line_number, line) in enumerate(lines):
     if line_number == len(table_data):
         # Add another separation between benchmark items and aggregates
-        new_result += lines[-1] + "\n"
+        table_string_reformatted += lines[-1] + "\n"
 
-    new_result += line + "\n"
+    table_string_reformatted += line + "\n"
 
 
 # In case the runs for the executed benchmark have been cut or the number of runs was insufficient for the p-value
@@ -313,14 +318,14 @@ if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
     first_column_width = len(lines[1].split("|")[1])
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
     if add_note_for_capped_runs:
-        note = "˄" + f' Execution stopped at {new_data["context"]["max_runs"]} runs'
-        new_result += "|" + (" Notes ".rjust(first_column_width, " ")) + "|| " + note.ljust(width_for_note, " ") + "|\n"
+        note = "˄" + f' Execution stopped due to max runs reached'
+        table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " ")) + "|| " + note.ljust(width_for_note, " ") + "|\n"
     if add_note_for_insufficient_pvalue_runs:
         note = "˅" + " Insufficient number of runs for p-value calculation"
-        new_result += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
-    new_result += lines[-1] + "\n"
+        table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
+    table_string_reformatted += lines[-1] + "\n"
 
-result = new_result
+table_string = table_string_reformatted
 
 
 # If github_format is set, format the output in the style of a diff file where added lines (starting with +) are
@@ -331,20 +336,20 @@ if github_format:
     green_control_sequence = colored("", "green")[0:5]
     red_control_sequence = colored("", "red")[0:5]
 
-    new_result = "```diff\n"
-    new_result += create_context_overview(old_data, new_data, github_format) + "\n"
-    for line in result.splitlines():
+    table_string_reformatted = "```diff\n"
+    table_string_reformatted += create_context_overview(old_data, new_data, github_format) + "\n"
+    for line in table_string.splitlines():
         if green_control_sequence + "+" in line:
-            new_result += "+"
+            table_string_reformatted += "+"
         elif red_control_sequence + "-" in line:
-            new_result += "-"
+            table_string_reformatted += "-"
         else:
-            new_result += " "
+            table_string_reformatted += " "
 
-        new_result += line + "\n"
-    new_result += "```"
-    result = new_result
+        table_string_reformatted += line + "\n"
+    table_string_reformatted += "```"
+    table_string = table_string_reformatted
 else:
-    result = create_context_overview(old_data, new_data, github_format) + "\n\n" + result
+    table_string = create_context_overview(old_data, new_data, github_format) + "\n\n" + table_string
 
-print(result)
+print(table_string)
