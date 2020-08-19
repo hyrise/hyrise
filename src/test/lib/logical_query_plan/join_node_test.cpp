@@ -411,6 +411,37 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin) {
   EXPECT_EQ(join_node->functional_dependencies().at(3), generated_fd_x);
 }
 
+TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
+  const auto join_column_c = _t_a_c;
+  const auto join_column_x = _t_b_x;
+
+  const auto key_constraint_a_b = TableKeyConstraint{{_t_a_a->original_column_id, _t_a_b->original_column_id},KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_c = TableKeyConstraint{{_t_a_c->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node_a->set_key_constraints({key_constraint_a_b, key_constraint_c});
+  _mock_node_b->set_key_constraints({*_key_constraint_x});
+
+  // Not really a trivial FD since it can be derived from the given key constraint across columns a & b, but for the
+  // sake of the test:
+  _mock_node_a->set_non_trivial_functional_dependencies({FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}}});
+
+  // clang-format off
+  const auto& join_node =
+  JoinNode::make(JoinMode::Inner, equals_(join_column_c, join_column_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  const auto& fds_join = join_node->functional_dependencies();
+  EXPECT_EQ(fds_join.size(), 3);
+  const auto expected_fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c, _t_b_x, _t_b_y}};
+  const auto expected_fd_c = FunctionalDependency{{_t_a_c}, {_t_a_a, _t_a_b, _t_b_x, _t_b_y}};
+  const auto expected_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
+
+  EXPECT_EQ(fds_join.at(0), expected_fd_a_b);
+  EXPECT_EQ(fds_join.at(1), expected_fd_c);
+  EXPECT_EQ(fds_join.at(2), expected_fd_x);
+}
+
 TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
