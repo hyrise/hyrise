@@ -45,8 +45,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    *      - Forwards non-trivial FDs from both input nodes.
    * (c) Inner-/Outer-Joins:
    *      - Forwards non-trivial FDs from both input nodes whose determinant expressions stay non-nullable.
-   *      - Returns derived, trivial FDs from the left and/or right input node as non-trivial FDs if associated unique
-   *        constraints become discarded.
+   *      - Turns derived, trivial FDs from the left and/or right input node into non-trivial FDs if the underlying
+   *        unique constraints do not survive the join.
    */
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 

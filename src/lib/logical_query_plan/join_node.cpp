@@ -88,6 +88,11 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
 std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
     const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
+  if(left_unique_constraints->empty() && right_unique_constraints->empty()) {
+    // Early exit
+    return std::make_shared<LQPUniqueConstraints>();
+  }
+
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins
@@ -153,15 +158,15 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   const auto right_unique_constraints = right_input()->unique_constraints();
   const auto& output_unique_constraints = _output_unique_constraints(left_unique_constraints, right_unique_constraints);
 
-  if (output_unique_constraints->empty()) {
+  if (output_unique_constraints->empty() && !left_unique_constraints->empty() && !right_unique_constraints->empty()) {
     // All unique constraints become discarded, so we have to manually forward all FDs from both input nodes.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->functional_dependencies();
-  } else if (output_unique_constraints == right_unique_constraints) {
+  } else if (output_unique_constraints == right_unique_constraints && !left_unique_constraints->empty()) {
     // Left input node's unique constraints become discarded.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();
-  } else if (output_unique_constraints == left_unique_constraints) {
+  } else if (output_unique_constraints == left_unique_constraints && !right_unique_constraints->empty()) {
     // Right input node's unique constraints become discarded.
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->functional_dependencies();
