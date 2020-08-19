@@ -41,7 +41,15 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
 
-  auto node_label = node->description();
+  // Add FDs to
+  std::stringstream ss;
+  ss << node->description() << "\nFDs: ";
+  const auto& fds = node->functional_dependencies();
+  for(const auto& fd : fds) {
+    ss << fd << "\n";
+  }
+
+  auto node_label = ss.str();
   if (!node->comment.empty()) {
     node_label += "\\n(" + node->comment + ")";
   }
