@@ -411,6 +411,32 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin) {
   EXPECT_EQ(join_node->functional_dependencies().at(3), generated_fd_x);
 }
 
+TEST_F(JoinNodeTest, FunctionalDependenciesDeriveUniqueConstraintsLeft) {
+  /**
+   * We set a unique constraint for the left, but not for the right join column of the Inner Join. Consequently, unique
+   * constraints of the left input node become discarded whereas the unique constraints of the right input node survive.
+   * Therefore, we have to check whether left input node's trivial FDs become forwarded as non-trivial ones.
+   */
+  _mock_node_a->set_key_constraints({*_key_constraint_a});
+  _mock_node_a->set_key_constraints({*_key_constraint_x});
+  // clang-format off
+  const auto& join_node =
+  JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  // Tests
+  const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), generated_fd_a);
+
+  const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
+  EXPECT_EQ(join_node->functional_dependencies().size(), 2);
+  EXPECT_EQ(join_node->functional_dependencies().at(0), generated_fd_a);
+  EXPECT_EQ(join_node->functional_dependencies().at(1), generated_fd_x);
+}
+
 TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
   const auto key_constraint_a_b =
       TableKeyConstraint{{_t_a_a->original_column_id, _t_a_b->original_column_id}, KeyConstraintType::PRIMARY_KEY};
