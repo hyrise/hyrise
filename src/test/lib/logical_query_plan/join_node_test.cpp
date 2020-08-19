@@ -365,7 +365,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialBothAndDerive) {
   }
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesDeriveUniqueConstraintsNone) {
+TEST_F(JoinNodeTest, FunctionalDependenciesDeriveNone) {
   /**
    * Set unique constraints for both join columns of an Inner Join, so that unique constraints from both sides become
    * forwarded. Consequently, we do not expect non-trivial FDs from the left or right input node's unique constraints
@@ -401,17 +401,17 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveUniqueConstraintsNone) {
   EXPECT_EQ(join_node->functional_dependencies().at(3), generated_fd_x);
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesDeriveUniqueConstraintsLeft) {
+TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   /**
    * We set a unique constraint for the left, but not for the right join column of the Inner Join. Consequently, unique
    * constraints of the left input node become discarded whereas the unique constraints of the right input node survive.
    * Therefore, we have to check whether left input node's trivial FDs become forwarded as non-trivial ones.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
-  _mock_node_a->set_key_constraints({*_key_constraint_x});
+  _mock_node_b->set_key_constraints({*_key_constraint_x});
   // clang-format off
   const auto& join_node =
-  JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x),
+  JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y),
     _mock_node_a,
     _mock_node_b);
   // clang-format on
