@@ -29,9 +29,6 @@ class JoinNodeTest : public BaseTest {
     _t_b_y = _mock_node_b->get_column("y");
 
     _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    _cross_join_node->set_left_input(_mock_node_a);
-    _cross_join_node->set_right_input(_mock_node_b);
-
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -235,11 +232,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
   }
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialFDsLeft) {
   const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
-  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
-  const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
-  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
   const auto join_column_a = _t_a_a;
   const auto join_column_x = _t_b_x;
 
@@ -257,11 +251,28 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({});
+
     if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
     } else {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    }
+  }
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialFDsRight) {
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  const auto join_column_a = _t_a_a;
+  const auto join_column_x = _t_b_x;
+
+  for (const auto join_mode :
+      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+    auto join_node = std::shared_ptr<JoinNode>();
+    if (join_mode == JoinMode::Cross) {
+      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    } else {
+      join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x), _mock_node_a, _mock_node_b);
     }
 
     // Right input Node has non-trivial FDs
@@ -269,11 +280,29 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+
     if (join_mode == JoinMode::Left || join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
     } else {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
+    }
+  }
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialFDsBoth) {
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  const auto join_column_a = _t_a_a;
+  const auto join_column_x = _t_b_x;
+
+  for (const auto join_mode :
+      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+    auto join_node = std::shared_ptr<JoinNode>();
+    if (join_mode == JoinMode::Cross) {
+      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    } else {
+      join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x), _mock_node_a, _mock_node_b);
     }
 
     // Both input nodes have non-trivial FDs
@@ -281,6 +310,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
     _mock_node_b->set_key_constraints({});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+
     if (join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
     } else if (join_mode == JoinMode::Left) {
@@ -294,6 +324,25 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
     }
+  }
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialAndTrivialFDs) {
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
+  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
+  const auto join_column_a = _t_a_a;
+  const auto join_column_x = _t_b_x;
+
+  for (const auto join_mode :
+      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+    auto join_node = std::shared_ptr<JoinNode>();
+    if (join_mode == JoinMode::Cross) {
+      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    } else {
+      join_node = JoinNode::make(join_mode, equals_(join_column_a, join_column_x), _mock_node_a, _mock_node_b);
+    }
 
     /**
      * Test, whether FD forwarding still works when FDs from unique constraints are added to the output:
@@ -305,6 +354,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwarding) {
     _mock_node_b->set_key_constraints({*_key_constraint_y});
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+
     if (join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
     } else if (join_mode == JoinMode::Left) {

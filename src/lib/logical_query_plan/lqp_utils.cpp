@@ -402,11 +402,11 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
   // Adjust FDs: Remove dependents that are not part of the node's output expressions
-  auto part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
+  auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
     return !output_expressions_set.contains(fd_dependent_expression);
   };
   for (auto& fd : fds) {
-    std::erase_if(fd.dependents, part_of_output_expressions);
+    std::erase_if(fd.dependents, not_part_of_output_expressions);
   }
 
   // Remove invalid or unnecessary FDs
