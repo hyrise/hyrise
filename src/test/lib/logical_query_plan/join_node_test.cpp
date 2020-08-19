@@ -418,12 +418,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
   _mock_node_a->set_key_constraints({key_constraint_a_b, key_constraint_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-  // The following FD is trivial since it can be derived from a LQP unique constraint (columns a & b). However,
-  // we define it as non-trivial anyway to trigger the FD merging logic.
+  // The following FD is trivial since it can be derived from a unique constraint (PRIMARY KEY across a & b).
+  // However, we define it as non-trivial anyway, to verify the conflict resolution when merging FDs later on.
   const auto fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a_b});
 
-  // Define an Inner Join that does not discard any unique constraints
+  // Define an Inner Join, so that all unique constraints survive
   // clang-format off
   const auto& join_node =
   JoinNode::make(JoinMode::Inner, equals_(_t_a_c, _t_b_x),
@@ -436,6 +436,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
   const auto expected_fd_c = FunctionalDependency{{_t_a_c}, {_t_a_a, _t_a_b, _t_b_x, _t_b_y}};
   const auto expected_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
 
+  // Prerequisites
   const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
   EXPECT_EQ(non_trivial_fds.size(), 1);
   EXPECT_EQ(non_trivial_fds.at(0), fd_a_b);
