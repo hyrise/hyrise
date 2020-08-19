@@ -41,15 +41,29 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
 
-  // Add FDs to
-  std::stringstream ss;
-  ss << node->description() << "\nFDs: ";
-  const auto& fds = node->functional_dependencies();
-  for(const auto& fd : fds) {
-    ss << fd << "\n";
-  }
+  auto node_label = node->description();
+  if(!dynamic_pointer_cast<AbstractNonQueryNode>(node)) {
+    // Visualize FDs
+    std::stringstream ss;
+    ss << "FDs: ";
+    const auto& fds = node->functional_dependencies();
+    for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
+      ss << fds.at(fd_idx);
+      if(fd_idx < fds.size() - 1) ss << ",\n";
+    }
+    if (fds.empty()) ss << " none";
+    ss << "\n";
 
-  auto node_label = ss.str();
+    // Visualize Unique Constraints
+    ss << "Unique: ";
+    const auto& unique_constraints = node->unique_constraints();
+    for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
+      ss << unique_constraints->at(uc_idx);
+      if(uc_idx < unique_constraints->size() - 1) ss << ",\n";
+    }
+    if (unique_constraints->empty()) ss << " none";
+    node_label += "\n" + ss.str();
+  }
   if (!node->comment.empty()) {
     node_label += "\\n(" + node->comment + ")";
   }
@@ -57,7 +71,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   if (node->left_input()) {
     auto left_input = node->left_input();
-    _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
+    _build_subtree(left_input, visualized_nodes,  visualized_sub_queries);
     _build_dataflow(left_input, node, InputSide::Left);
   }
 
