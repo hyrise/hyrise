@@ -267,7 +267,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialFDsRight) {
   const auto join_column_x = _t_b_x;
 
   for (const auto join_mode :
-      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
     auto join_node = std::shared_ptr<JoinNode>();
     if (join_mode == JoinMode::Cross) {
       join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
@@ -297,7 +297,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialFDsBoth) {
   const auto join_column_x = _t_b_x;
 
   for (const auto join_mode :
-      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
     auto join_node = std::shared_ptr<JoinNode>();
     if (join_mode == JoinMode::Cross) {
       join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
@@ -336,7 +336,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialAndTrivialFDs) {
   const auto join_column_x = _t_b_x;
 
   for (const auto join_mode :
-      {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
     auto join_node = std::shared_ptr<JoinNode>();
     if (join_mode == JoinMode::Cross) {
       join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
@@ -412,34 +412,52 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardingInnerJoin) {
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
-  const auto join_column_c = _t_a_c;
-  const auto join_column_x = _t_b_x;
-
-  const auto key_constraint_a_b = TableKeyConstraint{{_t_a_a->original_column_id, _t_a_b->original_column_id},KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_a_b =
+      TableKeyConstraint{{_t_a_a->original_column_id, _t_a_b->original_column_id}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_c = TableKeyConstraint{{_t_a_c->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node_a->set_key_constraints({key_constraint_a_b, key_constraint_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-  // Not really a trivial FD since it can be derived from the given key constraint across columns a & b, but for the
-  // sake of the test:
-  _mock_node_a->set_non_trivial_functional_dependencies({FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}}});
+  // The following FD is trivial since it can be derived from a LQP unique constraint (columns a & b). However,
+  // we define it as non-trivial anyway to trigger the FD merging logic.
+  const auto fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}};
+  _mock_node_a->set_non_trivial_functional_dependencies({fd_a_b});
 
+  // Define an Inner Join that does not discard any unique constraints
   // clang-format off
   const auto& join_node =
-  JoinNode::make(JoinMode::Inner, equals_(join_column_c, join_column_x),
+  JoinNode::make(JoinMode::Inner, equals_(_t_a_c, _t_b_x),
     _mock_node_a,
     _mock_node_b);
   // clang-format on
 
-  const auto& fds_join = join_node->functional_dependencies();
-  EXPECT_EQ(fds_join.size(), 3);
+  // After the join, we expect the following FDs to be returned:
   const auto expected_fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c, _t_b_x, _t_b_y}};
   const auto expected_fd_c = FunctionalDependency{{_t_a_c}, {_t_a_a, _t_a_b, _t_b_x, _t_b_y}};
   const auto expected_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
 
-  EXPECT_EQ(fds_join.at(0), expected_fd_a_b);
-  EXPECT_EQ(fds_join.at(1), expected_fd_c);
-  EXPECT_EQ(fds_join.at(2), expected_fd_x);
+  const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
+  EXPECT_EQ(non_trivial_fds.size(), 1);
+  EXPECT_EQ(non_trivial_fds.at(0), fd_a_b);
+
+  const auto& trivial_fds = fds_from_unique_constraints(join_node, join_node->unique_constraints());
+  EXPECT_EQ(trivial_fds.size(), 3);
+  EXPECT_EQ(trivial_fds.at(0), expected_fd_a_b);
+  EXPECT_EQ(trivial_fds.at(1), expected_fd_c);
+  EXPECT_EQ(trivial_fds.at(2), expected_fd_x);
+
+  /**
+   * After merging the two FD sets above, we expect three and instead of four FDs since the following FD objects
+   *   {a, b} => {c} and
+   *   {a, b} => {c, x, y}
+   * can be merged into one.
+   */
+  const auto merged_fds = merge_fds(non_trivial_fds, trivial_fds);
+  EXPECT_EQ(merged_fds.size(), 3);
+  EXPECT_EQ(merged_fds.at(0), expected_fd_a_b);
+  EXPECT_EQ(merged_fds.at(1), expected_fd_c);
+  EXPECT_EQ(merged_fds.at(2), expected_fd_x);
+  EXPECT_EQ(merged_fds, join_node->functional_dependencies());
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
