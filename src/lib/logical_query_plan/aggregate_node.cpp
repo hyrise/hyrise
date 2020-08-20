@@ -10,6 +10,7 @@
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -20,12 +21,12 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
     : AbstractLQPNode(LQPNodeType::Aggregate, {/* Expressions added below*/}),
       aggregate_expressions_begin_idx{group_by_expressions.size()} {
-#if HYRISE_DEBUG
-  for (const auto& aggregate_expression : aggregate_expressions) {
-    DebugAssert(aggregate_expression->type == ExpressionType::Aggregate,
-                "Expression used as aggregate expression must be of type AggregateExpression.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& aggregate_expression : aggregate_expressions) {
+      Assert(aggregate_expression->type == ExpressionType::Aggregate,
+             "Expression used as aggregate expression must be of type AggregateExpression.");
+    }
   }
-#endif
 
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
   std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
@@ -77,6 +78,12 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   return output_expressions;
 }
 
+bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < node_expressions.size(), "ColumnID out of range");
+  Assert(left_input(), "Need left input to determine nullability");
+  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+}
+
 std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
@@ -116,13 +123,15 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
 
   // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
-  ExpressionUnorderedSet group_by_columns(group_by_columns_count);
-  std::copy_n(node_expressions.begin(), group_by_columns_count,
-              std::inserter(group_by_columns, group_by_columns.begin()));
+  if (group_by_columns_count > 0) {
+    ExpressionUnorderedSet group_by_columns(group_by_columns_count);
+    std::copy_n(node_expressions.begin(), group_by_columns_count,
+                std::inserter(group_by_columns, group_by_columns.begin()));
 
-  // Make sure, we do not add an already existing or a superset unique constraint.
-  if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
-    unique_constraints->emplace_back(group_by_columns);
+    // Make sure, we do not add an already existing or a superset unique constraint.
+    if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
+      unique_constraints->emplace_back(group_by_columns);
+    }
   }
 
   /**
@@ -139,11 +148,17 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   return unique_constraints;
 }
 
-bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(column_id < node_expressions.size(), "ColumnID out of range");
-  Assert(left_input(), "Need left input to determine nullability");
-  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {
+  auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+
+  // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
+  // all FDs whose expressions are no longer part of the node's output expressions.
+  remove_invalid_fds(shared_from_this(), non_trivial_fds);
+
+  return non_trivial_fds;
 }
+
+size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
@@ -156,8 +171,6 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping&
       expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
       expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));
 }
-
-size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);

@@ -25,3 +25,12 @@ struct LQPUniqueConstraint final {
 using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::LQPUniqueConstraint> {
+  size_t operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const;
+};
+
+}  // namespace std

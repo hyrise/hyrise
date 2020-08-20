@@ -34,9 +34,13 @@ std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const 
    *
    * Future Work: Merge unique constraints from the left and right input node.
    */
-  DebugAssert(left_input()->unique_constraints() == right_input()->unique_constraints(), "Merging of unique "
-              "constraints should be implemented.");
+  DebugAssert(left_input()->unique_constraints() == right_input()->unique_constraints(),
+              "Merging of unique constraints should be implemented.");
   return _forward_left_unique_constraints();
+}
+
+std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependencies() const {
+  Fail("Merging of FDs should be implemented.");
 }
 
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
