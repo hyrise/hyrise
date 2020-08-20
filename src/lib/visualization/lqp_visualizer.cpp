@@ -45,8 +45,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if(!dynamic_pointer_cast<AbstractNonQueryNode>(node)) {
     // Visualize FDs
     std::stringstream ss;
-    ss << "FDs: ";
-    const auto& fds = node->functional_dependencies();
+    ss << "Non-trivial FDs: ";
+    const auto& fds = node->non_trivial_functional_dependencies();
     for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
       ss << fds.at(fd_idx);
       if(fd_idx < fds.size() - 1) ss << ",\n";
