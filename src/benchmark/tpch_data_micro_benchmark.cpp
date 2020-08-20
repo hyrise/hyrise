@@ -1,11 +1,13 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <random>
 
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
+#include "storage/encoding_type.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -16,6 +18,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/print.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -31,6 +34,52 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 using duration_unit = std::chrono::microseconds;
+
+constexpr auto SELECTIVITY = 0.1f;
+
+const auto LINEITEM_COLUMNS_TO_PROCESS = std::map<std::string, std::pair<ColumnID, DataType>>{
+  {"l_partkey", {ColumnID{1}, DataType::Int}},
+  {"l_linenumber", {ColumnID{3}, DataType::Int}},
+  {"l_shipmode", {ColumnID{14}, DataType::String}},
+  {"l_comment", {ColumnID{15}, DataType::String}}
+};
+
+/**
+ * We are walking the results backwards (desc) to obtain the small values of l_partkey. Otherwise, we start witht he largest value
+ * which would yield a selectivity of 0.25.
+ */
+template <typename T>
+T get_search_value(const std::string column_name, const size_t row_count_lineitem) {
+  std::ofstream compression_selection_selectivities;
+  compression_selection_selectivities.open("compression_selection_filters.csv", std::ios_base::app);
+
+  auto sql_pipeline = SQLPipelineBuilder{"SELECT " + column_name + ", count(*) FROM lineitem group by " + column_name + " order by " + column_name + " desc"}.create_pipeline();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  // Print::print(table);
+  auto search_value = table->get_value<T>(ColumnID{0}, 0u).value();
+  auto accumulated_qualified_rows = table->get_value<int64_t>(ColumnID{1}, 0u).value();
+  Assert(table->row_count() > 1, "Unexpected column with only a single value");
+  const auto target_filter_rows = static_cast<int64_t>(SELECTIVITY * static_cast<float>(row_count_lineitem));
+  for (auto row_id = size_t{1}; row_id < table->row_count(); ++row_id) {
+    const auto rows_per_value = table->get_value<int64_t>(ColumnID{1}, row_id).value();
+
+    // 1st case: new added value still does not reach the limit, accept it
+    // 2nd case: new added value is nearer to 0.05f and we thus accept it
+    if (accumulated_qualified_rows + rows_per_value <= target_filter_rows ||
+        abs(accumulated_qualified_rows - target_filter_rows) > abs(accumulated_qualified_rows + rows_per_value - target_filter_rows)) {
+      search_value = table->get_value<T>(ColumnID{0}, row_id).value();
+      accumulated_qualified_rows += rows_per_value;
+      continue;
+    }
+    break;
+  }
+  std::cout << "Searching " + column_name + " for »" << search_value << "«." << std::endl;
+  compression_selection_selectivities << column_name << "," << row_count_lineitem << "," << table->row_count() << "," << static_cast<double>(accumulated_qualified_rows) / static_cast<double>(row_count_lineitem) << "\n";
+
+  compression_selection_selectivities.close();
+
+  return search_value;
+}
 
 class TableWrapper;
 
@@ -59,31 +108,14 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     std::ofstream compression_selection_selectivities;
     compression_selection_selectivities.open("compression_selection_filters.csv");
     compression_selection_selectivities << "PREDICATE_COLUMN,TABLE_LENGTH,DISTINCT_ELEMENTS,SELECTIVITY\n";
+    compression_selection_selectivities.close();
 
     const auto row_count_lineitem = lineitem_table->row_count();
 
-    auto ll_sql_pipeline = SQLPipelineBuilder{"SELECT l_linenumber, count(*) FROM lineitem group by l_linenumber order by count(*) asc"}.create_pipeline();
-    const auto [ll_pipeline_status, ll_table] = ll_sql_pipeline.get_result_table();
-    const auto search_value_l_linenumber = ll_table->get_value<int>(ColumnID{0}, 0u);
-    const auto count_l_linenumber = ll_table->get_value<int64_t>(ColumnID{1}, 0u);
-    std::cout << "Searching l_linenumber for »" << *search_value_l_linenumber << "<<." << std::endl;
-    compression_selection_selectivities << "L_LINENUMBER," << row_count_lineitem << "," << ll_table->row_count() << "," << static_cast<double>(*count_l_linenumber) / static_cast<double>(row_count_lineitem) << "\n";
-
-    auto lp_sql_pipeline = SQLPipelineBuilder{"SELECT l_partkey, count(*) FROM lineitem group by l_partkey order by count(*) desc"}.create_pipeline();
-    const auto [lp_pipeline_status, lp_table] = lp_sql_pipeline.get_result_table();
-    const auto search_value_l_partkey = lp_table->get_value<int>(ColumnID{0}, 0u);
-    const auto count_l_partkey = lp_table->get_value<int64_t>(ColumnID{1}, 0u);
-    std::cout << "Searching l_partkey for »" << *search_value_l_partkey << "<<." << std::endl;
-    compression_selection_selectivities << "L_PARTKEY," << row_count_lineitem << "," << lp_table->row_count() << "," << static_cast<double>(*count_l_partkey) / static_cast<double>(row_count_lineitem) << "\n";
-
-    auto lc_sql_pipeline = SQLPipelineBuilder{"SELECT l_comment, count(*) FROM lineitem group by l_comment order by count(*) desc"}.create_pipeline();
-    const auto [lc_pipeline_status, lc_table] = lc_sql_pipeline.get_result_table();
-    const auto search_value_l_comment = lc_table->get_value<pmr_string>(ColumnID{0}, 0u);
-    const auto count_l_comment = lc_table->get_value<int64_t>(ColumnID{1}, 0u);
-    std::cout << "Searching l_comment for »" << *search_value_l_comment << "<<." << std::endl;
-    compression_selection_selectivities << "L_COMMENT," << row_count_lineitem << "," << lc_table->row_count() <<  "," << static_cast<double>(*count_l_comment) / static_cast<double>(row_count_lineitem) << "\n";
-
-    compression_selection_selectivities.close();
+    const auto search_value_l_linenumber = get_search_value<int>("l_linenumber", row_count_lineitem);
+    const auto search_value_l_partkey = get_search_value<int>("l_partkey", row_count_lineitem);
+    const auto search_value_l_shipmode = get_search_value<pmr_string>("l_shipmode", row_count_lineitem);
+    const auto search_value_l_comment = get_search_value<pmr_string>("l_comment", row_count_lineitem);
 
     // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
@@ -115,19 +147,19 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     _l_linenumber_operand = pqp_column_(ColumnID{3}, lineitem_table->column_data_type(ColumnID{3}),
                                                 lineitem_table->column_is_nullable(ColumnID{3}), "");
-    _l_linenumber_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _l_linenumber_operand,
-                                                                          value_(*search_value_l_linenumber));
+    _l_linenumber_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, _l_linenumber_operand,
+                                                                          value_(search_value_l_linenumber));
 
     _l_partkey_operand = pqp_column_(ColumnID{1}, lineitem_table->column_data_type(ColumnID{1}),
                                                 lineitem_table->column_is_nullable(ColumnID{1}), "");
-    _l_partkey_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _l_partkey_operand,
-                                                                          value_(*search_value_l_partkey));
+    _l_partkey_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, _l_partkey_operand,
+                                                                          value_(search_value_l_partkey));
 
     _last_column_id_lineitem = static_cast<uint16_t>(lineitem_table->column_count()) - 1;
     _l_comment_operand = pqp_column_(ColumnID{_last_column_id_lineitem}, lineitem_table->column_data_type(ColumnID{_last_column_id_lineitem}),
                                                 lineitem_table->column_is_nullable(ColumnID{_last_column_id_lineitem}), "");
-    _l_comment_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _l_comment_operand,
-                                                                       value_(*search_value_l_comment));
+    _l_comment_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, _l_comment_operand,
+                                                                       value_(search_value_l_comment));
 
     _orders_table_node = StoredTableNode::make("orders");
     _orders_orderpriority = _orders_table_node->get_column("o_orderpriority");
@@ -373,46 +405,27 @@ std::string segment_encoding_to_csv_string(const SegmentEncodingSpec& seg_spec) 
   result << encoding_type_to_string.left.at(seg_spec.encoding_type) << ",";
   if (seg_spec.vector_compression_type) {
     result << vector_compression_type_to_string.left.at(*seg_spec.vector_compression_type);
-  } else {
-    result << "None";
   }
 
   return result.str();
 }
 
-template <typename D>
-std::stringstream csv_time_measurement_row(const std::string&& benchmark_name, const SegmentEncodingSpec& seg_spec,
-  const size_t repetitions, const D begin, const D end, const size_t nth_of_a_second, std::ofstream& output_file) {
+void csv_measurement_row(const std::string benchmark_name, const SegmentEncodingSpec& seg_spec,
+  const size_t repetitions, const size_t value, const size_t nth_of_a_second, std::ofstream& output_file) {
   std::stringstream result;
 
-  const auto duration = std::chrono::duration_cast<duration_unit>(end - begin); 
-
-  result << benchmark_name << "," << segment_encoding_to_csv_string(seg_spec) << ",";
-  if (begin == end) {
-    // in case nanosecond timings equal, something went wrong
-    result << repetitions << ",NULL," << nth_of_a_second << "\n";
-  } else {
-    result << repetitions << "," << duration.count() << "," << nth_of_a_second << "\n";
-  }
+  result << benchmark_name << "," << segment_encoding_to_csv_string(seg_spec) << "," << repetitions << "," << value;
+  result << "," << nth_of_a_second << "\n";
 
   output_file << result.str();
-
-  return result;
 }
 
-std::stringstream csv_size_measurement_row(const std::string&& benchmark_name, const SegmentEncodingSpec& seg_spec,
-    const size_t size, std::ofstream& output_file) {
-  std::stringstream result;
-  result << benchmark_name << "," << segment_encoding_to_csv_string(seg_spec) << ",";
-  if (size == 0) {
-    // Something went wrong, when data disappeared
-    result << "NULL\n";
-  } else {
-    result << size << "\n";
-  }
-  output_file << result.str();
+template <typename D>
+void csv_measurement_row(const std::string benchmark_name, const SegmentEncodingSpec& seg_spec,
+  const size_t repetitions, const D begin, const D end, const size_t nth_of_a_second, std::ofstream& output_file) {
 
-  return result;
+  const auto duration = std::chrono::duration_cast<duration_unit>(end - begin);
+  csv_measurement_row(benchmark_name, seg_spec, repetitions, duration.count(), nth_of_a_second, output_file);
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(benchmark::State& state) {
@@ -430,179 +443,235 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
                                            SegmentEncodingSpec{EncodingType::RunLength},
                                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                           SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+                                           SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
                                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
                                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 
-  // constexpr size_t encoding_measurements = 100;
-  // constexpr size_t filter_measurements = 1'000;
+  // constexpr size_t encoding_measurements = 20;
+  // constexpr size_t FILTER_MEASUREMENTS = 1'000;
 
   constexpr size_t encoding_measurements = 5;
-  constexpr size_t filter_measurements = 10;
+  constexpr size_t FILTER_MEASUREMENTS = 10;
 
   constexpr size_t nth_of_a_second = 1'000'000;
 
-  std::ofstream runtime_measurements;
-  runtime_measurements.open("compression_selection_runtime_measurements.csv");
-  runtime_measurements << "Benchmark,Encoding,VectorCompression,Repetitions,Runtime,NthOfASecond\n";
+  std::ofstream measurements;
+  measurements.open("measurements.csv");
+  measurements << "Benchmark,ColumnName,Encoding,VectorCompression,Repetitions,Value,NthOfASecond\n";
 
-  std::ofstream size_measurements;
-  size_measurements.open("compression_selection_size_measurements.csv");
-  size_measurements << "Benchmark,Encoding,VectorCompression,Size\n";
-
-  for (auto seg_spec : all_test_segment_encodings) {
-    chunk_spec[1] = seg_spec;
-    chunk_spec[3] = seg_spec;
+  for (const auto& seg_spec : all_test_segment_encodings) {
+    // Both integer columns to encode
+    if (seg_spec.encoding_type != EncodingType::FixedStringDictionary) {
+      chunk_spec[1] = seg_spec;
+      chunk_spec[3] = seg_spec;
+    }
+    // String columns to encode
     if (seg_spec.encoding_type != EncodingType::FrameOfReference) {
+      chunk_spec[10] = seg_spec;
       chunk_spec.back() = seg_spec;
     }
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
 
 
     for (auto i = size_t{0}; i < encoding_measurements; ++i) {
+
+      // Writing NULL measurements for Unencoded (no encoding necessary)
       if (seg_spec.encoding_type == EncodingType::Unencoded) {
         {
           const auto start = std::chrono::high_resolution_clock::now();
-          csv_time_measurement_row("UnencodingPartkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
-          csv_time_measurement_row("EncodingPartkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
-          csv_time_measurement_row("UnencodingComment", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
-          csv_time_measurement_row("EncodingComment", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
+          csv_measurement_row("Unencoding,l_partkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
+          csv_measurement_row("Encoding,l_partkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
+          csv_measurement_row("Unencoding,l_comment", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
+          csv_measurement_row("Encoding,l_comment", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
           break;
         }
       }
-      /**
-          PARTKEY
-       */
-      chunk_spec[1] = SegmentEncodingSpec{EncodingType::Unencoded};
-      {
-        const auto start = std::chrono::high_resolution_clock::now();
-        ChunkEncoder::encode_all_chunks(table, chunk_spec);
-        const auto end = std::chrono::high_resolution_clock::now();
-        csv_time_measurement_row("UnencodingPartkey", seg_spec, encoding_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-      }
-      chunk_spec[1] = seg_spec;
-      {
-        const auto start = std::chrono::high_resolution_clock::now();
-        ChunkEncoder::encode_all_chunks(table, chunk_spec);
-        const auto end = std::chrono::high_resolution_clock::now();
-        csv_time_measurement_row("EncodingPartkey", seg_spec, encoding_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-      }
 
-      /**
-          COMMENT
-       */
-      if (seg_spec.encoding_type != EncodingType::FrameOfReference) {
-        chunk_spec.back() = SegmentEncodingSpec{EncodingType::Unencoded};
-        {
-          const auto start = std::chrono::high_resolution_clock::now();
-          ChunkEncoder::encode_all_chunks(table, chunk_spec);
-          const auto end = std::chrono::high_resolution_clock::now();
-          csv_time_measurement_row("UnencodingComment", seg_spec, encoding_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-        }
+      const auto measure_encoding_time = [&](const std::string column_name) {
+        if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
+          const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
 
-        chunk_spec.back() = seg_spec;
-        {
-          const auto start = std::chrono::high_resolution_clock::now();
-          ChunkEncoder::encode_all_chunks(table, chunk_spec);
-          const auto end = std::chrono::high_resolution_clock::now();
-          csv_time_measurement_row("EncodingComment", seg_spec, encoding_measurements, start, end, nth_of_a_second, runtime_measurements).str();
+          chunk_spec[column_id] = SegmentEncodingSpec{EncodingType::Unencoded};
+          {
+            const auto start = std::chrono::high_resolution_clock::now();
+            ChunkEncoder::encode_all_chunks(table, chunk_spec);
+            const auto end = std::chrono::high_resolution_clock::now();
+            csv_measurement_row("Unencoding," + column_name, seg_spec, encoding_measurements, start, end, nth_of_a_second, measurements);
+          }
+          chunk_spec[column_id] = seg_spec;
+          {
+            const auto start = std::chrono::high_resolution_clock::now();
+            ChunkEncoder::encode_all_chunks(table, chunk_spec);
+            const auto end = std::chrono::high_resolution_clock::now();
+            csv_measurement_row("Encoding," + column_name, seg_spec, encoding_measurements, start, end, nth_of_a_second, measurements);
+          }
         }
-      } else {
-        {
-          const auto start = std::chrono::high_resolution_clock::now();
-          csv_time_measurement_row("UnencodingComment", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
-          csv_time_measurement_row("EncodingComment", seg_spec, encoding_measurements, start, start, nth_of_a_second, runtime_measurements).str();
-        }
-      }
+      };
+
+      measure_encoding_time("l_partkey");
+      measure_encoding_time("l_linenumber");
+      measure_encoding_time("l_shipmode");
+      measure_encoding_time("l_comment");
     }
 
-    // if (seg_spec.encoding_type != EncodingType::LZ4) {
-    //   std::stringstream validation_output;
-    //   Print::print(table, PrintFlags::None, validation_output);
-    //   std::cout << validation_output.str().substr(0, 1000) << std::endl;
-    // }
+    /**
+     *
+     * DIRECT SCANS
+     *
+     */
+    const auto search_value_l_linenumber = get_search_value<int>("l_linenumber", table->row_count());
+    const auto search_value_l_partkey = get_search_value<int>("l_partkey", table->row_count());
+    const auto search_value_l_shipmode = get_search_value<pmr_string>("l_shipmode", table->row_count());
+    const auto search_value_l_comment = get_search_value<pmr_string>("l_comment", table->row_count());
 
-    for (auto i = size_t{0}; i < filter_measurements; ++i) {
-      const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _l_linenumber_predicate);
+    // template <typename D>
+    const auto measure_scan = [&](const std::string benchmark, const std::string column_name,
+                                         const auto& ref_table, const auto search_value) {
+      if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
+        const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
+        const auto operand = pqp_column_(column_id, table->column_data_type(column_id),
+                                         table->column_is_nullable(column_id), column_name);
+        const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
+                                                                           operand, value_(search_value));
+        for (auto i = size_t{0}; i < FILTER_MEASUREMENTS; ++i) {
+          const auto table_scan = std::make_shared<TableScan>(ref_table, predicate);
 
-      {
-        auto start = std::chrono::high_resolution_clock::now();
-        table_scan->execute();
-        auto end = std::chrono::high_resolution_clock::now();
-        // std::cout << "lines:" << table_scan->get_output()->row_count() << std::endl;
+          {
+            auto start = std::chrono::high_resolution_clock::now();
+            table_scan->execute();
+            auto end = std::chrono::high_resolution_clock::now();
 
-        csv_time_measurement_row("DirectScan_l_linenumber", seg_spec, filter_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-      }
-    }
+            csv_measurement_row(benchmark + "," + column_name, seg_spec, FILTER_MEASUREMENTS, start, end, nth_of_a_second, measurements);
 
-    for (auto i = size_t{0}; i < filter_measurements; ++i) {
-      const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _l_partkey_predicate);
-
-      {
-        auto start = std::chrono::high_resolution_clock::now();
-        table_scan->execute();
-        auto end = std::chrono::high_resolution_clock::now();
-
-        csv_time_measurement_row("DirectScan_l_partkey", seg_spec, filter_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-      }
-    }
-
-    for (auto i = size_t{0}; i < filter_measurements; ++i) {
-      const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _l_comment_predicate);
-
-      if (seg_spec.encoding_type != EncodingType::FrameOfReference) {
-        {
-          auto start = std::chrono::high_resolution_clock::now();
-          table_scan->execute();
-          auto end = std::chrono::high_resolution_clock::now();
-
-          csv_time_measurement_row("DirectScan_l_comment", seg_spec, filter_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-        }
-      } else {
-        {
-          auto start = std::chrono::high_resolution_clock::now();
-          csv_time_measurement_row("DirectScan_l_comment", seg_spec, filter_measurements, start, start, nth_of_a_second, runtime_measurements).str();
+            if (benchmark == "DirectScan") {
+              const auto check_lineitem_table_size = static_cast<float>(ref_table->get_output()->row_count());
+              const auto check_result_table_size = static_cast<float>(table_scan->get_output()->row_count());
+              Assert(check_result_table_size > (0.075f * check_lineitem_table_size)
+                     && check_result_table_size < (0.20f * check_lineitem_table_size),
+                     "Unexpected selectivity (input table size: " + 
+                     std::to_string(check_lineitem_table_size) + " and filter " +
+                     " result size: " + std::to_string(check_result_table_size) +  ")");
+            }
+          }
         }
       }
-    }
+    };
+  
+    const auto table_wrapper = _table_wrapper_map.at("lineitem");
+    measure_scan("DirectScan", "l_partkey", table_wrapper, search_value_l_partkey);
+    measure_scan("DirectScan", "l_linenumber", table_wrapper, search_value_l_linenumber);
+    measure_scan("DirectScan", "l_shipmode", table_wrapper, search_value_l_shipmode);
+    measure_scan("DirectScan", "l_comment", table_wrapper, search_value_l_comment);
 
-    for (auto i = size_t{0}; i < filter_measurements; ++i) {
-      const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _l_linenumber_predicate);
-      table_scan->execute();
-      const auto postfilter_scan = std::make_shared<TableScan>(table_scan, _l_partkey_predicate);
+    /**
+     *
+     * REFERENCE SCANS
+     *
+     */
+    const auto position_gap_size = 1.0f / SELECTIVITY;
+    std::mt19937 generator(17);
+    std::normal_distribution<float> distribution(position_gap_size, position_gap_size * 0.2f);
 
-      {
-        auto start = std::chrono::high_resolution_clock::now();
-        postfilter_scan->execute();
-        auto end = std::chrono::high_resolution_clock::now();
-        // std::cout << "lines:" << table_scan->get_output()->row_count() << std::endl;
 
-        csv_time_measurement_row("PostFilter_l_linenumber", seg_spec, filter_measurements, start, end, nth_of_a_second, runtime_measurements).str();
-      }
-    }
+    // Sorted PosList
+    std::shared_ptr<Table> reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
-    auto column_size_partkey = size_t{0};
-    auto column_size_linenumber = size_t{0};
-    auto column_size_comment = size_t{0};
+    // Creata a reference table of single-chunk-ref chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
-      column_size_partkey += chunk->get_segment(ColumnID{1})->memory_usage(MemoryUsageCalculationMode::Full);
-      column_size_linenumber += chunk->get_segment(ColumnID{3})->memory_usage(MemoryUsageCalculationMode::Full);
-      column_size_comment += chunk->get_segment(ColumnID{_last_column_id_lineitem})->memory_usage(MemoryUsageCalculationMode::Full);
-    }
+      auto pos_list = std::make_shared<RowIDPosList>();
+      auto row_id = static_cast<uint32_t>(distribution(generator));
+      while (row_id < table->get_chunk(chunk_id)->size()) {
+        const auto chunk_offset = row_id % table->target_chunk_size();
+        pos_list->emplace_back(RowID{chunk_id, ChunkOffset{chunk_offset}});
+        row_id += static_cast<uint32_t>(distribution(generator));
+      }
 
-    csv_size_measurement_row("Partkey", seg_spec, column_size_partkey, size_measurements);
-    csv_size_measurement_row("Linenumber", seg_spec, column_size_linenumber, size_measurements);
-    if (seg_spec.encoding_type != EncodingType::FrameOfReference) {
-      csv_size_measurement_row("Comment", seg_spec, column_size_comment, size_measurements);
-    } else {
-      csv_size_measurement_row("Comment", seg_spec, 0, size_measurements);
-    }
+      pos_list->guarantee_single_chunk();
+      Segments segments;
+      for (auto column_id = ColumnID{0}; column_id < reference_table->column_count(); ++column_id) {
+        segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+      }
 
-    runtime_measurements.flush();
-    size_measurements.flush();
+      reference_table->append_chunk(segments);  
+    }
+    auto reference_table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
+    reference_table_wrapper->execute();
+
+    // Unsorted PosList
+    std::shared_ptr<Table> unsorted_reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+
+    auto pos_list = std::make_shared<RowIDPosList>();
+    auto row_id = static_cast<uint32_t>(distribution(generator));
+    while (row_id < table->row_count()) {
+      const auto chunk_id = static_cast<uint32_t>(row_id / table->target_chunk_size());
+      const auto chunk_offset = row_id % table->target_chunk_size();
+      pos_list->emplace_back(RowID{ChunkID{chunk_id}, ChunkOffset{chunk_offset}});
+      row_id += static_cast<uint32_t>(distribution(generator));
+    }
+    std::shuffle(pos_list->begin(), pos_list->end(), generator);
+    Segments unsorted_segments;
+    for (auto column_id = ColumnID{0}; column_id < unsorted_reference_table->column_count(); ++column_id) {
+      unsorted_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+    }
+    unsorted_reference_table->append_chunk(unsorted_segments);  
+
+    auto unsorted_reference_table_wrapper = std::make_shared<TableWrapper>(std::move(unsorted_reference_table));
+    unsorted_reference_table_wrapper->execute();
+
+    // auto measure_post_filter = [&](const std::string benchmark, const auto& ref_table, const std::string column_name, const auto predicate) {
+    //   if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
+    //     for (auto i = size_t{0}; i < FILTER_MEASUREMENTS; ++i) {
+    //       const auto postfilter_scan = std::make_shared<TableScan>(ref_table, predicate);
+          
+    //       auto start = std::chrono::high_resolution_clock::now();
+    //       postfilter_scan->execute();
+    //       auto end = std::chrono::high_resolution_clock::now();
+    //       csv_measurement_row(benchmark + "," + column_name, seg_spec, FILTER_MEASUREMENTS, start, end, nth_of_a_second, measurements);
+    //     }
+    //   }
+    // };
+
+    // measure_post_filter("PostFilter", reference_table_wrapper, "l_partkey", _l_partkey_predicate);
+    // measure_post_filter("PostFilter", reference_table_wrapper, "l_linenumber", _l_linenumber_predicate);
+    // measure_post_filter("PostFilter", reference_table_wrapper, "l_shipmode", _l_shipmode_predicate);
+    // measure_post_filter("PostFilter", reference_table_wrapper, "l_comment", _l_comment_predicate);
+
+    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_partkey", _l_partkey_predicate);
+    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_linenumber", _l_linenumber_predicate);
+    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_shipmode", _l_shipmode_predicate);
+    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_comment", _l_comment_predicate);
+
+    measure_scan("PostFilter", "l_partkey", reference_table_wrapper, search_value_l_partkey);
+    measure_scan("PostFilter", "l_linenumber", reference_table_wrapper, search_value_l_linenumber);
+    measure_scan("PostFilter", "l_shipmode", reference_table_wrapper, search_value_l_shipmode);
+    measure_scan("PostFilter", "l_comment", reference_table_wrapper, search_value_l_comment);
+
+    measure_scan("UnsortedPostFilter", "l_partkey", unsorted_reference_table_wrapper, search_value_l_partkey);
+    measure_scan("UnsortedPostFilter", "l_linenumber", unsorted_reference_table_wrapper, search_value_l_linenumber);
+    measure_scan("UnsortedPostFilter", "l_shipmode", unsorted_reference_table_wrapper, search_value_l_shipmode);
+    measure_scan("UnsortedPostFilter", "l_comment", unsorted_reference_table_wrapper, search_value_l_comment);
+
+
+    auto get_column_size = [&](const std::string column_name) {
+      const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
+      auto column_size = size_t{0};
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        column_size += chunk->get_segment(column_id)->memory_usage(MemoryUsageCalculationMode::Full);
+      }
+
+      csv_measurement_row("Size," + column_name, seg_spec, FILTER_MEASUREMENTS, column_size, nth_of_a_second, measurements);
+    };
+
+    get_column_size("l_partkey");
+    get_column_size("l_linenumber");
+    get_column_size("l_shipmode");
+    get_column_size("l_comment");
+
+    measurements.flush();
   }
-  runtime_measurements.close();
-  size_measurements.close();
+  measurements.close();
 
   _compression_benchmark_done = true;
 }
