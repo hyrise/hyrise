@@ -79,7 +79,13 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
-TEST_F(UnionNodeTest, FunctionalDependencies) {
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionAll) {
+
+  // Continue here: 21.08.2020 18:25
+
+}
+
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
   // Create StoredTableNode with a single FD
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));

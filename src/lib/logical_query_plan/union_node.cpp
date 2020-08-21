@@ -62,23 +62,31 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
 std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
-    case SetOperationMode::All:
-      return {};
-      Fail("Handling of functional dependencies is not yet specified for UNION ALL");
-      // TODO(Julian)
-      // - LQP Unique Constraints get lost
-      //    -> create all FDs from previous LQP Unique Constraints
-      //    -> is_column_nullable
-      // - intersect non_trivial FDs from both sides?
-    case SetOperationMode::Positions:
+      break;
+    case SetOperationMode::All: {
+      /**
+       * With UnionAll, unique constraints from both input nodes become discarded. To preserve trivial FDs, we
+       * request all available FDs from both input nodes.
+       */
+      const auto& fds_left = left_input()->functional_dependencies();
+      const auto& fds_right = right_input()->functional_dependencies();
+      /**
+        * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
+        * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
+        * around this issue, we return the intersected set of FDs which is valid for both input nodes.
+        */
+      return intersect_fds(fds_left, fds_right);
+    }
+    case SetOperationMode::Positions: {
       /**
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
       const auto& non_trivial_fds = left_input()->non_trivial_functional_dependencies();
       DebugAssert(non_trivial_fds == right_input()->non_trivial_functional_dependencies(),
-                  "Expected both input nodes to pass the same FDs.");
+                  "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;
+    }
   }
   Fail("Unhandled UnionMode");
 }
