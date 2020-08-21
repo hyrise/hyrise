@@ -67,7 +67,7 @@ void ClusteringPlugin::_optimize_clustering() {
       table->append_chunk(segments, mvcc_data);
       auto sort_column_definition = SortColumnDefinition(ColumnID{sort_column_id}, SortMode::Ascending);
       table->get_chunk(chunk_id)->finalize();
-      table->get_chunk(chunk_id)->set_sorted_by(sort_column_definition);
+      table->get_chunk(chunk_id)->set_individually_sorted_by(sort_column_definition);
     }
 
     // for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
