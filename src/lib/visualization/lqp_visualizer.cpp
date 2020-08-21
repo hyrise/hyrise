@@ -42,28 +42,6 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   visualized_nodes.insert(node);
 
   auto node_label = node->description();
-  if(!dynamic_pointer_cast<AbstractNonQueryNode>(node)) {
-    // Visualize FDs
-    std::stringstream ss;
-    ss << "Non-trivial FDs: ";
-    const auto& fds = node->non_trivial_functional_dependencies();
-    for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
-      ss << fds.at(fd_idx);
-      if(fd_idx < fds.size() - 1) ss << ",\n";
-    }
-    if (fds.empty()) ss << " none";
-    ss << "\n";
-
-    // Visualize Unique Constraints
-    ss << "Unique: ";
-    const auto& unique_constraints = node->unique_constraints();
-    for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
-      ss << unique_constraints->at(uc_idx);
-      if(uc_idx < unique_constraints->size() - 1) ss << ",\n";
-    }
-    if (unique_constraints->empty()) ss << " none";
-    node_label += "\n" + ss.str();
-  }
   if (!node->comment.empty()) {
     node_label += "\\n(" + node->comment + ")";
   }
@@ -146,6 +124,26 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
                  << "% estd.";
   } else {
     label_stream << "no est.";
+  }
+
+  if(!dynamic_pointer_cast<AbstractNonQueryNode>(from)) {
+    // Visualize FDs
+    label_stream << "\n" << "Non-trivial FDs: ";
+    const auto& fds = from->non_trivial_functional_dependencies();
+    for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
+      ss << fds.at(fd_idx);
+      if(fd_idx < fds.size() - 1) ss << ",\n";
+    }
+    if (fds.empty()) label_stream << " none";
+
+    // Visualize Unique Constraints
+    label_stream << "\n" << "Unique Constraints: ";
+    const auto& unique_constraints = from->unique_constraints();
+    for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
+      ss << unique_constraints->at(uc_idx);
+      if(uc_idx < unique_constraints->size() - 1) ss << ",\n";
+    }
+    if (unique_constraints->empty()) ss << " none";
   }
 
   VizEdgeInfo info = _default_edge;
