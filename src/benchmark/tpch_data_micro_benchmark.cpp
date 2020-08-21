@@ -456,6 +456,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
 
   constexpr size_t nth_of_a_second = 1'000'000;
 
+  const auto search_value_l_linenumber = get_search_value<int>("l_linenumber", table->row_count());
+  const auto search_value_l_partkey = get_search_value<int>("l_partkey", table->row_count());
+  const auto search_value_l_shipmode = get_search_value<pmr_string>("l_shipmode", table->row_count());
+  const auto search_value_l_comment = get_search_value<pmr_string>("l_comment", table->row_count());
+
   std::ofstream measurements;
   measurements.open("measurements.csv");
   measurements << "Benchmark,ColumnName,Encoding,VectorCompression,Repetitions,Value,NthOfASecond\n";
@@ -514,12 +519,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
      * DIRECT SCANS
      *
      */
-    const auto search_value_l_linenumber = get_search_value<int>("l_linenumber", table->row_count());
-    const auto search_value_l_partkey = get_search_value<int>("l_partkey", table->row_count());
-    const auto search_value_l_shipmode = get_search_value<pmr_string>("l_shipmode", table->row_count());
-    const auto search_value_l_comment = get_search_value<pmr_string>("l_comment", table->row_count());
-
-    // template <typename D>
     const auto measure_scan = [&](const std::string benchmark, const std::string column_name,
                                          const auto& ref_table, const auto search_value) {
       if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
