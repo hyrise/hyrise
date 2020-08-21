@@ -39,6 +39,7 @@ struct VizVertexInfo {
 
 struct VizEdgeInfo {
   std::string label;
+  std::string label_tooltip;
   std::string color = "white";
   std::string font_color = "white";
   double pen_width = 1.0;
@@ -95,6 +96,7 @@ class AbstractVisualizer {
     _add_property("style", &VizEdgeInfo::style);
     _add_property("dir", &VizEdgeInfo::dir);
     _add_property("arrowhead", &VizEdgeInfo::arrowhead);
+    _add_property("labeltooltip", &VizEdgeInfo::label_tooltip);
   }
 
   virtual ~AbstractVisualizer() = default;
