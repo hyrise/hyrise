@@ -23,8 +23,12 @@ struct GraphvizConfig {
 
 struct VizGraphInfo {
   std::string bg_color = "black";
+  std::string font_color = "white";
   std::string rankdir = "BT";
   std::string ratio = "compress";
+  std::string label = "For tooltips with advanced information, hover your mouse over vertices or edge labels.\n\n\n";
+  std::string label_location = "t";
+  std::string label_justification = "l";
 };
 
 struct VizVertexInfo {
@@ -76,8 +80,12 @@ class AbstractVisualizer {
         _default_edge(std::move(edge_info)) {
     // Add global Graph properties
     _add_graph_property("rankdir", _graph_info.rankdir);
+    _add_graph_property("fontcolor", _graph_info.font_color);
     _add_graph_property("bgcolor", _graph_info.bg_color);
     _add_graph_property("ratio", _graph_info.ratio);
+    _add_graph_property("label", _graph_info.label);
+    _add_graph_property("labelloc", _graph_info.label_location);
+    _add_graph_property("labeljust", _graph_info.label_justification);
 
     // Add vertex properties
     _add_property("node_id", &VizVertexInfo::id);
