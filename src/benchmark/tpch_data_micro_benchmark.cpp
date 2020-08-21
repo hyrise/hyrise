@@ -73,7 +73,7 @@ T get_search_value(const std::string column_name, const size_t row_count_lineite
     }
     break;
   }
-  std::cout << "Searching " + column_name + " for »" << search_value << "«." << std::endl;
+  // std::cout << "Searching " + column_name + " for »" << search_value << "«." << std::endl;
   compression_selection_selectivities << column_name << "," << row_count_lineitem << "," << table->row_count() << "," << static_cast<double>(accumulated_qualified_rows) / static_cast<double>(row_count_lineitem) << "\n";
 
   compression_selection_selectivities.close();
@@ -448,11 +448,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
                                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
                                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 
-  // constexpr size_t encoding_measurements = 20;
+  // constexpr size_t ENCODING_MEASUREMENTS = 20;
   // constexpr size_t FILTER_MEASUREMENTS = 1'000;
 
-  constexpr size_t encoding_measurements = 5;
-  constexpr size_t FILTER_MEASUREMENTS = 10;
+  constexpr size_t ENCODING_MEASUREMENTS = 5;
+  constexpr size_t FILTER_MEASUREMENTS = 50;
 
   constexpr size_t nth_of_a_second = 1'000'000;
 
@@ -474,18 +474,12 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
 
 
-    for (auto i = size_t{0}; i < encoding_measurements; ++i) {
+    std::cout << "Measuring de/encoding for encoding » " << seg_spec << "«." << std::endl;
+    for (auto i = size_t{0}; i < ENCODING_MEASUREMENTS; ++i) {
 
-      // Writing NULL measurements for Unencoded (no encoding necessary)
+      // Unencoded: no encoding necessary
       if (seg_spec.encoding_type == EncodingType::Unencoded) {
-        {
-          const auto start = std::chrono::high_resolution_clock::now();
-          csv_measurement_row("Unencoding,l_partkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
-          csv_measurement_row("Encoding,l_partkey", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
-          csv_measurement_row("Unencoding,l_comment", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
-          csv_measurement_row("Encoding,l_comment", seg_spec, encoding_measurements, start, start, nth_of_a_second, measurements);
-          break;
-        }
+        continue;
       }
 
       const auto measure_encoding_time = [&](const std::string column_name) {
@@ -497,14 +491,14 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
             const auto start = std::chrono::high_resolution_clock::now();
             ChunkEncoder::encode_all_chunks(table, chunk_spec);
             const auto end = std::chrono::high_resolution_clock::now();
-            csv_measurement_row("Unencoding," + column_name, seg_spec, encoding_measurements, start, end, nth_of_a_second, measurements);
+            csv_measurement_row("Unencoding," + column_name, seg_spec, ENCODING_MEASUREMENTS, start, end, nth_of_a_second, measurements);
           }
           chunk_spec[column_id] = seg_spec;
           {
             const auto start = std::chrono::high_resolution_clock::now();
             ChunkEncoder::encode_all_chunks(table, chunk_spec);
             const auto end = std::chrono::high_resolution_clock::now();
-            csv_measurement_row("Encoding," + column_name, seg_spec, encoding_measurements, start, end, nth_of_a_second, measurements);
+            csv_measurement_row("Encoding," + column_name, seg_spec, ENCODING_MEASUREMENTS, start, end, nth_of_a_second, measurements);
           }
         }
       };
@@ -559,6 +553,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
     };
   
     const auto table_wrapper = _table_wrapper_map.at("lineitem");
+    std::cout << "Measuring scans for encoding » " << seg_spec << "«." << std::endl;
     measure_scan("DirectScan", "l_partkey", table_wrapper, search_value_l_partkey);
     measure_scan("DirectScan", "l_linenumber", table_wrapper, search_value_l_linenumber);
     measure_scan("DirectScan", "l_shipmode", table_wrapper, search_value_l_shipmode);
@@ -619,49 +614,31 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
     auto unsorted_reference_table_wrapper = std::make_shared<TableWrapper>(std::move(unsorted_reference_table));
     unsorted_reference_table_wrapper->execute();
 
-    // auto measure_post_filter = [&](const std::string benchmark, const auto& ref_table, const std::string column_name, const auto predicate) {
-    //   if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
-    //     for (auto i = size_t{0}; i < FILTER_MEASUREMENTS; ++i) {
-    //       const auto postfilter_scan = std::make_shared<TableScan>(ref_table, predicate);
-          
-    //       auto start = std::chrono::high_resolution_clock::now();
-    //       postfilter_scan->execute();
-    //       auto end = std::chrono::high_resolution_clock::now();
-    //       csv_measurement_row(benchmark + "," + column_name, seg_spec, FILTER_MEASUREMENTS, start, end, nth_of_a_second, measurements);
-    //     }
-    //   }
-    // };
-
-    // measure_post_filter("PostFilter", reference_table_wrapper, "l_partkey", _l_partkey_predicate);
-    // measure_post_filter("PostFilter", reference_table_wrapper, "l_linenumber", _l_linenumber_predicate);
-    // measure_post_filter("PostFilter", reference_table_wrapper, "l_shipmode", _l_shipmode_predicate);
-    // measure_post_filter("PostFilter", reference_table_wrapper, "l_comment", _l_comment_predicate);
-
-    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_partkey", _l_partkey_predicate);
-    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_linenumber", _l_linenumber_predicate);
-    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_shipmode", _l_shipmode_predicate);
-    // measure_post_filter("UnsortedPostFilter", unsorted_reference_table_wrapper, "l_comment", _l_comment_predicate);
-
+    std::cout << "Measuring post filters for for encoding » " << seg_spec << "«." << std::endl;
     measure_scan("PostFilter", "l_partkey", reference_table_wrapper, search_value_l_partkey);
     measure_scan("PostFilter", "l_linenumber", reference_table_wrapper, search_value_l_linenumber);
     measure_scan("PostFilter", "l_shipmode", reference_table_wrapper, search_value_l_shipmode);
     measure_scan("PostFilter", "l_comment", reference_table_wrapper, search_value_l_comment);
 
+    std::cout << "Measuring post filters (unsorted pos list) for encoding » " << seg_spec << "«." << std::endl;
     measure_scan("UnsortedPostFilter", "l_partkey", unsorted_reference_table_wrapper, search_value_l_partkey);
     measure_scan("UnsortedPostFilter", "l_linenumber", unsorted_reference_table_wrapper, search_value_l_linenumber);
     measure_scan("UnsortedPostFilter", "l_shipmode", unsorted_reference_table_wrapper, search_value_l_shipmode);
     measure_scan("UnsortedPostFilter", "l_comment", unsorted_reference_table_wrapper, search_value_l_comment);
 
 
+    std::cout << "Getting accumulated segments sizes for encoding » " << seg_spec << "«." << std::endl;
     auto get_column_size = [&](const std::string column_name) {
-      const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
-      auto column_size = size_t{0};
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& chunk = table->get_chunk(chunk_id);
-        column_size += chunk->get_segment(column_id)->memory_usage(MemoryUsageCalculationMode::Full);
-      }
+      if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
+        const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
+        auto column_size = size_t{0};
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto& chunk = table->get_chunk(chunk_id);
+          column_size += chunk->get_segment(column_id)->memory_usage(MemoryUsageCalculationMode::Full);
+        }
 
-      csv_measurement_row("Size," + column_name, seg_spec, FILTER_MEASUREMENTS, column_size, nth_of_a_second, measurements);
+        csv_measurement_row("Size," + column_name, seg_spec, FILTER_MEASUREMENTS, column_size, nth_of_a_second, measurements);
+      }
     };
 
     get_column_size("l_partkey");
