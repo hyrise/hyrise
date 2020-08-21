@@ -59,7 +59,7 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
 
   } else {
     /**
-     * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or, if it isn't we fall back to
+     * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to
      * using a regex matcher.
      *
      * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.

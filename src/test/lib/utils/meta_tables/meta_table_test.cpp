@@ -135,7 +135,7 @@ TEST_P(MultiStorageMetaTablesTest, IsDynamic) {
     Hyrise::get()
         .storage_manager.get_table("int_int")
         ->get_chunk(ChunkID{0})
-        ->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
