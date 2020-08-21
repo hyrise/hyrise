@@ -132,16 +132,17 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   // Node Output Expressions
   tooltip_stream << "Output Expressions: \n";
   const auto& output_expressions = from->output_expressions();
-  for(auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
     tooltip_stream << " (" << column_id + 1 << ") ";
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
-    if(from->is_column_nullable(column_id)) tooltip_stream << " IS NULLABLE";
+    if (from->is_column_nullable(column_id)) tooltip_stream << " IS NULLABLE";
     tooltip_stream << "\n";
   }
   if (!dynamic_pointer_cast<AbstractNonQueryNode>(from)) {
     // Unique Constraints
     const auto& unique_constraints = from->unique_constraints();
-    tooltip_stream << "\n" << "Unique Constraints: \n";
+    tooltip_stream << "\n"
+                   << "Unique Constraints: \n";
     if (unique_constraints->empty()) tooltip_stream << " <none>\n";
     for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
       tooltip_stream << " (" << uc_idx + 1 << ") ";
@@ -150,7 +151,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     // Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
     if (!unique_constraints->empty()) trivial_fds = fds_from_unique_constraints(from, unique_constraints);
-    tooltip_stream << "\n" << "Functional Dependencies (trivial): \n";
+    tooltip_stream << "\n"
+                   << "Functional Dependencies (trivial): \n";
     if (trivial_fds.empty()) tooltip_stream << " <none>\n";
     for (auto fd_idx = size_t{0}; fd_idx < trivial_fds.size(); ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
@@ -158,7 +160,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     }
     // Non-trivial FDs
     const auto& fds = from->non_trivial_functional_dependencies();
-    tooltip_stream << "\n" << "Functional Dependencies (non-trivial): \n";
+    tooltip_stream << "\n"
+                   << "Functional Dependencies (non-trivial): \n";
     if (fds.empty()) tooltip_stream << " <none>";
     for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
