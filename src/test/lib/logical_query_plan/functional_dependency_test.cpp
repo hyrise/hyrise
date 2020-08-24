@@ -67,12 +67,23 @@ TEST_F(FunctionalDependencyTest, MergeFDs) {
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
   const auto fd_b = FunctionalDependency({_b}, {_c});
 
-  const auto& merged_fds = merge_fds({fd_a_1, fd_b, fd_a_b}, {fd_a_b, fd_a_2});
+  const auto& merged_fds = merge_fds({fd_a_1, fd_a_b, fd_b}, {fd_a_2});
 
   EXPECT_EQ(merged_fds.size(), 3);
   EXPECT_EQ(merged_fds.at(0), fd_a);
   EXPECT_EQ(merged_fds.at(1), fd_b);
   EXPECT_EQ(merged_fds.at(2), fd_a_b);
+}
+
+TEST_F(FunctionalDependencyTest, MergeFDsRemoveDuplicates) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_b = FunctionalDependency({_b}, {_c});
+
+  const auto& merged_fds = merge_fds({fd_a, fd_b}, {fd_b});
+
+  EXPECT_EQ(merged_fds.size(), 2);
+  EXPECT_EQ(merged_fds.at(0), fd_a);
+  EXPECT_EQ(merged_fds.at(1), fd_b);
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
