@@ -104,50 +104,48 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   union_all_node->set_right_input(predicate_node_b);
 
   // We expect all FDs to be forwarded since both input nodes have the same non-trivial FDs & unique constraints.
-  EXPECT_EQ(union_all_node->functional_dependencies().size(), 3);
-  EXPECT_EQ(union_all_node->functional_dependencies().at(0), trivial_fd_a);
-  EXPECT_EQ(union_all_node->functional_dependencies().at(1), non_trivial_fd_b);
-  EXPECT_EQ(union_all_node->functional_dependencies().at(2), non_trivial_fd_c);
+  const auto& union_node_fds = union_all_node->functional_dependencies();
+  const auto& union_node_non_trivial_fds = union_all_node->non_trivial_functional_dependencies();
   // Since all unique constraints become discarded, former trivial FDs become non-trivial:
-  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().size(), 3);
-  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(0), trivial_fd_a);
-  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(1), non_trivial_fd_b);
-  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(2), non_trivial_fd_c);
+  EXPECT_EQ(union_node_fds, union_node_non_trivial_fds);
+
+  EXPECT_EQ(union_node_fds.size(), 3);
+  EXPECT_EQ(union_node_fds.at(0), trivial_fd_a);
+  EXPECT_EQ(union_node_fds.at(1), non_trivial_fd_c);
+  EXPECT_EQ(union_node_fds.at(2), non_trivial_fd_b);
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
-  const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
-  const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
-  const auto non_trivial_fd_c = FunctionalDependency({_c}, {_b});
 
-  // Set FDs
-  _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
-  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b, non_trivial_fd_c});
-  EXPECT_EQ(_mock_node1->functional_dependencies().size(), 3);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_c);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(2), trivial_fd_a);
+  // Create single non-trivial FD
+  const auto non_trivial_fd_b = FunctionalDependency({_a}, {_b});
+  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
 
-  // Create UnionNode
+  /**
+   * Create UnionNode
+   * Hack: We use an AggregateNode with a pseudo-aggregate ANY(_c) to
+   *        - receive a new unique constraint and also
+   *        - a new trivial FD {_a, _b} => {_c}
+   */
   const auto& projection_node_a = ProjectionNode::make(expression_vector(_a, _b, _c), _mock_node1);
-  // Hack:
-  //  - Abuse AggregateNode with ANY-pseudo-aggregate to discard FDs and unique constraints involving column
-  //    expression _c
-  const auto& aggregate_node = AggregateNode::make(expression_vector(_b, _c), expression_vector(any_(_a)), _mock_node1);
+  const auto& aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node1);
   const auto& projection_node_b = ProjectionNode::make(expression_vector(_a, _b, _c), aggregate_node);
-  //  - Check whether our hack works:
-  EXPECT_NE(*_mock_node1->unique_constraints(), *projection_node_b->unique_constraints());
-  EXPECT_NE(_mock_node1->non_trivial_functional_dependencies(),
-            projection_node_b->non_trivial_functional_dependencies());
 
   const auto& union_all_node = UnionNode::make(SetOperationMode::All);
   union_all_node->set_left_input(projection_node_a);
   union_all_node->set_right_input(projection_node_b);
 
-  // The input nodes have differing non-trivial FDs & unique constraints. The output is expected to be the intersect
-  // of both input nodes' FDs –> Discard all FDs that involve column expression _a
+  // Prerequisite: Input nodes have differing FDs
+  const auto& expected_fd_a_b = FunctionalDependency({_a, _b}, {_c});
+  EXPECT_EQ(projection_node_a->functional_dependencies().size(), 1);
+  EXPECT_EQ(projection_node_a->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(projection_node_b->functional_dependencies().size(), 2);
+  EXPECT_EQ(projection_node_b->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(projection_node_b->functional_dependencies().at(1), expected_fd_a_b);
+
+  // Test: We expect both input FD-sets to be intersected. Therefore, only one FD should survive.
   EXPECT_EQ(union_all_node->functional_dependencies().size(), 1);
-  EXPECT_EQ(union_all_node->functional_dependencies().at(0), non_trivial_fd_c);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(0), non_trivial_fd_b);
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
