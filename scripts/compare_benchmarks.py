@@ -298,7 +298,7 @@ for (placeholder, final) in [
             unit_column = header_strings[column_id + 1]
             previous_length = len(title_column) + len(unit_column) + 1
             new_title = f" {final} ".ljust(previous_length, " ")
-            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2 :])
+            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2:])
 
 
 # Swap second line of header with automatically added separator. Terminaltables does not support multi-line headers. So
