@@ -79,9 +79,79 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
-TEST_F(UnionNodeTest, FunctionalDependenciesUnionAll) {
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
+  const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
+  const auto non_trivial_fd_c = FunctionalDependency({_c}, {_b});
 
-  // Continue here: 21.08.2020 18:25
+  // Set FDs
+  _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
+  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b, non_trivial_fd_c});
+  EXPECT_EQ(_mock_node1->functional_dependencies().size(), 3);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_c);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(2), trivial_fd_a);
+
+  // Create PredicateNodes & UnionPositionsNode
+  const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
+  const auto& predicate_node_b = PredicateNode::make(greater_than_(_b, 5), _mock_node1);
+  const auto& union_all_node = UnionNode::make(SetOperationMode::All);
+  union_all_node->set_left_input(predicate_node_a);
+  union_all_node->set_right_input(predicate_node_b);
+
+  // We expect all FDs to be forwarded since both input nodes have the same non-trivial FDs & unique constraints.
+  EXPECT_EQ(union_all_node->functional_dependencies().size(), 3);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(0), trivial_fd_a);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(1), non_trivial_fd_c);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(2), non_trivial_fd_b);
+  // Since all unique constraints become discarded, former trivial FDs become non-trivial:
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().size(), 3);
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(0), trivial_fd_a);
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(1), non_trivial_fd_c);
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(2), non_trivial_fd_b);
+}
+
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
+  const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
+  const auto non_trivial_fd_c = FunctionalDependency({_c}, {_b});
+
+  // Set FDs
+  _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
+  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b, non_trivial_fd_c});
+  EXPECT_EQ(_mock_node1->functional_dependencies().size(), 3);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_c);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(2), trivial_fd_a);
+
+  // Create UnionNode
+  const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
+  EXPECT_EQ(predicate_node_a->functional_dependencies(), _mock_node1->functional_dependencies());
+  // Hack:
+  //  (1) Remove column, so that some unique constraints and non-trivial FDs become discarded
+  const auto& projection_node_hack = ProjectionNode::make(expression_vector(_a, _b), _mock_node1);
+  //  (2) Re-add column, so that we are able to perform UnionAll
+  const auto& projection_node_b = ProjectionNode::make(expression_vector(_a, _b, _c), projection_node_hack);
+  //  (3) We expect differing FDs and differing unique constraints:
+  EXPECT_NE(*_mock_node1->unique_constraints(), *projection_node_b->unique_constraints());
+  EXPECT_NE(_mock_node1->non_trivial_functional_dependencies(),
+            projection_node_b->non_trivial_functional_dependencies());
+
+  const auto& union_all_node = UnionNode::make(SetOperationMode::All);
+  union_all_node->set_left_input(predicate_node_a);
+  union_all_node->set_right_input(projection_node_b);
+
+  // The input nodes have differing non-trivial FDs & unique constraints. The output is expected to be the intersect
+  // of both input node's FDs –> Discard all FDs involving column expression _c
+  const auto expected_fd_a = FunctionalDependency({_a}, {_b});
+  EXPECT_EQ(union_all_node->functional_dependencies().size(), 2);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(union_all_node->functional_dependencies().at(1), expected_fd_a);
+  // Since all unique constraints become discarded, former trivial FDs become non-trivial:
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().size(), 2);
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(union_all_node->non_trivial_functional_dependencies().at(1), expected_fd_a);
+}
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsPositive) {
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
@@ -91,8 +161,8 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsPositive) {
   _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
   EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), trivial_fd_a);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), trivial_fd_a);
 
   // Create PredicateNodes & UnionPositionsNode
   const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
@@ -105,8 +175,8 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsPositive) {
   EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().size(), 1);
   EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().at(0), non_trivial_fd_b);
   EXPECT_EQ(union_positions_node->functional_dependencies().size(), 2);
-  EXPECT_EQ(union_positions_node->functional_dependencies().at(0), trivial_fd_a);
   EXPECT_EQ(union_positions_node->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(union_positions_node->functional_dependencies().at(1), trivial_fd_a);
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsNegative) {
@@ -117,8 +187,8 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsNegative) {
   _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
   EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), trivial_fd_a);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), trivial_fd_a);
 
   // Create PredicateNodes & UnionPositionsNode
   const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
@@ -134,7 +204,7 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsNegative) {
   EXPECT_THROW(union_positions_node->functional_dependencies(), std::logic_error);
 }
 
-TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
+TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) { // TODO(Julian) make two tests: Forward & Discard
   // Add two unique constraints to _mock_node1
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
