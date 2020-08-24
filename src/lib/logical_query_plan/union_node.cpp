@@ -62,8 +62,6 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
 
 std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
-    case SetOperationMode::Unique:
-      break;
     case SetOperationMode::All: {
       /**
        * With UnionAll, unique constraints from both input nodes become discarded. To preserve trivial FDs, we
@@ -72,10 +70,10 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
       const auto& fds_left = left_input()->functional_dependencies();
       const auto& fds_right = right_input()->functional_dependencies();
       /**
-        * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
-        * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
-        * around this issue, we return the intersected set of FDs which is valid for both input nodes.
-        */
+       * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
+       * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
+       * around this issue, we return the intersected set of FDs which is valid for both input nodes.
+       */
       return intersect_fds(fds_left, fds_right);
     }
     case SetOperationMode::Positions: {
@@ -88,8 +86,10 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
                   "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;
     }
+    default: {
+      Fail("Unhandled UnionMode");
+    }
   }
-  Fail("Unhandled UnionMode");
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
