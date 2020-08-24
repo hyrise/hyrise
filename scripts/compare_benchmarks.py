@@ -105,7 +105,7 @@ def create_context_overview(old_config, new_config, github_format):
     if github_format:
         # For GitHub, the output is a fake diff, where a leading '-' marks a deletion and causes the line to be printed
         # in red. We do that for all differing configuration lines. Other lines are prepended with ' '.
-        new_output = ''
+        new_output = ""
         for line in table_output.splitlines():
             marker = "-" if ("≠" in line or "!" in line) else " "
             new_output += f"{marker}{line}\n"
@@ -258,8 +258,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
         unsuccessful_info_colored = [colored(text, attrs=["dark"]) for text in unsuccessful_info]
         table_data.append(unsuccessful_info_colored)
 
-# Add a summary of all benchmark items to the final table, including (1) the change of the accumulated sum of all queries' average
-# runtimes and (2) the geometric mean of the percentage changes.
+# Add a summary of all benchmark items to the final table, including (1) the change of the accumulated sum of all
+# queries' average runtimes and (2) the geometric mean of the percentage changes.
 table_data.append(
     [
         "Sum",
@@ -298,7 +298,7 @@ for (placeholder, final) in [
             unit_column = header_strings[column_id + 1]
             previous_length = len(title_column) + len(unit_column) + 1
             new_title = f" {final} ".ljust(previous_length, " ")
-            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2:])
+            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2 :])
 
 
 # Swap second line of header with automatically added separator. Terminaltables does not support multi-line headers. So
@@ -318,8 +318,9 @@ if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
     first_column_width = len(lines[1].split("|")[1])
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
     if add_note_for_capped_runs:
-        note = "˄" + f' Execution stopped due to max runs reached'
-        table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " ")) + "|| " + note.ljust(width_for_note, " ") + "|\n"
+        note = "˄ Execution stopped due to max runs reached"
+        table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " "))
+        table_string_reformatted += "|| " + note.ljust(width_for_note, " ") + "|\n"
     if add_note_for_insufficient_pvalue_runs:
         note = "˅" + " Insufficient number of runs for p-value calculation"
         table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
