@@ -116,7 +116,6 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
-
   // Create single non-trivial FD
   const auto non_trivial_fd_b = FunctionalDependency({_a}, {_b});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
@@ -199,20 +198,29 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
   EXPECT_THROW(union_positions_node->functional_dependencies(), std::logic_error);
 }
 
-TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) { // TODO(Julian) make two tests: Forward & Discard
+TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
   // Add two unique constraints to _mock_node1
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
+  _mock_node1->set_key_constraints({key_constraint_a_b, key_constraint_b});
   EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
 
   // Check whether all unique constraints are forwarded
   EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
   EXPECT_EQ(*_union_node->unique_constraints(), *_mock_node1->unique_constraints());
+}
 
-  // Negative test: Input nodes with differing unique constraints should lead to failure
+TEST_F(UnionNodeTest, UniqueConstraintsUnionPositionsInvalidInput) {
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
+
   auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
-  mock_node1_changed->set_key_constraints(TableKeyConstraints{key_constraint_a_b});
+  mock_node1_changed->set_key_constraints({key_constraint_a_b});
+
+  // Input nodes are not allowed to have differing unique constraints
+  EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
+  EXPECT_EQ(mock_node1_changed->unique_constraints()->size(), 1);
   _union_node->set_right_input(mock_node1_changed);
   EXPECT_THROW(_union_node->unique_constraints(), std::logic_error);
 }

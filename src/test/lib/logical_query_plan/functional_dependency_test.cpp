@@ -7,8 +7,8 @@ namespace opossum {
 class FunctionalDependencyTest : public BaseTest {
  public:
   void SetUp() override {
-    _mock_node_a =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},"mock_node_a");
+    _mock_node_a = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "mock_node_a");
     _a = _mock_node_a->get_column("a");
     _b = _mock_node_a->get_column("b");
     _c = _mock_node_a->get_column("c");
@@ -95,6 +95,5 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
   EXPECT_EQ(intersected_fds.at(0), fd_a_2);
   EXPECT_EQ(intersected_fds.at(1), fd_a_b);
 }
-
 
 }  // namespace opossum
