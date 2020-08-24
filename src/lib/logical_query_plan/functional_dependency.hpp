@@ -40,12 +40,22 @@ struct FunctionalDependency {
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
 /**
- * @return TODO(Julian)
+ * @return The given FDs as an unordered set in an inflated form.
+ *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
+ *         works as follows:
+ *                                                      {a} => {b}
+ *                             {a} => {b, c, d}   -->   {a} => {c}
+ *                                                      {a} => {d}
  */
 std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
- * @return TODO(Julian)
+ * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
+ *         As a result, FDs become deflated as follows:
+ *
+ *                             {a} => {b}
+ *                             {a} => {c}         -->   {a} => {b, c, d}
+ *                             {a} => {d}
  */
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
 
@@ -57,7 +67,7 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
                                             const std::vector<FunctionalDependency>& fds_b);
 
 /**
- * @return TODO(Julian)
+ * @return Returns FDs that are included in both of the given vectors.
  */
 std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDependency>& fds_a,
                                                 const std::vector<FunctionalDependency>& fds_b);
