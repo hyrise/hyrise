@@ -83,26 +83,55 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAll) {
 
   // Continue here: 21.08.2020 18:25
 
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsPositive) {
+  const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
+
+  // Set FDs
+  _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
+  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
+  EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), trivial_fd_a);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_b);
+
+  // Create PredicateNodes & UnionPositionsNode
+  const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
+  const auto& predicate_node_b = PredicateNode::make(greater_than_(_b, 5), _mock_node1);
+  const auto& union_positions_node = UnionNode::make(SetOperationMode::Positions);
+  union_positions_node->set_left_input(predicate_node_a);
+  union_positions_node->set_right_input(predicate_node_b);
+
+  // Positive Tests
+  EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_EQ(union_positions_node->functional_dependencies().size(), 2);
+  EXPECT_EQ(union_positions_node->functional_dependencies().at(0), trivial_fd_a);
+  EXPECT_EQ(union_positions_node->functional_dependencies().at(0), non_trivial_fd_b);
 }
 
-TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
-  // Create StoredTableNode with a single FD
-  const auto table_name = "t_a";
-  Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
-  const auto stored_table_node = StoredTableNode::make(table_name);
-  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
-  // Create ValidateNode as it is required by UnionPositions
-  auto validate_node = ValidateNode::make(stored_table_node);
-  EXPECT_EQ(validate_node->functional_dependencies().size(), 1);
+TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsNegative) {
+  const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
 
-  // Test UnionPositions (forward FDs)
-  auto union_positions_node = UnionNode::make(SetOperationMode::All);
-  union_positions_node->set_left_input(validate_node);
-  union_positions_node->set_right_input(validate_node);
+  // Set FDs
+  _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
+  _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
+  EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), trivial_fd_a);
+  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_b);
 
-  Hyrise::get().reset();
+  // Create PredicateNodes & UnionPositionsNode
+  const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
+  const auto& predicate_node_b = PredicateNode::make(greater_than_(_b, 5), _mock_node2);
+  const auto& union_positions_node = UnionNode::make(SetOperationMode::Positions);
+  union_positions_node->set_left_input(predicate_node_a);
+  union_positions_node->set_right_input(predicate_node_b);
+
+  // Negative Tests
+  EXPECT_NE(predicate_node_a->non_trivial_functional_dependencies(),
+            predicate_node_b->non_trivial_functional_dependencies());
+  EXPECT_THROW(union_positions_node->non_trivial_functional_dependencies(), std::logic_error);
+  EXPECT_THROW(union_positions_node->functional_dependencies(), std::logic_error);
 }
 
 TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
