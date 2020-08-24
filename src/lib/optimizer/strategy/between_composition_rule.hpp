@@ -44,7 +44,7 @@ class BetweenCompositionRule : public AbstractRule {
 
   /**
    * A column boundary is a normalized format that allows us to store a column and a value
-   * expression of a predicate node. The value represents a boundary for the column, if the ColumnBoundaryType does not
+   * expression of a predicate node. The value represents a boundary for the column if the ColumnBoundaryType does not
    * equal None. To create the ColumnBoundary for the other column, if both expressions are LQPColumnExpressions, the
    * boundary_is_column_expression flag has been added.
    */

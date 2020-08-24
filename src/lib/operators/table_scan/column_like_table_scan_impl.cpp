@@ -65,9 +65,9 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
   });
 }
 
-void ColumnLikeTableScanImpl::_scan_dictionary_segment(
-    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
+void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                                       RowIDPosList& matches,
+                                                       const std::shared_ptr<const AbstractPosList>& position_filter) {
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
   // position_filter), this optimization is detrimental. See caller for that case.

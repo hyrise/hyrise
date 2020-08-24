@@ -35,8 +35,7 @@ std::shared_ptr<RowIDPosList> AbstractDereferencedColumnTableScanImpl::scan_chun
 }
 
 void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const ReferenceSegment& segment,
-                                                                      const ChunkID chunk_id,
-                                                                      RowIDPosList& matches) {
+                                                                      const ChunkID chunk_id, RowIDPosList& matches) {
   const auto& pos_list = segment.pos_list();
 
   if (pos_list->references_single_chunk() && !pos_list->empty()) {

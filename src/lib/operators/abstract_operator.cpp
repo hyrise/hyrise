@@ -70,9 +70,9 @@ void AbstractOperator::execute() {
   // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
     if (lqp_node) {
-      [[maybe_unused]] const auto& lqp_expressions = lqp_node->output_expressions();
+      const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
-        DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
+        Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
       } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
         // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
@@ -83,15 +83,15 @@ void AbstractOperator::execute() {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
-        DebugAssert(_output->column_count() == lqp_expressions.size(),
-                    std::string{"Mismatching number of output columns for "} + name());
+        Assert(_output->column_count() == lqp_expressions.size(),
+               std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           if (_type != OperatorType::Alias) {
-            [[maybe_unused]] const auto lqp_type = lqp_expressions[column_id]->data_type();
-            [[maybe_unused]] const auto pqp_type = _output->column_data_type(column_id);
-            [[maybe_unused]] const auto pqp_name = _output->column_name(column_id);
-            DebugAssert(pqp_type == lqp_type,
-                        std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+            const auto lqp_type = lqp_expressions[column_id]->data_type();
+            const auto pqp_type = _output->column_data_type(column_id);
+            const auto pqp_name = _output->column_name(column_id);
+            Assert(pqp_type == lqp_type,
+                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
         }
       }

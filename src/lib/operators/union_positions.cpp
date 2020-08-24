@@ -267,47 +267,48 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
     _referenced_column_ids.emplace_back(ref_segment->referenced_column_id());
   }
 
-#if HYRISE_DEBUG
-  /**
-   * Make sure all chunks have the same ColumnClusters and actually reference the tables and column_ids that the
-   * segments in the first chunk of the left input table reference
-   */
-  const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto current_pos_list = std::shared_ptr<const AbstractPosList>();
-      size_t next_cluster_id = 0;
-      const auto chunk = table->get_chunk(chunk_id);
-      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        if (next_cluster_id < _column_cluster_offsets.size() && column_id == _column_cluster_offsets[next_cluster_id]) {
-          next_cluster_id++;
-          current_pos_list = nullptr;
+  if constexpr (HYRISE_DEBUG) {
+    /**
+     * Make sure all chunks have the same ColumnClusters and actually reference the tables and column_ids that the
+     * segments in the first chunk of the left input table reference
+     */
+    const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        auto current_pos_list = std::shared_ptr<const AbstractPosList>();
+        size_t next_cluster_id = 0;
+        const auto chunk = table->get_chunk(chunk_id);
+        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+          if (next_cluster_id < _column_cluster_offsets.size() &&
+              column_id == _column_cluster_offsets[next_cluster_id]) {
+            next_cluster_id++;
+            current_pos_list = nullptr;
+          }
+
+          const auto segment = chunk->get_segment(column_id);
+          const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
+          auto pos_list = ref_segment->pos_list();
+
+          if (!current_pos_list) {
+            current_pos_list = pos_list;
+          }
+
+          Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
+                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+                     ") "
+                     "doesn't reference the same table as the segment at the same index in the first chunk "
+                     "of the left input table does");
+          Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
+                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+                     ")"
+                     " doesn't reference the same column as the segment at the same index in the first chunk "
+                     "of the left input table does");
+          Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster");
         }
-
-        const auto segment = chunk->get_segment(column_id);
-        const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
-        auto pos_list = ref_segment->pos_list();
-
-        if (!current_pos_list) {
-          current_pos_list = pos_list;
-        }
-
-        Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
-               "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                   ") "
-                   "doesn't reference the same table as the segment at the same index in the first chunk "
-                   "of the left input table does");
-        Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
-               "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                   ")"
-                   " doesn't reference the same column as the segment at the same index in the first chunk "
-                   "of the left input table does");
-        Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster");
       }
-    }
-  };
-  verify_column_clusters_in_all_chunks(left_input_table());
-  verify_column_clusters_in_all_chunks(right_input_table());
-#endif
+    };
+    verify_column_clusters_in_all_chunks(left_input_table());
+    verify_column_clusters_in_all_chunks(right_input_table());
+  }
 
   return nullptr;
 }

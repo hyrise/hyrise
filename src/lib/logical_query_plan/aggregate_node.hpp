@@ -26,6 +26,15 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
+  /**
+   * (1) Forwards left input node's unique constraints if its expressions are a subset of the group-by expressions.
+   * (2) Creates a new unique constraint from the group-by expressions if not already existing.
+   */
+  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+
+  // Returns non-trivial FDs from the left input node that remain valid.
+  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
   size_t aggregate_expressions_begin_idx;
 

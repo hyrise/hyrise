@@ -168,7 +168,6 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/table_key_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
@@ -196,6 +195,7 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
+    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
@@ -225,6 +225,7 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
+    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp

@@ -165,4 +165,32 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
+/**
+ * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
+ *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
+ *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
+ */
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                               const std::unordered_set<ColumnID>& column_ids);
+
+/**
+ * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
+ *         set of expressions. A unique constraint matches if it covers a subset of @param expressions.
+ */
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+                                         const ExpressionUnorderedSet& expressions);
+
+/**
+ * @return A set of FDs, derived from the given @param unique_constraints and based on the output expressions of the
+ *         given @param lqp node.
+ */
+std::vector<FunctionalDependency> fds_from_unique_constraints(
+    const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
+
+/**
+ * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
+ * the @param lqp node's output expressions.
+ */
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+
 }  // namespace opossum

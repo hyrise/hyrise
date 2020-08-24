@@ -913,7 +913,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
       // This was already evaluated before
       const auto table_iter = _uncorrelated_subquery_results->find(expression.pqp);
       DebugAssert(table_iter != _uncorrelated_subquery_results->cend(),
-                  "All uncorrelated PQPSubqueryExpression should be cached, if cache is present");
+                  "All uncorrelated PQPSubqueryExpression should be cached if cache is present");
       return {table_iter->second};
     } else {
       // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
