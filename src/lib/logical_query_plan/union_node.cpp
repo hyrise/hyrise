@@ -32,7 +32,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
 
 std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
-    case SetOperationMode::Positions:
+    case SetOperationMode::Positions: {
       /**
        * UnionPositions merges two reference tables with the same original table(s), computing a Set Union of their
        * PosLists. Therefore, unique constraints remain valid.
@@ -41,18 +41,19 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
        * PredicateSplitUpRule), the constraints have remained the same on the left and right sides. This is not
        * necessarily true in the future. We assert this behaviour so that we are aware if this ever changes.
        */
-      Assert(*left_input()->unique_constraints() == *right_input()->unique_constraints(),
+      const auto& left_unique_constraints = _forward_left_unique_constraints();
+      Assert(*left_unique_constraints == *right_input()->unique_constraints(),
              "Input tables should have the same constraints.");
-      return _forward_left_unique_constraints();
-
-    case SetOperationMode::All:
+      return left_unique_constraints;
+    }
+    case SetOperationMode::All: {
       /**
        * With UnionAll, two tables become merged. The resulting table might contain duplicates.
        * To forward constraints from child nodes, we would have to ensure that both input tables are completely
        * distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
        */
       return std::make_shared<LQPUniqueConstraints>();
-
+    }
     case SetOperationMode::Unique:
       Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
@@ -61,20 +62,34 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
 
 std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
-    case SetOperationMode::Unique:
-    case SetOperationMode::All:
-      Fail("Handling of functional dependencies is not yet specified for UNION ALL");
-    case SetOperationMode::Positions:
+    case SetOperationMode::All: {
+      /**
+       * With UnionAll, unique constraints from both input nodes become discarded. To preserve trivial FDs, we
+       * request all available FDs from both input nodes.
+       */
+      const auto& fds_left = left_input()->functional_dependencies();
+      const auto& fds_right = right_input()->functional_dependencies();
+      /**
+       * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
+       * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
+       * around this issue, we return the intersected set of FDs which is valid for both input nodes.
+       */
+      return intersect_fds(fds_left, fds_right);
+    }
+    case SetOperationMode::Positions: {
       /**
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
       const auto& non_trivial_fds = left_input()->non_trivial_functional_dependencies();
       DebugAssert(non_trivial_fds == right_input()->non_trivial_functional_dependencies(),
-                  "Expected both input nodes to pass the same FDs.");
+                  "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;
+    }
+    default: {
+      Fail("Unhandled UnionMode");
+    }
   }
-  Fail("Unhandled UnionMode");
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

@@ -429,6 +429,16 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                              return false;
                            }),
             fds.end());
+
+  /**
+   * Future Work: Remove redundant FDs. For example:
+   *               - {a, b} => {c, SUM(d)}
+   *               - {a}    => {b, c}
+   *              Because we already have {a} => {c}, we do not need {a, b} => {c}. Therefore, we should change our set
+   *              of FDs to the following:
+   *               - {a, b} => {SUM(d)}
+   *               - {a}    => {b, c}
+   */
 }
 
 }  // namespace opossum
