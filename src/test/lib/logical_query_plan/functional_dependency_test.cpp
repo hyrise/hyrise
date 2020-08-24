@@ -1,0 +1,100 @@
+#include "base_test.hpp"
+
+#include "logical_query_plan/functional_dependency.hpp"
+
+namespace opossum {
+
+class FunctionalDependencyTest : public BaseTest {
+ public:
+  void SetUp() override {
+    _mock_node_a =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},"mock_node_a");
+    _a = _mock_node_a->get_column("a");
+    _b = _mock_node_a->get_column("b");
+    _c = _mock_node_a->get_column("c");
+
+    _mock_node_b =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "mock_node_b");
+    _x = _mock_node_b->get_column("x");
+    _y = _mock_node_b->get_column("y");
+  }
+
+ protected:
+  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
+};
+
+TEST_F(FunctionalDependencyTest, InflateFDs) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_1 = FunctionalDependency({_a}, {_b});
+  const auto fd_a_2 = FunctionalDependency({_a}, {_c});
+  const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
+  const auto fd_x = FunctionalDependency({_x}, {_y});
+
+  const auto& inflated_fds = inflate_fds({fd_a, fd_a_b, fd_x, fd_x});
+  EXPECT_EQ(inflated_fds.size(), 4);
+  EXPECT_FALSE(inflated_fds.contains(fd_a));
+  EXPECT_TRUE(inflated_fds.contains(fd_a_1));
+  EXPECT_TRUE(inflated_fds.contains(fd_a_2));
+  EXPECT_TRUE(inflated_fds.contains(fd_a_b));
+  EXPECT_TRUE(inflated_fds.contains(fd_x));
+}
+
+TEST_F(FunctionalDependencyTest, DeflateFDs) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_1 = FunctionalDependency({_a}, {_b});
+  const auto fd_a_2 = FunctionalDependency({_a}, {_c});
+  const auto fd_b_c = FunctionalDependency({_b, _c}, {_a});
+
+  const auto& deflated_fds = deflate_fds({fd_a_1, fd_a_2, fd_a_2, fd_b_c});
+  EXPECT_EQ(deflated_fds.size(), 2);
+  EXPECT_EQ(deflated_fds.at(0), fd_a);
+  EXPECT_EQ(deflated_fds.at(1), fd_b_c);
+}
+
+TEST_F(FunctionalDependencyTest, MergeFDsEmpty) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+
+  EXPECT_TRUE(merge_fds({}, {}).empty());
+  EXPECT_EQ(merge_fds({fd_a}, {}), std::vector<FunctionalDependency>{fd_a});
+  EXPECT_EQ(merge_fds({}, {fd_a}), std::vector<FunctionalDependency>{fd_a});
+}
+
+TEST_F(FunctionalDependencyTest, MergeFDs) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_1 = FunctionalDependency({_a}, {_b});
+  const auto fd_a_2 = FunctionalDependency({_a}, {_c});
+  const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
+  const auto fd_b = FunctionalDependency({_b}, {_c});
+
+  const auto& merged_fds = merge_fds({fd_a_1, fd_b, fd_a_b}, {fd_a_b, fd_a_2});
+
+  EXPECT_EQ(merged_fds.size(), 3);
+  EXPECT_EQ(merged_fds.at(0), fd_a);
+  EXPECT_EQ(merged_fds.at(1), fd_b);
+  EXPECT_EQ(merged_fds.at(2), fd_a_b);
+}
+
+TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
+  const auto fd_x = FunctionalDependency({_x}, {_y});
+
+  EXPECT_TRUE(intersect_fds({}, {}).empty());
+  EXPECT_TRUE(intersect_fds({fd_x}, {}).empty());
+  EXPECT_TRUE(intersect_fds({}, {fd_x}).empty());
+}
+
+TEST_F(FunctionalDependencyTest, IntersectFDs) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_1 = FunctionalDependency({_a}, {_b});
+  const auto fd_a_2 = FunctionalDependency({_a}, {_c});
+  const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
+  const auto fd_x = FunctionalDependency({_x}, {_y});
+
+  const auto& intersected_fds = intersect_fds({fd_a, fd_a_b, fd_x}, {fd_a_b, fd_a_2});
+  EXPECT_EQ(intersected_fds.size(), 2);
+  EXPECT_EQ(intersected_fds.at(0), fd_a_2);
+  EXPECT_EQ(intersected_fds.at(1), fd_a_b);
+}
+
+
+}  // namespace opossum

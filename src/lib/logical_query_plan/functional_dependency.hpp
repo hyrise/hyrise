@@ -39,8 +39,14 @@ struct FunctionalDependency {
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
 
+/**
+ * @return TODO(Julian)
+ */
 std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds);
 
+/**
+ * @return TODO(Julian)
+ */
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
