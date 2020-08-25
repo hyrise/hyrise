@@ -84,8 +84,9 @@ TEST_F(FunctionalDependencyTest, DeflateFDs) {
 
   const auto& deflated_fds = deflate_fds({fd_a_1, fd_a_2, fd_a_2, fd_b_c});
   EXPECT_EQ(deflated_fds.size(), 2);
-  EXPECT_EQ(deflated_fds.at(0), fd_a);
-  EXPECT_EQ(deflated_fds.at(1), fd_b_c);
+  const auto deflated_fds_set = std::unordered_set<FunctionalDependency>(deflated_fds.cbegin(), deflated_fds.cend());
+  EXPECT_TRUE(deflated_fds_set.contains(fd_a));
+  EXPECT_TRUE(deflated_fds_set.contains(fd_b_c));
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {
@@ -119,8 +120,9 @@ TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
   const auto& fds_unified = union_fds({fd_a, fd_b}, {fd_b});
 
   EXPECT_EQ(fds_unified.size(), 2);
-  EXPECT_EQ(fds_unified.at(0), fd_a);
-  EXPECT_EQ(fds_unified.at(1), fd_b);
+  const auto fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.cbegin(), fds_unified.cend());
+  EXPECT_TRUE(fds_unified_set.contains(fd_a));
+  EXPECT_TRUE(fds_unified_set.contains(fd_b));
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
@@ -140,8 +142,10 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
 
   const auto& intersected_fds = intersect_fds({fd_a, fd_a_b, fd_x}, {fd_a_b, fd_a_2});
   EXPECT_EQ(intersected_fds.size(), 2);
-  EXPECT_EQ(intersected_fds.at(0), fd_a_b);
-  EXPECT_EQ(intersected_fds.at(1), fd_a_2);
+  const auto intersected_fds_set =
+      std::unordered_set<FunctionalDependency>(intersected_fds.cbegin(), intersected_fds.cend());
+  EXPECT_TRUE(intersected_fds_set.contains(fd_a_b));
+  EXPECT_TRUE(intersected_fds_set.contains(fd_a_2));
 }
 
 }  // namespace opossum

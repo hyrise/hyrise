@@ -469,9 +469,10 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
    */
   const auto fds_unified = union_fds(non_trivial_fds, trivial_fds);
   EXPECT_EQ(fds_unified.size(), 3);
-  EXPECT_EQ(fds_unified.at(0), expected_fd_a_b);
-  EXPECT_EQ(fds_unified.at(1), expected_fd_c);
-  EXPECT_EQ(fds_unified.at(2), expected_fd_x);
+  const auto fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.cbegin(), fds_unified.cend());
+  EXPECT_TRUE(fds_unified_set.contains(expected_fd_a_b));
+  EXPECT_TRUE(fds_unified_set.contains(expected_fd_c));
+  EXPECT_TRUE(fds_unified_set.contains(expected_fd_x));
   EXPECT_EQ(fds_unified, join_node->functional_dependencies());
 }
 
