@@ -425,7 +425,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   EXPECT_EQ(join_node->functional_dependencies().at(1), generated_fd_x);
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
+TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   const auto key_constraint_a_b =
       TableKeyConstraint{{_t_a_a->original_column_id, _t_a_b->original_column_id}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_c = TableKeyConstraint{{_t_a_c->original_column_id}, KeyConstraintType::UNIQUE};
@@ -462,17 +462,17 @@ TEST_F(JoinNodeTest, FunctionalDependenciesMerge) {
   EXPECT_EQ(trivial_fds.at(2), expected_fd_x);
 
   /**
-   * After merging the two FD sets above, we expect three and instead of four FDs since the following FD objects
+   * After unifiying the two FD sets above, we expect three and instead of four FDs since the following FD objects
    *   {a, b} => {c} and
    *   {a, b} => {c, x, y}
    * can be merged into one.
    */
-  const auto merged_fds = merge_fds(non_trivial_fds, trivial_fds);
-  EXPECT_EQ(merged_fds.size(), 3);
-  EXPECT_EQ(merged_fds.at(0), expected_fd_a_b);
-  EXPECT_EQ(merged_fds.at(1), expected_fd_c);
-  EXPECT_EQ(merged_fds.at(2), expected_fd_x);
-  EXPECT_EQ(merged_fds, join_node->functional_dependencies());
+  const auto fds_unified = union_fds(non_trivial_fds, trivial_fds);
+  EXPECT_EQ(fds_unified.size(), 3);
+  EXPECT_EQ(fds_unified.at(0), expected_fd_a_b);
+  EXPECT_EQ(fds_unified.at(1), expected_fd_c);
+  EXPECT_EQ(fds_unified.at(2), expected_fd_x);
+  EXPECT_EQ(fds_unified, join_node->functional_dependencies());
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {

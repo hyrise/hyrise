@@ -88,39 +88,39 @@ TEST_F(FunctionalDependencyTest, DeflateFDs) {
   EXPECT_EQ(deflated_fds.at(1), fd_b_c);
 }
 
-TEST_F(FunctionalDependencyTest, MergeFDsEmpty) {
+TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
 
-  EXPECT_TRUE(merge_fds({}, {}).empty());
-  EXPECT_EQ(merge_fds({fd_a}, {}), std::vector<FunctionalDependency>{fd_a});
-  EXPECT_EQ(merge_fds({}, {fd_a}), std::vector<FunctionalDependency>{fd_a});
+  EXPECT_TRUE(union_fds({}, {}).empty());
+  EXPECT_EQ(union_fds({fd_a}, {}), std::vector<FunctionalDependency>{fd_a});
+  EXPECT_EQ(union_fds({}, {fd_a}), std::vector<FunctionalDependency>{fd_a});
 }
 
-TEST_F(FunctionalDependencyTest, MergeFDs) {
+TEST_F(FunctionalDependencyTest, UnionFDs) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_1 = FunctionalDependency({_a}, {_b});
   const auto fd_a_2 = FunctionalDependency({_a}, {_c});
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
   const auto fd_b = FunctionalDependency({_b}, {_c});
 
-  const auto& merged_fds = merge_fds({fd_a_1, fd_a_b, fd_b}, {fd_a_2});
-  const auto& merged_fds_set = std::unordered_set<FunctionalDependency>(merged_fds.begin(), merged_fds.end());
+  const auto& fds_unified = union_fds({fd_a_1, fd_a_b, fd_b}, {fd_a_2});
+  const auto& fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.begin(), fds_unified.end());
 
-  EXPECT_EQ(merged_fds_set.size(), 3);
-  EXPECT_TRUE(merged_fds_set.contains(fd_a));
-  EXPECT_TRUE(merged_fds_set.contains(fd_b));
-  EXPECT_TRUE(merged_fds_set.contains(fd_a_b));
+  EXPECT_EQ(fds_unified_set.size(), 3);
+  EXPECT_TRUE(fds_unified_set.contains(fd_a));
+  EXPECT_TRUE(fds_unified_set.contains(fd_b));
+  EXPECT_TRUE(fds_unified_set.contains(fd_a_b));
 }
 
-TEST_F(FunctionalDependencyTest, MergeFDsRemoveDuplicates) {
+TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_b = FunctionalDependency({_b}, {_c});
 
-  const auto& merged_fds = merge_fds({fd_a, fd_b}, {fd_b});
+  const auto& fds_unified = union_fds({fd_a, fd_b}, {fd_b});
 
-  EXPECT_EQ(merged_fds.size(), 2);
-  EXPECT_EQ(merged_fds.at(0), fd_a);
-  EXPECT_EQ(merged_fds.at(1), fd_b);
+  EXPECT_EQ(fds_unified.size(), 2);
+  EXPECT_EQ(fds_unified.at(0), fd_a);
+  EXPECT_EQ(fds_unified.at(1), fd_b);
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {

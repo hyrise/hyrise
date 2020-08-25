@@ -114,7 +114,7 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
   return deflated_fds;
 }
 
-std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependency>& fds_a,
                                             const std::vector<FunctionalDependency>& fds_b) {
   if constexpr (HYRISE_DEBUG) {
     auto fds_a_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
@@ -125,13 +125,13 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
   if (fds_a.empty()) return fds_b;
   if (fds_b.empty()) return fds_a;
 
-  auto fds_merged = std::vector<FunctionalDependency>();
-  fds_merged.reserve(fds_a.size() + fds_b.size());
-  fds_merged.insert(fds_merged.end(), fds_a.begin(), fds_a.end());
-  fds_merged.insert(fds_merged.end(), fds_b.begin(), fds_b.end());
+  auto fds_unified = std::vector<FunctionalDependency>();
+  fds_unified.reserve(fds_a.size() + fds_b.size());
+  fds_unified.insert(fds_unified.end(), fds_a.begin(), fds_a.end());
+  fds_unified.insert(fds_unified.end(), fds_b.begin(), fds_b.end());
 
   // To get rid of potential duplicates, we call deflate before returning.
-  return deflate_fds(fds_merged);
+  return deflate_fds(fds_unified);
 }
 
 std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDependency>& fds_a,
