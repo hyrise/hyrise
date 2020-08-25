@@ -144,8 +144,8 @@ do
     echo "**"
     echo "<details>"
     echo "<summary>"
-    echo "Sum of average per-item runtime: TODO,"
-    echo "$output" | grep 'geometric mean' | sed -E 's/^[+-]//' | sed 's/geometric mean//; s/[ |]//g; s/^/Geometric Mean: /'
+    echo "$output" | grep '| Sum ' | sed -E 's/^[+-]//' | awk -F"|" '{print $2, $6}'  | sed 's/Sum//; s/[ ]//g; s/^/Sum of avg. query runtimes: /'
+    echo "$output" | grep '| Geomean ' | sed -E 's/^[+-]//' | sed 's/Geomean//; s/[ |]//g; s/^/Geometric mean of throughput changes: /'
     echo "</summary>"
     echo "$output"
     echo "</details>"
