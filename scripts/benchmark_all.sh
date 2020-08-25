@@ -144,9 +144,11 @@ do
     echo "**"
     echo "<details>"
     echo "<summary>"
-    echo "$output" | grep '| Sum ' | sed -E 's/^[+-]//' | awk -F"|" '{print $2, $6}'  | sed 's/Sum//; s/[ ]//g; s/^/Sum of avg. query runtimes: /'
+    echo "$output" | grep '| Sum ' | sed -E 's/^[+-]//' | awk -F"|" '{print $2, $6}'  | sed 's/Sum//; s/[ ]//g; s/^/Sum of avg. item runtimes: /'
+    echo " || "
     echo "$output" | grep '| Geomean ' | sed -E 's/^[+-]//' | sed 's/Geomean//; s/[ |]//g; s/^/Geometric mean of throughput changes: /'
     echo "</summary>"
+    echo ""
     echo "$output"
     echo "</details>"
   done
