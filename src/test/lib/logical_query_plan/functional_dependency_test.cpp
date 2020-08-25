@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "logical_query_plan/functional_dependency.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 namespace opossum {
 
@@ -23,6 +24,41 @@ class FunctionalDependencyTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_a, _mock_node_b;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
 };
+
+TEST_F(FunctionalDependencyTest, Equals) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
+
+  // Equal
+  EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_b, _c}));
+  EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_c, _b}));
+  EXPECT_EQ(fd_a_b, FunctionalDependency({_a, _b}, {_c}));
+  EXPECT_EQ(fd_a_b, FunctionalDependency({_b, _a}, {_c}));
+  // Not Equal
+  EXPECT_NE(fd_a, FunctionalDependency({_a}, {_c}));
+  EXPECT_NE(fd_a, FunctionalDependency({_a, _x}, {_b, _c}));
+  EXPECT_NE(fd_a_b, FunctionalDependency({_a, _b}, {_c, _x}));
+  EXPECT_NE(fd_a_b, FunctionalDependency({_a}, {_c}));
+}
+
+TEST_F(FunctionalDependencyTest, Hash) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
+
+  // Equal Hash
+  EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b, _c}).hash());
+  EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b}).hash());
+  EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_x, _y}).hash());
+  EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_c}).hash());
+  EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_b, _a}, {_c}).hash());
+  EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_c, _x}).hash());
+  EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_x}).hash());
+  // Non-Equal Hash
+  EXPECT_NE(fd_a.hash(), FunctionalDependency({_a, _x}, {_b, _c}).hash());
+  EXPECT_NE(fd_a.hash(), FunctionalDependency({_x}, {_b, _c}).hash());
+  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a}, {_c}).hash());
+  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a, _b, _x}, {_c}).hash());
+}
 
 TEST_F(FunctionalDependencyTest, InflateFDs) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
@@ -68,11 +104,12 @@ TEST_F(FunctionalDependencyTest, MergeFDs) {
   const auto fd_b = FunctionalDependency({_b}, {_c});
 
   const auto& merged_fds = merge_fds({fd_a_1, fd_a_b, fd_b}, {fd_a_2});
+  const auto& merged_fds_set = std::unordered_set<FunctionalDependency>(merged_fds.begin(), merged_fds.end());
 
-  EXPECT_EQ(merged_fds.size(), 3);
-  EXPECT_EQ(merged_fds.at(0), fd_a);
-  EXPECT_EQ(merged_fds.at(1), fd_b);
-  EXPECT_EQ(merged_fds.at(2), fd_a_b);
+  EXPECT_EQ(merged_fds_set.size(), 3);
+  EXPECT_TRUE(merged_fds_set.contains(fd_a));
+  EXPECT_TRUE(merged_fds_set.contains(fd_b));
+  EXPECT_TRUE(merged_fds_set.contains(fd_a_b));
 }
 
 TEST_F(FunctionalDependencyTest, MergeFDsRemoveDuplicates) {

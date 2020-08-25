@@ -15,12 +15,16 @@ bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
 
 bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const { return !(rhs == *this); }
 
+size_t LQPUniqueConstraint::hash() const {
+  return boost::hash_range(expressions.cbegin(), expressions.cend());
+}
+
 }  // namespace opossum
 
 namespace std {
 
 size_t hash<opossum::LQPUniqueConstraint>::operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const {
-  return boost::hash_range(lqp_unique_constraint.expressions.cbegin(), lqp_unique_constraint.expressions.cend());
+  return lqp_unique_constraint.hash();
 }
 
 }  // namespace std

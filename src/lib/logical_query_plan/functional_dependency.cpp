@@ -31,6 +31,10 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
 
 bool FunctionalDependency::operator!=(const FunctionalDependency& other) const { return !(other == *this); }
 
+size_t FunctionalDependency::hash() const {
+  return boost::hash_range(determinants.cbegin(), determinants.cend());
+}
+
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {
   stream << "{";
   auto determinants_vector =
@@ -129,7 +133,7 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
                                                 const std::vector<FunctionalDependency>& fds_b) {
   if (fds_a.empty() || fds_b.empty()) return {};
 
-  const auto& inflated_fds_a = inflate_fds(fds_a);
+  const auto& inflated_fds_a = inflate_fds(fds_a); // Continue DEBUG why is a FD lost?
   const auto& inflated_fds_b = inflate_fds(fds_b);
 
   auto intersected_fds = std::vector<FunctionalDependency>();
@@ -149,7 +153,7 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
 namespace std {
 
 size_t hash<opossum::FunctionalDependency>::operator()(const opossum::FunctionalDependency& fd) const {
-  return boost::hash_range(fd.determinants.cbegin(), fd.determinants.cend());
+  return fd.hash();
 }
 
 }  // namespace std

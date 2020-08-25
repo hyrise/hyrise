@@ -57,6 +57,7 @@ set(
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
+    lib/logical_query_plan/lqp_unique_constraint_test.cpp
     lib/logical_query_plan/lqp_utils_test.cpp
     lib/logical_query_plan/mock_node_test.cpp
     lib/logical_query_plan/predicate_node_test.cpp

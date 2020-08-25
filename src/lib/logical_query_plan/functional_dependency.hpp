@@ -32,6 +32,7 @@ struct FunctionalDependency {
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
+  size_t hash() const;
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
