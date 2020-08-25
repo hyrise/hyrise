@@ -32,7 +32,12 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
 bool FunctionalDependency::operator!=(const FunctionalDependency& other) const { return !(other == *this); }
 
 size_t FunctionalDependency::hash() const {
-  return boost::hash_range(determinants.cbegin(), determinants.cend());
+  size_t hash = 0;
+  for(const auto& expression : determinants) {
+    hash = hash xor expression->hash();
+  }
+
+  return boost::hash_value(hash - determinants.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {
