@@ -61,7 +61,7 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
- * @return A merged FD set from the given input @param fds_a and @param fds_b. FDs with the same determinant
+ * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
  *         expressions are merged into single objects by merging their dependent expressions.
  */
 std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependency>& fds_a,
