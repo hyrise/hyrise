@@ -34,7 +34,8 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
 size_t FunctionalDependency::hash() const {
   size_t hash = 0;
   for (const auto& expression : determinants) {
-    hash = hash xor expression->hash();
+    // Use commutative XOR operator to combine hashes
+    hash = hash ^ expression->hash();
   }
 
   return boost::hash_value(hash - determinants.size());
