@@ -45,6 +45,8 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Row count                   | ChunkOffset                         | 4
+   * Sorted Column count         | uint32_t                            | 4
+   * Sorted Columns              | SortColumnDefinition                | Sorted Column count * 3
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
    * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, RunLengthSegment).
@@ -177,31 +179,29 @@ class BinaryWriter {
    * Encoding Type               | EncodingType                        | 1
    * Number of Rows (in seg)     | uint32_t                            | 4
    * Number of Blocks            | uint32_t                            | 4
-   * Block size¹                 | uint32_t                            | 4
-   * Last Block size             | uint32_t                            | 4
-   * lz4 Block sizes             | vector<uint32_t>                    | Number of blocks * 4
-   * lz4 Blocks                  | vector<vector<char>>                | Sum(lz4 block sizes)
+   * Maximum LZ4 Block size      | uint32_t                            | 4
+   * Last LZ4 Block size         | uint32_t                            | 4
+   * LZ4 Block sizes             | vector<uint32_t>                    | Number of blocks * 4
+   * LZ4 Blocks                  | vector<vector<char>>                | Sum(lz4 block sizes)
    * NULL values' size           | uint32_t                            | 4
-   * NULL values²                | vector<bool> (BoolAsByteType)       | Size * 1
+   * NULL values¹                | vector<bool> (BoolAsByteType)       | Size * 1
    * Dictionary size             | uint32_t                            | 4
    * Dictionary                  | vector<char>                        | Dictionary size * 1
    * string offset size          | uint32_t                            | 4
-   * string offset data size³    | uint32_t                            | 4
-   * string offset³              | uint32_t                            | size * 4
+   * string offset data size²    | uint32_t                            | 4
+   * string offset²              | uint32_t                            | size * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
-   * ¹: This field is written if the number of blocks is greater than 1. Otherwise "Last Block Size" contains the
-   *    size of the single block or 0 if there are no blocks
-   * ²: This field is only written if NULL values' size is not 0
-   * ³: These fields are only written if string offset size is not 0
+   * ¹: This field is only written if NULL values' size is not 0
+   * ²: These fields are only written if string offset size is not 0
    */
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
 
   template <typename T>
-  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_encoded_segment);
+  static uint32_t _compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment);
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,

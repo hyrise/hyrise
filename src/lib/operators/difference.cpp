@@ -26,38 +26,38 @@ const std::string& Difference::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Difference::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Difference>(copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Difference>(copied_left_input, copied_right_input);
 }
 
 void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Difference::_on_execute() {
-  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
+  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
               "Input tables must have same number of columns");
 
   // 1. We create a set of all right input rows as concatenated strings.
 
-  auto right_input_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
+  auto right_input_row_set = std::unordered_set<std::string>(right_input_table()->row_count());
 
   // Iterating over all chunks and for each chunk over all segments
-  const auto chunk_count_right = input_table_right()->chunk_count();
+  const auto chunk_count_right = right_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
-    const auto chunk = input_table_right()->get_chunk(chunk_id);
+    const auto chunk = right_input_table()->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
-    for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); column_id++) {
-      const auto base_segment = chunk->get_segment(column_id);
+    for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); column_id++) {
+      const auto abstract_segment = chunk->get_segment(column_id);
 
       // filling the row vector with all values from this segment
       auto row_string_buffer = std::stringstream{};
-      for (ChunkOffset chunk_offset = 0; chunk_offset < base_segment->size(); chunk_offset++) {
-        // Previously we called a virtual method of the BaseSegment interface here.
+      for (ChunkOffset chunk_offset = 0; chunk_offset < abstract_segment->size(); chunk_offset++) {
+        // Previously we called a virtual method of the AbstractSegment interface here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_segment)[chunk_offset];
+        const auto value = (*abstract_segment)[chunk_offset];
         _append_string_representation(string_row_vector[chunk_offset], value);
       }
     }
@@ -70,12 +70,12 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   // 2. Now we check for each chunk of the left input which rows can be added to the output
 
   std::vector<std::shared_ptr<Chunk>> output_chunks;
-  output_chunks.reserve(input_table_left()->chunk_count());
+  output_chunks.reserve(left_input_table()->chunk_count());
 
   // Iterating over all chunks and for each chunk over all segment
-  const auto chunk_count_left = input_table_left()->chunk_count();
+  const auto chunk_count_left = left_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
-    const auto in_chunk = input_table_left()->get_chunk(chunk_id);
+    const auto in_chunk = left_input_table()->get_chunk(chunk_id);
     Assert(in_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
@@ -83,13 +83,13 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> out_pos_list_map;
 
-    for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
-      const auto base_segment = in_chunk->get_segment(column_id);
+    for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
+      const auto abstract_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
       const auto referenced_segment =
           std::dynamic_pointer_cast<const ReferenceSegment>(in_chunk->get_segment(column_id));
       auto out_column_id = column_id;
-      auto out_referenced_table = input_table_left();
+      auto out_referenced_table = left_input_table();
       std::shared_ptr<const AbstractPosList> in_pos_list;
 
       if (referenced_segment) {
@@ -116,12 +116,12 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk->size(); chunk_offset++) {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
-      for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
-        const auto base_segment = in_chunk->get_segment(column_id);
+      for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
+        const auto abstract_segment = in_chunk->get_segment(column_id);
 
-        // Previously a virtual method of the BaseSegment interface was called here.
+        // Previously a virtual method of the AbstractSegment interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_segment)[chunk_offset];
+        const auto value = (*abstract_segment)[chunk_offset];
         _append_string_representation(row_string_buffer, value);
       }
       const auto row_string = row_string_buffer.str();
@@ -145,15 +145,15 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // will be sorted after the difference operation as well.
       const auto chunk = std::make_shared<Chunk>(output_segments);
       chunk->finalize();
-      const auto& sorted_by = in_chunk->sorted_by();
+      const auto& sorted_by = in_chunk->individually_sorted_by();
       if (!sorted_by.empty()) {
-        chunk->set_sorted_by(sorted_by);
+        chunk->set_individually_sorted_by(sorted_by);
       }
       output_chunks.emplace_back(chunk);
     }
   }
 
-  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References,
+  return std::make_shared<Table>(left_input_table()->column_definitions(), TableType::References,
                                  std::move(output_chunks));
 }
 

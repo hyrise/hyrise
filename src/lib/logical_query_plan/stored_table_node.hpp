@@ -5,6 +5,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "storage/index/index_statistics.hpp"
 
 namespace opossum {
@@ -39,9 +40,11 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::vector<IndexStatistics> indexes_statistics() const;
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  std::vector<FunctionalDependency> functional_dependencies() const override;
+
+  // Generates unique constraints from table's key constraints and pays respect to pruned columns.
+  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   const std::string table_name;
 
@@ -55,7 +58,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;
   std::vector<ColumnID> _pruned_column_ids;
 };

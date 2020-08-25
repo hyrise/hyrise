@@ -119,7 +119,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
-        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
+        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = plan->deep_copy();
         return _optimized_logical_plan;
@@ -136,10 +136,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+
+  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache && _translation_info.cacheable) {

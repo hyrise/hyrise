@@ -143,7 +143,7 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const AbstractSegment& segment,
                                                                        const ChunkID chunk_id,
                                                                        std::unique_ptr<RowIDPosList>& null_rows_output,
                                                                        Subsample<T>& subsample) {

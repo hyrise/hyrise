@@ -24,7 +24,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
@@ -42,7 +42,8 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
+      _predicate(predicate) {}
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
@@ -72,13 +73,13 @@ void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 }
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<TableScan>(copied_input_left, _predicate->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy());
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
-  const auto in_table = input_table_left();
+  const auto in_table = left_input_table();
 
   _impl = create_impl();
   _impl_description = _impl->description();
@@ -166,8 +167,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
       const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
       chunk->finalize();
-      if (keep_chunk_sort_order && !chunk_in->sorted_by().empty()) {
-        chunk->set_sorted_by(chunk_in->sorted_by());
+      if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
+        chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
       }
       std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(chunk);
@@ -178,6 +179,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
+
+  auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
+  scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
+  scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
@@ -278,23 +283,23 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column of type string> LIKE <value of type string>
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
         right_value) {
-      return std::make_unique<ColumnLikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
+      return std::make_unique<ColumnLikeTableScanImpl>(left_input_table(), left_column_expression->column_id,
                                                        predicate_condition, boost::get<pmr_string>(*right_value));
     }
 
     // Predicate pattern: <column of type T> <binary predicate_condition> <value of type T>
     if (left_column_expression && right_value) {
-      return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), left_column_expression->column_id,
+      return std::make_unique<ColumnVsValueTableScanImpl>(left_input_table(), left_column_expression->column_id,
                                                           predicate_condition, *right_value);
     }
     if (right_column_expression && left_value) {
-      return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), right_column_expression->column_id,
+      return std::make_unique<ColumnVsValueTableScanImpl>(left_input_table(), right_column_expression->column_id,
                                                           flip_predicate_condition(predicate_condition), *left_value);
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <column>
     if (left_column_expression && right_column_expression) {
-      return std::make_unique<ColumnVsColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
+      return std::make_unique<ColumnVsColumnTableScanImpl>(left_input_table(), left_column_expression->column_id,
                                                            predicate_condition, right_column_expression->column_id);
     }
   }
@@ -303,7 +308,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
-      return std::make_unique<ColumnIsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
+      return std::make_unique<ColumnIsNullTableScanImpl>(left_input_table(), left_column_expression->column_id,
                                                          is_null_expression->predicate_condition);
     }
   }
@@ -347,13 +352,13 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column of type T> BETWEEN <value of type T> AND <value of type T>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
-      return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
+      return std::make_unique<ColumnBetweenTableScanImpl>(left_input_table(), left_column->column_id,
                                                           *lower_bound_value, *upper_bound_value, predicate_condition);
     }
   }
 
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), resolved_predicate);
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate);
 }
 
 void TableScan::_on_cleanup() { _impl.reset(); }

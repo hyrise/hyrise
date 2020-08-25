@@ -3,7 +3,7 @@
 #include "base_test.hpp"
 
 #include "resolve_type.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -38,8 +38,8 @@ class StorageChunkTest : public BaseTest {
   std::shared_ptr<Chunk> chunk;
   std::shared_ptr<BaseValueSegment> vs_int = nullptr;
   std::shared_ptr<BaseValueSegment> vs_str = nullptr;
-  std::shared_ptr<BaseSegment> ds_int = nullptr;
-  std::shared_ptr<BaseSegment> ds_str = nullptr;
+  std::shared_ptr<AbstractSegment> ds_int = nullptr;
+  std::shared_ptr<AbstractSegment> ds_str = nullptr;
 };
 
 TEST_F(StorageChunkTest, AddSegmentToChunk) {
@@ -64,8 +64,8 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}));
   chunk->append({2, "two"});
 
-  auto base_segment = chunk->get_segment(ColumnID{0});
-  EXPECT_EQ(base_segment->size(), 4u);
+  auto abstract_segment = chunk->get_segment(ColumnID{0});
+  EXPECT_EQ(abstract_segment->size(), 4u);
 }
 
 TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
@@ -102,10 +102,10 @@ TEST_F(StorageChunkTest, AddIndexByColumnID) {
 
 TEST_F(StorageChunkTest, AddIndexBySegmentPointer) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
   EXPECT_TRUE(index_int);
   EXPECT_TRUE(index_str);
   EXPECT_TRUE(index_int_str);
@@ -113,10 +113,10 @@ TEST_F(StorageChunkTest, AddIndexBySegmentPointer) {
 
 TEST_F(StorageChunkTest, GetIndexByColumnID) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
   EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
   EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
@@ -128,32 +128,32 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
 
 TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{ds_int}),
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int);
-  EXPECT_EQ(
-      chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{ds_int}),
-      index_int_str);
   EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
-                             std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str}),
+                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{ds_str}),
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str}),
+            index_int_str);
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
             index_str);
-  EXPECT_EQ(
-      chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{ds_str}),
-      nullptr);
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
+            nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
   auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
   // Make sure it finds both the single-column index as well as the multi-column index
@@ -172,19 +172,19 @@ TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {
 
 TEST_F(StorageChunkTest, GetIndexesBySegmentPointers) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
+  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
   // Make sure it finds both the single-column index as well as the multi-column index
   EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
             indexes_for_segment_0.cend());
   EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
             indexes_for_segment_0.cend());
 
-  auto indexes_for_segment_1 = chunk->get_indexes(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto indexes_for_segment_1 = chunk->get_indexes(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   // Make sure it only finds the single-column index
   EXPECT_NE(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_str),
             indexes_for_segment_1.cend());
@@ -194,10 +194,10 @@ TEST_F(StorageChunkTest, GetIndexesBySegmentPointers) {
 
 TEST_F(StorageChunkTest, RemoveIndex) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
-  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
-  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+  auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_str});
   auto index_int_str =
-      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
+      chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
   chunk->remove_index(index_int);
   auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
@@ -218,24 +218,24 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationSingle) {
-  EXPECT_TRUE(chunk->sorted_by().empty());
+  EXPECT_TRUE(chunk->individually_sorted_by().empty());
   const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
   chunk->finalize();
-  chunk->set_sorted_by(sorted_by);
-  EXPECT_EQ(chunk->sorted_by().size(), 1);
-  EXPECT_EQ(chunk->sorted_by().front(), sorted_by);
+  chunk->set_individually_sorted_by(sorted_by);
+  EXPECT_EQ(chunk->individually_sorted_by().size(), 1);
+  EXPECT_EQ(chunk->individually_sorted_by().front(), sorted_by);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationVector) {
-  EXPECT_TRUE(chunk->sorted_by().empty());
+  EXPECT_TRUE(chunk->individually_sorted_by().empty());
   const auto sorted_by_vector = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
                                             SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
   chunk->finalize();
-  chunk->set_sorted_by(sorted_by_vector);
-  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
+  chunk->set_individually_sorted_by(sorted_by_vector);
+  EXPECT_EQ(chunk->individually_sorted_by(), sorted_by_vector);
 
   // Resetting the sorting information is not allowed
-  EXPECT_THROW(chunk->set_sorted_by(sorted_by_vector), std::logic_error);
+  EXPECT_THROW(chunk->set_individually_sorted_by(sorted_by_vector), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
@@ -245,10 +245,10 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
                                                                pmr_vector<bool>{true, true, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
-  EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
+  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  EXPECT_NO_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)));
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
+  EXPECT_NO_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)));
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
                std::logic_error);
 }
 
@@ -259,11 +259,12 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
                                                                pmr_vector<bool>{true, false, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
-  EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
+  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Currently, NULL values always come first when sorted.
-  EXPECT_NO_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)));
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
+  EXPECT_NO_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)));
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
                std::logic_error);
 }
 
@@ -274,12 +275,12 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, true, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
-  EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
+  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
                std::logic_error);
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
                std::logic_error);
 }
 
@@ -290,12 +291,12 @@ TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, false, true});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
-  EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
+  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
                std::logic_error);
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
+  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
                std::logic_error);
 }
 

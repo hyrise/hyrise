@@ -34,11 +34,12 @@ struct JoinConfiguration {
  */
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(
-      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-      const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates,
-      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
+  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+                       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                       const OperatorJoinPredicate& primary_predicate,
+                       const std::vector<OperatorJoinPredicate>& secondary_predicates,
+                       std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                           std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   JoinMode mode() const;
 

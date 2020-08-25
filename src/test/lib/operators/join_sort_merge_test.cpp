@@ -50,8 +50,8 @@ TEST_F(OperatorsJoinSortMergeTest, DeepCopy) {
 
   EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
-  EXPECT_NE(join_operator_copy->input_left(), nullptr);
-  EXPECT_NE(join_operator_copy->input_right(), nullptr);
+  EXPECT_NE(join_operator_copy->left_input(), nullptr);
+  EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
 
 TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
@@ -112,7 +112,7 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
   const auto expected_sorted_columns = std::vector<SortColumnDefinition>{
       SortColumnDefinition(ColumnID{0}, SortMode::Ascending), SortColumnDefinition(ColumnID{4}, SortMode::Ascending)};
   for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
-    const auto& actual_sorted_columns = output_table->get_chunk(chunk_id)->sorted_by();
+    const auto& actual_sorted_columns = output_table->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_EQ(actual_sorted_columns, expected_sorted_columns);
   }
 }

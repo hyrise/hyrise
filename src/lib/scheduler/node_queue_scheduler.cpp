@@ -68,8 +68,8 @@ void NodeQueueScheduler::finish() {
 
   // All queues SHOULD be empty by now
   if (HYRISE_DEBUG) {
-    for ([[maybe_unused]] auto& queue : _queues) {
-      DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
+    for (auto& queue : _queues) {
+      Assert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
     }
   }
 

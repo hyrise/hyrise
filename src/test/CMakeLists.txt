@@ -100,6 +100,7 @@ set(
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
     lib/operators/operator_scan_predicate_test.cpp
+    lib/operators/pqp_utils_test.cpp
     lib/operators/print_test.cpp
     lib/operators/product_test.cpp
     lib/operators/projection_test.cpp
@@ -157,7 +158,6 @@ set(
     lib/statistics/attribute_statistics_test.cpp
     lib/statistics/cardinality_estimator_test.cpp
     lib/statistics/join_graph_statistics_cache_test.cpp
-    lib/statistics/statistics_objects/counting_quotient_filter_test.cpp
     lib/statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     lib/statistics/statistics_objects/generic_histogram_test.cpp
     lib/statistics/statistics_objects/min_max_filter_test.cpp
@@ -168,7 +168,6 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/constraints_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
@@ -196,6 +195,7 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
+    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
@@ -225,6 +225,7 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
+    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -252,7 +253,7 @@ set(
     gtest
     gmock
     sqlite3
-    MvccDeletePlugin  # So that we can test member methods without going through dlsym
+    hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -268,7 +269,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

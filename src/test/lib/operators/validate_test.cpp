@@ -205,7 +205,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // If Validate has a reference table as input, it can usually optimize the evaluation of the MVCC data.
-  // This optimization is possible, if a PosList of a reference segment references only one chunk.
+  // This optimization is possible if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
   auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
@@ -248,7 +248,7 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
 
   const auto& result_table_unsorted = validate_unsorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
 
@@ -260,7 +260,7 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);
     if (!chunk) continue;
-    chunk->set_sorted_by(sort_column_definition);
+    chunk->set_individually_sorted_by(sort_column_definition);
   }
   const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
   sorted_table_wrapper->execute();
@@ -271,7 +271,7 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
 
   const auto& result_table_sorted = validate_sorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_FALSE(sorted_by.empty());
     const auto sorted_by_vector = std::vector<SortColumnDefinition>{sort_column_definition};
     EXPECT_EQ(sorted_by, sorted_by_vector);

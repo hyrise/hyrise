@@ -73,7 +73,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
         const auto chunk = table->get_chunk(chunk_id);
         if (!chunk) continue;
 
-        chunk->set_sorted_by(sorted_by.value());
+        chunk->set_individually_sorted_by(sorted_by.value());
       }
     }
 
@@ -229,7 +229,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto& result_table_sorted = scan_sorted->get_output();
 
     for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-      const auto& actual_sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+      const auto& actual_sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
       ASSERT_TRUE(!actual_sorted_by.empty());
       const auto expected_sorted_by =
           std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
@@ -262,15 +262,6 @@ TEST_P(OperatorsTableScanTest, DoubleScan) {
   scan_2->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
-
-  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
-  // operator:
-  const auto& performance_data = scan_2->performance_data();
-  EXPECT_TRUE(performance_data.executed);
-  EXPECT_GT(performance_data.walltime.count(), 0);
-  EXPECT_TRUE(performance_data.has_output);
-  EXPECT_EQ(performance_data.output_row_count, 1);
-  EXPECT_EQ(performance_data.output_chunk_count, 1);
 }
 
 TEST_P(OperatorsTableScanTest, EmptyResultScan) {
@@ -280,15 +271,6 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++) {
     EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
   }
-
-  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
-  // operator:
-  const auto& performance_data = scan_1->performance_data();
-  EXPECT_TRUE(performance_data.executed);
-  EXPECT_GT(performance_data.walltime.count(), 0);
-  EXPECT_TRUE(performance_data.has_output);
-  EXPECT_EQ(performance_data.output_row_count, 0);
-  EXPECT_EQ(performance_data.output_chunk_count, 0);
 }
 
 TEST_P(OperatorsTableScanTest, SingleScan) {
@@ -651,7 +633,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -665,7 +647,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
+  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -1111,8 +1093,8 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
 
   const auto& result_table_unsorted = scan_unsorted->get_output();
 
-  EXPECT_TRUE(result_table_unsorted->get_chunk(ChunkID{0})->sorted_by().empty());
-  EXPECT_TRUE(result_table_unsorted->get_chunk(ChunkID{1})->sorted_by().empty());
+  EXPECT_TRUE(result_table_unsorted->get_chunk(ChunkID{0})->individually_sorted_by().empty());
+  EXPECT_TRUE(result_table_unsorted->get_chunk(ChunkID{1})->individually_sorted_by().empty());
 }
 
 TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
@@ -1130,7 +1112,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
 
   const auto expected_sorted_by =
       std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
-  EXPECT_EQ(result_chunk_sorted->sorted_by(), expected_sorted_by);
+  EXPECT_EQ(result_chunk_sorted->individually_sorted_by(), expected_sorted_by);
 }
 
 // Reference segments that only reference a single chunk allow forwarding the sorting flags.
@@ -1158,8 +1140,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
 
   ref_table->get_chunk(ChunkID{0})->finalize();
   ref_table->get_chunk(ChunkID{1})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1174,7 +1156,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
         std::dynamic_pointer_cast<const ReferenceSegment>(result_chunk_sorted->get_segment(ColumnID{0}));
     EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
-    const auto& chunk_sorted_by = result_chunk_sorted->sorted_by();
+    const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
     ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)});
   }
 }
@@ -1201,8 +1183,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
 
   ref_table->get_chunk(ChunkID{0})->finalize();
   ref_table->get_chunk(ChunkID{1})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1212,7 +1194,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   EXPECT_EQ(scan_sorted->get_output()->chunk_count(), 2);
   for (const auto& chunk_id : {ChunkID{0}, ChunkID{1}}) {
     const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(chunk_id);
-    const auto& chunk_sorted_by = result_chunk_sorted->sorted_by();
+    const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
     ASSERT_TRUE(chunk_sorted_by.empty());
   }
 }
@@ -1236,7 +1218,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagnMultipleChunksReferenced) {
   ref_table->append_chunk({segment});
 
   ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1245,7 +1227,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagnMultipleChunksReferenced) {
 
   EXPECT_EQ(scan_sorted->get_output()->chunk_count(), 1);
   const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{0});
-  const auto& chunk_sorted_by = result_chunk_sorted->sorted_by();
+  const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
   ASSERT_TRUE(chunk_sorted_by.empty());
 }
 

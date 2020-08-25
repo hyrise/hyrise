@@ -7,7 +7,7 @@
 
 #include "base_test.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
@@ -60,9 +60,9 @@ class CompositeGroupKeyIndexTest : public BaseTest {
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{_segment_int, _segment_str});
+        std::vector<std::shared_ptr<const AbstractSegment>>{_segment_int, _segment_str});
     _index_str_int = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{_segment_str, _segment_int});
+        std::vector<std::shared_ptr<const AbstractSegment>>{_segment_str, _segment_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);
@@ -77,8 +77,8 @@ class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   std::shared_ptr<CompositeGroupKeyIndex> _index_int_str;
   std::shared_ptr<CompositeGroupKeyIndex> _index_str_int;
-  std::shared_ptr<BaseSegment> _segment_int;
-  std::shared_ptr<BaseSegment> _segment_str;
+  std::shared_ptr<AbstractSegment> _segment_int;
+  std::shared_ptr<AbstractSegment> _segment_str;
 
   /**
    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the

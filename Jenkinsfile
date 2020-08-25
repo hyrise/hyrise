@@ -45,10 +45,18 @@ try {
   }
 
   node('linux') {
+    stage("Hostname") {
+      // Print the hostname to let us know on which node the docker image was executed for reproducibility.
+      sh "hostname"
+    }
+
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
-    oppossumCI.inside("-u 0:0") {
+    // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
+    // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
+    // See also: https://github.com/google/sanitizers/issues/764
+    oppossumCI.inside("--cap-add SYS_PTRACE -u 0:0") {
       try {
         stage("Setup") {
           checkout scm
@@ -305,7 +313,6 @@ try {
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
-          sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"

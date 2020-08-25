@@ -21,23 +21,25 @@ const std::string& AliasOperator::name() const {
 }
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
+  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   std::stringstream stream;
-  stream << "Alias [";
-  stream << boost::algorithm::join(_aliases, description_mode == DescriptionMode::SingleLine ? ", " : "\n");
+
+  stream << "Alias" << separator << "[";
+  stream << boost::algorithm::join(_aliases, ", ");
   stream << "]";
   return stream.str();
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<AliasOperator>(copied_left_input, _column_ids, _aliases);
 }
 
 void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
-  const auto& input_table = *input_table_left();
+  const auto& input_table = *left_input_table();
 
   /**
    * Generate the new TableColumnDefinitions, that is, setting the new names for the columns
@@ -72,7 +74,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments), input_chunk->mvcc_data());
     output_chunk->finalize();
     // The alias operator does not affect sorted_by property. If a chunk was sorted before, it still is after.
-    const auto& sorted_by = input_chunk->sorted_by();
+    const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
       auto sort_definitions = std::vector<SortColumnDefinition>{};
       sort_definitions.reserve(sorted_by.size());
@@ -85,7 +87,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
         sort_definitions.emplace_back(SortColumnDefinition(index, sort_definition.sort_mode));
       }
 
-      output_chunk->set_sorted_by(sort_definitions);
+      output_chunk->set_individually_sorted_by(sort_definitions);
     }
     output_chunks[chunk_id] = output_chunk;
   }

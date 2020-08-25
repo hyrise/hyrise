@@ -36,9 +36,9 @@ class UnionNodeTest : public BaseTest {
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions"); }
 
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+  EXPECT_EQ(*_union_node->output_expressions().at(0), *_mock_node1->output_expressions().at(0));
+  EXPECT_EQ(*_union_node->output_expressions().at(1), *_mock_node1->output_expressions().at(1));
+  EXPECT_EQ(*_union_node->output_expressions().at(2), *_mock_node1->output_expressions().at(2));
 }
 
 TEST_F(UnionNodeTest, HashingAndEqualityCheck) {
@@ -84,7 +84,7 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
   const auto stored_table_node = StoredTableNode::make(table_name);
   EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
   // Create ValidateNode as it is required by UnionPositions
@@ -97,6 +97,24 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   union_positions_node->set_right_input(validate_node);
 
   Hyrise::get().reset();
+}
+
+TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
+  // Add two unique constraints to _mock_node1
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
+  EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
+
+  // Check whether all unique constraints are forwarded
+  EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
+  EXPECT_EQ(*_union_node->unique_constraints(), *_mock_node1->unique_constraints());
+
+  // Negative test: Input nodes with differing unique constraints should lead to failure
+  auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
+  mock_node1_changed->set_key_constraints(TableKeyConstraints{key_constraint_a_b});
+  _union_node->set_right_input(mock_node1_changed);
+  EXPECT_THROW(_union_node->unique_constraints(), std::logic_error);
 }
 
 }  // namespace opossum

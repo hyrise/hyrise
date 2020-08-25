@@ -28,7 +28,7 @@ class AliasOperatorTest : public BaseTest {
 TEST_F(AliasOperatorTest, Name) {
   EXPECT_EQ(alias_operator->name(), "Alias");
   EXPECT_EQ(alias_operator->description(DescriptionMode::SingleLine), "Alias [z, x, y]");
-  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias [z\nx\ny]");
+  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias\n[z, x, y]");
 }
 
 TEST_F(AliasOperatorTest, OutputColumnNames) {
@@ -42,7 +42,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
   const auto result_table_unsorted = alias_operator->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
 
@@ -57,7 +57,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
 
   const auto result_table_sorted = alias_operator_sorted->get_output();
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_EQ(sorted_by.size(), 1);
     EXPECT_EQ(sorted_by.front().column, ColumnID{1});
     EXPECT_EQ(sorted_by.front().sort_mode, SortMode::Ascending);

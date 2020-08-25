@@ -292,7 +292,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
     lower_bound_value_expression = nullptr;
     upper_bound_value_expression = nullptr;
 
-    // Here, we could also generate BETWEEN expressions for when the lower and upper bounds are column expressions.
+    // Here, we could also generate BETWEEN expressions for when the lower and upper bounds are LQPColumnExpressions.
     // As the table scan does not yet support that and will revert to the ExpressionEvaluator, we don't do this and
     // use two separate predicates instead.
   }
@@ -365,7 +365,7 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       current_node = current_node->left_input();
     }
 
-    // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
+    // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input

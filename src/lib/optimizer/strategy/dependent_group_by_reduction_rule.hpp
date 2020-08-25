@@ -8,7 +8,6 @@ namespace opossum {
 
 class AbstractLQPNode;
 class AggregateNode;
-struct TableConstraintDefinition;
 class StoredTableNode;
 
 /**

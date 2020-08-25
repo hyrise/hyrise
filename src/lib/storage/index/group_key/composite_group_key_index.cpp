@@ -24,18 +24,19 @@ size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count
   return ((row_count + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes);
 }
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(
+    const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
-    [[maybe_unused]] auto all_segments_have_same_size =
+    auto all_segments_have_same_size =
         std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
                     [first_size](const auto& segment) { return segment->size() == first_size; });
 
-    DebugAssert(all_segments_have_same_size,
-                "CompositeGroupKey requires same length of all segments that should be indexed.");
+    Assert(all_segments_have_same_size,
+           "CompositeGroupKey requires same length of all segments that should be indexed.");
   }
 
   // cast and check segments
@@ -174,8 +175,8 @@ AbstractIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(c
   return position_it;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> CompositeGroupKeyIndex::_get_indexed_segments() const {
-  auto result = std::vector<std::shared_ptr<const BaseSegment>>();
+std::vector<std::shared_ptr<const AbstractSegment>> CompositeGroupKeyIndex::_get_indexed_segments() const {
+  auto result = std::vector<std::shared_ptr<const AbstractSegment>>();
   result.reserve(_indexed_segments.size());
   for (auto&& indexed_segment : _indexed_segments) {
     result.emplace_back(indexed_segment);

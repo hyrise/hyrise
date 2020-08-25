@@ -53,13 +53,13 @@ std::string LQPSubqueryExpression::description(const DescriptionMode mode) const
 }
 
 DataType LQPSubqueryExpression::data_type() const {
-  Assert(lqp->column_expressions().size() == 1,
+  Assert(lqp->output_expressions().size() == 1,
          "Can only determine the DataType of SubqueryExpressions that return exactly one column");
-  return lqp->column_expressions()[0]->data_type();
+  return lqp->output_expressions()[0]->data_type();
 }
 
 bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode&) const {
-  Assert(lqp->column_expressions().size() == 1,
+  Assert(lqp->output_expressions().size() == 1,
          "Can only determine the nullability of SelectExpressions that return exactly one column");
   return lqp->is_column_nullable(ColumnID{0});
 }

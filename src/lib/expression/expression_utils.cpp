@@ -159,7 +159,7 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
     if (AggregateExpression::is_count_star(*sub_expression)) {
       // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
-      // column_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
+      // output_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
       // its original_node is part of lqp.
       const auto& aggregate_expression = static_cast<const AggregateExpression&>(*sub_expression);
       const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());

@@ -35,7 +35,7 @@ class TransactionContextTest : public BaseTest {
 /**
  * @brief Helper operator.
  *
- * It calls the functor between a context’s assignment of a commit ID and it final commit.
+ * It calls the functor between a context’s assignment of a commit ID and its final commit.
  */
 class CommitFuncOp : public AbstractReadWriteOperator {
  public:
@@ -50,8 +50,8 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override { return nullptr; }
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override {
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override {
     Fail("Unexpected function call");
   }
 

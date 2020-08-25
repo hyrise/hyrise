@@ -39,7 +39,7 @@ TEST_F(QueryHandlerTest, BindParameters) {
   const auto bound_plan = QueryHandler::bind_prepared_plan(specification);
   EXPECT_EQ(bound_plan->type(), OperatorType::Validate);
 
-  const auto get_table = std::dynamic_pointer_cast<const GetTable>(bound_plan->input_left()->input_left());
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(bound_plan->left_input()->left_input());
   ASSERT_TRUE(get_table);
 
   // Check that the optimizer was executed. We cannot distinguish an optimized PQP from an unoptimized PQP, so we check

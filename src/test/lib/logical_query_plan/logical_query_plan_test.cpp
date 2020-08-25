@@ -293,7 +293,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
-  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->output_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -310,7 +310,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   const auto expression_a = std::make_shared<LQPColumnExpression>(node_int_int, ColumnID{0});
   const auto expression_b = std::make_shared<LQPColumnExpression>(node_int_int, ColumnID{1});
 
-  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->output_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -417,7 +417,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
   const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
 
   const auto copied_subquery_a =
-      std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_lqp->column_expressions().at(1));
+      std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_lqp->output_expressions().at(1));
   const auto copied_subquery_b =
       std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_predicate_a->predicate()->arguments.at(1));
 

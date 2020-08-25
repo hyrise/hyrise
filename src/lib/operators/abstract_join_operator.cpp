@@ -15,8 +15,8 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const OperatorJoinPredicate& primary_predicate,
                                            const std::vector<OperatorJoinPredicate>& secondary_predicates,
-                                           std::unique_ptr<OperatorPerformanceData> performance_data)
-    : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
+                                           std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
+    : AbstractReadOnlyOperator(type, left, right, std::move(init_performance_data)),
       _mode(mode),
       _primary_predicate(primary_predicate),
       _secondary_predicates(secondary_predicates) {
@@ -40,7 +40,7 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
 
 std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   const auto column_name = [&](const auto from_left, const auto column_id) {
-    const auto& input_table = from_left ? _input_left->get_output() : _input_right->get_output();
+    const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
     if (input_table) {
       // Input table is still available, use name from there
       return input_table->column_name(column_id);
@@ -49,7 +49,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     if (lqp_node) {
       // LQP is available, use column name from there
       const auto& input_lqp_node = lqp_node->input(from_left ? LQPInputSide::Left : LQPInputSide::Right);
-      return input_lqp_node->column_expressions()[column_id]->as_column_name();
+      return input_lqp_node->output_expressions()[column_id]->as_column_name();
     }
 
     // Fallback - use column ID
@@ -79,8 +79,8 @@ void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<Parameter
 
 std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                                                  const TableType table_type) const {
-  const auto left_in_table = _input_left->get_output();
-  const auto right_in_table = _input_right->get_output();
+  const auto left_in_table = _left_input->get_output();
+  const auto right_in_table = _right_input->get_output();
 
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);

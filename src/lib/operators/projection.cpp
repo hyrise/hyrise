@@ -30,9 +30,9 @@ const std::string& Projection::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Projection>(copied_input_left, expressions_deep_copy(expressions));
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -44,11 +44,11 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  const auto& input_table = *input_table_left();
+  const auto& input_table = *left_input_table();
 
   /**
-   * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
-   * input TableType (References or Data) matches the output column type (ReferenceSegment or not).
+   * For PQPColumnExpressions, it is possible to forward the input column if the input TableType (References or Data)
+   * matches the output column type (ReferenceSegment or not).
    */
   const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     auto output_segments = Segments{expressions.size()};
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
+    ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
@@ -232,7 +232,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     chunk->finalize();
 
     // Forward sorted_by flags, mapping column ids
-    const auto& sorted_by = input_chunk->sorted_by();
+    const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
@@ -244,7 +244,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
-        chunk->set_sorted_by(transformed);
+        chunk->set_individually_sorted_by(transformed);
       }
     }
 

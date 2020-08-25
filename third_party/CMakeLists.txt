@@ -70,25 +70,6 @@ target_compile_options(
     -fPIC
 )
 
-add_library(
-    cqf
-
-    cqf/src/cqf2.cpp
-    cqf/src/cqf4.cpp
-    cqf/src/cqf8.cpp
-    cqf/src/cqf16.cpp
-    cqf/src/cqf32.cpp
-)
-
-target_compile_options(cqf PRIVATE -Wno-format -fPIC)
-
-target_include_directories(
-    cqf
-
-    PUBLIC
-    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
-)
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
@@ -202,53 +183,54 @@ add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
 
-if (APPLE)
-    set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.dylib)
-else()
-    set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.so)
-endif()
+if(NOT APPLE)
+  # Only configure jemalloc for non-Apple builds, as we cannot properly replace the allocator on Mac using static linking:
+  #   If you ./configure jemalloc with --with-jemalloc-prefix="" on OSX and static link the library, your malloc's will
+  #   be handled by jemalloc. However, dynamically linked libraries will still use the default system zone. That is, any
+  #   *.so files that get dynamically linked to your application will not use jemalloc, even if the main object file has
+  #   been statically linked to jemalloc. This is different from linux. On linux, if the main object file is statically
+  #   linked to jemalloc, then all malloc's performed by libraries dynamically linked to your application will go
+  #   through jemalloc.
+  #  https://github.com/exabytes18/jemalloc-example
+  set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.so)
 
-if(CMAKE_CURRENT_SOURCE_DIR MATCHES "[ \t\r\n]" OR CMAKE_CURRENT_BINARY_DIR MATCHES "[ \t\r\n]")
-  # It looks like `--prefix=<...>` does not work too well if the prefix has a whitespace. We did not spend too long
-  # trying to get this to work as (1) this is easy to fix by the user, (2) it has only come up once in a long time, and
-  # (3) Makefiles are notoriously bad with spaces: http://savannah.gnu.org/bugs/?712
-  message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
-endif()
+  if(CMAKE_CURRENT_SOURCE_DIR MATCHES "[ \t\r\n]" OR CMAKE_CURRENT_BINARY_DIR MATCHES "[ \t\r\n]")
+    # It looks like `--prefix=<...>` does not work too well if the prefix has a whitespace. We did not spend too long
+    # trying to get this to work as (1) this is easy to fix by the user, (2) it has only come up once in a long time, and
+    # (3) Makefiles are notoriously bad with spaces: http://savannah.gnu.org/bugs/?712
+    message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
+  endif()
 
-include(ExternalProject)
-if(APPLE)
-    set(MAC_INCLUDES "SDKROOT=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk\" CPATH=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include\"")
-else()
-    set(MAC_INCLUDES "")
-endif()
-set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\" ${MAC_INCLUDES}")
-externalproject_add(
+  include(ExternalProject)
+  set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
+  externalproject_add(
+      libjemalloc
+
+      SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
+      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
+      # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
+      CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
+                                 cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
+                                 (printf \"$output\\n\" && false)"
+      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
+      INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
+      STEP_TARGETS build
+      BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
+  )
+
+  file(GLOB_RECURSE JEMALLOC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc/*)
+  externalproject_add_step(
     libjemalloc
-
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
-    # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
-    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
-                               cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
-                               (printf \"$output\\n\" && false)"
-    BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
-    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
-    STEP_TARGETS build
-    BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
-)
-
-file(GLOB_RECURSE JEMALLOC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc/*)
-externalproject_add_step(
-  libjemalloc
-  check_for_changes
-  # Make sure that we rebuild jemalloc when a file changes
-  DEPENDERS configure
-  DEPENDS "${JEMALLOC_FILES}"
-  COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jemalloc && make distclean >/dev/null 2>/dev/null) || true"
-)
-add_library(custom_jemalloc SHARED IMPORTED GLOBAL)
-add_dependencies(custom_jemalloc libjemalloc-build)  # ...-build is generated by STEP_TARGETS
-set_target_properties(custom_jemalloc PROPERTIES IMPORTED_LOCATION ${JEMALLOC_LIB_PATH})
+    check_for_changes
+    # Make sure that we rebuild jemalloc when a file changes
+    DEPENDERS configure
+    DEPENDS "${JEMALLOC_FILES}"
+    COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jemalloc && make distclean >/dev/null 2>/dev/null) || true"
+  )
+  add_library(custom_jemalloc SHARED IMPORTED GLOBAL)
+  add_dependencies(custom_jemalloc libjemalloc-build)  # ...-build is generated by STEP_TARGETS
+  set_target_properties(custom_jemalloc PROPERTIES IMPORTED_LOCATION ${JEMALLOC_LIB_PATH})
+endif()
 
 # build tpcds_dbgen library
 set(TPCDS_KIT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tpcds-kit/tools)

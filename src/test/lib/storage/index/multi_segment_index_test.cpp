@@ -6,7 +6,7 @@
 
 #include "base_test.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "types.hpp"
@@ -22,14 +22,14 @@ class MultiSegmentIndexTest : public BaseTest {
         DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str = std::make_shared<DerivedIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_int, dict_segment_str});
+        std::vector<std::shared_ptr<const AbstractSegment>>{dict_segment_int, dict_segment_str});
     index_str_int = std::make_shared<DerivedIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_str, dict_segment_int});
+        std::vector<std::shared_ptr<const AbstractSegment>>{dict_segment_str, dict_segment_int});
   }
 
   template <class Iterator>
   static std::vector<std::vector<AllTypeVariant>> result_as_vector(
-      const std::vector<std::shared_ptr<BaseSegment>> segments, Iterator begin, Iterator end) {
+      const std::vector<std::shared_ptr<AbstractSegment>> segments, Iterator begin, Iterator end) {
     std::vector<std::vector<AllTypeVariant>> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       auto row = std::vector<AllTypeVariant>{};
@@ -43,8 +43,8 @@ class MultiSegmentIndexTest : public BaseTest {
 
   std::shared_ptr<AbstractIndex> index_int_str = nullptr;
   std::shared_ptr<AbstractIndex> index_str_int = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
+  std::shared_ptr<AbstractSegment> dict_segment_int = nullptr;
+  std::shared_ptr<AbstractSegment> dict_segment_str = nullptr;
 };
 
 // List of indexes to test

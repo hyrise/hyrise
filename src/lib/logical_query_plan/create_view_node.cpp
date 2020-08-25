@@ -9,7 +9,7 @@ namespace opossum {
 
 CreateViewNode::CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view,
                                const bool init_if_not_exists)
-    : BaseNonQueryNode(LQPNodeType::CreateView),
+    : AbstractNonQueryNode(LQPNodeType::CreateView),
       view_name(init_view_name),
       view(init_view),
       if_not_exists(init_if_not_exists) {}

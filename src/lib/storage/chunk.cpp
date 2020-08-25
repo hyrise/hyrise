@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
@@ -43,7 +43,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 
 bool Chunk::is_mutable() const { return _is_mutable; }
 
-void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
+void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
 }
 
@@ -69,7 +69,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
+std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
@@ -86,7 +86,7 @@ bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
-    const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+    const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractIndex>>();
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
@@ -117,8 +117,8 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector
   return get_indexes(segments);
 }
 
-std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+std::shared_ptr<AbstractIndex> Chunk::get_index(
+    const SegmentIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
@@ -190,7 +190,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
+std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
@@ -199,7 +199,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
               }()),
               "column ids not within range [0, column_count()).");
 
-  auto segments = std::vector<std::shared_ptr<const BaseSegment>>{};
+  auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
   std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments),
                  [&](const auto& column_id) { return get_segment(column_id); });
@@ -217,16 +217,17 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-const std::vector<SortColumnDefinition>& Chunk::sorted_by() const { return _sorted_by; }
+const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const { return _sorted_by; }
 
-void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
-  set_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
+void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
+  set_individually_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
 }
 
-void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
+void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
-  // Currently, we assume that set_sorted_by is called only once at most. As such, there should be no existing sorting
-  // and the new sorting should contain at least one column. Feel free to remove this assertion if necessary.
+  // Currently, we assume that set_individually_sorted_by is called only once at most.
+  // As such, there should be no existing sorting and the new sorting should contain at least one column.
+  // Feel free to remove this assertion if necessary.
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {

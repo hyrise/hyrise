@@ -100,8 +100,8 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 
 namespace opossum {
 
-bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
-                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
+bool check_segment_equal(const std::shared_ptr<AbstractSegment>& actual_segment,
+                         const std::shared_ptr<AbstractSegment>& expected_segment, OrderSensitivity order_sensitivity,
                          TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
   if (actual_segment->data_type() != expected_segment->data_type()) {
     return false;
@@ -110,7 +110,7 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
   const auto definitions =
       std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", actual_segment->data_type(), true)};
 
-  auto table_type = [&](const std::shared_ptr<BaseSegment>& segment) {
+  auto table_type = [&](const std::shared_ptr<AbstractSegment>& segment) {
     if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
       return TableType::References;
     }
@@ -118,9 +118,9 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
   };
 
   auto actual_table = std::make_shared<Table>(definitions, table_type(actual_segment));
-  actual_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{actual_segment});
+  actual_table->append_chunk(pmr_vector<std::shared_ptr<AbstractSegment>>{actual_segment});
   auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
-  expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
+  expected_table->append_chunk(pmr_vector<std::shared_ptr<AbstractSegment>>{expected_segment});
 
   // If check_table_equal returns something other than std::nullopt, a difference has been found.
   return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode,

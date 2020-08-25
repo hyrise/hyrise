@@ -199,7 +199,7 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
 
   const auto& result_table_unsorted = projection_a_unsorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
 
@@ -215,7 +215,7 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   const auto& result_table_sorted = projection_b_a_sorted->get_output();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_FALSE(sorted_by.empty());
     // Expect sort to be column a, now with ColumnID 1
     const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};

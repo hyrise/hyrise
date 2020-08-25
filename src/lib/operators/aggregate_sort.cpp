@@ -305,7 +305,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     const auto chunk = input_table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
+    const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->individually_sorted_by();
 
     // We can skip sorting the chunk only if we group by a single column and the chunk is sorted by that column. We do
     // not store information about cascadingly sorted chunks, which we would need for skipping the sort step with
@@ -380,7 +380,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
  *    ValueSegments.
  */
 std::shared_ptr<const Table> AggregateSort::_on_execute() {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
 
   // Check for invalid aggregates
   _validate_aggregates();
@@ -695,9 +695,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> AggregateSort::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AggregateSort>(copied_input_left, _aggregates, _groupby_column_ids);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<AggregateSort>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
 void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -762,7 +762,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(input_column_id);
+    aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);

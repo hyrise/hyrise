@@ -6,12 +6,12 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
+#include "table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -197,13 +197,11 @@ class Table : private Noncopyable {
   }
 
   /**
-   * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
-   * by this method. Constraint column IDs will always be sorted from here on.
-   * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" key constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
-  const std::vector<TableConstraintDefinition>& get_soft_unique_constraints() const;
+  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+  const TableKeyConstraints& soft_key_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -240,7 +238,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  std::vector<TableConstraintDefinition> _constraint_definitions;
+  TableKeyConstraints _table_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
