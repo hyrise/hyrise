@@ -68,7 +68,7 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
   auto inflated_fds = std::unordered_set<FunctionalDependency>();
   inflated_fds.reserve(fds.size());
 
-  for (auto& fd : fds) {
+  for (const auto& fd : fds) {
     if (fd.dependents.size() == 1) {
       inflated_fds.insert(fd);
     } else {
@@ -122,7 +122,6 @@ std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependen
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
-  if (fds_a.empty() && fds_b.empty()) return {};
   if (fds_a.empty()) return fds_b;
   if (fds_b.empty()) return fds_a;
 
