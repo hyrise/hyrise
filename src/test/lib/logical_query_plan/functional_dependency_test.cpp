@@ -140,8 +140,8 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
 
   const auto& intersected_fds = intersect_fds({fd_a, fd_a_b, fd_x}, {fd_a_b, fd_a_2});
   EXPECT_EQ(intersected_fds.size(), 2);
-  EXPECT_EQ(intersected_fds.at(0), fd_a_2);
-  EXPECT_EQ(intersected_fds.at(1), fd_a_b);
+  EXPECT_EQ(intersected_fds.at(0), fd_a_b);
+  EXPECT_EQ(intersected_fds.at(1), fd_a_2);
 }
 
 }  // namespace opossum

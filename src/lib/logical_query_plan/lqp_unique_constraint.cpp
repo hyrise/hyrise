@@ -17,7 +17,7 @@ bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const { ret
 
 size_t LQPUniqueConstraint::hash() const {
   size_t hash = 0;
-  for(const auto& expression : expressions) {
+  for (const auto& expression : expressions) {
     hash = hash xor expression->hash();
   }
 

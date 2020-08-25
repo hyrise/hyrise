@@ -33,7 +33,7 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
 
 size_t FunctionalDependency::hash() const {
   size_t hash = 0;
-  for(const auto& expression : determinants) {
+  for (const auto& expression : determinants) {
     hash = hash xor expression->hash();
   }
 
@@ -138,7 +138,7 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
                                                 const std::vector<FunctionalDependency>& fds_b) {
   if (fds_a.empty() || fds_b.empty()) return {};
 
-  const auto& inflated_fds_a = inflate_fds(fds_a); // Continue DEBUG why is a FD lost?
+  const auto& inflated_fds_a = inflate_fds(fds_a);
   const auto& inflated_fds_b = inflate_fds(fds_b);
 
   auto intersected_fds = std::vector<FunctionalDependency>();
