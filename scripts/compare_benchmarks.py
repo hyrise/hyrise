@@ -24,7 +24,7 @@ def format_diff(diff):
 
 def color_diff(diff, inverse_colors=False):
     def select_color(value, color):
-        return color if abs(value - 1) > 0.05 else "white"
+        return color if round(abs(value - 1), 2) >= 0.05 else "white"
 
     diff_str = format_diff(diff)
     color = "green" if (diff_str[0] == "+") != (inverse_colors) else "red"
@@ -340,9 +340,9 @@ if github_format:
     table_string_reformatted = "```diff\n"
     table_string_reformatted += create_context_overview(old_data, new_data, github_format) + "\n"
     for line in table_string.splitlines():
-        if green_control_sequence + "+" in line:
+        if (green_control_sequence + "+" in line) or ('| Sum ' in line and green_control_sequence in line):
             table_string_reformatted += "+"
-        elif red_control_sequence + "-" in line:
+        elif (red_control_sequence + "-" in line) or ('| Sum ' in line and red_control_sequence in line):
             table_string_reformatted += "-"
         else:
             table_string_reformatted += " "
