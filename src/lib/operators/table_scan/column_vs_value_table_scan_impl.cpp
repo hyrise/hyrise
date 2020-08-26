@@ -132,6 +132,8 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
       #pragma omp simd
       // clang-format on
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
+        // `matches` might already contain entries if it is called multiple times by
+        // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
         matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
       }
     }
