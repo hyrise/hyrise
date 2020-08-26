@@ -61,26 +61,6 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
- * @return The given FDs as an unordered set in an inflated form.
- *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
- *         works as follows:
- *                                                      {a} => {b}
- *                             {a} => {b, c, d}   -->   {a} => {c}
- *                                                      {a} => {d}
- */
-std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds);
-
-/**
- * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         As a result, FDs become deflated as follows:
- *
- *                             {a} => {b}
- *                             {a} => {c}         -->   {a} => {b, c, d}
- *                             {a} => {d}
- */
-std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
-
-/**
  * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
  *         expressions are merged into single objects by merging their dependent expressions.
  */
