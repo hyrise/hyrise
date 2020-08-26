@@ -28,7 +28,7 @@ size_t LQPUniqueConstraint::hash() const {
 std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint) {
   stream << "{";
   auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{unique_constraint.expressions.begin(),
-      unique_constraint.expressions.end()};
+                                                                             unique_constraint.expressions.end()};
   stream << expressions_vector.at(0)->as_column_name();
   for (auto expression_idx = size_t{1}; expression_idx < expressions_vector.size(); ++expression_idx) {
     stream << ", " << expressions_vector[expression_idx]->as_column_name();

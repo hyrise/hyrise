@@ -140,7 +140,6 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   }
 
   if (!dynamic_pointer_cast<AbstractNonQueryNode>(from)) {
-
     // Edge Tooltip: Unique Constraints
     const auto& unique_constraints = from->unique_constraints();
     tooltip_stream << "\n"
