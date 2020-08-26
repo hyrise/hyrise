@@ -520,13 +520,15 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
      *
      */
     const auto measure_scan = [&](const std::string benchmark, const std::string column_name,
-                                         const auto& ref_table, const auto search_value) {
+                                  const auto& ref_table, const auto search_value,
+                                  const bool execute_like_scan = false) {
       if (encoding_supports_data_type(seg_spec.encoding_type, LINEITEM_COLUMNS_TO_PROCESS.at(column_name).second)) {
         const auto column_id = LINEITEM_COLUMNS_TO_PROCESS.at(column_name).first;
         const auto operand = pqp_column_(column_id, table->column_data_type(column_id),
                                          table->column_is_nullable(column_id), column_name);
-        const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
+        const auto predicate = std::make_shared<BinaryPredicateExpression>(execute_like_scan ? PredicateCondition::Like : PredicateCondition::GreaterThanEquals,
                                                                            operand, value_(search_value));
+
         for (auto i = size_t{0}; i < FILTER_MEASUREMENTS; ++i) {
           const auto table_scan = std::make_shared<TableScan>(ref_table, predicate);
 
@@ -535,7 +537,9 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
             table_scan->execute();
             auto end = std::chrono::high_resolution_clock::now();
 
-            csv_measurement_row(benchmark + "," + column_name, seg_spec, FILTER_MEASUREMENTS, start, end, nth_of_a_second, measurements);
+            // const auto benchmark_title = execute_like_scan ? benchmark + "Like" : benchmark;
+            const auto benchmark_title = benchmark;
+            csv_measurement_row(benchmark_title + "," + column_name, seg_spec, FILTER_MEASUREMENTS, start, end, nth_of_a_second, measurements);
 
             if (benchmark == "DirectScan") {
               const auto check_lineitem_table_size = static_cast<float>(ref_table->get_output()->row_count());
@@ -556,7 +560,8 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
     measure_scan("DirectScan", "l_partkey", table_wrapper, search_value_l_partkey);
     measure_scan("DirectScan", "l_linenumber", table_wrapper, search_value_l_linenumber);
     measure_scan("DirectScan", "l_shipmode", table_wrapper, search_value_l_shipmode);
-    measure_scan("DirectScan", "l_comment", table_wrapper, search_value_l_comment);
+    // measure_scan("DirectScan", "l_comment", table_wrapper, search_value_l_comment);
+    measure_scan("DirectScan", "l_comment", table_wrapper, "%as%", true);
 
     /**
      *
@@ -617,13 +622,15 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_CompressionSelectionIntroTable)(be
     measure_scan("PostFilter", "l_partkey", reference_table_wrapper, search_value_l_partkey);
     measure_scan("PostFilter", "l_linenumber", reference_table_wrapper, search_value_l_linenumber);
     measure_scan("PostFilter", "l_shipmode", reference_table_wrapper, search_value_l_shipmode);
-    measure_scan("PostFilter", "l_comment", reference_table_wrapper, search_value_l_comment);
+    // measure_scan("PostFilter", "l_comment", reference_table_wrapper, search_value_l_comment);
+    measure_scan("PostFilter", "l_comment", reference_table_wrapper, "%as%", true);
 
     std::cout << "Measuring post filters (unsorted pos list) for encoding » " << seg_spec << "«." << std::endl;
     measure_scan("UnsortedPostFilter", "l_partkey", unsorted_reference_table_wrapper, search_value_l_partkey);
     measure_scan("UnsortedPostFilter", "l_linenumber", unsorted_reference_table_wrapper, search_value_l_linenumber);
     measure_scan("UnsortedPostFilter", "l_shipmode", unsorted_reference_table_wrapper, search_value_l_shipmode);
-    measure_scan("UnsortedPostFilter", "l_comment", unsorted_reference_table_wrapper, search_value_l_comment);
+    // measure_scan("UnsortedPostFilter", "l_comment", unsorted_reference_table_wrapper, search_value_l_comment);
+    measure_scan("UnsortedPostFilter", "l_comment", unsorted_reference_table_wrapper, "%as%", true);
 
 
     std::cout << "Getting accumulated segments sizes for encoding » " << seg_spec << "«." << std::endl;
