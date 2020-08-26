@@ -124,9 +124,16 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
       const auto output_size = position_filter ? position_filter->size() : segment.size();
       const auto output_start_offset = matches.size();
       matches.resize(matches.size() + output_size);
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < output_size; ++chunk_offset) {
+
+      // Make the compiler try harder to vectorize the trivial loop below.
+      // This empty block is used to convince clang-format to keep the pragma indented.
+      // NOLINTNEXTLINE
+      {}  // clang-format off
+      #pragma omp simd
+      // clang-format on
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
         matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
-      }      
+      }
     }
 
     return;

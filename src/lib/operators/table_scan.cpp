@@ -170,7 +170,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         matches_out->guarantee_single_chunk();
 
         // If the entire chunk is matched, create a EntireChunkPosList instead
-        const auto output_pos_list = matches_out->size() == chunk_in->size() ? static_cast<std::shared_ptr<AbstractPosList>>(std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size())) : static_cast<std::shared_ptr<AbstractPosList>>(matches_out);
+        const auto output_pos_list = matches_out->size() == chunk_in->size()
+                                         ? static_cast<std::shared_ptr<AbstractPosList>>(
+                                               std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size()))
+                                         : static_cast<std::shared_ptr<AbstractPosList>>(matches_out);
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, output_pos_list);
