@@ -97,7 +97,7 @@ echo "<details>"
 echo "<summary>$(hostname) - click to expand</summary>"
 echo ""
 echo "| property | value |"
-echo "| -- | -- |"
+echo "| -- | -- | -- | -- |"
 echo "| Hostname | $(hostname) |"
 if [[ "$(uname)" == 'Darwin' ]]; then
   # Retrieve the model name. Might be more than one line if the hardware has been updated.
@@ -120,12 +120,12 @@ echo "</details>"
 
 # Print information about the time spent building the commits
 echo ""
-echo "**Build Time**"
-echo "| commit | build time |"
+echo "**Commit Info and Build Time**"
+echo "| commit | date | message |  build time |"
 echo "| -- | -- |"
-echo -n "| ${start_commit} |"
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${start_commit}) | "
 cat "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
-echo -n "| ${end_commit} |"
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${end_commit}) | "
 cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
 
 # Print information for each benchmark
