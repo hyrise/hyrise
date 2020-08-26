@@ -15,10 +15,20 @@ bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
 
 bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const { return !(rhs == *this); }
 
+size_t LQPUniqueConstraint::hash() const {
+  size_t hash = 0;
+  for (const auto& expression : expressions) {
+    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
+    hash = hash ^ expression->hash();
+  }
+
+  return boost::hash_value(hash - expressions.size());
+}
+
 std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint) {
   stream << "{";
   auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{unique_constraint.expressions.begin(),
-                                                                             unique_constraint.expressions.end()};
+      unique_constraint.expressions.end()};
   stream << expressions_vector.at(0)->as_column_name();
   for (auto expression_idx = size_t{1}; expression_idx < expressions_vector.size(); ++expression_idx) {
     stream << ", " << expressions_vector[expression_idx]->as_column_name();
@@ -33,7 +43,7 @@ std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique
 namespace std {
 
 size_t hash<opossum::LQPUniqueConstraint>::operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const {
-  return boost::hash_range(lqp_unique_constraint.expressions.cbegin(), lqp_unique_constraint.expressions.cend());
+  return lqp_unique_constraint.hash();
 }
 
 }  // namespace std

@@ -32,6 +32,7 @@ struct FunctionalDependency {
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
+  size_t hash() const;
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
@@ -60,10 +61,30 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
- * @return A merged FD set from the given input @param fds_a and @param fds_b. FDs with the same determinant
+ * @return The given FDs as an unordered set in an inflated form.
+ *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
+ *         works as follows:
+ *                                                      {a} => {b}
+ *                             {a} => {b, c, d}   -->   {a} => {c}
+ *                                                      {a} => {d}
+ */
+std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds);
+
+/**
+ * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
+ *         As a result, FDs become deflated as follows:
+ *
+ *                             {a} => {b}
+ *                             {a} => {c}         -->   {a} => {b, c, d}
+ *                             {a} => {d}
+ */
+std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds);
+
+/**
+ * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
  *         expressions are merged into single objects by merging their dependent expressions.
  */
-std::vector<FunctionalDependency> merge_fds(const std::vector<FunctionalDependency>& fds_a,
+std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependency>& fds_a,
                                             const std::vector<FunctionalDependency>& fds_b);
 
 /**

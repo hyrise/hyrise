@@ -182,7 +182,7 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   }
 
   // Prevent FDs with duplicate determinant expressions in the output vector
-  auto fds_out = merge_fds(fds_left, fds_right);
+  auto fds_out = union_fds(fds_left, fds_right);
 
   // Outer joins lead to nullable columns, which may invalidate some FDs
   if (!fds_out.empty() &&

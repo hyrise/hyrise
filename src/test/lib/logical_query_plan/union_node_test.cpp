@@ -109,12 +109,12 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   // Since all unique constraints become discarded, former trivial FDs become non-trivial:
   EXPECT_EQ(union_node_fds, union_node_non_trivial_fds);
 
+  EXPECT_EQ(union_node_fds.size(), 3);
   const auto& union_node_fds_set =
       std::unordered_set<FunctionalDependency>(union_node_fds.cbegin(), union_node_fds.cend());
-  EXPECT_EQ(union_node_fds_set.size(), 3);
   EXPECT_TRUE(union_node_fds_set.contains(trivial_fd_a));
-  EXPECT_TRUE(union_node_fds_set.contains(non_trivial_fd_c));
   EXPECT_TRUE(union_node_fds_set.contains(non_trivial_fd_b));
+  EXPECT_TRUE(union_node_fds_set.contains(non_trivial_fd_c));
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
@@ -176,6 +176,9 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
+  // This test verifies a DebugAssert condition. Therefore, we do not want this test to run in release mode.
+  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
 
