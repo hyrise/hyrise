@@ -1,3 +1,6 @@
+#include <iostream>
+#include <fstream>
+
 #include "benchmark_sql_executor.hpp"
 
 #include "sql/sql_pipeline_builder.hpp"
@@ -157,6 +160,9 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
     prefix += "-" + std::to_string(_num_visualized_plans);
   }
 
+  std::ofstream lqp_text_file(prefix + "-LQP.txt");
+  for (auto &lqp : lqps) lqp_text_file << *lqp;
+  
   LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP.svg");
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
