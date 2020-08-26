@@ -129,17 +129,19 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   std::stringstream tooltip_stream;
 
-  // Node Output Expressions
+  // Edge Tooltip: Node Output Expressions
   tooltip_stream << "Output Expressions: \n";
   const auto& output_expressions = from->output_expressions();
   for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
     tooltip_stream << " (" << column_id + 1 << ") ";
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
-    if (from->is_column_nullable(column_id)) tooltip_stream << " IS NULLABLE";
+    if (from->is_column_nullable(column_id)) tooltip_stream << " NULL";
     tooltip_stream << "\n";
   }
+
   if (!dynamic_pointer_cast<AbstractNonQueryNode>(from)) {
-    // Unique Constraints
+
+    // Edge Tooltip: Unique Constraints
     const auto& unique_constraints = from->unique_constraints();
     tooltip_stream << "\n"
                    << "Unique Constraints: \n";
@@ -148,7 +150,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
       tooltip_stream << " (" << uc_idx + 1 << ") ";
       tooltip_stream << unique_constraints->at(uc_idx) << "\n";
     }
-    // Trivial FDs
+
+    // Edge Tooltip: Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
     if (!unique_constraints->empty()) trivial_fds = fds_from_unique_constraints(from, unique_constraints);
     tooltip_stream << "\n"
@@ -158,7 +161,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
       tooltip_stream << " (" << fd_idx + 1 << ") ";
       tooltip_stream << trivial_fds.at(fd_idx) << "\n";
     }
-    // Non-trivial FDs
+
+    // Edge Tooltip: Non-trivial FDs
     const auto& fds = from->non_trivial_functional_dependencies();
     tooltip_stream << "\n"
                    << "Functional Dependencies (non-trivial): \n";
