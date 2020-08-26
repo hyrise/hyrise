@@ -121,7 +121,7 @@ echo "</details>"
 # Print information about the time spent building the commits
 echo ""
 echo "**Commit Info and Build Time**"
-echo "| commit | date | message |  build time |"
+echo "| commit | date | message | build time |"
 echo "| -- | -- | -- | -- |"
 echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${start_commit}) | "
 cat "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
