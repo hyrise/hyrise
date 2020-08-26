@@ -34,7 +34,7 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
 size_t FunctionalDependency::hash() const {
   size_t hash = 0;
   for (const auto& expression : determinants) {
-    // Use commutative XOR operator to combine hashes
+    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
     hash = hash ^ expression->hash();
   }
 

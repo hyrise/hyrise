@@ -18,7 +18,7 @@ bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const { ret
 size_t LQPUniqueConstraint::hash() const {
   size_t hash = 0;
   for (const auto& expression : expressions) {
-    // Use commutative XOR operator to combine hashes
+    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
     hash = hash ^ expression->hash();
   }
 
