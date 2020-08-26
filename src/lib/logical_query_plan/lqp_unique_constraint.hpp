@@ -18,6 +18,7 @@ struct LQPUniqueConstraint final {
 
   bool operator==(const LQPUniqueConstraint& rhs) const;
   bool operator!=(const LQPUniqueConstraint& rhs) const;
+  size_t hash() const;
 
   ExpressionUnorderedSet expressions;
 };
