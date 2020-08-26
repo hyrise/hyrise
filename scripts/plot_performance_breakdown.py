@@ -87,7 +87,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + r" $\emptyset$ " + f"{total_time[label_id]/10e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
@@ -127,7 +127,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{optimizer_total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + r" $\emptyset$ " + f"{optimizer_total_time[label_id]/10e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
