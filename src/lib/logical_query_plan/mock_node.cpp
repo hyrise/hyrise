@@ -129,14 +129,11 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
 
 const TableKeyConstraints& MockNode::key_constraints() const { return _table_key_constraints; }
 
-void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::functional_dependencies() const {
-  Assert(_table_key_constraints.empty() || !_functional_dependencies.empty(),
-         "There might be a misconception: Unlike StoredTableNode, MockNode does not generate FDs from table "
-         "constraints. FDs have to be set up manually.");
+std::vector<FunctionalDependency> MockNode::non_trivial_functional_dependencies() const {
   return _functional_dependencies;
 }
 
@@ -156,7 +153,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
-  mock_node->set_functional_dependencies(_functional_dependencies);
+  mock_node->set_non_trivial_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }

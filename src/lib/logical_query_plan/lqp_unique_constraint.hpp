@@ -18,10 +18,22 @@ struct LQPUniqueConstraint final {
 
   bool operator==(const LQPUniqueConstraint& rhs) const;
   bool operator!=(const LQPUniqueConstraint& rhs) const;
+  size_t hash() const;
 
   ExpressionUnorderedSet expressions;
 };
 
+std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint);
+
 using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::LQPUniqueConstraint> {
+  size_t operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const;
+};
+
+}  // namespace std

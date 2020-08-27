@@ -311,7 +311,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
     output_chunk->finalize();
-    output_chunk->set_sorted_by(final_sort_definition);
+    output_chunk->set_individually_sorted_by(final_sort_definition);
   }
   return sorted_table;
 }

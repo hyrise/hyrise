@@ -33,7 +33,7 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
   if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
     _scan_value_segment(*value_segment, chunk_id, *matches);
   } else {
-    const auto& chunk_sorted_by = chunk->sorted_by();
+    const auto& chunk_sorted_by = chunk->individually_sorted_by();
     if (!chunk_sorted_by.empty()) {
       for (const auto& sorted_by : chunk_sorted_by) {
         if (sorted_by.column == _column_id) {

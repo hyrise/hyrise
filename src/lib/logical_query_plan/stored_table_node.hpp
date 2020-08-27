@@ -46,8 +46,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
-  std::vector<FunctionalDependency> functional_dependencies() const override;
-
   const std::string table_name;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these

@@ -232,7 +232,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     chunk->finalize();
 
     // Forward sorted_by flags, mapping column ids
-    const auto& sorted_by = input_chunk->sorted_by();
+    const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
@@ -244,7 +244,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
-        chunk->set_sorted_by(transformed);
+        chunk->set_individually_sorted_by(transformed);
       }
     }
 

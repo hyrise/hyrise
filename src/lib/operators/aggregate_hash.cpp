@@ -437,8 +437,10 @@ template <typename AggregateKey>
 void AggregateHash::_aggregate() {
   const auto& input_table = left_input_table();
 
-  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
-    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& groupby_column_id : _groupby_column_ids) {
+      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+    }
   }
 
   // Check for invalid aggregates
