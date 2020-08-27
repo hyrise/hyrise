@@ -62,7 +62,7 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
 
 void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
   const auto append_lock = _table->acquire_append_mutex();
-  _table->append_mutable_chunk();        
+  _table->append_mutable_chunk(false);
   const auto& last_chunk = _table->last_chunk();
   Assert(last_chunk, "failed to get last chunk");
   const ChunkID appended_chunk_id {_table->chunk_count() - 1};
