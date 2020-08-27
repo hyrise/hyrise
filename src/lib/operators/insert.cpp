@@ -106,14 +106,15 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       _target_table->append_mutable_chunk();
     }
     while (remaining_rows > 0) {
-      //auto target_chunk_id = ChunkID{_target_table->chunk_count() - 1};
+      // auto target_chunk_id = ChunkID{_target_table->chunk_count() - 1};
       auto target_chunk_id = _target_table->get_insert_chunk_id();
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
 
       // If the last Chunk of the target Table is either immutable or full, append a new mutable Chunk
-      if (target_chunk == nullptr || !target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
+      if (target_chunk == nullptr || !target_chunk->is_mutable() ||
+          target_chunk->size() == _target_table->target_chunk_size()) {
         _target_table->append_mutable_chunk();
-        //++target_chunk_id;
+        // ++target_chunk_id;
         target_chunk_id = _target_table->get_insert_chunk_id();
         target_chunk = _target_table->get_chunk(target_chunk_id);
       }
