@@ -23,6 +23,8 @@ struct LQPUniqueConstraint final {
   ExpressionUnorderedSet expressions;
 };
 
+std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint);
+
 using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
 
 }  // namespace opossum
