@@ -32,6 +32,9 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
    */
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  // Returns non-trivial FDs from the left input node that remain valid.
+  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
   size_t aggregate_expressions_begin_idx;
 

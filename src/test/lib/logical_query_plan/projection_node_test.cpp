@@ -138,4 +138,31 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   }
 }
 
+TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
+  // Preparations
+  const auto fd_a = FunctionalDependency{{_a}, {_c}};
+  const auto fd_b = FunctionalDependency{{_b}, {_c}};
+  const auto fd_b_two_dependents = FunctionalDependency{{_b}, {_a, _c}};
+  _mock_node->set_non_trivial_functional_dependencies({fd_a, fd_b, fd_b_two_dependents});
+  EXPECT_EQ(_mock_node->functional_dependencies().size(), 3);
+
+  // Tests
+  // FDs without dependents are discarded
+  const auto& projection_node_1 = ProjectionNode::make(expression_vector(_a, add_(_b, _c)), _mock_node);
+  EXPECT_TRUE(projection_node_1->functional_dependencies().empty());
+  const auto& projection_node_2 = ProjectionNode::make(expression_vector(_b, sub_(_b, _c)), _mock_node);
+  EXPECT_TRUE(projection_node_2->functional_dependencies().empty());
+
+  // Missing determinants lead to FD removal
+  const auto& projection_node_3 = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
+  EXPECT_EQ(projection_node_3->functional_dependencies().size(), 1);
+  EXPECT_EQ(projection_node_3->functional_dependencies().at(0), fd_a);
+
+  // FDs are adjusted if some, but not all dependents are missing
+  const auto& projection_node_4 = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
+  EXPECT_EQ(projection_node_4->functional_dependencies().size(), 1);
+  const auto expected_fd = FunctionalDependency{{_b}, {_a}};
+  EXPECT_EQ(projection_node_4->functional_dependencies().at(0), expected_fd);
+}
+
 }  // namespace opossum

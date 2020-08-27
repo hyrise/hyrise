@@ -94,8 +94,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   }
 
   // Check counters for sorted segment scanning (value scan)
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
-  table->get_chunk(ChunkID{1})->set_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
+  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
+  table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   {
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();

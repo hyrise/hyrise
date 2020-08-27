@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "expression/expression_utils.hpp"
+#include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
@@ -51,6 +52,26 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
   }
 
   return unique_constraints;
+}
+
+std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {
+  auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+
+  // Currently, we remove non-trivial FDs whose expressions are no longer part of the node's output expressions.
+  remove_invalid_fds(shared_from_this(), non_trivial_fds);
+
+  /**
+   * Future Work: By analyzing the output expressions in more depth, we can save some of the input FDs. For example:
+   *               - StoredTableNode with the columns a, b, c and the following FD:
+   *                 {a} -> {b}
+   *               - ProjectionNode with the following output expressions:
+   *                 a, (b + 1)
+   *
+   *              The current implementation discards the above FD. Instead, we could save it via the following
+   *              reformulation: {a} -> {b + 1}
+   */
+
+  return non_trivial_fds;
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

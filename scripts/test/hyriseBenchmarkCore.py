@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import pexpect
@@ -26,16 +28,21 @@ def check_json(json, argument, error, return_error, difference=None):
             return True
     else:
         if abs(json - argument) > difference:
-            print("ERROR: " + error + " " + str(json) + " " + str(argument) + " " + str(difference))
+            print(f"ERROR: {error} {json} {argument} {difference}")
             return True
     return return_error
 
 
-def initialize(arguments, benchmark_name, verbose):
+def initialize():
     if len(sys.argv) == 1:
-        print("Usage: ./scripts/test/" + benchmark_name + "_test.py <build_dir>")
+        print(f"Usage: ./scripts/test/{os.path.basename(sys.argv[0])} <build_dir>")
         sys.exit(1)
 
+    build_dir = sys.argv[1]
+    return build_dir
+
+
+def run_benchmark(build_dir, arguments, benchmark_name, verbose):
     if "--table_path" in arguments and not os.path.isdir(arguments["--table_path"].replace("'", "")):
         print(
             "Cannot find "
@@ -51,8 +58,6 @@ def initialize(arguments, benchmark_name, verbose):
             + ". Are you running the test suite from the main folder of the Hyrise repository?"
         )
         sys.exit(1)
-
-    build_dir = sys.argv[1]
 
     concat_arguments = " ".join(["=".join(map(str, x)) for x in arguments.items()])
 

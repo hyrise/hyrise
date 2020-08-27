@@ -305,7 +305,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     const auto chunk = input_table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
+    const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->individually_sorted_by();
 
     // We can skip sorting the chunk only if we group by a single column and the chunk is sorted by that column. We do
     // not store information about cascadingly sorted chunks, which we would need for skipping the sort step with
