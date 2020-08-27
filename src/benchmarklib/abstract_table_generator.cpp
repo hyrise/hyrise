@@ -176,8 +176,8 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       const auto& table = table_info.table;
       if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
-        std::cout << "- WARNING: " << table_name << " was loaded from binary, but has a mismatching chunk size of "
-                  << table->get_chunk(ChunkID{0})->size() << std::endl;
+        Fail("Table '" + table_name + "' was loaded from binary, but has a mismatching chunk size of " +
+             std::to_string(table->get_chunk(ChunkID{0})->size()));
       }
     }
 
