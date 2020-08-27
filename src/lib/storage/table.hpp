@@ -113,8 +113,11 @@ class Table : private Noncopyable {
                     const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   // Create and append a Chunk consisting of ValueSegments.
-  void append_mutable_chunk();
+  void append_mutable_chunk(const bool insert_chunk = true);
   /** @} */
+
+  // Returns the insert chunk of the table
+  ChunkID get_insert_chunk_id() const;
 
   /**
    * @defgroup Convenience methods for accessing/adding Table data. Slow, use only for testing!
@@ -167,6 +170,7 @@ class Table : private Noncopyable {
   std::vector<std::vector<AllTypeVariant>> get_rows() const;
   /** @} */
 
+  // Append mutex. Must be obtained before appending any row
   std::unique_lock<std::mutex> acquire_append_mutex();
 
   /**
@@ -226,6 +230,7 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const ChunkOffset _target_chunk_size;
+  ChunkID _insert_chunk_id;
 
   /**
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.
