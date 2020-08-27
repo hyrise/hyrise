@@ -109,14 +109,34 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
   /**
-   * Early out: All entries (except NULLs) match
+   * Early out: All entries (possibly except NULLs) match
    */
   // NOLINTNEXTLINE - cpplint is drunk
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
-    });
+    if (_column_is_nullable) {
+      // We still have to check for NULLs
+      attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+        static const auto always_true = [](const auto&) { return true; };
+        _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
+      });
+    } else {
+      // No NULLs, all entries match.
+      const auto output_size = position_filter ? position_filter->size() : segment.size();
+      const auto output_start_offset = matches.size();
+      matches.resize(matches.size() + output_size);
+
+      // Make the compiler try harder to vectorize the trivial loop below.
+      // This empty block is used to convince clang-format to keep the pragma indented.
+      // NOLINTNEXTLINE
+      {}  // clang-format off
+      #pragma omp simd
+      // clang-format on
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
+        // `matches` might already contain entries if it is called multiple times by
+        // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
+        matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
+      }
+    }
 
     return;
   }
