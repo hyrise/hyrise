@@ -192,8 +192,8 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
 
     table_chunk->finalize();
 
-    Assert(!chunk->sorted_by().empty(), "chunk has no sorting information");
-    table_chunk->set_sorted_by(chunk->sorted_by());
+    Assert(!chunk->individually_sorted_by().empty(), "chunk has no sorting information");
+    table_chunk->set_individually_sorted_by(chunk->individually_sorted_by());
   }
 
   for (const auto chunk_id : _chunk_ids) {

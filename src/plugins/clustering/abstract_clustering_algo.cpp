@@ -106,12 +106,12 @@ void AbstractClusteringAlgo::_run_assertions() const {
         Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
         if (ordered_by_column_id) {
-          Assert(!chunk->sorted_by().empty(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
-          const auto sorted_column_id = chunk->sorted_by()[0].column;
+          Assert(!chunk->individually_sorted_by().empty(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
+          const auto sorted_column_id = chunk->individually_sorted_by()[0].column;
           Assert(sorted_column_id == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id)
             + ", but is ordered by " + table->column_name(sorted_column_id));
         } else {
-          Assert(chunk->sorted_by().empty(), "chunk should be unordered, but is ordered by " + table->column_name(chunk->sorted_by()[0].column));
+          Assert(chunk->individually_sorted_by().empty(), "chunk should be unordered, but is ordered by " + table->column_name(chunk->individually_sorted_by()[0].column));
         }
         if (VERBOSE) std::cout << "[" << description() << "] " << "-  Ordering information is correct" << " for table " << table_name << std::endl;
 
@@ -242,9 +242,9 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
   Assert(last_chunk, "last chunk disappeared");
   Assert(last_chunk->mvcc_data(), "MVCC data disappeared");
 
-  if (!chunk->sorted_by().empty()) {
-    const auto sorted_by = chunk->sorted_by();
-    last_chunk->set_sorted_by(sorted_by);
+  if (!chunk->individually_sorted_by().empty()) {
+    const auto sorted_by = chunk->individually_sorted_by();
+    last_chunk->set_individually_sorted_by(sorted_by);
   }
 
   if (!chunk->is_mutable()) {
@@ -255,7 +255,7 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
 
 void AbstractClusteringAlgo::_append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
   Assert(chunk, "chunk is nullptr");
-  Assert(!chunk->sorted_by().empty(), "chunk has no ordering information");
+  Assert(!chunk->individually_sorted_by().empty(), "chunk has no ordering information");
   _append_chunk_to_table(chunk, table, allow_mutable);
 }
 
@@ -298,7 +298,7 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
 
   auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
-  sorted_chunk_with_mvcc->set_sorted_by(sorted_const_chunk->sorted_by());
+  sorted_chunk_with_mvcc->set_individually_sorted_by(sorted_const_chunk->individually_sorted_by());
   return sorted_chunk_with_mvcc;
 }
 

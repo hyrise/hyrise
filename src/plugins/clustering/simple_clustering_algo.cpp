@@ -75,7 +75,7 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::sh
 }
 
 void SimpleClusteringAlgo::_append_chunks(const std::shared_ptr<const Table> from, std::shared_ptr<Table> to) {
-  Assert(!from->get_chunk(ChunkID{0})->sorted_by().empty(), "from table needs to be sorted");
+  Assert(!from->get_chunk(ChunkID{0})->individually_sorted_by().empty(), "from table needs to be sorted");
 
   const auto chunk_count = from->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -85,10 +85,10 @@ void SimpleClusteringAlgo::_append_chunks(const std::shared_ptr<const Table> fro
 }
 
 void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chunk, std::shared_ptr<Table> to) {
-  Assert(!chunk->sorted_by().empty(), "chunk needs to be sorted");
+  Assert(!chunk->individually_sorted_by().empty(), "chunk needs to be sorted");
 
   const auto column_count = chunk->column_count();
-  const auto& sorted_by = chunk->sorted_by();
+  const auto& sorted_by = chunk->individually_sorted_by();
 
   auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
   Segments segments{};
@@ -100,7 +100,7 @@ void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chun
     const auto append_lock = to->acquire_append_mutex();
     to->append_chunk(segments, mvcc_data);
     to->last_chunk()->finalize();
-    to->last_chunk()->set_sorted_by(sorted_by);
+    to->last_chunk()->set_individually_sorted_by(sorted_by);
   }
 }
 
