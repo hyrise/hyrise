@@ -1162,7 +1162,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
 }
 
 // Scanning two sorted reference segments. Currently, the sorting information is not passed forward when reference
-// segments do not guarantee that they only reference a single physical chunk (see table_scan.cpp).
+// segments do not guarantee that they only reference a single physical chunk (see table_scan.cpp). An exception is
+// if the entire chunk matches and is simply forwarded.
 TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto table = get_int_sorted_op()->table;
 
@@ -1188,21 +1189,32 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
-  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::LessThanEquals, 1234);
+  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 2);
   scan_sorted->execute();
 
   EXPECT_EQ(scan_sorted->get_output()->chunk_count(), 2);
-  for (const auto& chunk_id : {ChunkID{0}, ChunkID{1}}) {
-    const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(chunk_id);
+
+  {
+    // Chunk 0 matches partially and no sorting information is forwarded.
+    const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{0});
     const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
     ASSERT_TRUE(chunk_sorted_by.empty());
+  }
+
+  {
+    // Chunk 1 matches entirely and the chunk (including the sorting information) is forwarded.
+    const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{1});
+    const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
+    ASSERT_EQ(chunk_sorted_by.size(), 1);
+    ASSERT_EQ(chunk_sorted_by.at(0), SortColumnDefinition(ColumnID(0), SortMode::Ascending));
   }
 }
 
 // Tables with ReferenceSegments that reference multiple chunks are first separated by the ChunkID (see
 // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus the order may be destroyed. Due to the
-// missing single chunk guarantee, no sorting information is forwarded.
-TEST_P(OperatorsTableScanTest, SortedFlagnMultipleChunksReferenced) {
+// missing single chunk guarantee, no sorting information is forwarded. An exception is if the entire chunk matches and
+// is simply forwarded. This is NOT tested here.
+TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto table = get_int_sorted_op()->table;
 
   std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
@@ -1222,7 +1234,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagnMultipleChunksReferenced) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
-  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::LessThanEquals, 1234);
+  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 2);
   scan_sorted->execute();
 
   EXPECT_EQ(scan_sorted->get_output()->chunk_count(), 1);

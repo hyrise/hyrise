@@ -111,8 +111,8 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
     for (const auto& expression : right_result.required_output_expressions) {
-      const auto find_it = std::find(result.required_output_expressions.cbegin(),
-                                     result.required_output_expressions.cend(), expression);
+      const auto find_it =
+          std::find(result.required_output_expressions.cbegin(), result.required_output_expressions.cend(), expression);
       if (find_it == result.required_output_expressions.cend()) {
         result.required_output_expressions.emplace_back(expression);
       }
