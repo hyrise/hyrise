@@ -177,7 +177,8 @@ void AbstractTableGenerator::generate_and_store() {
       const auto& table = table_info.table;
       if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
         Fail("Table '" + table_name + "' was loaded from binary, but has a mismatching chunk size of " +
-             std::to_string(table->get_chunk(ChunkID{0})->size()));
+             std::to_string(table->get_chunk(ChunkID{0})->size()) +
+             ". Delete cached files or use '--dont_cache_binary_tables'.");
       }
     }
 
