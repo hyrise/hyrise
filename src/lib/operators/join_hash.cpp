@@ -536,14 +536,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       probe_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_probe_input_table);
     }
 
-    auto output_chunk_count = size_t{0};
+    auto expected_output_chunk_count = size_t{0};
     for (size_t partition_id = 0; partition_id < build_side_pos_lists.size(); ++partition_id) {
       if (!build_side_pos_lists[partition_id].empty() || !probe_side_pos_lists[partition_id].empty()) {
-        ++output_chunk_count;
+        ++expected_output_chunk_count;
       }
     }
 
-    std::vector<std::shared_ptr<Chunk>> output_chunks{output_chunk_count};
+    std::vector<std::shared_ptr<Chunk>> output_chunks{};
+    output_chunks.reserve(expected_output_chunk_count);
 
     // For every partition, create a reference segment.
     for (size_t partition_id = 0, output_chunk_id{0}; partition_id < build_side_pos_lists.size(); ++partition_id) {
@@ -554,6 +555,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (build_side_pos_list->empty() && probe_side_pos_list->empty()) {
         continue;
+      }
+
+      const auto MIN_SIZE = 500;
+      const auto MAX_SIZE = MIN_SIZE * 2;
+      build_side_pos_list->reserve(MAX_SIZE);
+      probe_side_pos_list->reserve(MAX_SIZE);
+      while (partition_id + 1 < probe_side_pos_lists.size() && probe_side_pos_list->size() < MIN_SIZE && probe_side_pos_list->size() + probe_side_pos_lists[partition_id + 1].size() < MAX_SIZE) {
+        std::copy(build_side_pos_lists[partition_id + 1].begin(), build_side_pos_lists[partition_id + 1].end(), std::back_inserter(*build_side_pos_list));
+        build_side_pos_lists[partition_id + 1] = {};
+
+        std::copy(probe_side_pos_lists[partition_id + 1].begin(), probe_side_pos_lists[partition_id + 1].end(), std::back_inserter(*probe_side_pos_list));
+        probe_side_pos_lists[partition_id + 1] = {};
+
+        ++partition_id;
       }
 
       Segments output_segments;
@@ -580,7 +595,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           break;
       }
 
-      output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
+      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
       ++output_chunk_id;
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
