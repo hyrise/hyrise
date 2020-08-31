@@ -609,7 +609,7 @@ int Console::_export_table(const std::string& args) {
   const auto& meta_table_manager = Hyrise::get().meta_table_manager;
 
   std::shared_ptr<AbstractOperator> table_operator = nullptr;
-  if (meta_table_manager.is_meta_table_name(tablename)) {
+  if (MetaTableManager::is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
       out("Error: MetaTable does not exist in MetaTableManager\n");
       return ReturnCode::Error;
