@@ -76,6 +76,11 @@ do
     echo "Running $benchmark for $commit... (single-threaded)"
     ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
+    if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+      echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
+      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+    fi
+
     echo "Running $benchmark for $commit... (multi-threaded)"
     ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
@@ -131,14 +136,20 @@ cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs
 # Print information for each benchmark
 for benchmark in $benchmarks
 do
-  for config in st mt
+  configs="st mt"
+  if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+    configs="st st_s01 mt"
+  fi
+
+  for config in $configs
   do
-    output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json" --github 2>/dev/null)
+    # output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json" --github 2>/dev/null)
     echo ""
     echo ""
     echo -n "**${benchmark} - "
     case "${config}" in
       "st") echo -n "single-threaded" ;;
+      "st_s01") echo -n "single-threaded, SF 0.01" ;;
       "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
     esac
     echo "**"
