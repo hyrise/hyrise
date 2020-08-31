@@ -216,12 +216,15 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
       keys_per_chunk.reserve(chunk_count);
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = input_table->get_chunk(chunk_id);
-        if (!chunk) continue;
+        // if (!chunk) continue; // TODO this looks broken, as keys_per_chunk[chunk_id] will not match anymore
 
         if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
+          keys_per_chunk.emplace_back(chunk->size());
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+            keys_per_chunk.back()[chunk_offset] = AggregateKey(_groupby_column_ids.size());
+          }
         } else {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
+          keys_per_chunk.emplace_back(chunk->size());
         }
       }
 
@@ -328,18 +331,21 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               id_counter = 5'000'000'000;
             }
 
+            // std::cout << "pre-chunk" << t2.lap_formatted() << std::endl;
+
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
 
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
+              auto& keys = keys_per_chunk[chunk_id];
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0u;
+                    keys[chunk_offset] = 0u;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+                    keys[chunk_offset][group_column_index] = 0u;
                   }
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
@@ -411,17 +417,19 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   }
 
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = id;
+                    keys[chunk_offset] = id;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
+                    keys[chunk_offset][group_column_index] = id;
                   }
                 }
 
                 ++chunk_offset;
               });
+              // std::cout << "chunk" << t2.lap_formatted() << std::endl;
             }
           }
         });
+        // std::cout << "Column " << group_column_index << ": " << t.lap_formatted() << std::endl;
       }));
       jobs.back()->schedule();
     }
@@ -630,9 +638,6 @@ void AggregateHash::_aggregate() {
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
-
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
@@ -653,6 +658,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
+
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  // Above, _aggregate maintains its own timer internally, allowing it to track steps within _aggregate.
+  Timer timer;
 
   /**
    * Write group-by columns.

@@ -13,6 +13,7 @@
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
+#include <uninitialized_vector.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -81,7 +82,7 @@ using AggregateKeyEntry = uint64_t;
 struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
-using AggregateKeys = std::vector<AggregateKey>;
+using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>, std::vector<AggregateKey>, uninitialized_vector<AggregateKey>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
