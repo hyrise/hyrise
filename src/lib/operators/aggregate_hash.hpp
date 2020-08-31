@@ -140,7 +140,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
@@ -148,6 +148,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
+  std::optional<size_t> _num_results{};
 };
 
 }  // namespace opossum

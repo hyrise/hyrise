@@ -33,18 +33,43 @@ using namespace opossum;  // NOLINT
 // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
 // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
 template <typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key,
+typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, AggregateKey& key,
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
-  if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+  if constexpr (std::is_same_v<std::decay_t<AggregateKey>, EmptyAggregateKey>) {
     if (results.empty()) {
       results.emplace_back();
       results[0].row_id = row_id;
     }
     return results[0];
   } else {
+    auto dummy_entry = AggregateKeyEntry{};
+    auto first_key_entry = std::reference_wrapper<AggregateKeyEntry>{std::ref(dummy_entry)};
+    if constexpr (std::is_same_v<std::decay_t<AggregateKey>, AggregateKeyEntry>) {
+      first_key_entry = std::ref(key);
+    } else {
+      first_key_entry = std::ref(key[0]);
+    }
+
+    static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Expected AggregateKeyEntry to be unsigned 64-bit value");
+    constexpr auto mask = AggregateKeyEntry{1} << 63;
+    if (first_key_entry & mask) {
+      // std::cout << 's';
+      const auto result_id = first_key_entry ^ mask;
+
+      results.resize(std::max(results.size(), result_id + 1));
+      results[result_id].row_id = row_id;
+
+      return results[result_id];
+    }
+
     auto it = result_ids.find(key);
-    if (it != result_ids.end()) return results[it->second];
+    if (it != result_ids.end()) {
+      const auto result_id = it->second;
+      first_key_entry.get() = mask | result_id;
+      // std::cout << 'h';
+      return results[result_id];
+    }
 
     auto result_id = results.size();
 
@@ -55,16 +80,18 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     results.emplace_back();
     results[result_id].row_id = row_id;
 
+    // std::cout << 'i';
+    first_key_entry.get() = mask | result_id;
     return results[result_id];
   }
 }
 
 template <typename AggregateKey>
-const AggregateKey& get_aggregate_key([[maybe_unused]] const KeysPerChunk<AggregateKey>& keys_per_chunk,
+AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& keys_per_chunk,
                                       [[maybe_unused]] const ChunkID chunk_id,
                                       [[maybe_unused]] const ChunkOffset chunk_offset) {
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-    const auto& hash_keys = keys_per_chunk[chunk_id];
+    auto& hash_keys = keys_per_chunk[chunk_id];
 
     return hash_keys[chunk_offset];
   } else {
@@ -130,7 +157,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
 void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                                       const KeysPerChunk<AggregateKey>& keys_per_chunk) {
+                                       KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
@@ -178,6 +205,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
+  Timer t;
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
@@ -198,6 +226,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
       // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
       // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
       // that is fine
+      // TODO how much does this acutally save?
       size_t needed_size_per_aggregate_key =
           aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
       size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
@@ -268,7 +297,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                   this]() {
+                                                   this, &t]() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
@@ -310,6 +339,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               });
             }
           } else {
+            Timer t2;
             /*
             Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
@@ -459,7 +489,7 @@ void AggregateHash::_aggregate() {
   /**
    * PARTITIONING STEP
    */
-  const auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
+  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
   step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /**
