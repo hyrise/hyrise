@@ -50,8 +50,8 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = true;
 
-  SegmentPosition(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
-      : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
+  SegmentPosition(T init_value, const bool null_value, const ChunkOffset& chunk_offset)
+      : _value{std::move(init_value)}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const { return _value; }
   bool is_null() const { return _null_value; }
@@ -74,8 +74,8 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = false;
 
-  NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
-      : _value{value}, _chunk_offset{chunk_offset} {}
+  NonNullSegmentPosition(T init_value, const ChunkOffset& chunk_offset)
+      : _value{std::move(init_value)}, _chunk_offset{chunk_offset} {}
 
   const T& value() const { return _value; }
   bool is_null() const { return false; }
