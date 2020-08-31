@@ -15,7 +15,6 @@
 #include <memory>
 #include <regex>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
@@ -610,7 +609,7 @@ int Console::_export_table(const std::string& args) {
   const auto& meta_table_manager = Hyrise::get().meta_table_manager;
 
   std::shared_ptr<AbstractOperator> table_operator = nullptr;
-  if (std::string_view(tablename).starts_with(MetaTableManager::META_PREFIX)) {
+  if (meta_table_manager.is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
       out("Error: MetaTable does not exist in MetaTableManager\n");
       return ReturnCode::Error;
@@ -624,8 +623,8 @@ int Console::_export_table(const std::string& args) {
     table_operator = std::make_shared<GetTable>(tablename);
   }
 
-  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
   table_operator->execute();
+  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
 
   try {
     auto exporter = std::make_shared<Export>(table_operator, filepath);
