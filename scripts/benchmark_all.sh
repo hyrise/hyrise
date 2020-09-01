@@ -25,7 +25,7 @@ end_commit=$(git rev-parse $end_commit_reference | head -n 1)
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
   echo 'Cowardly refusing to execute on a dirty workspace'
-  exit 1
+#  exit 1
 fi
 
 # Ensure that this runs on a release build. Not really necessary, just a sanity check.
@@ -70,7 +70,7 @@ do
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
   # Run the benchmarks
-  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root 
+  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
@@ -78,7 +78,7 @@ do
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
