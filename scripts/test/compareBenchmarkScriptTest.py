@@ -11,7 +11,7 @@ import subprocess
 # ANSI-colored text turned out to be too cumbersome.
 def assert_latency_equals(item_count, runtimes, latency_string):
     if item_count == 0:
-        assert 'nan' in latency_string
+        assert "nan" in latency_string
         return
     avg_latency = sum(runtimes) / item_count / 1_000_000
     assert str(round(avg_latency, 1)) in latency_string
