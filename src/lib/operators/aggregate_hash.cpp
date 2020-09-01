@@ -32,7 +32,7 @@ using namespace opossum;  // NOLINT
 // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
 // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
 // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-template <typename ResultIds, typename Results, typename AggregateKey>
+template <bool CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, AggregateKey& key,
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
@@ -50,23 +50,27 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     } else {
       first_key_entry = std::ref(key[0]);
     }
-
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Expected AggregateKeyEntry to be unsigned 64-bit value");
     constexpr auto mask = AggregateKeyEntry{1} << 63;
-    if (first_key_entry & mask) {
-      // std::cout << 's';
-      const auto result_id = first_key_entry ^ mask;
 
-      results.resize(std::max(results.size(), result_id + 1));
-      results[result_id].row_id = row_id;
+    if constexpr (CacheResultIds) {
+      if (first_key_entry & mask) {
+        // std::cout << 's';
+        const auto result_id = first_key_entry ^ mask;
 
-      return results[result_id];
+        results.resize(std::max(results.size(), result_id + 1));
+        // results[result_id].row_id = row_id;
+
+        return results[result_id];
+      }
     }
 
     auto it = result_ids.find(key);
     if (it != result_ids.end()) {
       const auto result_id = it->second;
-      first_key_entry.get() = mask | result_id;
+      if constexpr(CacheResultIds) {
+        first_key_entry.get() = mask | result_id;
+      }
       // std::cout << 'h';
       return results[result_id];
     }
@@ -81,7 +85,9 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     results[result_id].row_id = row_id;
 
     // std::cout << 'i';
-    first_key_entry.get() = mask | result_id;
+    if constexpr(CacheResultIds) {
+      first_key_entry.get() = mask | result_id;
+    }
     return results[result_id];
   }
 }
@@ -170,9 +176,9 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+  const auto process_position = [&]<bool CacheResultIds>(const auto& position) {
     auto& result =
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        get_or_add_result<CacheResultIds>(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
 
     /**
@@ -196,7 +202,13 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     }
 
     ++chunk_offset;
-  });
+  };
+
+  if (_contexts_per_column.size() > 1) {
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position.template operator()<true>(position);});
+  } else {
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position.template operator()<false>(position);});
+  }
 }
 
 /**
@@ -572,7 +584,7 @@ void AggregateHash::_aggregate() {
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        get_or_add_result<false>(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
       }
     } else {
@@ -604,7 +616,7 @@ void AggregateHash::_aggregate() {
           } else {
             // count occurrences for each group key
             for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-              auto& result = get_or_add_result(result_ids, results,
+              auto& result = get_or_add_result<false>(result_ids, results,
                                                get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                                RowID{chunk_id, chunk_offset});
               ++result.aggregate_count;
