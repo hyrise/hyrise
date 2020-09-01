@@ -25,7 +25,7 @@ end_commit=$(git rev-parse $end_commit_reference | head -n 1)
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
   echo 'Cowardly refusing to execute on a dirty workspace'
-#  exit 1
+  exit 1
 fi
 
 # Ensure that this runs on a release build. Not really necessary, just a sanity check.
