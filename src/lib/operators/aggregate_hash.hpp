@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/small_vector.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
@@ -82,7 +83,7 @@ using AggregateKeyEntry = uint64_t;
 struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
-using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>, std::vector<AggregateKey>, uninitialized_vector<AggregateKey>>;
+using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, boost::container::small_vector<AggregateKeyEntry, 4>>, std::vector<AggregateKey>, uninitialized_vector<AggregateKey>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -160,8 +161,8 @@ struct hash<opossum::EmptyAggregateKey> {
 };
 
 template <>
-struct hash<std::vector<opossum::AggregateKeyEntry>> {
-  size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
+struct hash<boost::container::small_vector<opossum::AggregateKeyEntry, 4>> {
+  size_t operator()(const boost::container::small_vector<opossum::AggregateKeyEntry, 4>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

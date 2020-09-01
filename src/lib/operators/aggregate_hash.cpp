@@ -236,7 +236,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
     {
       // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
-      // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
+      // This calculation assumes that we use the biggest type of AggregateKey - other data structures use less space, but
       // that is fine
       // TODO how much does this acutally save?
       size_t needed_size_per_aggregate_key =
@@ -259,7 +259,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
         const auto chunk = input_table->get_chunk(chunk_id);
         // if (!chunk) continue; // TODO this looks broken, as keys_per_chunk[chunk_id] will not match anymore
 
-        if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
+        if constexpr (std::is_same_v<AggregateKey, boost::container::small_vector<AggregateKeyEntry, 4>>) {
           keys_per_chunk.emplace_back(chunk->size());
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
             keys_per_chunk.back()[chunk_offset] = AggregateKey(_groupby_column_ids.size());
@@ -697,7 +697,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
     default:
       PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<std::vector<AggregateKeyEntry>>();
+      _aggregate<boost::container::small_vector<AggregateKeyEntry, 4>>();
       break;
   }
 
