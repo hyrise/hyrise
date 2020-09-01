@@ -463,10 +463,11 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithEquiAndNonEquiPredicates) {
   const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_a->get_column("a");
 
+  const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   // Due to the second join predicate `not_equals`, we do not expect changes by the rule
-  EXPECT_LQP_EQ(actual_lqp, lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
