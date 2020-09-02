@@ -459,7 +459,6 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithEquiAndNonEquiPredicates) {
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
         node_a),
       stored_table_node));
-  // clang-format on
 
   const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_a->get_column("a");

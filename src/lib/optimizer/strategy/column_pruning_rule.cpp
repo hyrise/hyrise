@@ -265,8 +265,8 @@ void try_join_to_semi_rewrite(
     join_node->set_right_input(temp);
   }
 
-  if (!right_input_is_used && join_node->right_input()->has_matching_unique_constraint
-                              (join_predicate_expressions_right)) {
+  if (!right_input_is_used &&
+      join_node->right_input()->has_matching_unique_constraint(join_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }
