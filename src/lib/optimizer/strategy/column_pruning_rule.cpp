@@ -242,52 +242,35 @@ void try_join_to_semi_rewrite(
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
   if (left_input_is_used && right_input_is_used) return;
 
-  // Check whether the join predicates operate on unique columns.
-  auto join_is_unique_on_left_side = false;
-  auto join_is_unique_on_right_side = false;
-
+  // Check for Equi-Join and collect join predicate expressions
   const auto& join_predicates = join_node->join_predicates();
+  auto join_predicate_expressions_left = ExpressionUnorderedSet{};
+  auto join_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
-    const auto is_unique_column = [](const auto& expression) {
-      const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (!column) return false;
-
-      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
-      if (!stored_table_node) return false;
-
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& key_constraint : table->soft_key_constraints()) {
-        // This currently does not handle multi-column key constraints, but that should be easy to add once needed.
-        if (key_constraint.columns().size() > 1) continue;
-        if (*key_constraint.columns().cbegin() == column->original_column_id) {
-          return true;
-        }
-      }
-      return false;
-    };
-
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
     // We can only rewrite an inner join to a semi join if it is an equi join
-    if (predicate->predicate_condition != PredicateCondition::Equals) continue;
+    if (predicate->predicate_condition != PredicateCondition::Equals) return;
 
-    const auto& left_operand = predicate->left_operand();
-    const auto& right_operand = predicate->right_operand();
-
-    join_is_unique_on_left_side |= is_unique_column(left_operand);
-    join_is_unique_on_right_side |= is_unique_column(right_operand);
+    join_predicate_expressions_left.insert(predicate->left_operand());
+    join_predicate_expressions_right.insert(predicate->right_operand());
   }
+  DebugAssert(join_predicate_expressions_left.size() == join_predicate_expressions_right.size(), "Different number of "
+              "join "
+              "expressions");
 
   // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
   // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
   // join into a semi join.
-  if (!left_input_is_used && join_is_unique_on_left_side) {
+  if (!left_input_is_used && contains_matching_unique_constraint(join_node->left_input()->unique_constraints(),
+                                                                 join_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
   }
 
-  if (!right_input_is_used && join_is_unique_on_right_side) {
+  if (!right_input_is_used && contains_matching_unique_constraint(join_node->right_input()->unique_constraints(),
+                                                                  join_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }
