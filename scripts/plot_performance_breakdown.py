@@ -71,6 +71,7 @@ benchmark_df = pd.DataFrame(
 # summing up the runtimes from all stages for each query
 total_time = benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 
+print(benchmark_df)
 # Normalize data from nanoseconds to percentage of total cost
 benchmark_df.iloc[:, 1:] = benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 print(benchmark_df)
