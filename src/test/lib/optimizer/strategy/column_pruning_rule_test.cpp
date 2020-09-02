@@ -432,7 +432,8 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEquiPredicate) {
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithEquiAndNonEquiPredicates) {
-  // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result
+  // Same as InnerJoinToSemiJoin, but with an additional join predicate that probhibits the reformulation into a
+  // semi join
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   {
@@ -463,10 +464,18 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithEquiAndNonEquiPredicates) {
   const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_a->get_column("a");
 
-  const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
-  // Due to the second join predicate `not_equals`, we do not expect changes by the rule
+  // Due to the second join predicate `not_equals`, we do not expect a semi join reformulation.
+  // Still expect it to prune b+1 though.
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(pruned_a, 2)),
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(pruned_a, column0), not_equals_(pruned_a, column1)),
+      ProjectionNode::make(expression_vector(pruned_a),
+        pruned_node_a),
+      stored_table_node));
+  // clang-format on
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
