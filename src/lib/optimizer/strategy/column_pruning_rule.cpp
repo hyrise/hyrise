@@ -254,9 +254,6 @@ void try_join_to_semi_rewrite(
     join_predicate_expressions_left.insert(predicate->left_operand());
     join_predicate_expressions_right.insert(predicate->right_operand());
   }
-  DebugAssert(join_predicate_expressions_left.size() == join_predicate_expressions_right.size(), "Different number of "
-              "join "
-              "expressions");
 
   // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
   // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
