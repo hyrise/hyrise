@@ -258,16 +258,15 @@ void try_join_to_semi_rewrite(
   // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
   // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
   // join into a semi join.
-  if (!left_input_is_used && contains_matching_unique_constraint(join_node->left_input()->unique_constraints(),
-                                                                 join_predicate_expressions_left)) {
+  if (!left_input_is_used && join_node->left_input()->has_matching_unique_constraint(join_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
   }
 
-  if (!right_input_is_used && contains_matching_unique_constraint(join_node->right_input()->unique_constraints(),
-                                                                  join_predicate_expressions_right)) {
+  if (!right_input_is_used && join_node->right_input()->has_matching_unique_constraint
+                              (join_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }

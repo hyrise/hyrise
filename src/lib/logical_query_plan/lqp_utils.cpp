@@ -332,8 +332,8 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
 
 bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
                                          const ExpressionUnorderedSet& expressions) {
+  DebugAssert(!unique_constraints->empty(), "Invalid input: Set of unique constraints should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
-  if (unique_constraints->empty()) return false;
 
   // Look for a unique constraint that is based on a subset of the given expressions
   for (const auto& unique_constraint : *unique_constraints) {
