@@ -240,33 +240,40 @@ void try_join_to_semi_rewrite(
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
+
+  // Early out, if we need output expressions from both input tables.
   if (left_input_is_used && right_input_is_used) return;
 
-  // Check for Equi-Join and collect join predicate expressions
+  /**
+   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1. To check the latter, we
+   * collect all Equi-join expressions and look for a matching unique constraint.
+   */
   const auto& join_predicates = join_node->join_predicates();
-  auto join_predicate_expressions_left = ExpressionUnorderedSet{};
-  auto join_predicate_expressions_right = ExpressionUnorderedSet{};
+  auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
+  auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
+    // Only Equals allows for 1:1 join cardinality
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    // We can only rewrite an inner join to a semi join if it is an equi join
-    if (predicate->predicate_condition != PredicateCondition::Equals) return;
+    if (predicate->predicate_condition != PredicateCondition::Equals) continue;
 
-    join_predicate_expressions_left.insert(predicate->left_operand());
-    join_predicate_expressions_right.insert(predicate->right_operand());
+    DebugAssert(join_node->left_input()->has_output_expressions({predicate->left_operand()}),
+                "Left join operand does not belong to left input table");
+    DebugAssert(join_node->right_input()->has_output_expressions({predicate->right_operand()}),
+                "Right join operand does not belong to right input table");
+    equals_predicate_expressions_left.insert(predicate->left_operand());
+    equals_predicate_expressions_right.insert(predicate->right_operand());
   }
+  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
-  // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
-  // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
-  // join into a semi join.
-  if (!left_input_is_used && join_node->left_input()->has_matching_unique_constraint(join_predicate_expressions_left)) {
+  if (!left_input_is_used &&
+      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
   }
-
   if (!right_input_is_used &&
-      join_node->right_input()->has_matching_unique_constraint(join_predicate_expressions_right)) {
+      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }
