@@ -156,7 +156,7 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   if (_num_visualized_plans > 0) {
     prefix += "-" + std::to_string(_num_visualized_plans);
   }
-  
+
   LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP.svg");
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
