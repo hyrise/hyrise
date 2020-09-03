@@ -69,7 +69,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    */
   // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
-  DebugAssert(join_graph->vertices.size() != 0, "There should be nodes in the join graph.");
+  DebugAssert(!join_graph->vertices.empty(), "There should be nodes in the join graph.");
   if (join_graph->vertices.size() == 1) {
     // a join graph with only one vertex is no actual join and needs no ordering
     result_lqp = lqp;
