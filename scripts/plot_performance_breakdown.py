@@ -71,7 +71,6 @@ benchmark_df = pd.DataFrame(
 # summing up the runtimes from all stages for each query
 total_time = benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 
-print(benchmark_df)
 # Normalize data from nanoseconds to percentage of total cost
 benchmark_df.iloc[:, 1:] = benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 print(benchmark_df)
@@ -88,7 +87,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + r"\n$\emptyset$ " + f"{total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{total_time[label_id]/10e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
@@ -128,7 +127,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + r"\n$\emptyset$ " + f"{optimizer_total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{optimizer_total_time[label_id]/10e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
