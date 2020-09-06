@@ -29,7 +29,7 @@ using namespace opossum;
 ///////////////////////////////
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/10mio/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/10mio/index_meta_data_int_index.csv";
-constexpr auto TBL_FILE = "../../data/10mio_pings_sort_int.tbl";
+constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 
 // table and compression settings
 ///////////////////////////////
