@@ -25,10 +25,10 @@ void add_segment_to_value_distribution(const AbstractSegment& segment,
 
     if constexpr (std::is_same_v<T, pmr_string>) {
       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(iterator_value.value())) {
-        ++value_distribution[iterator_value.value()];
+      if (domain.contains(pmr_string{iterator_value.value()})) { // TODO
+        ++value_distribution[pmr_string{iterator_value.value()}];
       } else {
-        ++value_distribution[domain.string_to_domain(iterator_value.value())];
+        ++value_distribution[domain.string_to_domain(pmr_string{iterator_value.value()})];
       }
     } else {
       ++value_distribution[iterator_value.value()];

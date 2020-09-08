@@ -71,7 +71,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         iterable.for_each([&](const auto& value) {
           // we are only interested in non-null values
           if (!value.is_null()) {
-            values.insert(value.value());
+            values.insert(ColumnDataType{value.value()});
           }
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};

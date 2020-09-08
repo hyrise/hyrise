@@ -309,9 +309,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               values from different inputs (important for Multi Joins).
               */
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
-                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, T{value.value()}};
               } else {
-                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, T{value.value()}};
               }
               ++elements_iter;
 

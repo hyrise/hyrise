@@ -65,7 +65,7 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
 
   SegmentPosition<T> dereference() const final {
     const auto value = *_iterator;
-    return {value.value(), value.is_null(), value.chunk_offset()};
+    return {T{value.value()}, value.is_null(), value.chunk_offset()};
   }
 
   std::unique_ptr<AnySegmentIteratorWrapperBase<T>> clone() const final {
