@@ -654,6 +654,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
 
+  const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
+  _output_column_definitions.resize(num_output_columns);
+  _output_segments.resize(num_output_columns);
+
   /**
    * Write group-by columns.
    *
@@ -818,13 +822,34 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   auto input_table = left_input_table();
 
-  // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
-  for (const auto& column_id : _groupby_column_ids) {
-    _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id),
-                                            input_table->column_is_nullable(column_id));
+  auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
+  {
+    auto output_column_id = ColumnID{0};
+    for (const auto& input_column_id : _groupby_column_ids) {
+      unaggregated_columns.emplace_back(input_column_id, output_column_id);
+      ++output_column_id;
+    }
+    for (auto aggregate : _aggregates) {
+      if (aggregate->aggregate_function == AggregateFunction::Any) {
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+        const auto input_column_id = pqp_column.column_id;
+        unaggregated_columns.emplace_back(input_column_id, output_column_id);
+      }
+      ++output_column_id;
+    }
+  }
 
-    resolve_data_type(input_table->column_data_type(column_id), [&](const auto typed_value) {
+  // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
+  for (const auto& unaggregated_column : unaggregated_columns) {
+    // Structured bindings do not work with the capture below :/
+    const auto input_column_id = unaggregated_column.first;
+    const auto output_column_id = unaggregated_column.second;
+
+    _output_column_definitions[output_column_id] = TableColumnDefinition{input_table->column_name(input_column_id),
+                                            input_table->column_data_type(input_column_id),
+                                            input_table->column_is_nullable(input_column_id)};
+
+    resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
 
       auto values = pmr_vector<ColumnDataType>(pos_list.size());
@@ -841,7 +866,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         auto& accessor = accessors[row_id.chunk_id];
         if (!accessor) {
           accessor =
-              create_segment_accessor<ColumnDataType>(input_table->get_chunk(row_id.chunk_id)->get_segment(column_id));
+              create_segment_accessor<ColumnDataType>(input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id));
         }
 
         const auto& optional_value = accessor->access(row_id.chunk_offset);
@@ -854,7 +879,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       }
 
       auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
-      _output_segments.push_back(value_segment);
+      _output_segments[output_column_id] = value_segment;
     });
   }
 }
@@ -885,18 +910,18 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
       write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
       break;
     case AggregateFunction::Any:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Any>(column_index);
+      // write_aggregate_output<ColumnDataType, AggregateFunction::Any>(column_index);
       break;
   }
 }
 
 template <typename ColumnDataType, AggregateFunction function>
-void AggregateHash::write_aggregate_output(ColumnID column_index) {
+void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, function>::AggregateType aggregate_type;
   auto aggregate_data_type = AggregateTraits<ColumnDataType, function>::AGGREGATE_DATA_TYPE;
 
-  const auto& aggregate = _aggregates[column_index];
+  const auto& aggregate = _aggregates[aggregate_index];
 
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
@@ -907,12 +932,12 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, decltype(aggregate_type)>>(
-      _contexts_per_column[column_index]);
+      _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
 
   // Before writing the first aggregate column, write all group keys into the respective columns
-  if (column_index == 0) {
+  if (aggregate_index == 0) {
     auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
     for (auto& result : context->results) {
@@ -941,7 +966,8 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   }
 
   DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values");
-  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+  const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
+  _output_column_definitions[output_column_id] = TableColumnDefinition{aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL};
 
   auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
   if (!NEEDS_NULL) {
@@ -950,7 +976,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
     output_segment =
         std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
   }
-  _output_segments.push_back(output_segment);
+  _output_segments[output_column_id] = output_segment;
 }
 
 template <typename AggregateKey>
