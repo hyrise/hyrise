@@ -651,9 +651,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
   }
 
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
-
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   _output_column_definitions.resize(num_output_columns);
   _output_segments.resize(num_output_columns);
@@ -676,7 +673,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
+
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
 
   /*
   Write the aggregated columns to the output
@@ -820,6 +819,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
+
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -882,6 +884,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       _output_segments[output_column_id] = value_segment;
     });
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
 }
 
 template <typename ColumnDataType>
