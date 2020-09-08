@@ -74,7 +74,7 @@ int main() {
   }
 
   const auto timestamp =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start).count();
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _benchmark_start).count();
 
   std::cout << timestamp << std::endl;
 
@@ -88,4 +88,8 @@ int main() {
   }
 
   table_exporter.flush();
+
+   const auto timestamp2 =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _benchmark_start).count();
+  std::cout << timestamp2 << std::endl;
 }
