@@ -617,8 +617,9 @@ void AggregateHash::_aggregate() {
                   chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Any:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
+              // _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(
+              //     chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
+              break;
           }
         });
 
