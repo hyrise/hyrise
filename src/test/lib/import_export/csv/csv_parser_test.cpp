@@ -290,7 +290,7 @@ TEST_F(CsvParserTest, WithScheduler) {
 }
 
 TEST_F(CsvParserTest, FinalizedChunks) {
-  auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{40});
+  const auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{40});
 
   EXPECT_EQ(table->chunk_count(), 3U);
 
