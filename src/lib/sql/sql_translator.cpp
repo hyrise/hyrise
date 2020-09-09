@@ -961,7 +961,8 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
       select_list_elements.emplace_back(SelectListElement{expression});
-      if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef) {
+      if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef &&
+          hsql_select_expr->type != hsql::kExprExtract) {
         select_list_elements.back().identifiers.emplace_back(hsql_select_expr->name);
       }
 
@@ -1318,6 +1319,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
           column_definition.data_type = DataType::String;
           break;
+        case hsql::DataType::DATE:
+        case hsql::DataType::DATETIME:
+          Fail("Date(time) types are not supported yet");
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
@@ -1510,6 +1514,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           _parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }
 
+    case hsql::kExprExtract: {
+      Assert(expr.datetimeField != hsql::kDatetimeNone, "No DatetimeField specified in EXTRACT. Bug in sqlparser?");
+
+      auto datetime_component = hsql_datetime_field.at(expr.datetimeField);
+      return std::make_shared<ExtractExpression>(datetime_component, left);
+    }
+
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
@@ -1519,13 +1530,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto found_alias = function_aliases.find(name);
       if (found_alias != function_aliases.end()) {
         name = found_alias->second;
-      }
-
-      if (name == "EXTRACT"s) {
-        Assert(expr.datetimeField != hsql::kDatetimeNone, "No DatetimeField specified in EXTRACT. Bug in sqlparser?");
-
-        auto datetime_component = hsql_datetime_field.at(expr.datetimeField);
-        return std::make_shared<ExtractExpression>(datetime_component, left);
       }
 
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
@@ -1713,8 +1717,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Fail("Star expression should have been handled earlier");
 
     case hsql::kExprArrayIndex:
-    case hsql::kExprDatetimeField:
     case hsql::kExprHint:
+    case hsql::kExprCast:
       FailInput("Can't translate this hsql expression into a Hyrise expression");
   }
   Fail("Invalid enum value");
