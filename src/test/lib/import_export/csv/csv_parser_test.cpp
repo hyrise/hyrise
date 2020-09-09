@@ -291,7 +291,7 @@ TEST_F(CsvParserTest, WithScheduler) {
 
 TEST_F(CsvParserTest, FinalizedChunks) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{40});
-  // parsed table has 100 rows
+
   EXPECT_EQ(table->chunk_count(), 3U);
 
   // check if all chunks are finalized
