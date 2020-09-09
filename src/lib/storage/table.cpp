@@ -379,7 +379,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
             segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
               Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
 
-              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
+              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(ColumnDataType{position.value()}, chunk_id);
               if (!inserted) {
                 Assert(iter->second == chunk_id,
                        "Table cannot be set to value-clustered as same value "

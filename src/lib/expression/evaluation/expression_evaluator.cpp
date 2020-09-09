@@ -3,8 +3,8 @@
 #include <iterator>
 #include <type_traits>
 
-#include "boost/lexical_cast.hpp"
-#include "boost/variant/apply_visitor.hpp"
+#include <boost/lexical_cast.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -33,6 +33,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 #include "utils/performance_warning.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -159,6 +160,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
   }
 
   // Ok, we have to actually work...
+  Timer t;
   auto result = std::shared_ptr<ExpressionResult<Result>>{};
 
   switch (expression.type) {
@@ -231,6 +233,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
 
   // Store the result in the cache
   _cached_expression_results.insert(cached_result_iter, {expression_ptr, result});
+
+  // std::cout << "\t" << expression.as_column_name() << ": " << t.lap_formatted() << std::endl;
 
   return std::static_pointer_cast<ExpressionResult<Result>>(result);
 }

@@ -5,7 +5,10 @@
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include "bytell_hash_map.hpp"
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include "../../third_party/robin-map/include/tsl/robin_map.h"
+
+#include "flat_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -81,16 +84,16 @@ class PosHashTable {
   // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
   // with a partition that has more values, the partitioning algorithm is at fault.
   using Offset = uint32_t;
-  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
+  using HashTable = tsl::robin_pg_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>, PolymorphicAllocator<std::pair<HashedType, Offset>>>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1>;
+  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>; // TODO PMR raus
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {
+      : _buffer(std::make_shared<boost::container::pmr::monotonic_buffer_resource>()), _hash_table(&*_buffer), _pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0, SmallPosList{buffer.get()}), _mode(mode) {
     // _pos_lists is initialized with an additional element to make the enforcement of the assertions easier.
     _hash_table.reserve(max_size);
   }
@@ -136,7 +139,7 @@ class PosHashTable {
       }
       _hash_table.clear();
     } else {
-      _hash_table.shrink_to_fit();
+      // _hash_table.rehash(_hash_table.size());
     }
   }
 
@@ -177,6 +180,7 @@ class PosHashTable {
   const std::vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
 
  private:
+  std::shared_ptr<boost::container::pmr::monotonic_buffer_resource> _buffer{};
   HashTable _hash_table;
   std::vector<SmallPosList> _pos_lists;
   JoinHashBuildMode _mode;
@@ -384,6 +388,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
   if (radix_bits == 0) {
+    // If we do not use radix partitioning, we need space for the entries in all partitions
     auto total_size = size_t{0};
     for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
       total_size += radix_container[partition_idx].elements.size();
