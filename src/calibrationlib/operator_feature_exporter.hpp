@@ -45,6 +45,9 @@ class OperatorFeatureExporter {
   // currently, supports only HashJoin stages
   void _export_join_stages(const std::shared_ptr<const AbstractJoinOperator>& op);
 
+  std::string _get_original_table(const std::shared_ptr<const AbstractOperator>& op) const;
+  AllTypeVariant _resolve_column_id(const std::string& table_name, const ColumnID column_id) const;
+
   const std::shared_ptr<Table> _general_output_table =
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
                                                      {"INPUT_ROWS", DataType::Long, false},

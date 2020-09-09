@@ -121,6 +121,7 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
 
 void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
+  const auto table_name = _get_original_table(op);
 
   auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
                                                 operator_info.left_input_rows,
@@ -129,7 +130,7 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                 operator_info.output_columns,
                                                 operator_info.walltime,
                                                 NULL_VALUE,
-                                                NULL_VALUE,
+                                                pmr_string{table_name},
                                                 NULL_VALUE,
                                                 operator_info.name};
 
@@ -140,6 +141,13 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   const auto& operator_info = _general_operator_information(op);
   const auto join_mode = pmr_string{join_mode_to_string.left.at(op->mode())};
   _export_join_stages(op);
+  const auto left_table_name = _get_original_table(op->left_input());
+  const auto right_table_name = _get_original_table(op->right_input());
+  const auto& primary_predicate = op->primary_predicate();
+  const auto left_column_id = primary_predicate.column_ids.first;
+  const auto right_column_id = primary_predicate.column_ids.second;
+  const auto left_column_name = _resolve_column_id(left_table_name, left_column_id);
+  const auto right_column_name = _resolve_column_id(right_table_name, right_column_id);
 
   const auto output_row = std::vector<AllTypeVariant>{_current_join_id,
                                                       operator_info.name,
@@ -151,10 +159,10 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                       operator_info.output_rows,
                                                       operator_info.output_columns,
                                                       operator_info.walltime,
-                                                      NULL_VALUE,
-                                                      NULL_VALUE,
-                                                      NULL_VALUE,
-                                                      NULL_VALUE};
+                                                      pmr_string{left_table_name},
+                                                      pmr_string{right_table_name},
+                                                      left_column_name,
+                                                      right_column_name};
 
   _join_output_table->append(output_row);
   ++_current_join_id;
@@ -186,6 +194,21 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
     scan_type = "COLUMN_SCAN";
   }
 
+  const auto table_name = _get_original_table(op);
+
+  AllTypeVariant column_name = NULL_VALUE;
+  const auto node = op->lqp_node;
+  for (const auto& el : node->node_expressions) {
+    visit_expression(el, [&](const auto& expression) {
+      if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+
+      const auto column_expression = static_pointer_cast<const LQPColumnExpression>(expression);
+      const auto column_id = column_expression->original_column_id;
+      column_name = _resolve_column_id(table_name, column_id);
+      return ExpressionVisitation::DoNotVisitArguments;
+    });
+  }
+
   Assert(op->_impl_description != "Unset", "Expected TableScan to be executed.");
   const auto implementation = pmr_string{op->_impl_description};
 
@@ -196,8 +219,8 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                       operator_info.output_columns,
                                                       operator_info.walltime,
                                                       scan_type,
-                                                      NULL_VALUE,
-                                                      NULL_VALUE,
+                                                      pmr_string{table_name},
+                                                      column_name,
                                                       implementation};
   _general_output_table->append(output_row);
 }
@@ -213,6 +236,28 @@ void OperatorFeatureExporter::_export_join_stages(const std::shared_ptr<const Ab
       _join_stages_table->append({static_cast<int32_t>(_current_join_id), pmr_string{step.second}, runtime});
     }
   }
+}
+
+
+std::string OperatorFeatureExporter::_get_original_table(const std::shared_ptr<const AbstractOperator>& op) const {
+  if (!op) return "";
+  std::string original_table = "";
+  visit_pqp(op, [&](const auto& node) {
+    if(node->type() != OperatorType::GetTable) return PQPVisitation::VisitInputs;
+    const auto get_table = static_pointer_cast<const GetTable>(node);
+    original_table = get_table->table_name();
+    return PQPVisitation::DoNotVisitInputs;
+  });
+
+  return original_table;
+}
+
+AllTypeVariant OperatorFeatureExporter::_resolve_column_id(const std::string& table_name, const ColumnID column_id) const {
+  if (Hyrise::get().storage_manager.has_table(table_name)) {
+    const auto table = Hyrise::get().storage_manager.get_table(table_name);
+    return pmr_string{table->column_names()[column_id]};
+  }
+  return NULL_VALUE;
 }
 
 }  // namespace opossum

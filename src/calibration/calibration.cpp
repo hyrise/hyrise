@@ -28,7 +28,7 @@ int main() {
   const bool GENERATE_SORTED_TABLES = true;
 
   // test data generation settings
-  constexpr bool GENERATE_TEST_DATA = false;
+  constexpr bool GENERATE_TEST_DATA = true;
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
   constexpr float SCALE_FACTOR = 0.01f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
@@ -44,11 +44,18 @@ int main() {
 
   if (GENERATE_TEST_DATA) {
     std::cout << "- Generating test data" << std::endl;
+    auto test_start = std::chrono::system_clock::now();
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
     benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
+    const auto test_duration =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
+    std::cout << "- Generated test data in " << test_duration << " s" << std::endl;
+
   }
 
   std::cout << "- Generating training data" << std::endl;
+  std::cout << "\t- Generating LQPS" << std::endl;
+  auto generation_start = std::chrono::system_clock::now();
 
   auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
   auto lqp_generator = CalibrationLQPGenerator();
@@ -61,9 +68,13 @@ int main() {
   }
 
   lqp_generator.generate_joins(tables);
+  const auto generation_duration =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - generation_start).count();
+  std::cout << "\t- Generated LQPs in " << generation_duration << " s" << std::endl;
 
+  std::cout << "\t- Running queries" << std::endl;
+  auto training_start = std::chrono::system_clock::now();
   const auto lqps = lqp_generator.get_lqps();
-  auto _benchmark_start = std::chrono::system_clock::now();
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
@@ -73,12 +84,12 @@ int main() {
     feature_exporter.export_to_csv(pqp);
   }
 
-  const auto timestamp =
-      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _benchmark_start).count();
-
-  std::cout << timestamp << std::endl;
+  const auto training_duration =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - training_start).count();
+  std::cout << "\t- Ran queries in " << training_duration << " s" << std::endl;
 
   std::cout << "- Exporting training data" << std::endl;
+  auto export_start = std::chrono::system_clock::now();
 
   feature_exporter.flush();
 
@@ -89,7 +100,7 @@ int main() {
 
   table_exporter.flush();
 
-   const auto timestamp2 =
-      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _benchmark_start).count();
-  std::cout << timestamp2 << std::endl;
+   const auto export_duration =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - export_start).count();
+  std::cout << "- Exported training data in " << export_duration << " s" << std::endl;
 }

@@ -38,13 +38,14 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
 
 void CalibrationLQPGenerator::generate_joins(
     const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables) {
-  std::cout << "before joins " << _generated_lqps.size() << std::endl;
+  const auto num_table_scans = _generated_lqps.size();
+  std::cout << "\t- " << num_table_scans << " TableScans" << std::endl;
   for (auto left_table : tables) {
     for (auto right_table : tables) {
       _generate_joins(left_table, right_table);
     }
   }
-  std::cout << "after joins " << _generated_lqps.size() << std::endl;
+  std::cout << "\t- " << _generated_lqps.size() - num_table_scans << " Joins" << std::endl;
 }
 
 void CalibrationLQPGenerator::_generate_table_scans(
