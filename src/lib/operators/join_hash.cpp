@@ -565,11 +565,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
       // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
       // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
-      // emitted otherwise.
+      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
       constexpr auto MIN_SIZE = 500;
       constexpr auto MAX_SIZE = MIN_SIZE * 2;
       build_side_pos_list->reserve(MAX_SIZE);
       probe_side_pos_list->reserve(MAX_SIZE);
+
+      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
+      // size or are empty (in case of semi/anti joins).
       while (partition_id + 1 < probe_side_pos_lists.size() && probe_side_pos_list->size() < MIN_SIZE &&
              probe_side_pos_list->size() + probe_side_pos_lists[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (build_side_pos_list) and free the memory
