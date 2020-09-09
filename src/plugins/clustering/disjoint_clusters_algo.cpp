@@ -53,7 +53,7 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     boundaries.push_back(std::make_pair(NULL_VALUE, NULL_VALUE));
   } else {
     // For SF 10, there seems to be a bug that causes histograms to contain more entries than the table has values
-    num_null_values = std::max(num_null_values, 0.0f);
+    num_null_values = std::max(num_null_values, 0.0f); // TODO use this variable
   }
   // add the first non-null cluster boundaries. The boundary values will be set later
   boundaries.push_back(std::make_pair(NULL_VALUE, NULL_VALUE));
@@ -91,6 +91,7 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     } else {
       // cluster would get larger than intended - process the bin again in the next cluster
       bin_id--;
+      is_last_bin = bin_id == histogram->bin_count() - 1;
       cluster_full = true;
     }
 
@@ -107,6 +108,13 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
   }
 
   Assert(bin_id == histogram->bin_count(), "histogram has " + std::to_string(histogram->bin_count()) + " bins, but processed only " + std::to_string(bin_id));
+
+
+  for (size_t boundary = 1; boundary < boundaries.size() - 1; boundary++) {
+    if (nullable and boundary == 1) continue;
+
+    Assert(boundaries[boundary].second == boundaries[boundary + 1].first, "Hole between boundary " + std::to_string(boundary) + " and " + std::to_string(boundary + 1));
+  }
 
   return boundaries;
 }
