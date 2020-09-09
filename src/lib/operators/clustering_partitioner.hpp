@@ -42,6 +42,7 @@ class ClusteringPartitioner : public AbstractReadWriteOperator {
   std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>>& _clusters;
   std::map<ClusterKey, std::set<ChunkID>>& _chunk_ids_per_cluster;
 
+  // std::map<ClusterKey, std::vector<std::vector<AllTypeVariant>>> _rows;
   size_t _num_locks;
   TransactionID _transaction_id;
 };

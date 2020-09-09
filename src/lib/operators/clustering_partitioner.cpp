@@ -78,6 +78,56 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
   // all locks have been acquired by now, so just write the results
   const auto mvcc_data = _chunk->mvcc_data();
 
+/*
+  for (ChunkOffset chunk_offset{0}; chunk_offset < _cluster_keys.size(); chunk_offset++) {
+    if (mvcc_data->get_end_cid(chunk_offset) != MvccData::MAX_COMMIT_ID) {
+      // Row is already marked as deleted. Do not cluster it.
+      continue;
+    }
+    const auto cluster_key = _cluster_keys[chunk_offset];
+
+
+    std::vector<AllTypeVariant> insertion_values;
+    for (ColumnID column_id{0}; column_id < _chunk->column_count(); column_id++) {
+      const auto segment = _chunk->get_segment(column_id);
+      Assert(segment, "segment was nullptr");
+      insertion_values.push_back((*segment)[chunk_offset]);
+    }
+
+    if (_rows.find(cluster_key) == _rows.cend()) {
+      _rows[cluster_key] = {};
+    }
+    _rows[cluster_key].push_back(insertion_values);
+
+
+    _chunk->mvcc_data()->set_end_cid(chunk_offset, commit_id);
+    _chunk->increase_invalid_row_count(1);
+  }
+
+  for (const auto& [cluster_key, rows] : _rows) {
+    const size_t rows_for_key = rows.size();
+    size_t rows_processed = 0;
+
+    while (rows_processed < rows_for_key) {
+      if (_clusters.find(cluster_key) == _clusters.end() || _clusters[cluster_key].second->size() == _table->target_chunk_size()) {
+        _start_new_chunk(cluster_key);
+      }
+      const auto& cluster_chunk = _clusters[cluster_key].second;
+      const auto chunk_size = cluster_chunk->size();
+      const size_t free_rows = _table->target_chunk_size() - chunk_size;
+      const auto rows_to_move = std::min(free_rows, rows_for_key - rows_processed);
+      const auto& new_mvcc_data = cluster_chunk->mvcc_data();
+
+      for (ChunkOffset offset{0}; offset < rows_to_move; offset++) {
+        new_mvcc_data->set_begin_cid(chunk_size + offset, commit_id);
+        cluster_chunk->append(rows[rows_processed]);
+        rows_processed++;
+      }
+    }
+    Assert(rows_processed == rows_for_key, "wrong number of rows rows_processed");
+  }
+*/
+
   for (ChunkOffset chunk_offset{0}; chunk_offset < _cluster_keys.size(); chunk_offset++) {
     if (mvcc_data->get_end_cid(chunk_offset) != MvccData::MAX_COMMIT_ID) {
       // Row is already marked as deleted. Do not cluster it.
@@ -111,6 +161,7 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
   _chunk->set_cleanup_commit_id(commit_id);
   // _unlock_chunk(_chunk);
 }
+
 
 // TODO do we need locks on the cluster-chunks that are added by this operator?
 

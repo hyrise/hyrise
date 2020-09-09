@@ -156,8 +156,8 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     const auto& mvcc_data = chunk->mvcc_data();
     for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
       if (mvcc_data->get_end_cid(offset) == MvccData::MAX_COMMIT_ID) {
-        // We assume that nobody inserts rows into the clustering chunks, and that the ClusteringSorter is only executed after all ClusteringPartitioner operators
-        // If those assumptions do not hold, the chunk size might increase during the sort operation, leading to rows we did not lock
+        // We assume that nobody inserts rows into the clustering chunks, and that the ClusteringSorter is only executed after all ClusteringPartitioner operators.
+        // If those assumptions do not hold, the chunk size might increase during the sort operation, leading to rows we did not lock.
         // Unfortunately, there is not really something as an "insert lock" that stops from inserting. We could simply lock all (i.e., including unused) rows of the old chunk, but is that pretty?
         Assert(mvcc_data->get_tid(offset) == _transaction_id, "Row " + std::to_string(offset) + " was not locked. Did the chunk grow?");
         mvcc_data->set_end_cid(offset, commit_id);
