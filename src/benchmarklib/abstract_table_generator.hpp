@@ -77,6 +77,8 @@ class AbstractTableGenerator {
   virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
+
+  static bool _all_chunks_sorted_by(const std::shared_ptr<Table>& table, const SortColumnDefinition& sort_column);
 };
 
 }  // namespace opossum

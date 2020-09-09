@@ -103,9 +103,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     const auto chunk = table->get_chunk(chunk_id);
 
     if (mode == "Sorted") {
-      chunk->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
     } else if (mode == "SortedDescending") {
-      chunk->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
     }
   }
 

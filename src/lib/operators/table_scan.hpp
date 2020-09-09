@@ -58,7 +58,7 @@ class TableScan : public AbstractReadOnlyOperator {
         return;
       }
 
-      const auto *const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+      const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
       stream << separator << "Chunks: ";
       if (chunk_scans_skipped > 0) {
         stream << chunk_scans_skipped << " skipped";

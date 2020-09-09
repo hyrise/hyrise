@@ -4,11 +4,12 @@
 
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 
 namespace opossum {
 
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
-    : AbstractNonQueryNode(LQPNodeType::StaticTable), table(init_table) {}
+    : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
 
 std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -40,6 +41,21 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   }
 
   return *_output_expressions;
+}
+
+std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
+  // Generate from table key constraints
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  const auto table_key_constraints = table->soft_key_constraints();
+
+  for (const auto& table_key_constraint : table_key_constraints) {
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of column expressions.");
+    unique_constraints->emplace_back(column_expressions);
+  }
+
+  return unique_constraints;
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

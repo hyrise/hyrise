@@ -85,9 +85,14 @@ void AbstractTableGenerator::generate_and_store() {
 
       if (is_sorted) {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
+        const SortColumnDefinition sort_column{sort_column_id, sort_mode};
+
+        if (_all_chunks_sorted_by(table, sort_column)) continue;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
+          const auto& chunk = table->get_chunk(chunk_id);
+          Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
+          chunk->set_individually_sorted_by(sort_column);
         }
 
         continue;
@@ -122,7 +127,7 @@ void AbstractTableGenerator::generate_and_store() {
         }
         table->append_chunk(segments, mvcc_data);
         table->get_chunk(chunk_id)->finalize();
-        table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
+        table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
@@ -171,8 +176,9 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       const auto& table = table_info.table;
       if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
-        std::cout << "- WARNING: " << table_name << " was loaded from binary, but has a mismatching chunk size of "
-                  << table->get_chunk(ChunkID{0})->size() << std::endl;
+        Fail("Table '" + table_name + "' was loaded from binary, but has a mismatching chunk size of " +
+             std::to_string(table->get_chunk(ChunkID{0})->size()) +
+             ". Delete cached files or use '--dont_cache_binary_tables'.");
       }
     }
 
@@ -274,5 +280,22 @@ AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_
 
 void AbstractTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
+
+bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>& table,
+                                                   const SortColumnDefinition& sort_column) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto& sorted_columns = table->get_chunk(chunk_id)->individually_sorted_by();
+    if (sorted_columns.empty()) return false;
+    bool chunk_sorted = false;
+    for (const auto& sorted_column : sorted_columns) {
+      if (sorted_column.column == sort_column.column) {
+        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode");
+        chunk_sorted = true;
+      }
+    }
+    if (!chunk_sorted) return false;
+  }
+  return true;
+}
 
 }  // namespace opossum

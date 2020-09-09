@@ -436,8 +436,10 @@ template <typename AggregateKey>
 void AggregateHash::_aggregate() {
   const auto& input_table = left_input_table();
 
-  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
-    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& groupby_column_id : _groupby_column_ids) {
+      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+    }
   }
 
   // Check for invalid aggregates
@@ -628,9 +630,6 @@ void AggregateHash::_aggregate() {
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
-
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
@@ -651,6 +650,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
+
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
 
   /**
    * Write group-by columns.

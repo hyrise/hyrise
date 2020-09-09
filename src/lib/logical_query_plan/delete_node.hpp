@@ -3,14 +3,14 @@
 #include <memory>
 #include <string>
 
-#include "abstract_lqp_node.hpp"
+#include "abstract_non_query_node.hpp"
 
 namespace opossum {
 
 /**
  * Node type to represent deletion (more specifically, invalidation) in a table.
  */
-class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractLQPNode {
+class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractNonQueryNode {
  public:
   DeleteNode();
 

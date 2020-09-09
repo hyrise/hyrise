@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "expression/lqp_column_expression.hpp"
+#include "lqp_utils.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -70,6 +71,31 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _output_expressions.reset();
 }
 
+std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+
+  for (const auto& table_key_constraint : _table_key_constraints) {
+    // Discard key constraints that involve pruned column id(s).
+    const auto& key_constraint_column_ids = table_key_constraint.columns();
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&key_constraint_column_ids](const auto& pruned_column_id) {
+                      return key_constraint_column_ids.contains(pruned_column_id);
+                    })) {
+      continue;
+    }
+
+    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
+    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of column expressions.");
+
+    // Create LQPUniqueConstraint
+    unique_constraints->emplace_back(column_expressions);
+  }
+
+  return unique_constraints;
+}
+
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string MockNode::description(const DescriptionMode mode) const {
@@ -103,14 +129,11 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
 
 const TableKeyConstraints& MockNode::key_constraints() const { return _table_key_constraints; }
 
-void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::functional_dependencies() const {
-  Assert(_table_key_constraints.empty() || !_functional_dependencies.empty(),
-         "There might be a misconception: Unlike StoredTableNode, MockNode does not generate FDs from table "
-         "constraints. FDs have to be set up manually.");
+std::vector<FunctionalDependency> MockNode::non_trivial_functional_dependencies() const {
   return _functional_dependencies;
 }
 
@@ -130,7 +153,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
-  mock_node->set_functional_dependencies(_functional_dependencies);
+  mock_node->set_non_trivial_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }

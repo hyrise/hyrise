@@ -414,7 +414,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
    *    an invalid column data type in Hyrise.
    */
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
-    // Turn `expression` into `CAST(expression AS <column_data_type>)`, if expression is a NULL literal
+    // Turn `expression` into `CAST(expression AS <column_data_type>)` if expression is a NULL literal
     auto expression = output_expressions[column_id];
     if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression); value_expression) {
       if (variant_is_null(value_expression->value)) {
