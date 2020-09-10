@@ -1717,9 +1717,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Fail("Star expression should have been handled earlier");
 
     case hsql::kExprArrayIndex:
+      FailInput("Array indexes are not yet supported");
+
     case hsql::kExprHint:
+      FailInput("Hints are not yet supported");
+
     case hsql::kExprCast:
-      FailInput("Can't translate this hsql expression into a Hyrise expression");
+      FailInput("Explicit casts are not yet supported");
   }
   Fail("Invalid enum value");
 }
