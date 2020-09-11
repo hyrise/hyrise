@@ -286,12 +286,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         using IterableType = typename decltype(it)::IterableType;
 
         if constexpr (!is_reference_segment_iterable_v<IterableType>) {
-          while (end - it > num_rows) {
-            // The last chunk has changed its size since we allocated elements. This is due to a concurrent insert
-            // into that chunk. In any case, those inserts will not be visible to our current transaction, so we can
-            // ignore them.
-            --end;
-          }
+          // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
+          // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
+          // can ignore them.
+          const auto inserted_rows = (end - it) - num_rows;
+          end -= inserted_rows;
         }
 
         while (it != end) {
