@@ -918,6 +918,10 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
             ++new_pos_list_iter;
           }
           if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
+            // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
+            // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
+            // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE in join_hash.cpp), this
+            // guarantee cannot be given.
             new_pos_list->guarantee_single_chunk();
           }
 
@@ -941,7 +945,8 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
       // radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
       // allows us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
       // should be cheap. In the other cases, the cost of iterating through the PosList are likely to be amortized in
-      // following operators.
+      // following operators. See the comment at the previous call of guarantee_single_chunk to understand when this
+      // guarantee might not be given.
       // This is not part of PosList as other operators should have a better understanding of how they emit references.
       auto common_chunk_id = std::optional<ChunkID>{};
       for (const auto& row : *pos_list) {
