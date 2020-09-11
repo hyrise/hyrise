@@ -104,8 +104,22 @@ void _export_chunk_size_statistics() {
 
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
-  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
-  _clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
+
+  const auto env_var_algorithm = std::getenv("CLUSTERING_ALGORITHM");
+  std::string algorithm;
+  if (env_var_algorithm == NULL) {
+    algorithm = "DisjointClusters";
+  } else {
+    algorithm = std::string(env_var_algorithm);
+  }
+
+  if (algorithm == "Partitioner") {
+    _clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
+  } else if (algorithm == "DisjointClusters") {
+    _clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
+  } else {
+    Fail("Unknown clustering algorithm: " + algorithm);
+  }
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 

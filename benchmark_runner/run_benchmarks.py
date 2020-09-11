@@ -26,13 +26,15 @@ def run_benchmark(benchmark, config_name, chunk_size):
 
   process_env = os.environ.copy()
   process_env["BENCHMARK_TO_RUN"] = benchmark.name()
+  process_env["CLUSTERING_ALGORITHM"] = "DisjointClusters"
+  #process_env["CLUSTERING_ALGORITHM"] = "Partitioner"
 
   # not sure if using "--cache_binary_tables" is a good idea.
   # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
   # this might influence subsequent benchmarks (e.g. via pruning)
   output_file = f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"
   p = Popen(
-            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", output_file],
+            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--metrics", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", output_file],
             env=process_env,
             stdout=sys.stdout,
             stdin=sys.stdin,
