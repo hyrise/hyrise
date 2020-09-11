@@ -285,12 +285,14 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       segment_with_iterators<T>(*segment, [&](auto it, auto end) {
         using IterableType = typename decltype(it)::IterableType;
 
-        if constexpr (!is_reference_segment_iterable_v<IterableType>) {
+        if (dynamic_cast<ValueSegment<T>*>(&*segment)) {
           // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
           // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
           // can ignore them.
           const auto inserted_rows = (end - it) - num_rows;
           end -= inserted_rows;
+        } else {
+          Assert(end - it == num_rows, "Non-ValueSegment changed size while being accessed");
         }
 
         while (it != end) {
