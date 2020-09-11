@@ -33,6 +33,7 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
+
     auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
     ChunkEncoder::encode_all_chunks(compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("compressed", compressed_table);
@@ -53,6 +54,10 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
                                     SegmentEncodingSpec{EncodingType::FixedStringDictionary});
     storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
+
+    auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 2u);
+    ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("int_float4", int_float4);
 
     for (const auto& [name, table] : storage_manager.tables()) {
       generate_chunk_pruning_statistics(table);
@@ -109,6 +114,60 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
   std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
+  // If a temporary table is used more than once, only prune for the predicates that apply to all paths
+
+  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+
+  const auto a = lqp_column_(stored_table_node, ColumnID{0});
+  const auto b = lqp_column_(stored_table_node, ColumnID{1});
+
+  // clang-format off
+  auto common = 
+    PredicateNode::make(greater_than_(b, 700),    // allows for pruning of chunk 0
+      PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+        stored_table_node));
+  auto lqp = 
+    UnionNode::make(SetOperationMode::All,
+      PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+        common),
+      PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+        common));
+  // clang-format on
+
+  StrategyBaseTest::apply_rule(_rule, lqp);
+  auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
+  // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore
+
+  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+
+  const auto a = lqp_column_(stored_table_node, ColumnID{0});
+  const auto b = lqp_column_(stored_table_node, ColumnID{1});
+
+  // clang-format off
+  auto common = 
+    PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+      stored_table_node);
+  auto lqp = 
+    UnionNode::make(SetOperationMode::All,
+      PredicateNode::make(greater_than_(b, 700),    // would allow for pruning of chunk 0
+        PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+          common)),
+      PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+        common));
+  // clang-format on
+
+  StrategyBaseTest::apply_rule(_rule, lqp);
+  auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{2}};
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
