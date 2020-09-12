@@ -28,6 +28,25 @@ BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table)
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
+void AbstractTableGenerator::check_nullable(const std::shared_ptr<Table>& table) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+      auto column_is_nullable = table->column_is_nullable(column_id);
+      auto abstract_segment = chunk->get_segment(column_id);
+      resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        using SegmentType = std::decay_t<decltype(segment)>;
+        if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+          if (segment.is_nullable() != column_is_nullable) {
+            std::cout << "column " << column_id << " nullable " << column_is_nullable << " segment in chunk " << chunk_id << " nullable " << segment.is_nullable() << std::endl;
+          }
+        }
+      });
+    }
+  }
+}
+
 void AbstractTableGenerator::generate_and_store() {
   Timer timer;
 
@@ -35,6 +54,9 @@ void AbstractTableGenerator::generate_and_store() {
   auto table_info_by_name = generate();
   metrics.generation_duration = timer.lap();
   std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
+
+  std::cout << "loaded tables" << std::endl;
+  check_nullable(table_info_by_name["orders"].table);
 
   /**
    * Sort tables if a sort order was defined by the benchmark
@@ -135,11 +157,15 @@ void AbstractTableGenerator::generate_and_store() {
     metrics.sort_duration = timer.lap();
     std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
   }
+  std::cout << "sorted tables" << std::endl;
+  check_nullable(table_info_by_name["orders"].table);
 
   /**
    * Add constraints if defined by the benchmark
    */
   _add_constraints(table_info_by_name);
+
+  check_nullable(table_info_by_name["orders"].table);
 
   /**
    * Finalizing all chunks of all tables that are still mutable.
@@ -153,6 +179,7 @@ void AbstractTableGenerator::generate_and_store() {
     }
   }
 
+  check_nullable(table_info_by_name["orders"].table);
   /**
    * Encode the tables
    */
@@ -169,6 +196,7 @@ void AbstractTableGenerator::generate_and_store() {
   std::cout << "- Encoding tables and generating pruning statistic done (" << format_duration(metrics.encoding_duration)
             << ")" << std::endl;
 
+  check_nullable(table_info_by_name["orders"].table);
   /**
    * Write the Tables into binary files if required
    */
