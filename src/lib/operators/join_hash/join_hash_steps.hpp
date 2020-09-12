@@ -5,7 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include "../../third_party/robin-map/include/tsl/robin_map.h"
+#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -81,12 +81,12 @@ class PosHashTable {
   // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
   // with a partition that has more values, the partitioning algorithm is at fault.
   using Offset = uint32_t;
-  using HashTable = tsl::robin_pg_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>, PolymorphicAllocator<std::pair<HashedType, Offset>>>;
+  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1>;
+  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
@@ -135,6 +135,8 @@ class PosHashTable {
         _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
       }
       _hash_table.clear();
+    } else {
+      _hash_table.shrink_to_fit();
     }
   }
 
