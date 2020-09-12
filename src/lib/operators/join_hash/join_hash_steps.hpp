@@ -86,7 +86,7 @@ class PosHashTable {
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
+  using SmallPosList = std::vector<RowID, PolymorphicAllocator<RowID>>;
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
