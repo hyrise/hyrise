@@ -27,10 +27,8 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
-  std::cout << "after header" << int(file.tellg()) << std::endl;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
-    std::cout << "after chunk" << int(file.tellg()) << std::endl;
   }
 
   return table;
@@ -86,10 +84,6 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
   const auto column_count = _read_value<ColumnID>(file);
   const auto column_data_types = _read_values<pmr_string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
-  std::cout << "nullable" << std::endl;
-  for(auto i : column_nullables) {
-    std::cout << i << std::endl;
-  }
   const auto column_names = _read_string_values(file, column_count);
 
   TableColumnDefinitions output_column_definitions;
@@ -142,9 +136,7 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                                bool is_nullable) {
-  std::cout << "segment start" << int(file.tellg()) << std::endl;
   const auto column_type = _read_value<EncodingType>(file);
-  std::cout << column_type << std::endl;
 
   switch (column_type) {
     case EncodingType::Unencoded:
@@ -177,7 +169,6 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  std::cout << "is_nullable " << is_nullable << std::endl;
   if (is_nullable) {
     auto nullables = _read_values<bool>(file, row_count);
     auto values = _read_values<T>(file, row_count);
