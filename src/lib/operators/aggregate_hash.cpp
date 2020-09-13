@@ -642,10 +642,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       // No need for a complex data structure if we only have one entry
       _aggregate<AggregateKeyEntry>();
       break;
-    case 2:
-      // We need to explicitly list all array sizes that we want to support
-      _aggregate<std::array<AggregateKeyEntry, 2>>();
-      break;
     default:
       PerformanceWarning("No std::array implementation initialized - falling back to vector");
       _aggregate<boost::container::small_vector<AggregateKeyEntry, 4>>();
