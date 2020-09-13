@@ -5,9 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include "../../third_party/robin-map/include/tsl/robin_map.h"
-
+#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -83,8 +81,7 @@ class PosHashTable {
   // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
   // with a partition that has more values, the partitioning algorithm is at fault.
   using Offset = uint32_t;
-  using HashTable = tsl::robin_pg_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>,
-                                      PolymorphicAllocator<std::pair<HashedType, Offset>>>;
+  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -93,10 +90,7 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _buffer(std::make_shared<boost::container::pmr::monotonic_buffer_resource>()),
-        _hash_table(&*_buffer),
-        _pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0, &*_buffer),
-        _mode(mode) {
+      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {
     // _pos_lists is initialized with an additional element to make the enforcement of the assertions easier.
     _hash_table.reserve(max_size);
   }
@@ -141,12 +135,14 @@ class PosHashTable {
         _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
       }
       _hash_table.clear();
+    } else {
+      _hash_table.shrink_to_fit();
     }
   }
 
   // For a value seen on the probe side, return an iterator into the matching positions on the build side
   template <typename InputType>
-  const pmr_vector<SmallPosList>::const_iterator find(const InputType& value) const {
+  const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for SinglePosition mode, use contains");
 
     const auto casted_value = static_cast<HashedType>(value);
@@ -176,14 +172,13 @@ class PosHashTable {
     }
   }
 
-  const pmr_vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
+  const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
 
-  const pmr_vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
+  const std::vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
 
  private:
-  std::shared_ptr<boost::container::pmr::monotonic_buffer_resource> _buffer{};
   HashTable _hash_table;
-  pmr_vector<SmallPosList> _pos_lists;
+  std::vector<SmallPosList> _pos_lists;
   JoinHashBuildMode _mode;
   std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
