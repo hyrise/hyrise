@@ -94,7 +94,7 @@ bool column_nullablility_equals_segment_nullability(const std::shared_ptr<const 
 
 TEST_P(SortTest, UnchangedNullability) {
   const auto param = GetParam();
-  
+
   EXPECT_TRUE(column_nullablility_equals_segment_nullability(input_table));
 
   auto sort = Sort{input_table_wrapper, param.sort_columns, param.output_chunk_size, param.force_materialization};

@@ -69,15 +69,15 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         // Check if value segment is full
         if (current_segment_size >= output_chunk_size) {
           current_segment_size = 0u;
-          
+
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
           if (column_is_nullable) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                           std::move(value_segment_null_vector));  
+                                                                           std::move(value_segment_null_vector));
           } else {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
           }
-          
+
           chunk_it->push_back(value_segment);
           value_segment_value_vector = pmr_vector<ColumnDataType>();
           value_segment_null_vector = pmr_vector<bool>();
@@ -96,7 +96,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
         if (column_is_nullable) {
           value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                         std::move(value_segment_null_vector));  
+                                                                         std::move(value_segment_null_vector));
         } else {
           value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
         }
