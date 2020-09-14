@@ -17,11 +17,11 @@ benchmark=$3
 shift; shift; shift
 benchmark_arguments=$@
 
-# if [[ $(git status --untracked-files=no --porcelain) ]]
-# then
-# 	echo Cowardly refusing to execute on a dirty workspace
-# 	exit 1
-# fi
+if [[ $(git status --untracked-files=no --porcelain) ]]
+then
+	echo Cowardly refusing to execute on a dirty workspace
+	exit 1
+fi
 
 commit_list=$(git rev-list --ancestry-path ${start_commit}^..${end_commit})
 
