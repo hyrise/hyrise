@@ -33,9 +33,9 @@ commit_list=$(echo $commit_list | awk '{for (i=NF; i>1; i--) printf("%s ",$i); p
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ ! -z "$output" ]
 then
-  build_system='ninja'
+	build_system='ninja'
 else
-  build_system='make'
+	build_system='make'
 fi
 
 for commit in $commit_list
