@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/small_vector.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <magic_enum.hpp>
 
@@ -648,7 +647,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
     default:
       PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<boost::container::small_vector<AggregateKeyEntry, 4>>();
+      _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
 
