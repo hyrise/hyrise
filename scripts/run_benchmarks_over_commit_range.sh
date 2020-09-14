@@ -17,11 +17,11 @@ benchmark=$3
 shift; shift; shift
 benchmark_arguments=$@
 
-if [[ $(git status --untracked-files=no --porcelain) ]]
-then
-	echo Cowardly refusing to execute on a dirty workspace
-	exit 1
-fi
+# if [[ $(git status --untracked-files=no --porcelain) ]]
+# then
+# 	echo Cowardly refusing to execute on a dirty workspace
+# 	exit 1
+# fi
 
 commit_list=$(git rev-list --ancestry-path ${start_commit}^..${end_commit})
 
@@ -52,6 +52,12 @@ do
 	${build_system} $benchmark -j $((cores / 2)) > /dev/null
 
 	./$benchmark $benchmark_arguments -o auto_${commit}.json
+
+	output=$(grep ${commit} auto_${commit}.json)
+	if [ -z "$output" ]; then
+		echo "Commit Hash ${commit} not found in auto_${commit}.json. It looks like the build failed."
+		exitcode=1
+	fi
 done
 
 for commit in $commit_list
