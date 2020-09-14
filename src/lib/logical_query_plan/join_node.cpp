@@ -32,6 +32,18 @@ JoinNode::JoinNode(const JoinMode init_join_mode,
     : AbstractLQPNode(LQPNodeType::Join, init_join_predicates), join_mode(init_join_mode) {
   Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
   Assert(!join_predicates().empty(), "Non-Cross Joins require predicates");
+  if constexpr (HYRISE_DEBUG) {
+    for(const auto& predicate : node_expressions) {
+      const auto& binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+      if(binary_predicate_expression &&
+         binary_predicate_expression->predicate_condition == PredicateCondition::Equals) {
+        Assert(!right_input()->has_output_expressions({binary_predicate_expression->left_operand()}),
+               "Did not expect the left operand expression to be part of the right input node's output expressions.");
+        Assert(!left_input()->has_output_expressions({binary_predicate_expression->right_operand()}),
+               "Did not expect the right operand expression to be part of the left input node's output expressions.");
+      }
+    }
+  }
 }
 
 std::string JoinNode::description(const DescriptionMode mode) const {
