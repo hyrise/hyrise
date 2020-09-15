@@ -263,7 +263,7 @@ void try_join_to_semi_rewrite(
 
     // Collect operand expressions table-wise
     for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
-      if(join_node->left_input()->has_output_expressions({operand_expression})) {
+      if (join_node->left_input()->has_output_expressions({operand_expression})) {
         equals_predicate_expressions_left.insert(operand_expression);
       } else if (join_node->right_input()->has_output_expressions({operand_expression})) {
         equals_predicate_expressions_right.insert(operand_expression);
