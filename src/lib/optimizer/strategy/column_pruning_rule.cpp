@@ -245,26 +245,35 @@ void try_join_to_semi_rewrite(
   if (left_input_is_used && right_input_is_used) return;
 
   /**
-   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1. To check the latter, we
-   * collect all Equi-join expressions and look for a matching unique constraint.
+   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
+   * follows:
+   * (1) For each table, we collect the operand expressions from all given Equals-predicates.
+   * (2) We determine the input node that should be used for filtering.
+   * (3) We check the input node from (2) for matching single- or multi-expression unique constraints.
+   *     a) Match    -> Rewrite to Semi Join
+   *     b) No match -> Do no rewrite to Semi Join because we might end up with duplicated input records.
    */
   const auto& join_predicates = join_node->join_predicates();
   auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
   auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
-    // Only Equals allows for 1:1 join cardinality
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
+    // Skip predicates that are not of type Equals (because we need 1:1 join cardinality)
     if (predicate->predicate_condition != PredicateCondition::Equals) continue;
 
-    DebugAssert(join_node->left_input()->has_output_expressions({predicate->left_operand()}),
-                "Left join operand does not belong to left input table");
-    DebugAssert(join_node->right_input()->has_output_expressions({predicate->right_operand()}),
-                "Right join operand does not belong to right input table");
-    equals_predicate_expressions_left.insert(predicate->left_operand());
-    equals_predicate_expressions_right.insert(predicate->right_operand());
+    // Collect operand expressions table-wise
+    for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
+      if(join_node->left_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_left.insert(operand_expression);
+      } else if (join_node->right_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_right.insert(operand_expression);
+      }
+    }
   }
+  // Early out, if we did not see any Equals-predicates.
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
+  // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
   if (!left_input_is_used &&
       join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
