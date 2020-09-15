@@ -345,9 +345,8 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoinTwoPredicates) {
-  // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinSingleEqui) {
+  // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result.
 
   {
     TableColumnDefinitions column_definitions;
@@ -366,9 +365,9 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoinTwoPredicates) {
   const auto column1 = stored_table_node->get_column("column1");
 
   // clang-format off
-  lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
-    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), equals_(a, column1)),
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), not_equals_(a, column1)),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
         node_a),
       stored_table_node));
@@ -380,7 +379,53 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoinTwoPredicates) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(pruned_a, 2)),
-    JoinNode::make(JoinMode::Semi, expression_vector(equals_(pruned_a, column0), equals_(pruned_a, column1)),
+    JoinNode::make(JoinMode::Semi, expression_vector(equals_(pruned_a, column0), not_equals_(pruned_a, column1)),
+      ProjectionNode::make(expression_vector(pruned_a),
+        pruned_node_a),
+      stored_table_node));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinMultiEqui) {
+  /**
+   * Defines a multi-column key constraint (column0, column1) and two inner join predicates of type Equals covering
+   * those two columns. We expect to see a semi join reformulation because the resulting unique constraint matches
+   * the inner join's predicate expressions.
+   */
+  {
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("column0", DataType::Int, false);
+    column_definitions.emplace_back("column1", DataType::Int, false);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+
+    auto& sm = Hyrise::get().storage_manager;
+    sm.add_table("table", table);
+
+    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+  }
+
+  const auto stored_table_node = StoredTableNode::make("table");
+  const auto column0 = stored_table_node->get_column("column0");
+  const auto column1 = stored_table_node->get_column("column1");
+
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(a, 2)),
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), equals_(a, column1)),
+      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+        node_a),
+    stored_table_node));
+
+  const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
+  const auto pruned_a = pruned_node_a->get_column("a");
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(pruned_a, 2)),
+    JoinNode::make(JoinMode::Semi, expression_vector(equals_(pruned_a, column0), equals(pruned_a, column1)),
       ProjectionNode::make(expression_vector(pruned_a),
         pruned_node_a),
       stored_table_node));
