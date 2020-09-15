@@ -8,6 +8,8 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "tpcc/tpcc_benchmark_item_runner.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -254,6 +256,27 @@ int main(int argc, const char* argv[]) {
   }
   //
   //  /JOB
+  //
+
+  //
+  //  TPC-C
+  //
+  else if (BENCHMARK == "TPC-C") {
+    constexpr auto WAREHOUSES = int{2};
+
+    auto context = BenchmarkRunner::create_context(*config);
+    context.emplace("scale_factor", WAREHOUSES);
+
+    auto item_runner = std::make_unique<TPCCBenchmarkItemRunner>(config, WAREHOUSES);
+    auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(item_runner),
+                                                              std::make_unique<TPCCTableGenerator>(WAREHOUSES, config),
+                                                              context);
+
+    Hyrise::get().benchmark_runner = benchmark_runner;
+    benchmark_runner->run();
+  }
+  //
+  //  /TPC-C
   //
 
   return 0;
