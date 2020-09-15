@@ -155,7 +155,7 @@ void CompressionPlugin::_optimize_compression() {
   _keep_alive_stash.clear();
   const auto initial_system_memory_usage = get_all_segments_memory_usage();
   const auto memory_budget_mb = std::stoll(_memory_budget_setting->get());
-  const auto memory_budget = memory_budget_mb * 1024 * 1024;
+  const auto memory_budget = memory_budget_mb * 1000 * 1000;
   const auto memory_usage_reduction =
       static_cast<int64_t>(initial_system_memory_usage) - static_cast<int64_t>(memory_budget);
   auto achieved_memory_usage_reduction = int64_t{0};

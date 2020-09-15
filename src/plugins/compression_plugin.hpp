@@ -36,7 +36,7 @@ class CompressionPlugin : public AbstractPlugin {
     const std::string& get() { return _value; }
     void set(const std::string& value) final { _value = value; }
 
-    std::string _value = "9999";
+    std::string _value = "10000";
   };
 
   constexpr static std::chrono::milliseconds THREAD_INTERVAL = std::chrono::milliseconds(7'500);
