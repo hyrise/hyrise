@@ -8,7 +8,8 @@ namespace opossum {
 MetaSettingsTable::MetaSettingsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false},
                                                {"value", DataType::String, false},
-                                               {"description", DataType::String, false}}) {}
+                                               {"description", DataType::String, false},
+                                               {"display name", DataType::String, false}}) {}
 
 const std::string& MetaSettingsTable::name() const {
   static const auto name = std::string{"settings"};
@@ -23,7 +24,7 @@ std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
 
   for (const auto& setting_name : setting_names) {
     const auto& setting = Hyrise::get().settings_manager.get_setting(setting_name);
-    output_table->append({pmr_string{setting_name}, pmr_string{setting->get()}, pmr_string{setting->description()}});
+    output_table->append({pmr_string{setting_name}, pmr_string{setting->get()}, pmr_string{setting->description()}, pmr_string{setting->get_display_name()}});
   }
 
   return output_table;
