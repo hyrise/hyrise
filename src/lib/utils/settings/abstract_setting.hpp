@@ -30,6 +30,8 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
 
   virtual const std::string& get() = 0;
 
+  virtual const std::string& get_display_name() {return NULL;}
+
   virtual void set(const std::string& value) = 0;
 
   virtual void register_at_settings_manager();
