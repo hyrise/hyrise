@@ -305,8 +305,6 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
 }
 
 TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
@@ -322,7 +320,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -345,7 +343,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinSingleEqui) {
+TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
   // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result.
 
   {
@@ -388,7 +386,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinSingleEqui) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinMultiEqui) {
+TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   /**
    * Defines a multi-column key constraint (column0, column1) and two inner join predicates of type Equals covering
    * those two columns. We expect to see a semi join reformulation because the resulting unique constraint matches
@@ -434,9 +432,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinMultiEqui) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutEqualsPredicate) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
+TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEqui) {
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
@@ -452,7 +448,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutEqualsPredicate) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, greater_than_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -477,9 +473,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutEqualsPredicate) {
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
-  // based on the InnerJoinToSemiJoin test
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
+  // Based on the InnerJoinToSemiJoin test.
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
@@ -493,7 +487,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -565,9 +559,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutMatchingUniqueConstraint
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
-  // based on the InnerJoinToSemiJoin test
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
+  // Based on the InnerJoinToSemiJoin test.
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
@@ -583,7 +575,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Left, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
