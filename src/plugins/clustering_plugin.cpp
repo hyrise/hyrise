@@ -5,16 +5,14 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "resolve_type.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
-#include "statistics/table_statistics.hpp"
-#include "statistics/generate_pruning_statistics.hpp"
-#include "resolve_type.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
 
 namespace opossum {
 
@@ -30,11 +28,16 @@ void ClusteringPlugin::_optimize_clustering() {
 
   _optimized = true;
 
-  std::map<std::string, std::string> sort_orders = {{"orders_tpch_0_1", "o_orderdate"}, {"orders_tpch_1", "o_orderdate"}, {"lineitem_tpch_0_1", "l_shipdate"}, {"lineitem_tpch_1", "l_shipdate"}};
+  std::map<std::string, std::string> sort_orders = {{"orders_tpch_0_1", "o_orderdate"},
+                                                    {"orders_tpch_1", "o_orderdate"},
+                                                    {"lineitem_tpch_0_1", "l_shipdate"},
+                                                    {"lineitem_tpch_1", "l_shipdate"}};
 
   for (auto& [table_name, column_name] : sort_orders) {
     if (!Hyrise::get().storage_manager.has_table(table_name)) {
-      Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters for " + table_name + " table!", LogLevel::Debug);
+      Hyrise::get().log_manager.add_message(
+          description(), "No optimization possible with given parameters for " + table_name + " table!",
+          LogLevel::Debug);
       continue;
     }
     auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -43,7 +46,10 @@ void ClusteringPlugin::_optimize_clustering() {
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
-    auto sort = Sort{table_wrapper, {SortColumnDefinition{sort_column_id, SortMode::Ascending}}, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes};
+    auto sort = Sort{table_wrapper,
+                     {SortColumnDefinition{sort_column_id, SortMode::Ascending}},
+                     Chunk::DEFAULT_SIZE,
+                     Sort::ForceMaterialization::Yes};
     sort.execute();
     const auto immutable_sorted_table = sort.get_output();
 
@@ -61,7 +67,8 @@ void ClusteringPlugin::_optimize_clustering() {
         const auto abstract_segment = chunk->get_segment(column_id);
         std::shared_ptr<AbstractSegment> new_segment;
         const auto data_type = table->column_data_type(column_id);
-        new_segment = ChunkEncoder::encode_segment(abstract_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
+        new_segment =
+            ChunkEncoder::encode_segment(abstract_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
         segments.emplace_back(new_segment);
       }
       table->append_chunk(segments, mvcc_data);
@@ -87,17 +94,16 @@ void ClusteringPlugin::_optimize_clustering() {
     generate_chunk_pruning_statistics(table);
 
     Hyrise::get().storage_manager.replace_table(table_name, table);
-    if (Hyrise::get().default_lqp_cache)
-      Hyrise::get().default_lqp_cache->clear();
-    if (Hyrise::get().default_pqp_cache)
-      Hyrise::get().default_pqp_cache->clear();
+    if (Hyrise::get().default_lqp_cache) Hyrise::get().default_lqp_cache->clear();
+    if (Hyrise::get().default_pqp_cache) Hyrise::get().default_pqp_cache->clear();
 
-    Hyrise::get().log_manager.add_message(description(), "Applied new clustering configuration (" + column_name + ") to " + table_name + " table.", LogLevel::Warning);
+    Hyrise::get().log_manager.add_message(
+        description(), "Applied new clustering configuration (" + column_name + ") to " + table_name + " table.",
+        LogLevel::Warning);
   }
 }
 
 void ClusteringPlugin::stop() {}
-
 
 EXPORT_PLUGIN(ClusteringPlugin)
 

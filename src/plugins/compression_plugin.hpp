@@ -28,7 +28,7 @@ class CompressionPlugin : public AbstractPlugin {
   // Budget in megabyte
   class MemoryBudgetSetting : public AbstractSetting {
    public:
-    explicit MemoryBudgetSetting() : AbstractSetting("Plugin::Compression::MemoryBudget") {}
+    MemoryBudgetSetting() : AbstractSetting("Plugin::Compression::MemoryBudget") {}
     const std::string& description() const final {
       static const auto description = std::string{"The memory budget (MB) to target for the CompressionPlugin."};
       return description;
