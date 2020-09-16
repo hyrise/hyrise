@@ -35,20 +35,19 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
 
+  if (!chunk_sorted_by.empty()) {
+    for (const auto& sorted_by : chunk_sorted_by) {
+      if (sorted_by.column == _column_id) {
+        _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++chunk_scans_sorted;
+        return;
+      }
+    }
+  }
+
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
-    if (!chunk_sorted_by.empty()) {
-      for (const auto& sorted_by : chunk_sorted_by) {
-        if (sorted_by.column == _column_id) {
-          // For dictionary segments (handled above), _scan_sorted_segment is called internally
-          _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-          ++chunk_scans_sorted;
-          return;
-        }
-      }
-    }
-
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
   }
 }
@@ -145,20 +144,6 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
   if (_value_matches_none(segment, search_value_id)) {
     ++chunk_scans_skipped;
     return;
-  }
-
-  // For sorted segments, call _scan_sorted_segment only now. This ...
-  // TODO
-  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
-  if (!chunk_sorted_by.empty()) {
-    for (const auto& sorted_by : chunk_sorted_by) {
-      if (sorted_by.column == _column_id) {
-        // For dictionary segments (handled above), _scan_sorted_segment is called internally
-        _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++chunk_scans_sorted;
-        return;
-      }
-    }
   }
 
   _with_operator_for_dict_segment_scan([&](auto predicate_comparator) {
