@@ -675,9 +675,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     _write_groupby_output(pos_list);
   }
 
+  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer
-      timer;  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
+  Timer timer;
 
   /*
   Write the aggregated columns to the output
