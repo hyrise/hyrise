@@ -163,7 +163,7 @@ int main(int argc, const char* argv[]) {
     }
   }
 
-  const auto BENCHMARKS = std::vector<std::string>{"TPC-H", "TPC-DS", "JOB"}; 
+  const auto BENCHMARKS = std::vector<std::string>{"TPC-C", "TPC-DS", "JOB", "TPC-H"};
 
   const auto env_var = std::getenv("BENCHMARK_TO_RUN");
   if (env_var == nullptr) {
@@ -273,7 +273,6 @@ int main(int argc, const char* argv[]) {
                                                               context);
 
     Hyrise::get().benchmark_runner = benchmark_runner;
-    benchmark_runner->run();
   }
   //
   //  /TPC-C
