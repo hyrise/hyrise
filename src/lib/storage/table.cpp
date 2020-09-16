@@ -298,10 +298,13 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
     if (!chunk) continue;
 
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-      segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
-        if (!segment_position.is_null()) {
-          rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
-        }
+      resolve_data_type(column_data_type(column_id), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        segment_iterate<ColumnDataType>(*chunk->get_segment(column_id), [&](const auto& segment_position) {
+          if (!segment_position.is_null()) {
+            rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = ColumnDataType{segment_position.value()};
+          }
+        });
       });
     }
 
@@ -379,7 +382,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
             segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
               Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
 
-              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
+              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(ColumnDataType{position.value()}, chunk_id);
               if (!inserted) {
                 Assert(iter->second == chunk_id,
                        "Table cannot be set to value-clustered as same value "

@@ -79,7 +79,7 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
       for (; it != end; ++it) {
         const auto segment_item = *it;
         if (!segment_item.is_null()) {
-          distinct_values.insert(segment_item.value());
+          distinct_values.insert(ColumnDataType{segment_item.value()});
         }
       }
     });

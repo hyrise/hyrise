@@ -10,9 +10,11 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/small_vector.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
+#include <uninitialized_vector.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -81,7 +83,7 @@ using AggregateKeyEntry = uint64_t;
 struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
-using AggregateKeys = std::vector<AggregateKey>;
+using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, boost::container::small_vector<AggregateKeyEntry, 4>>, std::vector<AggregateKey>, uninitialized_vector<AggregateKey>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -139,7 +141,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
@@ -147,6 +149,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
+  std::optional<size_t> _num_results{};
 };
 
 }  // namespace opossum
@@ -158,8 +161,8 @@ struct hash<opossum::EmptyAggregateKey> {
 };
 
 template <>
-struct hash<std::vector<opossum::AggregateKeyEntry>> {
-  size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
+struct hash<boost::container::small_vector<opossum::AggregateKeyEntry, 4>> {
+  size_t operator()(const boost::container::small_vector<opossum::AggregateKeyEntry, 4>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

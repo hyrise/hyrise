@@ -17,6 +17,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -44,6 +45,7 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
+  Timer t;
   const auto& input_table = *left_input_table();
 
   /**
@@ -69,6 +71,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto chunk_count_input_table = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
+    Timer t_chunk;
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -77,6 +80,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      Timer t_col;
       const auto& expression = expressions[column_id];
 
       // Forward input column if possible
@@ -194,7 +198,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
         output_segments[column_id] = std::move(output_segment);
       }
+      // std::cout << "    Segment " << column_id << ": " << t_col.lap_formatted() << std::endl;
     }
+    // std::cout << "  Chunk " << chunk_id << ": " << t_chunk.lap_formatted() << std::endl;
 
     output_chunk_segments[chunk_id] = std::move(output_segments);
   }
@@ -250,6 +256,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     output_chunks[chunk_id] = chunk;
   }
+
+  // std::cout << "All: " << t.lap_formatted() << std::endl;
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());

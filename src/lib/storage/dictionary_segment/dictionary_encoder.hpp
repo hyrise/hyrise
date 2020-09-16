@@ -47,7 +47,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
         const auto segment_item = *segment_it;
         if (!segment_item.is_null()) {
           const auto segment_value = segment_item.value();
-          dense_values.push_back(segment_value);
+          dense_values.push_back(T{segment_value});
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
             if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
