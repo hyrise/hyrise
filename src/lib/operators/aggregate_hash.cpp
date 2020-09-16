@@ -833,7 +833,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       unaggregated_columns.emplace_back(input_column_id, output_column_id);
       ++output_column_id;
     }
-    for (auto aggregate : _aggregates) {
+    for (const auto& aggregate : _aggregates) {
       if (aggregate->aggregate_function == AggregateFunction::Any) {
         const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
         const auto input_column_id = pqp_column.column_id;
