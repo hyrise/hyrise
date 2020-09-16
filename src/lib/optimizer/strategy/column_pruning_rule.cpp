@@ -258,7 +258,7 @@ void try_join_to_semi_rewrite(
   auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    // Skip predicates that are not of type Equals (because we need 1:1 join cardinality)
+    // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
     if (predicate->predicate_condition != PredicateCondition::Equals) continue;
 
     // Collect operand expressions table-wise
