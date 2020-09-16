@@ -247,11 +247,11 @@ void try_join_to_semi_rewrite(
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
    * follows:
-   * (1) For each table, we collect the operand expressions from all given Equals-predicates.
+   * (1) From all predicates of type Equals, we collect the operand expressions by input node.
    * (2) We determine the input node that should be used for filtering.
-   * (3) We check the input node from (2) for matching single- or multi-expression unique constraints.
-   *     a) Match    -> Rewrite to Semi Join
-   *     b) No match -> Do no rewrite to Semi Join because we might end up with duplicated input records.
+   * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
+   *     a) Found match -> Rewrite to semi join
+   *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
    */
   const auto& join_predicates = join_node->join_predicates();
   auto equals_predicate_expressions_left = ExpressionUnorderedSet{};

@@ -320,7 +320,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -363,7 +363,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
   const auto column1 = stored_table_node->get_column("column1");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), not_equals_(a, column1)),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -409,7 +409,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   const auto column1 = stored_table_node->get_column("column1");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), equals_(a, column1)),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -423,7 +423,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(pruned_a, 2)),
-    JoinNode::make(JoinMode::Semi, expression_vector(equals_(pruned_a, column0), equals(pruned_a, column1)),
+    JoinNode::make(JoinMode::Semi, expression_vector(equals_(pruned_a, column0), equals_(pruned_a, column1)),
       ProjectionNode::make(expression_vector(pruned_a),
         pruned_node_a),
       stored_table_node));
@@ -448,7 +448,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEqui) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, greater_than_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -487,7 +487,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -535,7 +535,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutMatchingUniqueConstraint
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
@@ -575,7 +575,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  auto lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Left, equals_(a, column0),
       ProjectionNode::make(expression_vector(a, add_(b, 1)),
