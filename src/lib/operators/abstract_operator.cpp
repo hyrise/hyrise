@@ -67,8 +67,8 @@ void AbstractOperator::execute() {
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
-  // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
+    // Verify that LQP (if set) and PQP match.
     if (lqp_node) {
       const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
@@ -94,6 +94,19 @@ void AbstractOperator::execute() {
                    std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
         }
+      }
+    }
+    // Verify that nullability of columns and segments match for value segments
+    for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+      for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+        const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
+        resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          using SegmentType = std::decay_t<decltype(segment)>;
+          if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+            Assert(segment.is_nullable() && !_output->column_is_nullable(column_id), "Nullable segment found in non-nullable column");
+          }
+        });
       }
     }
   }
