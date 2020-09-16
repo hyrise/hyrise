@@ -676,7 +676,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           break;
         }
         case AggregateFunction::Any: {
-          write_groupby_column(input_column_id, ColumnID{static_cast<ColumnID::base_type>(aggregate_index + _groupby_column_ids.size())});
+          write_groupby_column(input_column_id, ColumnID{static_cast<ColumnID::base_type>(aggregate_index +
+                                                                                          _groupby_column_ids.size())});
           break;
         }
       }
@@ -767,7 +768,11 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+  const auto nullable = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct &&
+                         function != AggregateFunction::Any) ||
+                        (function == AggregateFunction::Any && left_input_table()->column_is_nullable(input_column_id));
+  const auto column_name = aggregate->aggregate_function == AggregateFunction::Any ? pqp_column.as_column_name()
+                                                                                   : aggregate->as_column_name();
+  _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
 }  // namespace opossum

@@ -83,7 +83,12 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
-                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
+                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
+  _has_aggregate_functions =
+      !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
+        return aggregate_expression->aggregate_function == AggregateFunction::Any;
+      });
+}
 
 const std::string& AggregateHash::name() const {
   static const auto name = std::string{"AggregateHash"};
@@ -459,7 +464,7 @@ void AggregateHash::_aggregate() {
    */
   _contexts_per_column = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
 
-  if (_aggregates.empty()) {
+  if (!_has_aggregate_functions) {
     /*
     Insert a dummy context for the DISTINCT implementation.
     That way, _contexts_per_column will always have at least one context with results.
@@ -503,7 +508,7 @@ void AggregateHash::_aggregate() {
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
 
-    if (_aggregates.empty()) {
+    if (!_has_aggregate_functions) {
       /**
        * DISTINCT implementation
        *
@@ -617,7 +622,7 @@ void AggregateHash::_aggregate() {
                   chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Any:
-              //  ANY is a pseudo-function and is handled by _write_groupby_output
+              // ANY is a pseudo-function and is handled by _write_groupby_output
               break;
           }
         });
@@ -656,14 +661,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   _output_segments.resize(num_output_columns);
 
   /**
-   * Write group-by columns.
-   *
-   * 'results_per_column' always contains at least one element, since there are either GroupBy or Aggregate columns.
-   * However, we need to look only at the first element, because the keys for all columns are the same.
-   *
-   * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
+   * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call _write_groupby_output.
+   * Otherwise, it is called by the first call to _write_aggregate_output.
    **/
-  if (_aggregates.empty()) {
+  if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
         _contexts_per_column[0]);
     auto pos_list = RowIDPosList();
@@ -675,7 +676,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   }
 
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
+  Timer
+      timer;  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
 
   /*
   Write the aggregated columns to the output
@@ -847,9 +849,9 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     const auto input_column_id = unaggregated_column.first;
     const auto output_column_id = unaggregated_column.second;
 
-    _output_column_definitions[output_column_id] = TableColumnDefinition{input_table->column_name(input_column_id),
-                                            input_table->column_data_type(input_column_id),
-                                            input_table->column_is_nullable(input_column_id)};
+    _output_column_definitions[output_column_id] =
+        TableColumnDefinition{input_table->column_name(input_column_id), input_table->column_data_type(input_column_id),
+                              input_table->column_is_nullable(input_column_id)};
 
     resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
@@ -867,8 +869,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
         auto& accessor = accessors[row_id.chunk_id];
         if (!accessor) {
-          accessor =
-              create_segment_accessor<ColumnDataType>(input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id));
+          accessor = create_segment_accessor<ColumnDataType>(
+              input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id));
         }
 
         const auto& optional_value = accessor->access(row_id.chunk_offset);
@@ -914,7 +916,7 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
       write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
       break;
     case AggregateFunction::Any:
-      // write_aggregate_output<ColumnDataType, AggregateFunction::Any>(column_index);
+      // written by _write_groupby_output
       break;
   }
 }
@@ -971,7 +973,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
 
   DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values");
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
-  _output_column_definitions[output_column_id] = TableColumnDefinition{aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL};
+  _output_column_definitions[output_column_id] =
+      TableColumnDefinition{aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL};
 
   auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
   if (!NEEDS_NULL) {
