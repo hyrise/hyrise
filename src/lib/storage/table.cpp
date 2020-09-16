@@ -232,18 +232,9 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
               "Input does not have the same number of columns.");
 
   if constexpr (HYRISE_DEBUG) {
-    for (size_t column_id = 0; column_id < segments.size(); ++column_id) {
-      const auto& abstract_segment = segments.at(column_id);
-      
-      resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        using SegmentType = std::decay_t<decltype(segment)>;
-        if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
-          Assert(segment.is_nullable() && !column_is_nullable(static_cast<ColumnID>(column_id)), "Incompatible nullability of segment and column");
-        } else if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
-          Assert(_type == TableType::References, "Invalid Segment type");
-        }
-      });
+    for (const auto& segment : segments) {
+      const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
+      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
     }
 
     // Check that existing chunks are not empty
