@@ -662,6 +662,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
   /**
    * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call _write_groupby_output.
+   *   Example: SELECT c_custkey, c_name FROM customer GROUP BY c_custkey, c_name (same as SELECT DISTINCT), which
+   *            is rewritten to group only on c_custkey and collect c_name as an ANY pseudo-aggregate.
    * Otherwise, it is called by the first call to _write_aggregate_output.
    **/
   if (!_has_aggregate_functions) {
