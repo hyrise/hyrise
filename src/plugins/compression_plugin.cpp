@@ -74,8 +74,9 @@ void CompressionPlugin::start() {
 int64_t CompressionPlugin::_compress_column(const std::string table_name, const std::string column_name,
                                             const std::string encoding_name, const bool column_was_accessed,
                                             const int64_t desired_memory_usage_reduction) {
-  constexpr auto SLEEP_BETWEEN_SEGMENTS_MS = 100;
-  constexpr auto SLEEP_BETWEEN_COLUMNS_MS = 300;
+  // Arbitrary values
+  constexpr auto SLEEP_BETWEEN_SEGMENTS_MS = 25;
+  constexpr auto SLEEP_BETWEEN_COLUMNS_MS = 50;
 
   if (!Hyrise::get().storage_manager.has_table(table_name)) {
     const auto message = "Table " + table_name + " not found. TPC-H data is probably not loaded.";
