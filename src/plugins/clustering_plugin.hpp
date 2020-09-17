@@ -31,7 +31,6 @@ class ClusteringPlugin : public AbstractPlugin {
   void _optimize_clustering();
 
   bool _optimized = false;
-  
 };
 
 }  // namespace opossum
