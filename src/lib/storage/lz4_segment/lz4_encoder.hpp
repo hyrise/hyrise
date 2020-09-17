@@ -294,7 +294,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     auto lz4_stream = LZ4_createStreamHC();
     // We use the maximum high compression level available in LZ4 for best compression ratios.
-    LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
+    LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MIN);
 
     const auto input_size = values.size() * sizeof(T);
     auto num_blocks = input_size / _block_size;
