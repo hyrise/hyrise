@@ -91,55 +91,68 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
   const auto segment_encoding_spec = get_segment_encoding_from_encoding_name(encoding_name);
 
-  auto memory_usage_old = int64_t{0};
-  auto memory_usage_new = int64_t{0};
-  auto achieved_memory_usage_reduction = int64_t{0};
+  auto memory_usage_old = std::atomic_int64_t{0};
+  auto memory_usage_new = std::atomic_int64_t{0};
+  auto achieved_memory_usage_reduction = std::atomic_int64_t{0};
 
   // TODO(user): check if we should increase or decrease the memory.
 
-  auto encoded_segment_count = size_t{0};
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    if ((desired_memory_usage_reduction > 0 && achieved_memory_usage_reduction >= desired_memory_usage_reduction) ||
+  auto next_chunk = std::atomic_uint{0};
+  constexpr auto THREAD_COUNT = 8;
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(THREAD_COUNT);
+
+  auto encoded_segment_count = std::atomic_uint{0};
+  for (auto thread_id = 0u; thread_id < THREAD_COUNT; ++thread_id) {
+    threads.emplace_back([&] {
+      while (true) {
+        auto my_chunk = next_chunk++;
+        if (my_chunk >= chunk_count) return;
+        if ((desired_memory_usage_reduction > 0 && achieved_memory_usage_reduction >= desired_memory_usage_reduction) ||
         (desired_memory_usage_reduction < 0 && achieved_memory_usage_reduction < desired_memory_usage_reduction)) {
-      // Finish as soon as we have achieved the desired reduction in memory usage OR break if we have used up the
-      // the budget for increasing the memory usage.
-      break;
-    }
+          // Finish as soon as we have achieved the desired reduction in memory usage OR break if we have used up the
+          // the budget for increasing the memory usage.
+          return;
+        }
 
-    auto chunk = table->get_chunk(chunk_id);
-    const auto abstract_segment = chunk->get_segment(column_id);
+        auto chunk = table->get_chunk(ChunkID{my_chunk});
+        const auto abstract_segment = chunk->get_segment(column_id);
 
-    const auto current_encoding_spec = get_segment_encoding_spec(abstract_segment);
-    if (current_encoding_spec.encoding_type == segment_encoding_spec.encoding_type &&
-        (!segment_encoding_spec.vector_compression_type ||
-         segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
-      continue;
-    }
+        const auto current_encoding_spec = get_segment_encoding_spec(abstract_segment);
+        if (current_encoding_spec.encoding_type == segment_encoding_spec.encoding_type &&
+            (!segment_encoding_spec.vector_compression_type ||
+             segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
+          continue;
+        }
 
-    const auto previous_segment_size = abstract_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
-    memory_usage_old += previous_segment_size;
+        const auto previous_segment_size = abstract_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+        memory_usage_old += previous_segment_size;
 
-    const auto encoded_segment = ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec);
-    if (abstract_segment == encoded_segment) {
-      // No encoding took place, segment was already encoded with the requesting encoding.
-      continue;
-    }
-    const auto new_segment_size = encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
-    memory_usage_new += new_segment_size;
+        const auto encoded_segment = ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec);
+        if (abstract_segment == encoded_segment) {
+          // No encoding took place, segment was already encoded with the requesting encoding.
+          continue;
+        }
+        const auto new_segment_size = encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+        memory_usage_new += new_segment_size;
 
-    _keep_alive_stash.emplace_back(abstract_segment);
-    chunk->replace_segment(column_id, encoded_segment);
-    achieved_memory_usage_reduction += previous_segment_size - new_segment_size;
-    ++encoded_segment_count;
-    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_BETWEEN_SEGMENTS_MS));
+        chunk->replace_segment(column_id, encoded_segment);
+        achieved_memory_usage_reduction += previous_segment_size - new_segment_size;
+        ++encoded_segment_count;
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_BETWEEN_SEGMENTS_MS));
+      }
+    });
   }
+
+  for (auto& thread : threads) thread.join();
 
   if (memory_usage_old != memory_usage_new) {
     Assert(encoded_segment_count > 0, "Memory usage changed, but no segment encoding has been adapted.");
     const auto memory_change_in_megabytes =
         (static_cast<double>(memory_usage_old) - static_cast<double>(memory_usage_new)) / 1'000'000;
     std::stringstream stringstream;
-    stringstream << "Encoded " << encoded_segment_count << " of " << chunk_count << " segments of " << table_name;
+    const uint64_t esc = encoded_segment_count;
+    stringstream << "Encoded " << esc << " of " << chunk_count << " segments of " << table_name;
     stringstream << "." << column_name << " using " + encoding_name << ": ";
     stringstream << ((memory_change_in_megabytes > 0) ? "saved " : "added ");
     stringstream << std::fixed << std::setprecision(2) << std::abs(memory_change_in_megabytes) << " MB ";
@@ -154,7 +167,6 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 }
 
 void CompressionPlugin::_optimize_compression() {
-  _keep_alive_stash.clear();
   const auto initial_system_memory_usage = get_all_segments_memory_usage();
   const auto memory_budget_mb = std::stoll(_memory_budget_setting->get());
   const auto memory_budget = memory_budget_mb * 1000 * 1000;

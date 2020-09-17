@@ -54,8 +54,6 @@ class CompressionPlugin : public AbstractPlugin {
 
   std::shared_ptr<MemoryBudgetSetting> _memory_budget_setting;
 
-  std::vector<std::shared_ptr<AbstractSegment>> _keep_alive_stash;
-
   // Hand tuned, determined by an greedy "Microsoft-like heuristic". Adapted the use of FSBA and changed it almost
   // everywhere to SIMDBP128 (long story).
   // Update: temporary change to FSBA due to encoding crashes.
