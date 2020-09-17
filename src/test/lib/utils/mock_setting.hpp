@@ -16,6 +16,8 @@ class MockSetting : public AbstractSetting {
 
   const std::string& get() final;
 
+  const std::string& get_display_name() final;
+
   void set(const std::string& value) final;
 
   size_t get_calls() const;
@@ -24,6 +26,7 @@ class MockSetting : public AbstractSetting {
 
  private:
   std::string _value;
+  std::string _display_name;
   size_t _get_calls;
   size_t _set_calls;
 };

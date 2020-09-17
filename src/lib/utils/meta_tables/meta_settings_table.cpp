@@ -9,7 +9,7 @@ MetaSettingsTable::MetaSettingsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false},
                                                {"value", DataType::String, false},
                                                {"description", DataType::String, false},
-                                               {"display name", DataType::String, false}}) {}
+                                               {"display_name", DataType::String, false}}) {}
 
 const std::string& MetaSettingsTable::name() const {
   static const auto name = std::string{"settings"};

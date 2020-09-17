@@ -34,7 +34,7 @@ class CompressionPlugin : public AbstractPlugin {
       return description;
     }
     const std::string& get_display_name() override { return _display_name; }
-    const std::string& get() override { return _value; }
+    const std::string& get() final { return _value; }
     void set(const std::string& value) final { _value = value; }
 
     std::string _value = "10000";
