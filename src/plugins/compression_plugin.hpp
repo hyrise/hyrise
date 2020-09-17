@@ -33,10 +33,12 @@ class CompressionPlugin : public AbstractPlugin {
       static const auto description = std::string{"The memory budget (MB) to target for the CompressionPlugin."};
       return description;
     }
-    const std::string& get() { return _value; }
+    const std::string& display_name() const final { return _display_name; }
+    const std::string& get() final { return _value; }
     void set(const std::string& value) final { _value = value; }
 
     std::string _value = "10000";
+    std::string _display_name = "Memory Budget (MB)";
   };
 
   constexpr static std::chrono::milliseconds THREAD_INTERVAL = std::chrono::milliseconds(7'500);

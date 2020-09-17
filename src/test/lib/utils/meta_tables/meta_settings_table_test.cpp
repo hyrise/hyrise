@@ -21,14 +21,15 @@ class MetaSettingsTest : public BaseTest {
 
     const auto column_definitions = meta_settings_table->column_definitions();
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
-    table->append({pmr_string{"mock_setting"}, pmr_string{"bar"}, pmr_string{"baz"}});
+    table->append({pmr_string{"mock_setting"}, pmr_string{"bar"}, pmr_string{"baz"}, pmr_string{"bazo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     mock_manipulation_values = table_wrapper->get_output();
 
     expected_table = std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false},
                                                                     {"value", DataType::String, false},
-                                                                    {"description", DataType::String, false}},
+                                                                    {"description", DataType::String, false},
+                                                                    {"display_name", DataType::String, false}},
                                              TableType::Data, 5);
 
     mock_setting = std::make_shared<MockSetting>("mock_setting");
@@ -54,7 +55,8 @@ TEST_F(MetaSettingsTest, IsUpdateable) {
 }
 
 TEST_F(MetaSettingsTest, TableGeneration) {
-  expected_table->append({pmr_string{"mock_setting"}, pmr_string{"mock_value"}, pmr_string{"mock_description"}});
+  expected_table->append({pmr_string{"mock_setting"}, pmr_string{"mock_value"}, pmr_string{"mock_description"},
+                          pmr_string{"Mock Setting"}});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
 
@@ -65,7 +67,8 @@ TEST_F(MetaSettingsTest, TableGeneration) {
 TEST_F(MetaSettingsTest, Update) {
   updateTable(meta_settings_table, mock_manipulation_values->get_row(0), mock_manipulation_values->get_row(0));
 
-  expected_table->append({pmr_string{"mock_setting"}, pmr_string{"bar"}, pmr_string{"mock_description"}});
+  expected_table->append(
+      {pmr_string{"mock_setting"}, pmr_string{"bar"}, pmr_string{"mock_description"}, pmr_string{"Mock Setting"}});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
 

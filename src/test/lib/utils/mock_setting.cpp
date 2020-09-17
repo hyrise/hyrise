@@ -10,6 +10,11 @@ const std::string& MockSetting::description() const {
   return description;
 }
 
+const std::string& MockSetting::display_name() const {
+  static const auto display_name = std::string{"Mock Setting"};
+  return display_name;
+}
+
 const std::string& MockSetting::get() {
   _get_calls++;
   return _value;

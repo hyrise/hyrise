@@ -14,6 +14,8 @@ class MockSetting : public AbstractSetting {
 
   const std::string& description() const final;
 
+  const std::string& display_name() const final;
+
   const std::string& get() final;
 
   void set(const std::string& value) final;

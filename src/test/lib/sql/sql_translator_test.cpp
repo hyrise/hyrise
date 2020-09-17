@@ -2251,7 +2251,9 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   const auto expressions = expression_vector(lqp_column_(select_node,
                                                                 meta_table->column_id_by_name("name")), "foo",
                                              lqp_column_(select_node,
-                                                                meta_table->column_id_by_name("description")));
+                                                                meta_table->column_id_by_name("description")),
+                                             lqp_column_(select_node,
+                                                                meta_table->column_id_by_name("display_name")));
 
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_settings", MetaTableChangeType::Update,
