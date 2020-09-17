@@ -47,6 +47,10 @@ class CompressionPlugin : public AbstractPlugin {
 
   bool _stop_requested = false;
 
+  enum class PluginStatus : uint8_t { Unknown = 0, Feasible = 1, Infeasible = 2 };
+
+  PluginStatus _previous_status = PluginStatus::Unknown;
+
   int64_t _compress_column(const std::string table_name, const std::string column_name, const std::string encoding_name,
                            const bool column_was_accessed, const int64_t desired_memory_usage_reduction);
 

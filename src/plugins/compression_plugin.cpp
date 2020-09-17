@@ -209,9 +209,15 @@ void CompressionPlugin::_optimize_compression() {
   std::stringstream stringstream;
   LogLevel log_level = LogLevel::Warning;
   if (static_cast<int64_t>(initial_system_memory_usage - achieved_memory_usage_reduction) > memory_budget) {
+    if (_previous_status == PluginStatus::Infeasible) return;
+    _previous_status = PluginStatus::Infeasible;
+
     stringstream << "Compression optimization finished: The memory budget is infeasible";
     log_level = LogLevel::Debug;
   } else {
+    if (_previous_status == PluginStatus::Feasible) return;
+    _previous_status = PluginStatus::Feasible;
+
     stringstream << "Compression optimization finished: memory budget is feasible";
   }
   stringstream << " (budget: " << (memory_budget / 1'000'000) << " MB, currrent size of table data: ";
