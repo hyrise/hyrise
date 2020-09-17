@@ -47,7 +47,7 @@ void TableFeatureExporter::_export_column_data(std::shared_ptr<const Calibration
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
-      const auto& sort_definitions = chunk->sorted_by();
+      const auto& sort_definitions = chunk->individually_sorted_by();
       if (sort_definitions.empty()) {
         sorted_ascending = false;
         sorted_descending = false;

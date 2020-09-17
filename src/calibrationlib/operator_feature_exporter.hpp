@@ -1,8 +1,10 @@
 #pragma once
 
+#include <atomic>
 #include <mutex>
 #include <string>
 
+#include "expression/lqp_column_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -26,6 +28,17 @@ class OperatorFeatureExporter {
     int32_t output_columns{0};
   };
 
+  struct TableColumnInformation {
+    TableColumnInformation(const pmr_string& init_table_name, const pmr_string& init_column_name,
+                           const pmr_string& init_column_type)
+        : table_name(init_table_name), column_name(init_column_name), column_type(init_column_type) {}
+    pmr_string table_name;
+    pmr_string column_name;
+    pmr_string column_type;
+  };
+
+  enum class InputSide { Left, Right };
+
   explicit OperatorFeatureExporter(const std::string& path_to_dir);
 
   void export_to_csv(const std::shared_ptr<const AbstractOperator> op);
@@ -40,13 +53,15 @@ class OperatorFeatureExporter {
   void _export_get_table(const std::shared_ptr<const GetTable>& op);
   void _export_table_scan(const std::shared_ptr<const TableScan>& op);
 
-  const GeneralOperatorInformation _general_operator_information(const std::shared_ptr<const AbstractOperator>& op);
-
-  // currently, supports only HashJoin stages
   void _export_join_stages(const std::shared_ptr<const AbstractJoinOperator>& op);
 
-  std::string _get_original_table(const std::shared_ptr<const AbstractOperator>& op) const;
-  AllTypeVariant _resolve_column_id(const std::string& table_name, const ColumnID column_id) const;
+  const GeneralOperatorInformation _general_operator_information(
+      const std::shared_ptr<const AbstractOperator>& op) const;
+
+  const TableColumnInformation _table_column_information(
+      const std::shared_ptr<const AbstractLQPNode>& lqp_node,
+      const std::shared_ptr<const LQPColumnExpression>& column_expression,
+      const InputSide input_side = InputSide::Left) const;
 
   const std::shared_ptr<Table> _general_output_table =
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
@@ -55,9 +70,9 @@ class OperatorFeatureExporter {
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
-                                                     {"OPERATOR_DETAIL", DataType::String, true},
-                                                     {"TABLE_NAME", DataType::String, true},
-                                                     {"COLUMN_NAME", DataType::String, true},
+                                                     {"COLUMN_TYPE", DataType::String, false},
+                                                     {"TABLE_NAME", DataType::String, false},
+                                                     {"COLUMN_NAME", DataType::String, false},
                                                      {"OPERATOR_IMPLEMENTATION", DataType::String, true}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_output_table =
@@ -71,10 +86,12 @@ class OperatorFeatureExporter {
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
-                                                     {"LEFT_TABLE_NAME", DataType::String, true},
-                                                     {"RIGHT_TABLE_NAME", DataType::String, true},
-                                                     {"LEFT_COLUMN_NAME", DataType::String, true},
-                                                     {"RIGHT_COLUMN_NAME", DataType::String, true}},
+                                                     {"LEFT_TABLE_NAME", DataType::String, false},
+                                                     {"LEFT_COLUMN_NAME", DataType::String, false},
+                                                     {"LEFT_COLUMN_TYPE", DataType::String, false},
+                                                     {"RIGHT_TABLE_NAME", DataType::String, false},
+                                                     {"RIGHT_COLUMN_NAME", DataType::String, false},
+                                                     {"RIGHT_COLUMN_TYPE", DataType::String, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},

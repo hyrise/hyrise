@@ -518,13 +518,11 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 }
 
 void BenchmarkRunner::_export_pqps() const {
-  std::cout << "export" << std::endl;
   const auto& pqp_cache = Hyrise::get().default_pqp_cache;
   const auto cache_map = pqp_cache->snapshot();
   for (const auto& [_, entry] : cache_map) {
     _operator_exporter->export_to_csv(entry.value);
   }
-  std::cout << "clear" << std::endl;
   // Clear pqp cache for next benchmark run
   pqp_cache->clear();
 }

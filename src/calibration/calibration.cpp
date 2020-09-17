@@ -48,9 +48,8 @@ int main() {
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
     benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
     const auto test_duration =
-      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
     std::cout << "- Generated test data in " << test_duration << " s" << std::endl;
-
   }
 
   std::cout << "- Generating training data" << std::endl;
@@ -100,7 +99,7 @@ int main() {
 
   table_exporter.flush();
 
-   const auto export_duration =
+  const auto export_duration =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - export_start).count();
   std::cout << "- Exported training data in " << export_duration << " s" << std::endl;
 }
