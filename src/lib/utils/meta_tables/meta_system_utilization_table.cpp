@@ -265,7 +265,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
  * data structure's allocator requests a specific amount of bytes that exceeds a certain size class by only one byte,
  * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between
  * size classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory
- * slightly exceeds, the greater the difference between the actually allocated and the requested memory.
+ * slightly exceeds, the larger the difference between the actually allocated and the requested memory.
  *
  * Example:
  *   Assumed size classes: ... 20 KiB, 24 KiB, ..., 256 KiB, 320 KiB, ...
