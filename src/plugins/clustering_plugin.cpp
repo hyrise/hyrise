@@ -75,19 +75,6 @@ void ClusteringPlugin::_optimize_clustering() {
       table->get_chunk(chunk_id)->set_individually_sorted_by(sort_column_definition);
     }
 
-    // for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    //   auto chunk = table->get_chunk(chunk_id);
-    //   for (ColumnID column_)
-    // const auto base_segment = chunk->get_segment(column_id);
-    // memory_usage_old += base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
-
-    // std::shared_ptr<BaseSegment> new_segment;
-    // new_segment = encode_and_compress_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
-    // memory_usage_new += new_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
-
-    // chunk->replace_segment(column_id, new_segment);
-    // }
-
     table->set_table_statistics(TableStatistics::from_table(*table));
     generate_chunk_pruning_statistics(table);
 
