@@ -33,7 +33,7 @@ class CompressionPlugin : public AbstractPlugin {
       static const auto description = std::string{"The memory budget (MB) to target for the CompressionPlugin."};
       return description;
     }
-    const std::string& get_display_name() override { return _display_name; }
+    const std::string& display_name() const final { return _display_name; }
     const std::string& get() final { return _value; }
     void set(const std::string& value) final { _value = value; }
 
