@@ -261,7 +261,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
  * fragmentation or because jemalloc keeps empty pages for future use). In rare cases, it can also be higher than
  * the amount of virtual memory if memory has been allocated but not committed yet.
  *
- * jemalloc's memory allocation uses different size classes, each with a different size of bytes to allocate. If a
+ * jemalloc's memory allocation uses different size classes, each with a different number of bytes to allocate. If a
  * data structure's allocator requests a specific amount of bytes that exceeds a certain size class by only one byte,
  * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between
  * size classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory
