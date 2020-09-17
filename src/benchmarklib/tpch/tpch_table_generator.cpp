@@ -329,7 +329,7 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
   // Allowed as per TPC-H Specification, paragraph 1.5.2
   // Hyrise standard config: {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
   // We don't want this for the Cockpit's use cases.
-  return {};
+  return {{"lineitem", "l_comment"}, {"orders", "o_comment"}}
 }
 
 void TPCHTableGenerator::_add_constraints(

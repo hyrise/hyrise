@@ -28,10 +28,8 @@ void ClusteringPlugin::_optimize_clustering() {
 
   _optimized = true;
 
-  std::map<std::string, std::string> sort_orders = {{"orders_tpch_0_1", "o_orderdate"},
-                                                    {"orders_tpch_1", "o_orderdate"},
-                                                    {"lineitem_tpch_0_1", "l_shipdate"},
-                                                    {"lineitem_tpch_1", "l_shipdate"}};
+  std::map<std::string, std::string> sort_orders = {{"orders_tpch_1", "o_orderkey"},
+                                                    {"lineitem_tpch_1", "l_orderkey"}};
 
   for (auto& [table_name, column_name] : sort_orders) {
     if (!Hyrise::get().storage_manager.has_table(table_name)) {
