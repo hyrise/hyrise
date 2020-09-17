@@ -94,12 +94,12 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
   auto memory_usage_new = int64_t{0};
   auto achieved_memory_usage_reduction = int64_t{0};
 
-  // TODO: check if we should inrease or decrease the memory.
+  // TODO(user): check if we should increase or decrease the memory.
 
   auto encoded_segment_count = size_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     if ((desired_memory_usage_reduction > 0 && achieved_memory_usage_reduction >= desired_memory_usage_reduction) ||
-       (desired_memory_usage_reduction < 0 && achieved_memory_usage_reduction < desired_memory_usage_reduction))  {
+        (desired_memory_usage_reduction < 0 && achieved_memory_usage_reduction < desired_memory_usage_reduction)) {
       // Finish as soon as we have achieved the desired reduction in memory usage OR break if we have used up the
       // the budget for increasing the memory usage.
       break;
@@ -110,7 +110,8 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
     const auto current_encoding_spec = get_segment_encoding_spec(abstract_segment);
     if (current_encoding_spec.encoding_type == segment_encoding_spec.encoding_type &&
-        (!segment_encoding_spec.vector_compression_type || segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
+        (!segment_encoding_spec.vector_compression_type ||
+         segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
       continue;
     }
 
@@ -154,7 +155,8 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 void CompressionPlugin::_optimize_compression() {
   _keep_alive_stash.clear();
   const auto initial_system_memory_usage = get_all_segments_memory_usage();
-  const auto memory_budget = std::stoll(_memory_budget_setting->get());
+  const auto memory_budget_mb = std::stoll(_memory_budget_setting->get());
+  const auto memory_budget = memory_budget_mb * 1000 * 1000;
   const auto memory_usage_reduction =
       static_cast<int64_t>(initial_system_memory_usage) - static_cast<int64_t>(memory_budget);
   auto achieved_memory_usage_reduction = int64_t{0};
@@ -209,7 +211,6 @@ void CompressionPlugin::stop() {
   _stop_requested = true;
   _memory_budget_setting->unregister_at_settings_manager();
 }
-
 
 EXPORT_PLUGIN(CompressionPlugin)
 

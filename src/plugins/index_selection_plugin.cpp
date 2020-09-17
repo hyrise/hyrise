@@ -10,7 +10,6 @@ void IndexSelectionPlugin::start() {
 
 void IndexSelectionPlugin::stop() {}
 
-
 EXPORT_PLUGIN(IndexSelectionPlugin)
 
 }  // namespace opossum

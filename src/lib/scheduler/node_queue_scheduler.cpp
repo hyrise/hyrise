@@ -88,9 +88,7 @@ bool NodeQueueScheduler::active() const { return _active; }
 
 const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
 
-size_t NodeQueueScheduler::number_of_workers() const {
-  return _workers.size();
-}
+size_t NodeQueueScheduler::number_of_workers() const { return _workers.size(); }
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <utility>
 
