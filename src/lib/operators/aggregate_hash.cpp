@@ -445,7 +445,7 @@ void AggregateHash::_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
 
   /**
@@ -651,7 +651,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
   }
 
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
 
   /**
