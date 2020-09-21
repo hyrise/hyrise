@@ -17,12 +17,15 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
-    : AbstractReadOnlyOperator(OperatorType::Projection, input_operator), expressions(init_expressions) {}
+    : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
+                               std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
+      expressions(init_expressions) {}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -44,6 +47,8 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
+  Timer timer;
+
   const auto& input_table = *left_input_table();
 
   /**
@@ -60,12 +65,20 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
 
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  if (!uncorrelated_subquery_results->empty()) {
+    step_performance_data.set_step_runtime(OperatorSteps::UncorrelatedSubqueries, timer.lap());
+  }
+
   auto column_is_nullable = std::vector<bool>(expressions.size(), false);
 
   /**
    * Perform the projection
    */
   auto output_chunk_segments = std::vector<Segments>(input_table.chunk_count());
+
+  auto forwarding_cost = std::chrono::nanoseconds{};
+  auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
   const auto chunk_count_input_table = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
@@ -85,6 +98,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
+        forwarding_cost += timer.lap();
       } else if (expression->type == ExpressionType::PQPColumn && !forward_columns) {
         // The current column will be returned without any logical modifications. As other columns do get modified (and
         // returned as a ValueSegment), all segments (including this one) need to become ValueSegments. This segment is
@@ -189,15 +203,20 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             column_is_nullable[column_id] = has_null;
           }
         });
+        forwarding_cost += timer.lap();
       } else {
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
         output_segments[column_id] = std::move(output_segment);
+        expression_evaluator_cost += timer.lap();
       }
     }
 
     output_chunk_segments[chunk_id] = std::move(output_segments);
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
+  step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
 
   /**
    * Determine the TableColumnDefinitions and build the output table
@@ -250,6 +269,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     output_chunks[chunk_id] = chunk;
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());
