@@ -31,13 +31,18 @@ ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
 template <typename T>
 ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values)
     : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)), _null_values(std::move(null_values)) {
-  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
+  DebugAssert(_values.size() == _null_values->size(), "The number of values and null_values should be equal");
+
+  // We cannot check for the capacity being equal because of the implementation details of vector<bool>
+  DebugAssert(_values.capacity() <= _null_values->capacity(),
+              "The capacity of values and null_values should be compatible");
 }
 
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
+  access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   // Segment supports null values and value is null
   if (is_nullable() && _null_values->at(chunk_offset)) {
@@ -49,6 +54,7 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
 
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
+  access_counter[SegmentAccessCounter::AccessType::Point] += 1;
   return is_nullable() && (*_null_values)[chunk_offset];
 }
 
@@ -57,6 +63,7 @@ T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of segment type because it is null.");
+  access_counter[SegmentAccessCounter::AccessType::Point] += 1;
   return _values.at(chunk_offset);
 }
 
@@ -65,6 +72,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
   Assert(size() < _values.capacity(), "ValueSegment is full");
 
   bool is_null = variant_is_null(val);
+  access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
@@ -72,7 +80,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
+  Assert(!is_null, "ValueSegment is not nullable but value passed is null.");
 
   _values.push_back(boost::get<T>(val));
 }
@@ -100,10 +108,11 @@ const pmr_vector<bool>& ValueSegment<T>::null_values() const {
 }
 
 template <typename T>
-pmr_vector<bool>& ValueSegment<T>::null_values() {
-  DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
+void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
+  Assert(is_nullable(), "This ValueSegment does not support null values.");
 
-  return *_null_values;
+  std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
+  (*_null_values)[chunk_offset] = true;
 }
 
 template <typename T>
@@ -117,6 +126,7 @@ void ValueSegment<T>::resize(const size_t size) {
               "ValueSegments should not be shrunk or resized beyond their original capacity");
   _values.resize(size);
   if (is_nullable()) {
+    std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
     _null_values->resize(size);
   }
 }
@@ -124,12 +134,15 @@ void ValueSegment<T>::resize(const size_t size) {
 template <typename T>
 std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
+  std::shared_ptr<BaseSegment> copy;
   if (is_nullable()) {
     pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-    return std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
+    copy = std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
   } else {
-    return std::make_shared<ValueSegment<T>>(std::move(new_values));
+    copy = std::make_shared<ValueSegment<T>>(std::move(new_values));
   }
+  copy->access_counter = access_counter;
+  return copy;
 }
 
 template <typename T>

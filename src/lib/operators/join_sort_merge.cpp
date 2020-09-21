@@ -46,9 +46,9 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinSortMerge>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                          _secondary_predicates);
 }
 
@@ -56,20 +56,23 @@ void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, All
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
-                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+                   left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                   right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinSortMerge doesn't support these parameters");
 
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+  const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
+  DebugAssert(left_column_type == right_input_table()->column_data_type(_primary_predicate.column_ids.second),
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-      _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  resolve_data_type(left_column_type, [&](const auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
+        *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  });
 
   return _impl->_on_execute();
 }
@@ -109,8 +112,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
-  std::unique_ptr<PosList> _null_rows_left;
-  std::unique_ptr<PosList> _null_rows_right;
+  std::unique_ptr<RowIDPosList> _null_rows_left;
+  std::unique_ptr<RowIDPosList> _null_rows_right;
 
   const ColumnID _primary_left_column_id;
   const ColumnID _primary_right_column_id;
@@ -127,8 +130,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_left;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -136,7 +139,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
     size_t cluster;
     size_t index;
@@ -184,8 +187,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
+    size_t chunk_count_left = _sort_merge_join.left_input_table()->chunk_count();
+    size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
     return static_cast<size_t>(
         std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
   }
@@ -637,7 +640,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _right_outer_non_equi_join() {
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-    if (_sort_merge_join.input_table_left()->row_count() == 0) {
+    if (_sort_merge_join.left_input_table()->row_count() == 0) {
       _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(end_of_right_table));
       return;
     }
@@ -702,7 +705,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _left_outer_non_equi_join() {
     auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-    if (_sort_merge_join.input_table_right()->row_count() == 0) {
+    if (_sort_merge_join.right_input_table()->row_count() == 0) {
       _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(end_of_left_table));
       return;
     }
@@ -768,8 +771,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
-      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_left[cluster_number] = std::make_shared<RowIDPosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
@@ -782,8 +785,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
-          multi_predicate_join_evaluator.emplace(*_sort_merge_join._input_left->get_output(),
-                                                 *_sort_merge_join.input_right()->get_output(), _mode,
+          multi_predicate_join_evaluator.emplace(*_sort_merge_join._left_input->get_output(),
+                                                 *_sort_merge_join.right_input()->get_output(), _mode,
                                                  _secondary_join_predicates);
         }
 
@@ -810,7 +813,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Adds the segments from an input table to the output table
   **/
   void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                            const std::shared_ptr<const PosList>& pos_list) {
+                            const std::shared_ptr<const RowIDPosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)
@@ -846,10 +849,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
   * This is done because there should not be any reference segments referencing reference segments.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
-                                                 const std::shared_ptr<const PosList>& pos_list) {
+  std::shared_ptr<AbstractPosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table,
+                                                         ColumnID column_id,
+                                                         const std::shared_ptr<const AbstractPosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
-    auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+    auto input_pos_lists = std::vector<std::shared_ptr<const AbstractPosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto base_segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
       auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
@@ -857,8 +861,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Get the row ids that are referenced
-    auto new_pos_list = std::make_shared<PosList>();
-    for (const auto& row : *pos_list) {
+    auto new_pos_list = std::make_shared<RowIDPosList>();
+    for (const auto row : *pos_list) {
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
@@ -877,7 +881,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
+        _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
         include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
@@ -892,8 +896,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _perform_join();
 
     if (include_null_left || include_null_right) {
-      auto null_output_left = std::make_shared<PosList>();
-      auto null_output_right = std::make_shared<PosList>();
+      auto null_output_left = std::make_shared<RowIDPosList>();
+      auto null_output_right = std::make_shared<RowIDPosList>();
 
       // Add the outer join rows which had a null value in their join column
       if (include_null_left) {
@@ -932,16 +936,27 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
+    const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
+                                                             _sort_merge_join._primary_predicate.column_ids.second);
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
         continue;
       }
 
-      auto write_output_chunk = [this, pos_list_id, &output_chunks] {
+      auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
         Segments segments;
-        _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
-        _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
-        output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
+        _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
+        _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
+        auto output_chunk = std::make_shared<Chunk>(std::move(segments));
+        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+            _mode == JoinMode::Inner) {
+          output_chunk->finalize();
+          // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+          output_chunk->set_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                       SortColumnDefinition(right_join_column, SortMode::Ascending)});
+        }
+        output_chunks[pos_list_id] = output_chunk;
       };
 
       if (write_output_concurrently) {
@@ -964,7 +979,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                        [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
         output_chunks.end());
 
-    return _sort_merge_join._build_output_table(std::move(output_chunks));
+    auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
+    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+      // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
+      // non-equal predicates.
+      result_table->set_value_clustered_by({left_join_column, right_join_column});
+    }
+
+    return result_table;
   }
 };
 

@@ -16,7 +16,7 @@ class AbstractCardinalityEstimator;
  */
 class AbstractCostEstimator {
  public:
-  explicit AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator);
+  explicit AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator);
   virtual ~AbstractCostEstimator() = default;
 
   /**

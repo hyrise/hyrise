@@ -40,7 +40,7 @@ FixedString& FixedString::operator=(const FixedString& other) {
 }
 
 size_t FixedString::size() const {
-  const auto position = std::find(_mem, _mem + _maximum_length, '\0');
+  auto* const position = std::find(_mem, _mem + _maximum_length, '\0');
   return std::distance(_mem, position);
 }
 

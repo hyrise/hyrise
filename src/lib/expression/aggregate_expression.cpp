@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
+AggregateExpression::AggregateExpression(const AggregateFunction init_aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
-    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
+    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(init_aggregate_function) {}
 
 std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
@@ -35,9 +35,9 @@ std::string AggregateExpression::description(const DescriptionMode mode) const {
     if (mode == DescriptionMode::ColumnName) {
       stream << "COUNT(*)";
     } else {
-      const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument());
+      const auto* const column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument());
       DebugAssert(column_expression, "Expected aggregate argument to be column expression");
-      stream << "COUNT(" << column_expression->column_reference.original_node() << ".*)";
+      stream << "COUNT(" << column_expression->original_node.lock() << ".*)";
     }
   } else {
     stream << aggregate_function << "(";
@@ -102,7 +102,7 @@ bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
   if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) return false;
 
   const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
-  if (lqp_column_expression.column_reference.original_column_id() != INVALID_COLUMN_ID) return false;  // NOLINT
+  if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) return false;  // NOLINT
 
   return true;
 }

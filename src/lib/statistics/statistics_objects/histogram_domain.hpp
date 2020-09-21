@@ -56,11 +56,11 @@ class HistogramDomain<pmr_string> {
   HistogramDomain();
 
   /**
-   * @param min_char        The minimum of the supported character range
-   * @param max_char        The maximum of the supported character range
-   * @param prefix_length
+   * @param init_min_char        The minimum of the supported character range
+   * @param init_max_char        The maximum of the supported character range
+   * @param init_prefix_length
    */
-  HistogramDomain(const char min_char, const char max_char, const size_t prefix_length);
+  HistogramDomain(const char init_min_char, const char init_max_char, const size_t init_prefix_length);
 
   /**
    * @return whether @param string_value consists exclusively of characters between `min_char` and `max_char`

@@ -25,9 +25,9 @@ struct OperatorScanPredicate {
                                                                            const AbstractLQPNode& node);
 
   OperatorScanPredicate() = default;
-  OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                        const AllParameterVariant& value = NullValue{},
-                        const std::optional<AllParameterVariant>& value2 = std::nullopt);
+  OperatorScanPredicate(const ColumnID init_column_id, const PredicateCondition init_predicate_condition,
+                        const AllParameterVariant& init_value = NullValue{},
+                        const std::optional<AllParameterVariant>& init_value2 = std::nullopt);
 
   // Returns a string representation of the predicate, using an optionally given table that is used to resolve column
   // ids to names.

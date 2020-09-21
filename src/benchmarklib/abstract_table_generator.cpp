@@ -1,5 +1,7 @@
 #include "abstract_table_generator.hpp"
 
+#include <fstream>
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -23,7 +25,7 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"index_duration", metrics.index_duration.count()}};
 }
 
-BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
+BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table) : table(init_table) {}
 
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
@@ -45,7 +47,7 @@ void AbstractTableGenerator::generate_and_store() {
 
     for (const auto& [table_name, column_name] : sort_order_by_table) {
       auto& table = table_info_by_name[table_name].table;
-      const auto order_by_mode = OrderByMode::Ascending;  // currently fixed to ascending
+      const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
       const auto sort_column_id = table->column_id_by_name(column_name);
       const auto chunk_count = table->chunk_count();
 
@@ -65,6 +67,8 @@ void AbstractTableGenerator::generate_and_store() {
                   is_sorted = false;
                   break;
                 }
+
+                ++it;
                 continue;
               }
 
@@ -85,7 +89,7 @@ void AbstractTableGenerator::generate_and_store() {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          table->get_chunk(chunk_id)->set_ordered_by({sort_column_id, order_by_mode});
+          table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
         }
 
         continue;
@@ -100,7 +104,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(table_wrapper, sort_column_id, order_by_mode, _benchmark_config->chunk_size);
+      auto sort = std::make_shared<Sort>(
+          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, sort_mode}},
+          _benchmark_config->chunk_size, Sort::ForceMaterialization::Yes);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
 
@@ -117,7 +123,8 @@ void AbstractTableGenerator::generate_and_store() {
           segments.emplace_back(chunk->get_segment(column_id));
         }
         table->append_chunk(segments, mvcc_data);
-        table->get_chunk(chunk_id)->set_ordered_by({sort_column_id, order_by_mode});
+        table->get_chunk(chunk_id)->finalize();
+        table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
@@ -146,7 +153,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Encode the tables
    */
-  std::cout << "- Encoding tables if necessary" << std::endl;
+  std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Encoding '" << table_name << "' - " << std::flush;
     Timer per_table_timer;
@@ -156,7 +163,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
   metrics.encoding_duration = timer.lap();
-  std::cout << "- Encoding tables done (" << format_duration(metrics.encoding_duration) << ")" << std::endl;
+  std::cout << "- Encoding tables and generating pruning statistic done (" << format_duration(metrics.encoding_duration)
+            << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
@@ -198,7 +206,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding tables to StorageManager and generating statistics" << std::endl;
+  std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
   auto& storage_manager = Hyrise::get().storage_manager;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
@@ -210,7 +218,7 @@ void AbstractTableGenerator::generate_and_store() {
 
   metrics.store_duration = timer.lap();
 
-  std::cout << "- Adding tables to StorageManager and generating statistics done ("
+  std::cout << "- Adding tables to StorageManager and generating table statistics done ("
             << format_duration(metrics.store_duration) << ")" << std::endl;
 
   /**
@@ -220,6 +228,33 @@ void AbstractTableGenerator::generate_and_store() {
     storage_manager.apply_partitioning();
   } else {
     std::cout << "- Not applying partitioning as PARTITIONING environment variable is unset" << std::endl;
+  }
+
+  /**
+   * Dump dictionaries for external analysis
+   */
+  {
+    for (const auto& table_name : storage_manager.table_names()) {
+      const auto table = storage_manager.get_table(table_name);
+      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+        const auto column_name = table->column_name(column_id);
+        const auto column_data_type = table->column_data_type(column_id);
+        resolve_data_type(column_data_type, [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+            auto out = std::ofstream(table_name + "." + column_name + "." + std::to_string(chunk_id) + ".dict");
+
+            const auto chunk = table->get_chunk(chunk_id);
+            const auto& dictionary_segment = dynamic_cast<const DictionarySegment<ColumnDataType>&>(*chunk->get_segment(column_id));
+            const auto& dictionary = dictionary_segment.dictionary();
+
+            for (auto dictionary_entry : *dictionary) {
+              out << dictionary_entry << '\0';
+            }
+          }
+        });
+      }
+    }
   }
 
   /**

@@ -30,15 +30,15 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
   // 0. Validate input
   DebugAssert(context, "Update needs a transaction context");
-  DebugAssert(input_table_left()->row_count() == input_table_right()->row_count(),
+  DebugAssert(left_input_table()->row_count() == right_input_table()->row_count(),
               "Update required identical layouts from its input tables");
-  DebugAssert(input_table_left()->column_data_types() == input_table_right()->column_data_types(),
+  DebugAssert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
               "Update required identical layouts from its input tables");
 
   // 1. Delete obsolete data with the Delete operator.
   //    Delete doesn't accept empty input data
-  if (input_table_left()->row_count() > 0) {
-    _delete = std::make_shared<Delete>(_input_left);
+  if (left_input_table()->row_count() > 0) {
+    _delete = std::make_shared<Delete>(_left_input);
     _delete->set_transaction_context(context);
     _delete->execute();
 
@@ -49,7 +49,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   }
 
   // 2. Insert new data with the Insert operator.
-  _insert = std::make_shared<Insert>(_table_to_update_name, _input_right);
+  _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
   _insert->set_transaction_context(context);
   _insert->execute();
   // Insert cannot fail in the MVCC sense, no check necessary
@@ -58,9 +58,9 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 }
 
 std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Update>(_table_to_update_name, copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Update>(_table_to_update_name, copied_left_input, copied_right_input);
 }
 
 void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

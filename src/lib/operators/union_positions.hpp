@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 
 namespace opossum {
 
@@ -76,7 +76,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
 
  private:
   // See docs at the top of the cpp
-  using ReferenceMatrix = std::vector<opossum::PosList>;
+  using ReferenceMatrix = std::vector<opossum::RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**
@@ -91,8 +91,8 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   /**

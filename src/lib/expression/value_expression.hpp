@@ -10,7 +10,7 @@ namespace opossum {
  */
 class ValueExpression : public AbstractExpression {
  public:
-  explicit ValueExpression(const AllTypeVariant& value);
+  explicit ValueExpression(const AllTypeVariant& init_value);
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;

@@ -13,9 +13,11 @@
 namespace opossum {
 
 LQPSubqueryExpression::LQPSubqueryExpression(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,
+    const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids,
     const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions)
-    : AbstractExpression(ExpressionType::LQPSubquery, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+    : AbstractExpression(ExpressionType::LQPSubquery, parameter_expressions),
+      lqp(init_lqp),
+      parameter_ids(init_parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
          "Need exactly as many ParameterIDs as parameter Expressions");
 }

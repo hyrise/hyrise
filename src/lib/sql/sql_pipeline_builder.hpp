@@ -48,18 +48,7 @@ class SQLPipelineBuilder final {
    */
   SQLPipelineBuilder& disable_mvcc();
 
-  /*
-   * Keep temporary tables in the middle of the query plan for visualization and debugging
-   */
-  SQLPipelineBuilder& dont_cleanup_temporaries();
-
   SQLPipeline create_pipeline() const;
-
-  /**
-   * @param parsed_sql  for usage from SQLPipeline to pass along to SQLPipelineStatement, everyone else leaves this as
-   *                    nullptr
-   */
-  SQLPipelineStatement create_pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql = nullptr) const;
 
  private:
   const std::string _sql;
@@ -69,7 +58,6 @@ class SQLPipelineBuilder final {
   std::shared_ptr<Optimizer> _optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
-  CleanupTemporaries _cleanup_temporaries{true};
 };
 
 }  // namespace opossum

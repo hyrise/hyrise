@@ -13,11 +13,11 @@ namespace opossum {
  */
 class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractLQPNode {
  public:
-  explicit InsertNode(const std::string& table_name);
+  explicit InsertNode(const std::string& init_table_name);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
 
   const std::string table_name;
 

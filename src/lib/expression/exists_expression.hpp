@@ -12,7 +12,7 @@ enum class ExistsExpressionType { Exists, NotExists };
 class ExistsExpression : public AbstractExpression {
  public:
   ExistsExpression(const std::shared_ptr<AbstractExpression>& subquery,
-                   const ExistsExpressionType exists_expression_type);
+                   const ExistsExpressionType init_exists_expression_type);
 
   std::shared_ptr<AbstractExpression> subquery() const;
 

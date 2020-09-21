@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -27,8 +27,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   const std::string& name() const override;
 
   struct JoinParams {
-    PosList& pos_list_left;
-    PosList& pos_list_right;
+    RowIDPosList& pos_list_left;
+    RowIDPosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
     bool track_left_matches{};
@@ -43,8 +43,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   std::shared_ptr<const Table> _on_execute() override;
@@ -59,7 +59,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
                              const ChunkID chunk_id_left, const ChunkID chunk_id_right, JoinParams& params);
 
   static void _write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
-                                  const std::shared_ptr<PosList>& pos_list);
+                                  const std::shared_ptr<RowIDPosList>& pos_list);
 
   // The JoinIndex uses this join as a fallback if no index exists
   friend class JoinIndex;

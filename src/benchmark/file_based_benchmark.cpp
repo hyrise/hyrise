@@ -28,27 +28,16 @@ int main(int argc, char* argv[]) {
   // Comma-separated query names or "all"
   std::string queries_str;
 
-  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    table_path = json_config.value("table_path", "");
-    query_path = json_config.value("query_path", "");
-    queries_str = json_config.value("queries", "all");
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
+  query_path = cli_parse_result["query_path"].as<std::string>();
+  table_path = cli_parse_result["table_path"].as<std::string>();
+  queries_str = cli_parse_result["queries"].as<std::string>();
 
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
-
-    query_path = cli_parse_result["query_path"].as<std::string>();
-    table_path = cli_parse_result["table_path"].as<std::string>();
-    queries_str = cli_parse_result["queries"].as<std::string>();
-
-    benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
-  }
+  benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {

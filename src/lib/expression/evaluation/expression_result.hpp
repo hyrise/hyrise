@@ -62,13 +62,12 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult() = default;
 
-  explicit ExpressionResult(pmr_vector<T> values, pmr_vector<bool> nulls = {})
-      : values(std::move(values)), nulls(std::move(nulls)) {
+  explicit ExpressionResult(pmr_vector<T> init_values, pmr_vector<bool> init_nulls = {})
+      : values(std::move(init_values)), nulls(std::move(init_nulls)) {
     // Allowed size of nulls: 0 (not nullable)
     //                        1 (nullable, all values are NULL or NOT NULL, depending on the value)
     //                        n (same as values, 1:1 mapping)
-    DebugAssert(this->nulls.empty() || this->nulls.size() == 1 || this->nulls.size() == this->values.size(),
-                "Mismatching number of nulls");
+    DebugAssert(nulls.empty() || nulls.size() == 1 || nulls.size() == values.size(), "Mismatching number of nulls");
   }
 
   bool is_nullable_series() const { return size() != 1; }

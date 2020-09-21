@@ -7,6 +7,18 @@
 namespace opossum {
 
 void OperatorPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  if (!executed) {
+    stream << "not executed";
+    return;
+  }
+
+  if (!has_output) {
+    stream << "executed, but no output";
+    return;
+  }
+
+  stream << output_row_count << " row(s) in ";
+  stream << output_chunk_count << " chunk(s), ";
   stream << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime));
 }
 

@@ -18,11 +18,12 @@ class PQPSubqueryExpression : public AbstractExpression {
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
   // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
-  PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
-                        const Parameters& parameters = {});
+  PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp, const DataType data_type,
+                        const bool nullable, const Parameters& init_parameters = {});
 
   // Constructor for (potentially) multi-column PQPSubqueryExpressions as used in `EXISTS(SELECT ...)`
-  explicit PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
+  explicit PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
+                                 const Parameters& init_parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string description(const DescriptionMode mode) const override;
@@ -42,7 +43,7 @@ class PQPSubqueryExpression : public AbstractExpression {
  private:
   // If the PQPSubqueryExpression returns precisely one column, it "has" this column's data type and nullability.
   struct DataTypeInfo {
-    DataTypeInfo(const DataType data_type, const bool nullable);
+    DataTypeInfo(const DataType init_data_type, const bool init_nullable);
 
     const DataType data_type;
     const bool nullable;

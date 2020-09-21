@@ -63,9 +63,9 @@ class JoinGraphBuilder final {
    *  _parse_predicate() performs this conversion.
    */
   struct PredicateParseResult {
-    PredicateParseResult(const std::shared_ptr<AbstractLQPNode>& base_node,
-                         const std::shared_ptr<AbstractExpression>& predicate)
-        : base_node(base_node), predicate(predicate) {}
+    PredicateParseResult(const std::shared_ptr<AbstractLQPNode>& init_base_node,
+                         const std::shared_ptr<AbstractExpression>& init_predicate)
+        : base_node(init_base_node), predicate(init_predicate) {}
 
     std::shared_ptr<AbstractLQPNode> base_node;
     std::shared_ptr<AbstractExpression> predicate;

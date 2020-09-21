@@ -47,6 +47,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
+    DebugAssert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
+                "Empty chunk other than mutable chunk at the end was found");
     DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
                 "Supply MvccData for Chunks iff Table uses MVCC");
     DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
@@ -151,13 +153,27 @@ void Table::append_mutable_chunk() {
 }
 
 uint64_t Table::row_count() const {
-  uint64_t ret = 0;
+  if (_type == TableType::References && _cached_row_count && !HYRISE_DEBUG) {
+    return *_cached_row_count;
+  }
+
+  uint64_t row_count = 0;
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (chunk) ret += chunk->size();
+    if (chunk) row_count += chunk->size();
   }
-  return ret;
+
+  if (_type == TableType::References) {
+    // After being created, reference tables should never be changed again.
+    DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed");
+
+    // row_count() is called by AbstractOperator after the operator has finished to fill the performance data. As such,
+    // no synchronization is necessary.
+    _cached_row_count = row_count;
+  }
+
+  return row_count;
 }
 
 bool Table::empty() const { return row_count() == 0u; }
@@ -190,7 +206,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
-std::shared_ptr<Chunk> Table::last_chunk() {
+std::shared_ptr<Chunk> Table::last_chunk() const {
   DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
@@ -222,6 +238,16 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     for (const auto& segment : segments) {
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
       Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
+
+    // Check that existing chunks are not empty
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
+      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
     }
   }
 
@@ -303,6 +329,7 @@ const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints
 }
 
 void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
+  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   for (const auto& column_id : column_ids) {
     Assert(column_id < column_count(), "ColumnID out of range");
     Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
@@ -330,6 +357,47 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
 
     _constraint_definitions.push_back(new_constraint);
   }
+}
+
+const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
+
+void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
+  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    if (chunk_count > 1) {
+      for (const auto& column_id : value_clustered_by) {
+        resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
+          using ColumnDataType = typename decltype(column_data_type)::type;
+
+          auto value_to_chunk_map = std::unordered_map<ColumnDataType, ChunkID>{};
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = get_chunk(chunk_id);
+            const auto& segment = chunk->get_segment(column_id);
+            segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
+              Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
+
+              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
+              if (!inserted) {
+                Assert(iter->second == chunk_id,
+                       "Table cannot be set to value-clustered as same value "
+                       "is found in more than one chunk");
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+
+  _value_clustered_by = value_clustered_by;
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {

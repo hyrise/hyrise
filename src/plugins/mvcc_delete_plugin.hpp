@@ -32,7 +32,7 @@ class MvccDeletePlugin : public AbstractPlugin {
   friend class MvccDeletePluginSystemTest;
 
  public:
-  const std::string description() const final;
+  std::string description() const final;
 
   void start() final;
 
@@ -58,7 +58,7 @@ class MvccDeletePlugin : public AbstractPlugin {
   void _physical_delete_loop();
 
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
-                                  std::shared_ptr<TransactionContext> transaction_context);
+                                  const std::shared_ptr<TransactionContext>& transaction_context);
   static void _delete_chunk_physically(const std::shared_ptr<Table>& table, ChunkID chunk_id);
 
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;

@@ -1,3 +1,7 @@
+-- The queries in this file are automatically executed by the SQLiteTestRunner as part of hyriseTest.
+-- Their result is then compared to that of SQLite.
+-- Tables are loaded from sqlite_testrunner.tables.
+
 -- Select entire table
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
@@ -76,6 +80,11 @@ SELECT * FROM id_int_int_int_100 WHERE 90 >= a AND 20 <= a;
 SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 <= a;
 SELECT * FROM id_int_int_int_100 WHERE 91 >= a AND 20 < a;
 SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 < a;
+
+-- Scans with BETWEEN that cannot be handled by ColumnBetweenTableScanImpl, which supports scalar predicates only
+SELECT * FROM mixed WHERE 10 BETWEEN b AND 40
+SELECT * FROM mixed WHERE c BETWEEN b AND 100
+SELECT * FROM mixed WHERE b + 10 BETWEEN b AND c
 
 -- Scans with potential for predicate pruning
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 OR b >= 50 AND b <= 95;
@@ -257,6 +266,9 @@ SELECT COUNT(*) FROM mixed;
 SELECT COUNT(*) + 1 FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY a desc;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY COUNT(*) desc;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY 100 - COUNT(*) desc;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
 SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
 SELECT COUNT(*) FROM id_int_int_int_50, id_int_int_int_100;
@@ -266,7 +278,9 @@ SELECT COUNT(*) FROM mixed, id_int_int_int_100;
 -- COUNT(expr)
 SELECT COUNT(1) FROM mixed;
 SELECT COUNT(b + 1) FROM mixed;
+SELECT COUNT(b) + 1 FROM mixed;
 SELECT COUNT(1 + 2) FROM mixed;
+SELECT COUNT(b + c) FROM mixed;
 SELECT a, COUNT(1) FROM mixed GROUP BY a;
 SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1;
 
@@ -278,6 +292,7 @@ sELEcT Sum(b + b) AS sum_b_b from mixed;
 
 -- Aggregates with NULL
 SELECT a, MAX(b) FROM mixed_null GROUP BY a;
+SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b), a DESC;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
 SELECT a, AVG(b) FROM mixed_null GROUP BY a;
@@ -286,6 +301,7 @@ SELECT a, COUNT(*) FROM mixed_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
 SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
+SELECT a, b FROM (SELECT a, COUNT(a) AS b FROM mixed GROUP BY a) t
 
 -- HAVING
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b) < 40;
@@ -455,6 +471,13 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
+
+-- TRANSACTIONS
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; ROLLBACK; SELECT * FROM mixed;
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; COMMIT; SELECT * FROM mixed;
+
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; ROLLBACK; SELECT * FROM id_int_int_int_100;
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; COMMIT; SELECT * FROM id_int_int_int_100;
 
 -- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT

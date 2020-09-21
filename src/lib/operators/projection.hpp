@@ -20,8 +20,8 @@ namespace opossum {
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  Projection(const std::shared_ptr<const AbstractOperator>& in,
-             const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+  Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
+             const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions);
 
   const std::string& name() const override;
 
@@ -51,8 +51,8 @@ class Projection : public AbstractReadOnlyOperator {
   void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 };
 
 }  // namespace opossum

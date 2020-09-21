@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from hyriseBenchmarkCore import *
 
@@ -8,6 +8,7 @@ from hyriseBenchmarkCore import *
 # During the second run, the shell output is validated using pexpect
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
+  build_dir = initialize()
 
   return_error = False
 
@@ -24,7 +25,7 @@ def main():
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
-  benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
   benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
   benchmark.expect_exact("Running in single-threaded mode")
@@ -53,7 +54,7 @@ def main():
     output = json.load(f)
 
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
-  for i in xrange(0,4):
+  for i in range(0,4):
     return_error = check_json(output["benchmarks"][i]["name"], arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_duration"], int(arguments["--time"]) * 1e9, "Max duration doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_runs"], int(arguments["--runs"]), "Max runs don't match with JSON:", return_error)
@@ -80,7 +81,7 @@ def main():
   arguments["--chunk_size"] = "100000"
   arguments["--verify"] = "true"
 
-  benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
@@ -99,9 +100,6 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if return_error:
     sys.exit(1)

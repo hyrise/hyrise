@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-BaseAttributeStatistics::BaseAttributeStatistics(const DataType data_type) : data_type(data_type) {}
+BaseAttributeStatistics::BaseAttributeStatistics(const DataType init_data_type) : data_type(init_data_type) {}
 
 std::shared_ptr<BaseAttributeStatistics> BaseAttributeStatistics::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,

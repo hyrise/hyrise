@@ -33,7 +33,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result).lqp_nodes.at(0);
       LQPTranslator{}.translate_node(result_node);
     }
   }
@@ -51,7 +51,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     for (auto _ : state) {
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result).lqp_nodes.at(0);
       LQPTranslator{}.translate_node(result_node);
     }
   }
@@ -63,8 +63,8 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     pqp_cache->resize(16);
 
     for (auto _ : state) {
-      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline_statement();
-      pipeline_statement.get_physical_plan();
+      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline();
+      pipeline_statement.get_physical_plans();
     }
   }
 

@@ -15,7 +15,7 @@ std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmet
  */
 class ArithmeticExpression : public AbstractExpression {
  public:
-  ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
+  ArithmeticExpression(const ArithmeticOperator init_arithmetic_operator,
                        const std::shared_ptr<AbstractExpression>& left_operand,
                        const std::shared_ptr<AbstractExpression>& right_operand);
 

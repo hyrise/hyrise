@@ -13,8 +13,8 @@ ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
 
 std::string ExpressionEvaluatorTableScanImpl::description() const { return "ExpressionEvaluator"; }
 
-std::shared_ptr<PosList> ExpressionEvaluatorTableScanImpl::scan_chunk(ChunkID chunk_id) const {
-  return std::make_shared<PosList>(
+std::shared_ptr<RowIDPosList> ExpressionEvaluatorTableScanImpl::scan_chunk(ChunkID chunk_id) const {
+  return std::make_shared<RowIDPosList>(
       ExpressionEvaluator{_in_table, chunk_id, _uncorrelated_subquery_results}.evaluate_expression_to_pos_list(
           *_expression));
 }

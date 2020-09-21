@@ -127,7 +127,7 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
     const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   auto joined_clusters = std::vector<JoinGraphVertexSet>{};
 
-  for (auto& vertex_cluster : vertex_clusters) {
+  for (const auto& vertex_cluster : vertex_clusters) {
     if ((vertex_cluster.first & edge.vertex_set).any()) {
       joined_clusters.emplace_back(vertex_cluster.first);
     }

@@ -5,6 +5,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -42,7 +43,7 @@ std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<con
   if (!lhs && !rhs) return std::nullopt;
   if (!(lhs && rhs) || lhs->type != rhs->type) return LQPMismatch(lhs, rhs);
 
-  const auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
+  auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
   if (mismatch_left) return mismatch_left;
 
   return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
@@ -54,7 +55,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   if (!lhs && !rhs) return std::nullopt;
   if (!lhs->shallow_equals(*rhs, node_mapping)) return LQPMismatch(lhs, rhs);
 
-  const auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
+  auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
   if (mismatch_left) return mismatch_left;
 
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
@@ -189,10 +190,10 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
       case LQPNodeType::Insert:
-        modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
+        modified_tables.insert(static_cast<InsertNode&>(*node).table_name);
         break;
       case LQPNodeType::Update:
-        modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        modified_tables.insert(static_cast<UpdateNode&>(*node).table_name);
         break;
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
@@ -206,6 +207,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
           return LQPVisitation::VisitInputs;
         });
       } break;
+      case LQPNodeType::ChangeMetaTable:
+        modified_tables.insert(static_cast<ChangeMetaTableNode&>(*node).table_name);
+        break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
@@ -226,6 +230,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
       case LQPNodeType::Union:
+      case LQPNodeType::Intersect:
+      case LQPNodeType::Except:
       case LQPNodeType::Mock:
         return LQPVisitation::VisitInputs;
     }
@@ -252,8 +258,8 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       const auto predicate = predicate_node->predicate();
-      const auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
+      auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
+      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
       if (left_input_expression) {
         return left_input_expression;
       } else {

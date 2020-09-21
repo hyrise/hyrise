@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-ValueExpression::ValueExpression(const AllTypeVariant& value)
-    : AbstractExpression(ExpressionType::Value, {}), value(value) {}
+ValueExpression::ValueExpression(const AllTypeVariant& init_value)
+    : AbstractExpression(ExpressionType::Value, {}), value(init_value) {}
 
 bool ValueExpression::requires_computation() const { return false; }
 
@@ -26,9 +26,9 @@ std::string ValueExpression::description(const DescriptionMode mode) const {
   }
 
   if (value.type() == typeid(int64_t)) {
-    stream << "l";
+    stream << "L";
   } else if (value.type() == typeid(float)) {
-    stream << "f";
+    stream << "F";
   }
 
   return stream.str();

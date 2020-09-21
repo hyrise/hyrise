@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
+BenchmarkState::BenchmarkState(const opossum::Duration init_max_duration) : max_duration(init_max_duration) {}
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
@@ -25,7 +25,8 @@ bool BenchmarkState::keep_running() {
       break;
     case State::Over:
       return false;
-    default: {}
+    default: {
+    }
   }
 
   benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
@@ -41,6 +42,6 @@ bool BenchmarkState::keep_running() {
 
 void BenchmarkState::set_done() { state = State::Over; }
 
-bool BenchmarkState::is_done() { return state == State::Over; }
+bool BenchmarkState::is_done() const { return state == State::Over; }
 
 }  // namespace opossum

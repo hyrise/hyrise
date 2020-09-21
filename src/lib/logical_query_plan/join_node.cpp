@@ -19,17 +19,18 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
-    : JoinNode(join_mode, std::vector<std::shared_ptr<AbstractExpression>>{join_predicate}) {}
+JoinNode::JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
+    : JoinNode(init_join_mode, std::vector<std::shared_ptr<AbstractExpression>>{join_predicate}) {}
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
-    : AbstractLQPNode(LQPNodeType::Join, join_predicates), join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode init_join_mode,
+                   const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates)
+    : AbstractLQPNode(LQPNodeType::Join, init_join_predicates), join_mode(init_join_mode) {
   Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
-  Assert(!join_predicates.empty(), "Non-Cross Joins require predicates");
+  Assert(!join_predicates().empty(), "Non-Cross Joins require predicates");
 }
 
 std::string JoinNode::description(const DescriptionMode mode) const {
@@ -45,7 +46,7 @@ std::string JoinNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**
@@ -60,13 +61,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
 
-  _column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
+  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _column_expressions.begin());
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), column_expressions.begin());
 
   if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
-  return _column_expressions;
+  return column_expressions;
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {

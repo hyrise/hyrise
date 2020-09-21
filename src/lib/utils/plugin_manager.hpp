@@ -26,6 +26,8 @@ class PluginManager : public Noncopyable {
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
+  std::vector<PluginName> loaded_plugins() const;
+
   ~PluginManager();
 
  protected:

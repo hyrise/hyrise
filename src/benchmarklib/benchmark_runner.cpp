@@ -224,7 +224,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     const auto num_successful_runs = result.successful_runs.size();
     const auto duration_per_item =
-        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
@@ -345,8 +345,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         {"name", name},
         {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
         {"successful_runs", runs_to_json(result.successful_runs)},
-        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
-        {"iterations", result.successful_runs.size()}};
+        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
@@ -354,24 +353,22 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+        static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
-    // want to touch this and potentially break the comparability across commits.
+    // want to touch this and potentially break the comparability across commits. Note that items_per_second only
+    // includes succesfull iterations.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item =
-        !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
-    benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }
 
-  // Gather information on the (estimated) table size
+  // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{
@@ -399,29 +396,27 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // some point. The way this is solved here is not really nice, but as the TPC-C benchmark binary has just a main
   // method and not a class, retrieving this default value properly would require some major refactoring of how
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
-  const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+  const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
 
   // TPC-C does not support binary caching
-  const auto default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
+  const auto* const default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
-  // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
-  // newest options. Sadly, there is no way to to get all option keys to do this automatically.
   // clang-format off
   cli_options.add_options()
     ("help", "print a summary of CLI options")
     ("full_help", "print more detailed information about configuration options")
     ("r,runs", "Maximum number of runs per item, negative values mean infinity", cxxopts::value<int64_t>()->default_value("-1")) // NOLINT
     ("c,chunk_size", "Chunk size", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
-    ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
-    ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
+    ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<uint64_t>()->default_value("60")) // NOLINT
+    ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<uint64_t>()->default_value("0")) // NOLINT
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
-    ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
+    ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint32_t>()->default_value("0")) // NOLINT
+    ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value(default_dont_cache_binary_tables)) // NOLINT

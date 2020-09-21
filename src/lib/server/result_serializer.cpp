@@ -1,5 +1,6 @@
 #include "result_serializer.hpp"
 #include "lossy_cast.hpp"
+#include "query_handler.hpp"
 
 namespace opossum {
 
@@ -86,6 +87,15 @@ void ResultSerializer::send_query_response(
       }
       postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
     }
+  }
+}
+
+std::string ResultSerializer::build_command_complete_message(const ExecutionInformation& execution_information,
+                                                             const uint64_t row_count) {
+  if (execution_information.custom_command_complete_message) {
+    return execution_information.custom_command_complete_message.value();
+  } else {
+    return build_command_complete_message(execution_information.root_operator_type, row_count);
   }
 }
 

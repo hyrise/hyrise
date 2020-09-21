@@ -46,31 +46,20 @@ int main(int argc, char* argv[]) {
   float scale_factor;
   bool use_prepared_statements;
 
-  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1.f);
-    comma_separated_queries = json_config.value("queries", std::string(""));
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-    use_prepared_statements = json_config.value("use_prepared_statements", false);
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
-
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
-
-    if (cli_parse_result.count("queries")) {
-      comma_separated_queries = cli_parse_result["queries"].as<std::string>();
-    }
-
-    scale_factor = cli_parse_result["scale"].as<float>();
-
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
-
-    use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
+  if (cli_parse_result.count("queries")) {
+    comma_separated_queries = cli_parse_result["queries"].as<std::string>();
   }
+
+  scale_factor = cli_parse_result["scale"].as<float>();
+
+  config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+
+  use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
 
   std::vector<BenchmarkItemID> item_ids;
 

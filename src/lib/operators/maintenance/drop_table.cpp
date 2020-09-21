@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-DropTable::DropTable(const std::string& table_name, const bool if_exists)
-    : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name), if_exists(if_exists) {}
+DropTable::DropTable(const std::string& init_table_name, const bool init_if_exists)
+    : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
 
 const std::string& DropTable::name() const {
   static const auto name = std::string{"DropTable"};
@@ -24,8 +24,8 @@ std::shared_ptr<const Table> DropTable::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
   return std::make_shared<DropTable>(table_name, if_exists);
 }
 
