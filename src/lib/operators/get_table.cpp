@@ -9,6 +9,7 @@
 
 #include "hyrise.hpp"
 #include "types.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 

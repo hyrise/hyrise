@@ -85,7 +85,7 @@ ChunkOffset Chunk::size() const {
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 
-std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
+const std::shared_ptr<MvccData>& Chunk::mvcc_data() const { return _mvcc_data; }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {

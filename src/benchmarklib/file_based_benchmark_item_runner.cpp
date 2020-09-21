@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <random>
 
 #include <boost/algorithm/string.hpp>
 
@@ -44,13 +45,45 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
+template<typename T, typename RandomGenerator>
+const T select_randomly(const std::initializer_list<T>& vector, RandomGenerator& rnd) {
+  auto start = vector.begin();
+  std::uniform_int_distribution<> dis(0, std::distance(start, vector.end()) - 1);
+  std::advance(start, dis(rnd));
+
+  return *start;
+}
+
+std::string FileBasedBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
+  static thread_local std::minstd_rand random_engine{_random_seed++};
+  std::vector<std::string> parameters;
+  const auto& query_name = _queries[item_id].name;
+
+  static const auto KUNNRs = {"0000880516"};
+//  {"0000350013","0001237988","0000023281","0000332088","0001128390","0001251875","0000187516","0000010196","0000766596","0000034229","0000803407","0000869599","0000136688","0000020915","0001232856","0000015763","0001211064","0000272816","0000531371","0000856235","0001240234","0001221162","0001234456","0001151742","0000875651","0000142644","0000012117","0000713522","0000010573","0000852135","0000830297","0000729442","0000272192","0000518884","0001240145","0001234389","0001025456","0000739860","0001064618","0000412364","0001071172","0001184852","0001254909","0000988241","0001235575","0001104603","0001144479","0001184452","0000033030","0000037912","0000880516","0000956069","0000501650","0000819952","0001230153","0001252827","0000861842","0001237286","0001211597","0001231911","0001183933","0000827964","0001146933","0001100277","0000681510","0000757185","0001166808","0000615528","0000335172","0000871925","0000870746","0000653399","0001200527","0001206967","0000190755","0000835441","0001198457","0000996365","0001233850","0001145666","0001259869","0001198440","0001267705","0001267761"};
+
+  if (query_name == "oltp_sum_receivables") {
+    parameters.emplace_back(select_randomly(KUNNRs, random_engine));
+  }
+
+  auto query_template = std::string{_queries[item_id].sql};
+
+  for (const auto& parameter : parameters) {
+    boost::replace_first(query_template, "?", parameter);
+  }
+
+  return query_template;
+}
+
 bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  const auto sql = _build_query(item_id);
+
   std::shared_ptr<const Table> expected_result_table = nullptr;
   if (!_dedicated_expected_results.empty()) {
     expected_result_table = _dedicated_expected_results[item_id];
   }
 
-  const auto [status, table] = sql_executor.execute(_queries[item_id].sql, expected_result_table);
+  const auto [status, table] = sql_executor.execute(sql, expected_result_table);
   return status == SQLPipelineStatus::Success;
 }
 

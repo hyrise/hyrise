@@ -85,7 +85,7 @@ class Chunk : private Noncopyable {
 
   bool has_mvcc_data() const;
 
-  std::shared_ptr<MvccData> mvcc_data() const;
+  const std::shared_ptr<MvccData>& mvcc_data() const;
 
   std::vector<std::shared_ptr<AbstractIndex>> get_indexes(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;

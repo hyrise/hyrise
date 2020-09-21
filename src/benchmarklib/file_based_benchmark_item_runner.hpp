@@ -25,6 +25,9 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  protected:
   bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
+  // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> ACDOCA 1)
+  std::string _build_query(const BenchmarkItemID item_id);
+
   struct Query {
     std::string name;
     std::string sql;
@@ -36,6 +39,8 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::vector<Query> _queries;
   std::vector<BenchmarkItemID> _items;
+
+  std::atomic<unsigned int> _random_seed{0};
 };
 
 }  // namespace opossum

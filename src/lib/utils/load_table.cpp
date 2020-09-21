@@ -20,6 +20,8 @@ namespace opossum {
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {
   std::string line;
   std::getline(infile, line);
+
+
   std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
   std::getline(infile, line);
   std::vector<std::string> column_types = split_string_by_delimiter(line, '|');
