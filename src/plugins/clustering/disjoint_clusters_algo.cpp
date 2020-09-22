@@ -247,12 +247,12 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
       cluster_boundaries.push_back(boundaries);
 
       // debug prints
-      std::cout << "computed boundaries for " << clustering_column << std::endl;
-      auto boundary_index = 0;
-      for (const auto& boundary : boundaries) {
-        std::cout << "boundary " << boundary_index << ": [" << boundary.first << ", " << boundary.second << "]" << std::endl;
-        boundary_index++;
-      }
+      //std::cout << "computed boundaries for " << clustering_column << std::endl;
+      //auto boundary_index = 0;
+      //for (const auto& boundary : boundaries) {
+      //  std::cout << "boundary " << boundary_index << ": [" << boundary.first << ", " << boundary.second << "]" << std::endl;
+      //  boundary_index++;
+      //}
       std::cout << "requested " << num_clusters << " boundaries, got " << boundaries.size() << " (" << 100.0 * boundaries.size() / num_clusters << "%)" << std::endl;
     });
 
@@ -334,11 +334,15 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
     std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>> clusters;
 
+    size_t clustering_key_ns {0};
+
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
         std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
+        Timer clustering_timer;
         const auto cluster_keys = _cluster_keys(initial_chunk);
+        clustering_key_ns += clustering_timer.lap().count();
 
         auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
@@ -365,6 +369,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       }
     }
 
+    std::cout << "Identifying the clustering keys took " << clustering_key_ns / 1e6 << "ms" << std::endl;
     const auto partition_duration = per_step_timer.lap();
     std::cout << "-   Partitioning done (" << format_duration(partition_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["partition"] = partition_duration.count();
@@ -425,6 +430,7 @@ void DisjointClustersAlgo::_perform_clustering() {
 
 
     // phase 2: sort within clusters
+    std::cout << "There are " << chunk_ids_per_cluster.size() << " clusters" << std::endl;
     std::unordered_set<ChunkID> new_chunk_ids;
     std::cout << "-   Sorting clusters" << std::endl;
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
