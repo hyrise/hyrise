@@ -94,8 +94,6 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
-
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -106,6 +104,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
+
+  // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
+  // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
+  // (FDs) used by the DependentGroupByReductionRule.
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
