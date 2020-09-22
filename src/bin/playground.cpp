@@ -17,6 +17,7 @@
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
+#include "operators/import.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -25,6 +26,25 @@
 #include "SQLParserResult.h"
 
 using namespace opossum;  // NOLINT
+
+const std::unordered_set<std::string> filename_blacklist() {
+  auto filename_blacklist = std::unordered_set<std::string>{};
+  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
+
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else {
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) != '#') {
+        filename_blacklist.emplace(filename);
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_blacklist;
+}
 
 int main(int argc, char* argv[]) {
   if (argc < 2) {
@@ -120,13 +140,27 @@ int main(int argc, char* argv[]) {
     }
 
     if (!(config->enable_visualization || config->verify)) _merge_result_files(output_file_path, result_file_names);
+
+
+    // run each query twice again and visualize it
+    if (!config->enable_visualization) {
+      auto tpch_query_ids_benchmark = std::vector<BenchmarkItemID>();
+      for (size_t i = 0u; i < 22; i++) {
+        tpch_query_ids_benchmark.push_back(BenchmarkItemID{i});
+      }
+      auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, false, scale_factor, tpch_query_ids_benchmark);
+      config->max_runs = 2;
+      config->enable_visualization = true;
+      auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+          *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), BenchmarkRunner::create_context(*config));
+      Hyrise::get().benchmark_runner = benchmark_runner;
+      benchmark_runner->run();
+    }
   } else if (BENCHMARK == "tpcds") {
     const std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification/";
     const auto scale_factor = cli_parse_result["scale"].as<float>();
     std::cout << "- Scale factor is " << scale_factor << std::endl;
     auto query_files = tpcds_filename_whitelist();
-    // TODO
-    //query_files = {"93.sql"};
     std::vector<std::string> result_file_names{};
 
 
@@ -141,6 +175,23 @@ int main(int argc, char* argv[]) {
       Hyrise::get().benchmark_runner = benchmark_runner;
 
       if (!plugin_loaded) {
+        // load shuffled tables
+        std::vector<std::string> shuffled_tables {"store_sales"};
+        for (const auto& table_name : shuffled_tables) {
+          auto importer = std::make_shared<Import>("shuffled_" + table_name + ".csv", table_name);
+          std::cout << "Replacing " << table_name << " with a shuffled version.." << std::flush;
+          importer->execute();
+          auto table = Hyrise::get().storage_manager.get_table(table_name);
+          for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+            const auto& chunk = table->get_chunk(chunk_id);
+            if (chunk && chunk->is_mutable()) {
+              chunk->finalize();
+            }
+          }
+          //ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(table_name), EncodingType::Dictionary);
+          std::cout << " done" << std::endl;
+        }
+
         const std::string plugin_filename = argv[1];
         const std::filesystem::path plugin_path(plugin_filename);
         Hyrise::get().plugin_manager.load_plugin(plugin_path);
@@ -159,6 +210,22 @@ int main(int argc, char* argv[]) {
       if (!(config->enable_visualization || config->verify)) _append_additional_statistics(*config->output_file_path);
     }
     if (!(config->enable_visualization || config->verify)) _merge_result_files(output_file_path, result_file_names);
+
+    // run each query twice again and visualize it
+    if (!config->enable_visualization) {
+      auto tpch_query_ids_benchmark = std::vector<BenchmarkItemID>();
+      for (size_t i = 0u; i < 22; i++) {
+        tpch_query_ids_benchmark.push_back(BenchmarkItemID{i});
+      }
+      config->max_runs = 2;
+      config->enable_visualization = true;
+      auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
+      auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
+      auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
+                                                              opossum::BenchmarkRunner::create_context(*config));
+      Hyrise::get().benchmark_runner = benchmark_runner;
+      benchmark_runner->run();
+    }
   } else if (BENCHMARK == "job") {
     const auto table_path = "hyrise/imdb_data";
     const auto query_path = "hyrise/third_party/join-order-benchmark";
