@@ -450,7 +450,7 @@ void AggregateHash::_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
 
   /**

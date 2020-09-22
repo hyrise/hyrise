@@ -206,7 +206,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            static_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
+            dynamic_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
