@@ -355,6 +355,8 @@ void DisjointClustersAlgo::_perform_clustering() {
     _runtime_statistics[table_name]["steps"]["boundaries"] = boundaries_duration.count();
     
 
+    // signalize that the partition phase starts
+    Hyrise::get().update_thread_state = 1;
 
     // phase 1: partition each chunk into clusters
     std::cout << "-   Partitioning" << std::endl;
@@ -407,6 +409,8 @@ void DisjointClustersAlgo::_perform_clustering() {
     size_t number_merged_rows{0};
     // phase 1.5: merge small chunks into new chunks to reduce the number of chunks
     if constexpr (MERGE_SMALL_CHUNKS) {
+      // signalize that the encode phase starts
+      Hyrise::get().update_thread_state = 2;
       std::cout << "-   Merging small chunks" << std::endl;
       const ClusterKey MERGE_CLUSTER(_clustering_column_ids.size(), std::numeric_limits<size_t>::max());
 
@@ -456,12 +460,15 @@ void DisjointClustersAlgo::_perform_clustering() {
         chunk->finalize();
       }
 
-      std::cout << "Merged " << number_merged_rows << " from " << number_merged_chunks << " chunks." << std::endl;
+      std::cout << "Merged " << number_merged_rows << " rows from " << number_merged_chunks << " chunks." << std::endl;
       const auto merge_duration = per_step_timer.lap();
       std::cout << "-   Merging small chunks done (" << format_duration(merge_duration) << ")" << std::endl;
       _runtime_statistics[table_name]["steps"]["merge"] = merge_duration.count();
     }
 
+    // signalize that the sort phase starts
+    Hyrise::get().update_thread_state = 3;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     // phase 2: sort within clusters
     std::cout << "There are " << chunk_ids_per_cluster.size() << " clusters" << std::endl;
@@ -485,6 +492,10 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::cout << "Sorting clusters done (" << format_duration(sort_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["sort"] = sort_duration.count();
 
+    // signalize that the encode phase starts
+    Hyrise::get().update_thread_state = 4;
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // phase 2.5: encode chunks
     std::cout << "-   Encoding clusters" << std::endl;

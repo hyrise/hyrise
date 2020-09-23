@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <random>
 
 #include "clustering/abstract_clustering_algo.hpp"
 #include "clustering/simple_clustering_algo.hpp"
@@ -14,6 +15,8 @@
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 
@@ -102,6 +105,70 @@ void _export_chunk_size_statistics() {
   std::cout << " Done" << std::endl;
 }
 
+std::mutex _cout_mutex;
+
+void _update_rows_multithreaded(const size_t seed) {
+
+  while(Hyrise::get().update_thread_state == 0) {
+    // wait for the clustering to begin
+    std::this_thread::sleep_for (std::chrono::milliseconds(10));
+  }
+
+  _cout_mutex.lock();
+  std::cout << "Thread " << seed << " started executing updates" << std::endl;
+  _cout_mutex.unlock();
+
+  std::vector<size_t> executed_updates(3, 0);
+  std::vector<size_t> successful_executed_updates(3, 0);
+  std::mt19937 gen(seed);
+  std::uniform_int_distribution<> distrib(1, 600'000);
+  auto current_step = Hyrise::get().update_thread_state;
+  while (current_step < 4) {
+    size_t l_orderkey = distrib(gen);
+    while (l_orderkey % 32 >= 8) {
+      l_orderkey -= 8;
+    }
+    const auto l_orderkey_as_string = std::to_string(l_orderkey);
+    const std::string sql = "UPDATE lineitem SET l_orderkey = "  + l_orderkey_as_string + " WHERE l_orderkey = " + l_orderkey_as_string;
+
+    auto builder = SQLPipelineBuilder{ sql };
+    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+    const auto [status, table] = sql_pipeline->get_result_tables();
+    if (status == SQLPipelineStatus::Success) {
+      successful_executed_updates[current_step - 1]++;
+    } else {
+      _cout_mutex.lock();
+      std::cout << "Thread " << seed << ": Update failed at step " << current_step << std::endl;
+      _cout_mutex.unlock();
+    }
+    executed_updates[current_step - 1]++;
+    auto new_step = Hyrise::get().update_thread_state;
+    if (new_step != current_step) {
+      _cout_mutex.lock();
+      std::cout << "Thread " << seed << " step changes from " << current_step << " to " << new_step << std::endl;
+      std::cout << "Thread " << seed << " executed " << executed_updates[current_step - 1]  << " updates in step " << current_step << std::endl;
+      _cout_mutex.unlock();
+    }
+    current_step = new_step;
+  }
+
+
+  _cout_mutex.lock();
+  std::cout << "Thread " << seed << " stopped executing updates" << std::endl;
+  std::vector<std::string> step_names = {"partition", "merge", "sort"};
+  for (size_t step_index = 0; step_index < step_names.size(); step_index++) {
+    const auto total = executed_updates[step_index];
+    const auto successful = successful_executed_updates[step_index];
+    std::cout << "Thread with seed " << seed << " executed " << total << " updates during the " << step_names[step_index] << " step, " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
+
+
+  }
+  std::cout << executed_updates[0] << " " << executed_updates[1] << " " << executed_updates[2] << std::endl;
+  std::cout << std::endl;
+  _cout_mutex.unlock();
+
+}
+
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
 
@@ -121,14 +188,26 @@ void ClusteringPlugin::start() {
     Fail("Unknown clustering algorithm: " + algorithm);
   }
 
+
+
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 
+  constexpr size_t NUM_UPDATE_THREADS = 10;
+  std::vector<std::thread> threads;
+  for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
+    threads.push_back(std::thread(_update_rows_multithreaded, thread_index));
+    std::cout << "Started thread " << thread_index << std::endl;
+  }
   _clustering_algo->run();
+  for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
+    threads[thread_index].join();
+    std::cout << "Stopped thread " << thread_index << std::endl;
+  }
 
   _write_clustering_information();
 
-  _export_chunk_pruning_statistics();
-  _export_chunk_size_statistics();
+  //_export_chunk_pruning_statistics();
+  //_export_chunk_size_statistics();
   std::cout << "[ClusteringPlugin] Clustering complete." << std::endl;
 }
 

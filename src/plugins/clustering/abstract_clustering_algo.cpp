@@ -95,6 +95,7 @@ void AbstractClusteringAlgo::_run_assertions() const {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk) {
         // ... pruning information is present
+        // TODO: cannot perform that check when updates are executed, a chunk might be mutable or without pruning statistics
         Assert(chunk->pruning_statistics(), "Chunk " + std::to_string(chunk_id) + " of " + table_name + " has no pruning statistics");
 
         // Clustering algos might generate invalidated chunks as temporary results. Ignore them.
@@ -103,6 +104,7 @@ void AbstractClusteringAlgo::_run_assertions() const {
           continue;
         }
 
+        // TODO: cannot perform that check when updates are executed, there might a mutable chunk
         Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
         if (ordered_by_column_id) {

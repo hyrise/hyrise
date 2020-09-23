@@ -46,6 +46,7 @@ class Hyrise : public Singleton<Hyrise> {
   SettingsManager settings_manager;
   LogManager log_manager;
   Topology topology;
+  size_t update_thread_state;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
