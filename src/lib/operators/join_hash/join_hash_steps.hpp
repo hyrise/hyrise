@@ -267,9 +267,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto& elements = radix_container[chunk_id].elements;
       auto& null_values = radix_container[chunk_id].null_values;
 
-      elements.resize(chunk_in->size());
+      const auto num_rows = chunk_in->size();
+      elements.resize(num_rows);
       if constexpr (keep_null_values) {
-        null_values.resize(chunk_in->size());
+        null_values.resize(num_rows);
       }
 
       auto elements_iter = elements.begin();
@@ -281,8 +282,18 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto reference_chunk_offset = ChunkOffset{0};
 
       const auto segment = chunk_in->get_segment(column_id);
-      segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
+      segment_with_iterators<T>(*segment, [&](auto it, auto end) {
         using IterableType = typename decltype(it)::IterableType;
+
+        if (dynamic_cast<ValueSegment<T>*>(&*segment)) {
+          // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
+          // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
+          // can ignore them.
+          const auto inserted_rows = (end - it) - num_rows;
+          end -= inserted_rows;
+        } else {
+          Assert(end - it == num_rows, "Non-ValueSegment changed size while being accessed");
+        }
 
         while (it != end) {
           const auto& value = *it;
@@ -336,19 +347,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           }
 
           ++it;
-
-          if (elements_iter == elements.end()) {
-            // The last chunk has changed its size since we allocated elements. This is due to a concurrent insert
-            // into that chunk. In any case, those inserts will not be visible to our current transaction, so we can
-            // ignore them.
-            break;
-          }
         }
       });
 
       // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
       // vector to the number of values actually written.
       elements.resize(std::distance(elements.begin(), elements_iter));
+      null_values.resize(std::distance(null_values.begin(), null_values_iter));
 
       histograms[chunk_id] = std::move(histogram);
 

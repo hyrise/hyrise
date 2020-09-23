@@ -558,11 +558,10 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    *     output the column value at the start of the group (it is per definition the same in the whole group)
    * Write outputted values into the result table
    */
-  size_t groupby_index = 0;
-  for (const auto& column_id : _groupby_column_ids) {
-    const auto column_is_nullable = _output_column_definitions.at(groupby_index).nullable;
+  const auto write_groupby_column = [&](const ColumnID input_column_id, const ColumnID output_column_id) {
+    const auto column_is_nullable = _output_column_definitions.at(output_column_id).nullable;
     auto group_boundary_iter = group_boundaries.cbegin();
-    auto data_type = input_table->column_data_type(column_id);
+    auto data_type = input_table->column_data_type(input_column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
@@ -580,7 +579,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         }
 
         const auto chunk = sorted_table->get_chunk(group_start.chunk_id);
-        const auto& segment = chunk->get_segment(column_id);
+        const auto& segment = chunk->get_segment(input_column_id);
 
         /*
          * We are aware that operator[] and AllTypeVariant are known to be inefficient.
@@ -604,13 +603,18 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
       // Write group by segments
       if (column_is_nullable) {
-        _output_segments[groupby_index] =
-            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+        output_segments[output_column_id] =
+          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
       } else {
-        _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+        _output_segments[output_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
       }
     });
-    groupby_index++;
+  };
+
+  auto groupby_output_column_id = ColumnID{0};
+  for (const auto& input_column_id : _groupby_column_ids) {
+    write_groupby_column(input_column_id, groupby_output_column_id);
+    ++groupby_output_column_id;
   }
 
   // Call _aggregate_values for each aggregate
@@ -687,9 +691,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           break;
         }
         case AggregateFunction::Any: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Any>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+          write_groupby_column(input_column_id, ColumnID{static_cast<ColumnID::base_type>(aggregate_index +
+                                                                                          _groupby_column_ids.size())});
           break;
         }
       }
@@ -780,7 +783,11 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+  const auto nullable = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct &&
+                         function != AggregateFunction::Any) ||
+                        (function == AggregateFunction::Any && left_input_table()->column_is_nullable(input_column_id));
+  const auto column_name = aggregate->aggregate_function == AggregateFunction::Any ? pqp_column.as_column_name()
+                                                                                   : aggregate->as_column_name();
+  _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
 }  // namespace opossum

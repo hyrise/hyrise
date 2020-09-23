@@ -102,6 +102,7 @@ TEST_P(SortTest, UnchangedNullability) {
   sort.execute();
 
   const auto output_table = sort.get_output();
+
   EXPECT_TRUE(segment_nullability_implies_column_nullablility(output_table));
 }
 
