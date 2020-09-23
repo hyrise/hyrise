@@ -603,8 +603,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
       // Write group by segments
       if (column_is_nullable) {
-        output_segments[output_column_id] =
-          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+        _output_segments[output_column_id] =
+            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
       } else {
         _output_segments[output_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
       }
