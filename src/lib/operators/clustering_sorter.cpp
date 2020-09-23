@@ -47,7 +47,27 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
     }
 
     sorting_table->append_chunk(segments, chunk->mvcc_data());
+    sorting_table->last_chunk()->increase_invalid_row_count(chunk->invalid_row_count());
   }
+
+
+  /* DEBUG
+  size_t invalid_rows = 0;
+  size_t official_invalid_row_count = 0;
+  for (ChunkID chunk_id {0}; chunk_id < sorting_table->chunk_count(); chunk_id++) {
+    const auto chunk = sorting_table->get_chunk(chunk_id);
+    Assert(chunk, "bug");
+    const auto& mvcc_data = chunk->mvcc_data();
+    for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
+      if (mvcc_data->get_end_cid(offset) != MvccData::MAX_COMMIT_ID) {
+        invalid_rows++;
+      }
+    }
+    official_invalid_row_count += chunk->invalid_row_count();
+  }
+  Assert(invalid_rows >= official_invalid_row_count, "official: " + std::to_string(official_invalid_row_count) + ", actual: " + std::to_string(invalid_rows));
+  //*/// DEBUG OVER
+
 
   auto wrapper = std::make_shared<TableWrapper>(sorting_table);
   wrapper->execute();
@@ -56,6 +76,8 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
   auto validate = std::make_shared<Validate>(wrapper);
   validate->set_transaction_context(transaction_context());
   validate->execute();
+  const auto validate_output_size = validate->get_output()->row_count();
+  Assert(validate_output_size <= _expected_num_locks, "Expected validate output to contain at most " + std::to_string(_expected_num_locks) + " rows, but it contains " + std::to_string(validate_output_size) + " rows");
 
   const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(_sort_column_id, SortMode::Ascending) };
   auto sort = std::make_shared<Sort>(validate, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
@@ -94,6 +116,9 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
     return nullptr;
   }
 
+  Assert(_sorted_table->row_count() == _num_locks, "locked " + std::to_string(_num_locks) + " rows, sorted table size is " + std::to_string(_sorted_table->row_count()) + ". Sorting table size is " + std::to_string(sorting_table->row_count()));
+  Assert(_sorted_table->row_count() == _expected_num_locks, "Bug2");
+
   // no need to get locks for the sorted chunks, as they get inserted as completely new chunks
 
   return nullptr;
@@ -111,11 +136,13 @@ void ClusteringSorter::_unlock_all() {
 }
 
 bool ClusteringSorter::_lock_chunk(const std::shared_ptr<Chunk> chunk) {
+  Assert(_transaction_id > 0, "_transaction_id not set");
   const auto mvcc_data = chunk->mvcc_data();
 
   for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
     if (mvcc_data->get_end_cid(offset) != MvccData::MAX_COMMIT_ID) {
       // Row is invalidated. Invalidated rows should already be locked.
+      Assert(mvcc_data->get_tid(offset) > 0, "row invalidated, but no tid set");
       continue;
     }
 
@@ -206,6 +233,7 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
 }
 
 void ClusteringSorter::_on_rollback_records() {
+  std::cout << "[ClusteringSorter] performing rollback" << std::endl;
   _unlock_all();
 }
 
