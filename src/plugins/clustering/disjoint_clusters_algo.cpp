@@ -78,6 +78,7 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     // A cluster contains always at least one bin, thus check that the bin size is reasonable.
     constexpr size_t MAX_CLUSTER_SIZE_DIVERGENCE = 2;
     Assert(bin_size < MAX_CLUSTER_SIZE_DIVERGENCE * ideal_rows_per_cluster, "bin is too large: " + std::to_string(bin_size) + ", but a cluster should have about " + std::to_string(ideal_rows_per_cluster) + " rows");
+
     if (rows_in_cluster + bin_size < ideal_rows_per_cluster) {
       // cluster has not yet reached its target size
       rows_in_cluster += bin_size;
@@ -89,8 +90,12 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
       cluster_full = true;
     } else {
       // cluster would get larger than intended - process the bin again in the next cluster
-      bin_id--;
-      is_last_bin = bin_id == histogram->bin_count() - 1;
+      if (rows_in_cluster > 0) {
+        bin_id--;
+        is_last_bin = bin_id == histogram->bin_count() - 1;
+      } else {
+        upper_bound = is_last_bin ? AllTypeVariant{} : histogram->bin_minimum(bin_id + 1);
+      }
       cluster_full = true;
     }
 
@@ -290,6 +295,29 @@ void _delete_rows(const size_t l_orderkey, const size_t ms_delay, const std::str
     sql_pipeline->get_result_tables();
 }
 
+void DisjointClustersAlgo::_print_boundary_counts(const std::string& column_name) const {
+    const auto clustering_column_id = _table->column_id_by_name(column_name);
+    const auto nullable = _table->column_is_nullable(clustering_column_id);
+    const auto column_data_type = _table->column_data_type(clustering_column_id);
+    const auto row_count = _table->row_count();
+    resolve_data_type(column_data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
+
+      std::vector<size_t> boundary_counts;
+      const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(_table, column_name);
+      for (size_t num_clusters {2}; num_clusters <= 100; num_clusters++) {
+        const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters, nullable);
+        boundary_counts.push_back(boundaries.size());
+      }
+      std::cout << "Boundary counts for " << column_name << ": [";
+      for (const auto count : boundary_counts) {
+        std::cout << count << ",";
+      }
+      std::cout << "]" << std::endl;
+    });
+}
+
 void DisjointClustersAlgo::_perform_clustering() {
   std::cout << "- Performing clustering" << std::endl;
   Timer total_timer;
@@ -339,7 +367,7 @@ void DisjointClustersAlgo::_perform_clustering() {
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
-        std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
+        //std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
         Timer clustering_timer;
         const auto cluster_keys = _cluster_keys(initial_chunk);
         clustering_key_ns += clustering_timer.lap().count();
@@ -375,6 +403,8 @@ void DisjointClustersAlgo::_perform_clustering() {
     _runtime_statistics[table_name]["steps"]["partition"] = partition_duration.count();
 
 
+    size_t number_merged_chunks{0};
+    size_t number_merged_rows{0};
     // phase 1.5: merge small chunks into new chunks to reduce the number of chunks
     if constexpr (MERGE_SMALL_CHUNKS) {
       std::cout << "-   Merging small chunks" << std::endl;
@@ -392,6 +422,9 @@ void DisjointClustersAlgo::_perform_clustering() {
           Assert(chunk->size() > 0, "there should not be an empty chunk");
           Assert(chunk->size() <= 100000, "unreasonably large chunk: " + std::to_string(chunk->size()));
           const auto chunk_id = cluster.first;
+
+          number_merged_chunks++;
+          number_merged_rows += chunk->size();
 
           // "cluster" it again
           const auto cluster_keys = std::vector<ClusterKey>(chunk->size(), MERGE_CLUSTER);
@@ -423,6 +456,7 @@ void DisjointClustersAlgo::_perform_clustering() {
         chunk->finalize();
       }
 
+      std::cout << "Merged " << number_merged_rows << " from " << number_merged_chunks << " chunks." << std::endl;
       const auto merge_duration = per_step_timer.lap();
       std::cout << "-   Merging small chunks done (" << format_duration(merge_duration) << ")" << std::endl;
       _runtime_statistics[table_name]["steps"]["merge"] = merge_duration.count();

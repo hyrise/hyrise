@@ -38,6 +38,8 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
 
   bool _can_delete_chunk(const std::shared_ptr<Chunk> chunk) const;
 
+  void _print_boundary_counts(const std::string& column_name) const;
+
  private:
   std::vector<ClusterBoundaries> _boundaries;
   std::vector<ColumnID> _clustering_column_ids;
