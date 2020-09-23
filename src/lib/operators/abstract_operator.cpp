@@ -106,7 +106,8 @@ void AbstractOperator::execute() {
             using SegmentType = std::decay_t<decltype(segment)>;
             if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
               // If segment is nullable, the column must be nullable as well
-              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id), "Nullable segment found in non-nullable column");
+              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
+                     "Nullable segment found in non-nullable column");
             }
           });
         }
