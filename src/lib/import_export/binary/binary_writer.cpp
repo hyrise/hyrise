@@ -138,15 +138,27 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
 
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    resolve_data_and_segment_type(
-        *chunk->get_segment(column_id),
-        [&](const auto data_type_t, const auto& resolved_segment) { _write_segment(resolved_segment, ofstream); });
+    resolve_data_and_segment_type(*chunk->get_segment(column_id),
+                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                    using ColumnDataType = typename decltype(data_type_t)::type;
+                                    using SegmentType = std::decay_t<decltype(resolved_segment)>;
+                                    if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+                                      _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
+                                    } else {
+                                      _write_segment(resolved_segment, ofstream);
+                                    }
+                                  });
   }
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Unencoded);
+
+  if (column_is_nullable) {
+    export_value(ofstream, value_segment.is_nullable());
+  }
 
   if (value_segment.is_nullable()) {
     export_values(ofstream, value_segment.null_values());

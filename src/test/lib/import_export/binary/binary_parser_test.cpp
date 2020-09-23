@@ -71,6 +71,7 @@ TEST_P(BinaryParserMultiEncodingTest, StringSegment) {
   column_definitions.emplace_back("a", DataType::String, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
   expected_table->append({"This"});
+  
   expected_table->append({"is"});
   expected_table->append({"a"});
   expected_table->append({"test"});

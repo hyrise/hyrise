@@ -59,7 +59,8 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * Null Values'                | vector<bool> (BoolAsByteType)       | Rows * 1
+   * Segment nullable'           | bool (BoolAsByteType)               | 1
+   * Null Values`                | vector<bool> (BoolAsByteType)       | Rows * 1
    * Values°                     | T (int, float, double, long)        | Rows * sizeof(T)
    * Length of Strings^          | vector<size_t>                      | Rows * 2
    * Values^                     | std::string                         | Rows * string.length()
@@ -67,12 +68,13 @@ class BinaryWriter {
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
-   * ': These fields are only written if the column is nullable.
+   * ': This field is only written if the column is nullable.
+   * `: These fields are only written if the segment is nullable.
+   * °: This field is writen if the type of the column is NOT a string.
    * ^: These fields are only written if the type of the column IS a string.
-   * °: This field is writen if the type of the column is NOT a string
    */
   template <typename T>
-  static void _write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream);
+  static void _write_segment(const ValueSegment<T>& value_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   /**
    * ReferenceSegments are dumped with the following layout, which is similar to value segments:
