@@ -29,6 +29,10 @@
 #define MERGE_SMALL_CHUNKS true
 #define SMALL_CHUNK_TRESHOLD 10000
 
+#define NUM_REPEATS_PARTITION 1
+#define NUM_REPEATS_MERGE 1
+#define NUM_REPEATS_SORT 1
+
 namespace opossum {
 
 DisjointClustersAlgo::DisjointClustersAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
@@ -361,32 +365,62 @@ void DisjointClustersAlgo::_perform_clustering() {
     // phase 1: partition each chunk into clusters
     std::cout << "-   Partitioning" << std::endl;
     const auto chunk_count_before_clustering = _table->chunk_count();
+
+    // get ids of chunks that shall be partitioned - mutable chunks excluded
+    std::vector<ChunkID> chunks_to_partition;
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
+      const auto& chunk = _table->get_chunk(chunk_id);
+      if (chunk && !chunk->is_mutable()) {
+        chunks_to_partition.push_back(chunk_id);
+      }
+    }
+
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
     std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>> clusters;
 
     size_t clustering_key_ns {0};
+    size_t partition_steps_failed = 0;
+    size_t partition_steps_successful = 0;
+    size_t partition_steps_failed_finally = 0;
 
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
-      const auto initial_chunk = _table->get_chunk(chunk_id);
-      if (initial_chunk) {
-        //std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
-        Timer clustering_timer;
-        const auto cluster_keys = _cluster_keys(initial_chunk);
-        clustering_key_ns += clustering_timer.lap().count();
+    for (size_t attempt = 0; attempt < NUM_REPEATS_PARTITION; attempt++) {
+      std::cout << "Beginning with partition attempt " << attempt + 1 << " of " << NUM_REPEATS_PARTITION << std::endl;
+      std::vector<ChunkID> partition_failed_chunks;
+      for (const auto chunk_id : chunks_to_partition) {
+        const auto initial_chunk = _table->get_chunk(chunk_id);
+        if (initial_chunk) {
+          //std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
+          Timer clustering_timer;
+          const auto cluster_keys = _cluster_keys(initial_chunk);
+          clustering_key_ns += clustering_timer.lap().count();
 
-        auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
-        clustering_partitioner->set_transaction_context(partition_transaction);
-        clustering_partitioner->execute();
+          auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
+          clustering_partitioner->set_transaction_context(partition_transaction);
+          clustering_partitioner->execute();
 
-        if (clustering_partitioner->execute_failed()) {
-          std::cout << "Chunk " << chunk_id << " could not be locked entirely or was modified since cluster keys were computed. Trying again." << std::endl;
-          chunk_id--;
-          partition_transaction->rollback(RollbackReason::Conflict);
-          continue;
-        } else {
-          partition_transaction->commit();
+          if (clustering_partitioner->execute_failed()) {
+            std::cout << "Chunk " << chunk_id << " could not be locked entirely or was modified since cluster keys were computed." << std::endl;
+            partition_failed_chunks.push_back(chunk_id);
+            partition_transaction->rollback(RollbackReason::Conflict);
+            partition_steps_failed++;
+            continue;
+          } else {
+            partition_transaction->commit();
+            partition_steps_successful++;
+            //_clustered_chunks.insert(chunk_id);
+          }
         }
+      }
+
+      if (partition_failed_chunks.size() > 0) {
+        chunks_to_partition = partition_failed_chunks;
+        std::cout << "Partition attempt " << attempt + 1 << " failed for " << partition_failed_chunks.size() << " chunks" << std::endl;
+        partition_steps_failed_finally = partition_failed_chunks.size();
+      } else {
+        std::cout << "Partition attempt " << attempt + 1 << " successful" << std::endl;
+        partition_steps_failed_finally = 0;
+        break;
       }
     }
 
@@ -405,24 +439,41 @@ void DisjointClustersAlgo::_perform_clustering() {
     _runtime_statistics[table_name]["steps"]["partition"] = partition_duration.count();
 
 
-    size_t number_merged_chunks{0};
-    size_t number_merged_rows{0};
+    size_t merge_steps_failed = 0;
+    size_t merge_steps_successful = 0;
+    size_t merge_steps_failed_finally = 0;
+    const ClusterKey MERGE_CLUSTER(_clustering_column_ids.size(), std::numeric_limits<size_t>::max());
     // phase 1.5: merge small chunks into new chunks to reduce the number of chunks
     if constexpr (MERGE_SMALL_CHUNKS) {
       // signalize that the encode phase starts
       Hyrise::get().update_thread_state = 2;
-      std::cout << "-   Merging small chunks" << std::endl;
-      const ClusterKey MERGE_CLUSTER(_clustering_column_ids.size(), std::numeric_limits<size_t>::max());
 
-      size_t cluster_idx = 0;
+      size_t number_merged_chunks{0};
+      size_t number_merged_rows{0};
+
+      std::cout << "-   Merging small chunks" << std::endl;
+
+
+      std::vector<ClusterKey> chunks_to_merge;
       for (const auto& [cluster_key, cluster] : clusters) {
         if (cluster_key == MERGE_CLUSTER) {
-          cluster_idx++;
-         continue;
+          continue;
         }
         const auto& chunk = cluster.second;
-        if (chunk->size() <= SMALL_CHUNK_TRESHOLD) {
-          //std::cout << "Merging cluster_idx " << cluster_idx << std::endl;
+        if (chunk && chunk->size() <= SMALL_CHUNK_TRESHOLD) {
+          chunks_to_merge.push_back(cluster_key);
+        }
+      }
+
+      for (size_t attempt = 0; attempt < NUM_REPEATS_MERGE; attempt++) {
+        std::cout << "Beginning with merge attempt " << attempt + 1 << " of " << NUM_REPEATS_MERGE << std::endl;
+        std::vector<ClusterKey> merge_failed_chunks;
+
+        for (const auto &cluster_key : chunks_to_merge) {
+          Assert(cluster_key != MERGE_CLUSTER, "We should never merge the merge cluster");
+          const auto& cluster = clusters[cluster_key];
+          const auto& chunk = cluster.second;
+          Assert(chunk->size() <= SMALL_CHUNK_TRESHOLD, "Bug");
           Assert(chunk->size() > 0, "there should not be an empty chunk");
           Assert(chunk->size() <= 100000, "unreasonably large chunk: " + std::to_string(chunk->size()));
           const auto chunk_id = cluster.first;
@@ -441,16 +492,27 @@ void DisjointClustersAlgo::_perform_clustering() {
           if (clustering_partitioner->execute_failed()) {
             std::cout << "Chunk " << chunk_id << " was supposed to be merged because its chunk size is less than " << SMALL_CHUNK_TRESHOLD << ", but was modified during the merge. Skipping it." << std::endl;
             partition_transaction->rollback(RollbackReason::Conflict);
+            merge_steps_failed++;
+            merge_failed_chunks.push_back(cluster_key);
             continue;
           } else {
             partition_transaction->commit();
-
+            merge_steps_successful++;
             // remove from the old cluster
             chunk_ids_per_cluster[cluster_key].erase(chunk_id);
+            //_clustered_chunks.insert(chunk_id);
           }
         }
 
-        cluster_idx++;
+        if (merge_failed_chunks.size() > 0) {
+          std::cout << "Merge attempt " << attempt + 1 << " failed for " << merge_failed_chunks.size() << " chunks" << std::endl;
+          chunks_to_merge = merge_failed_chunks;
+          merge_steps_failed_finally = merge_failed_chunks.size();
+        } else {
+          std::cout << "Merge attempt " << attempt + 1 << " successful" << std::endl;
+          merge_steps_failed_finally = 0;
+          break;
+        }
       }
 
       // finalize merge chunks
@@ -474,17 +536,48 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::cout << "There are " << chunk_ids_per_cluster.size() << " clusters" << std::endl;
     std::unordered_set<ChunkID> new_chunk_ids;
     std::cout << "-   Sorting clusters" << std::endl;
+    std::vector<ClusterKey> clusters_to_sort;
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
-      auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id, new_chunk_ids);
-      clustering_sorter->set_transaction_context(sort_transaction);
-      clustering_sorter->execute();
+      clusters_to_sort.push_back(key);
+    }
 
-      if (clustering_sorter->execute_failed()) {
-        std::cout << "Failed to sort a cluster. Skipping it." << std::endl;
-        sort_transaction->rollback(RollbackReason::Conflict);
+    size_t sort_steps_failed = 0;
+    size_t sort_steps_successful = 0;
+    size_t sort_steps_failed_finally = 0;
+    for (size_t attempt = 0; attempt < NUM_REPEATS_SORT; attempt++) {
+      std::cout << "Starting sort step attempt " << attempt + 1 << " of " << NUM_REPEATS_SORT << std::endl;
+      std::vector<ClusterKey> clusters_sort_failed;
+      for (const auto& key : clusters_to_sort) {
+        const auto& chunk_ids = chunk_ids_per_cluster[key];
+        auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+        auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id, new_chunk_ids);
+        clustering_sorter->set_transaction_context(sort_transaction);
+        clustering_sorter->execute();
+
+        if (clustering_sorter->execute_failed()) {
+          std::cout << "Failed to sort a cluster. Skipping it." << std::endl;
+          sort_transaction->rollback(RollbackReason::Conflict);
+          sort_steps_failed++;
+          clusters_sort_failed.push_back(key);
+        } else {
+          sort_transaction->commit();
+          sort_steps_successful++;
+
+          //for (const auto chunk_id : chunk_ids) {
+            _clustered_chunks.insert(chunk_ids.cbegin(), chunk_ids.cend());
+          //}
+          Assert(chunk_ids.size() > 0 || key == MERGE_CLUSTER, "chunk_ids disappeared");
+        }
+      }
+
+      if (clusters_sort_failed.size() > 0) {
+        std::cout << "Sort attempt " << attempt + 1 << " failed for " << clusters_sort_failed.size() << " clusters" << std::endl;
+        clusters_to_sort = clusters_sort_failed;
+        sort_steps_failed_finally = clusters_sort_failed.size();
       } else {
-        sort_transaction->commit();
+        std::cout << "Sort attempt " << attempt + 1 << " successful" << std::endl;
+        sort_steps_failed_finally = 0;
+        break;
       }
     }
 
@@ -503,6 +596,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       const auto &chunk = _table->get_chunk(chunk_id);
       Assert(chunk, "chunk must not be deleted");
       ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), EncodingType::Dictionary);
+      _clustered_chunks.insert(chunk_id);
     }
     const auto encode_duration = per_step_timer.lap();
     std::cout << "Encoding clusters done (" << format_duration(encode_duration) << ")" << std::endl;
@@ -534,6 +628,14 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto table_clustering_duration = per_table_timer.lap();
     std::cout << "-  Clustering " << table_name << " done (" << format_duration(table_clustering_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["total"] = table_clustering_duration.count();
+
+    // print statistics
+    const auto total_partition_steps = partition_steps_successful + partition_steps_failed;
+    const auto total_merge_steps = merge_steps_successful + merge_steps_failed;
+    const auto total_sort_steps = sort_steps_successful + sort_steps_failed;
+    std::cout << "Total partition attempts: " << total_partition_steps << ", " << partition_steps_successful << " of them successful (" << 100.0 * partition_steps_successful / total_partition_steps << "%). " << partition_steps_failed_finally << " partition steps failed finally." << std::endl;
+    std::cout << "Total merge attempts: " << total_merge_steps << ", " << merge_steps_successful << " of them successful (" << 100.0 * merge_steps_successful / total_merge_steps << "%). " <<  merge_steps_failed_finally  << " merge steps failed finally." << std::endl;
+    std::cout << "Total sort attempts: " << total_sort_steps << ", " << sort_steps_successful << " of them successful (" << 100.0 * sort_steps_successful / total_sort_steps << "%). " << sort_steps_failed_finally << " sort steps failed finally." << std::endl;
   }
 
   const auto total_clustering_duration = total_timer.lap();
