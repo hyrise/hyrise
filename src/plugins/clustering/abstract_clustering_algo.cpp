@@ -91,7 +91,12 @@ void AbstractClusteringAlgo::_run_assertions() const {
     if (VERBOSE) std::cout << "[" << description() << "] " << "-  Chunk count is correct" << " for table " << table_name << std::endl;
 
     // Iterate over all chunks, and check that ...
-    for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+      if (_clustered_chunks.find(chunk_id) == _clustered_chunks.cend()) {
+        // Chunk was not clustered. This may happen, e.g., as a consequence of inserts, or failing partition/sort steps.
+        //std::cout << "Skipping chunk with id " << chunk_id << std::endl;
+        continue;
+      }
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk) {
         // ... pruning information is present

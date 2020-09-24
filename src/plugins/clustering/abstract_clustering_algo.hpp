@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <unordered_set>
 #include <utility>
 
 #include "nlohmann/json.hpp"
@@ -53,6 +54,7 @@ class AbstractClusteringAlgo {
 
   std::map<std::string, size_t> _original_table_sizes;
   nlohmann::json _runtime_statistics;
+  std::unordered_set<ChunkID> _clustered_chunks;
 };
 
 }  // namespace opossum
