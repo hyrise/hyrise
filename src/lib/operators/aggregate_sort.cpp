@@ -565,8 +565,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
-      pmr_vector<bool> null_values;
-      if (column_is_nullable) null_values = pmr_vector<bool>(group_boundaries.size() + 1);
+      auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
       for (size_t value_index = 0; value_index < values.size(); value_index++) {
         RowID group_start;

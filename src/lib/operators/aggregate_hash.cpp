@@ -861,8 +861,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
       auto values = pmr_vector<ColumnDataType>(pos_list.size());
-      pmr_vector<bool> null_values;
-      if (column_is_nullable) null_values = pmr_vector<bool>(pos_list.size());
+      auto null_values = pmr_vector<bool>(column_is_nullable ? pos_list.size() : 0);
       std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
 
       auto output_offset = ChunkOffset{0};
