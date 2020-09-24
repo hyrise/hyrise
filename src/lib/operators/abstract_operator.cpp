@@ -96,8 +96,10 @@ void AbstractOperator::execute() {
         }
       }
     }
-    // Verify that nullability of columns and segments match for value segments
-    if (_output) {
+
+    // Verify that nullability of columns and segments match for ValueSegments
+    // Only ValueSegments have an individual is_nullable attribute
+    if (_output && _output->type() == TableType::Data) {
       for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);

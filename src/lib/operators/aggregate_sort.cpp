@@ -590,12 +590,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
          */
         const auto& value = (*segment)[group_start.chunk_offset];
 
-        if (column_is_nullable) {
-          null_values[value_index] = variant_is_null(value);
-          if (!null_values[value_index]) {
-            // Only store non-null values
-            values[value_index] = boost::get<ColumnDataType>(value);
-          }
+        DebugAssert(!variant_is_null(value) || column_is_nullable, "Null values found in non-nullable column");
+        if (variant_is_null(value)) {
+          null_values[value_index] = true;
         } else {
           values[value_index] = boost::get<ColumnDataType>(value);
         }

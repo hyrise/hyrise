@@ -140,13 +140,7 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
-                                    using ColumnDataType = typename decltype(data_type_t)::type;
-                                    using SegmentType = std::decay_t<decltype(resolved_segment)>;
-                                    if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
-                                      _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
-                                    } else {
-                                      _write_segment(resolved_segment, ofstream);
-                                    }
+                                    _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
                                   });
   }
 }
@@ -167,7 +161,8 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
   export_values(ofstream, value_segment.values());
 }
 
-void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
@@ -198,7 +193,8 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
   // Write attribute vector width
@@ -216,7 +212,7 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 
 template <typename T>
 void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                                  std::ofstream& ofstream) {
+                                  bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
   // Write attribute vector width
@@ -236,7 +232,8 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::RunLength);
 
   // Write size and values
@@ -252,7 +249,7 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
 
 template <>
 void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
-                                  std::ofstream& ofstream) {
+                                  bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   // Write attribute vector width
@@ -276,7 +273,7 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
   // Write num elements (rows in segment)

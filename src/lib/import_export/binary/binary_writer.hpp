@@ -92,7 +92,8 @@ class BinaryWriter {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    */
-  static void _write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream);
+  static void _write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
+                             std::ofstream& ofstream);
 
   /**
    * DictionarySegments are dumped with the following layout:
@@ -114,7 +115,8 @@ class BinaryWriter {
    * °: This field is written if the type of the column is NOT a string
    */
   template <typename T>
-  static void _write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream);
+  static void _write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+                             std::ofstream& ofstream);
 
   /**
    * FixedStringDictionarySegments are dumped with the following layout:
@@ -133,7 +135,7 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                             std::ofstream& ofstream);
+                             bool column_is_nullable, std::ofstream& ofstream);
 
   /**
    * RunLengthSegments are dumped with the following layout:
@@ -150,7 +152,8 @@ class BinaryWriter {
    * The type of the column can be found in the global header of the file.
    */
   template <typename T>
-  static void _write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream);
+  static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+                             std::ofstream& ofstream);
 
   /**
    * FrameOfReferenceSegments are dumped with the following layout:
@@ -171,7 +174,8 @@ class BinaryWriter {
    * ¹: This field is only written when the optional NULL values are stored
    */
   template <typename T>
-  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, std::ofstream& ofstream);
+  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool column_is_nullable,
+                             std::ofstream& ofstream);
 
   /**
    * LZ4Segments are dumped with the following layout:
@@ -200,7 +204,7 @@ class BinaryWriter {
    * ²: These fields are only written if string offset size is not 0
    */
   template <typename T>
-  static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
+  static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   template <typename T>
   static uint32_t _compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment);
