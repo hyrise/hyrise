@@ -114,9 +114,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       if (target_chunk == nullptr || !target_chunk->is_mutable() ||
           target_chunk->size() == _target_table->target_chunk_size()) {
         _target_table->append_mutable_chunk();
+
         // ++target_chunk_id;
         target_chunk_id = _target_table->get_insert_chunk_id();
         target_chunk = _target_table->get_chunk(target_chunk_id);
+        std::cout << "[Insert] Appending new chunk with id " << target_chunk_id << std::endl;
       }
 
       const auto num_rows_for_target_chunk =
