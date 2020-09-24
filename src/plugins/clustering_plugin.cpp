@@ -107,7 +107,15 @@ void _export_chunk_size_statistics() {
 
 std::mutex _cout_mutex;
 
+
+std::vector<size_t> _executed_updates(3, 0);
+std::vector<size_t> _successful_executed_updates(3, 0);
+std::mutex _update_mutex;
+
 void _update_rows_multithreaded(const size_t seed) {
+
+  std::vector<size_t> executed_updates(3, 0);
+  std::vector<size_t> successful_executed_updates(3, 0);
 
   while(Hyrise::get().update_thread_state == 0) {
     // wait for the clustering to begin
@@ -118,10 +126,9 @@ void _update_rows_multithreaded(const size_t seed) {
   std::cout << "Thread " << seed << " started executing updates" << std::endl;
   _cout_mutex.unlock();
 
-  std::vector<size_t> executed_updates(3, 0);
-  std::vector<size_t> successful_executed_updates(3, 0);
+
   std::mt19937 gen(seed);
-  std::uniform_int_distribution<> distrib(1, 600'000);
+  std::uniform_int_distribution<> distrib(1, 60'000'000);
   auto current_step = Hyrise::get().update_thread_state;
   while (current_step < 4) {
     size_t l_orderkey = distrib(gen);
@@ -135,6 +142,7 @@ void _update_rows_multithreaded(const size_t seed) {
     auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
     const auto [status, table] = sql_pipeline->get_result_tables();
     if (status == SQLPipelineStatus::Success) {
+
       successful_executed_updates[current_step - 1]++;
     } else {
       _cout_mutex.lock();
@@ -167,6 +175,12 @@ void _update_rows_multithreaded(const size_t seed) {
   std::cout << std::endl;
   _cout_mutex.unlock();
 
+  _update_mutex.lock();
+  for (size_t step{0}; step < 3; step++) {
+    _executed_updates[step] += executed_updates[step];
+    _successful_executed_updates[step] += successful_executed_updates[step];
+  }
+  _update_mutex.unlock();
 }
 
 void ClusteringPlugin::start() {
@@ -199,10 +213,18 @@ void ClusteringPlugin::start() {
     std::cout << "Started thread " << thread_index << std::endl;
   }
   _clustering_algo->run();
+  std::vector<std::string> step_names = {"partition", "merge", "sort"};
+  for (size_t step = 0; step < step_names.size(); step++) {
+    const auto total = _executed_updates[step];
+    const auto successful = _successful_executed_updates[step];
+    std::cout << "Executed " << total << " updates during the " << step_names[step] << ", " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
+  }
+
   for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
     threads[thread_index].join();
     std::cout << "Stopped thread " << thread_index << std::endl;
   }
+
 
   _write_clustering_information();
 
