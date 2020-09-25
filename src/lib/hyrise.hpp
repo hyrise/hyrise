@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 #include "boost/container/pmr/memory_resource.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
@@ -47,6 +49,8 @@ class Hyrise : public Singleton<Hyrise> {
   LogManager log_manager;
   Topology topology;
   size_t update_thread_state;
+  std::unordered_set<ChunkID> active_chunks;
+  std::shared_ptr<std::mutex> active_chunks_mutex;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.

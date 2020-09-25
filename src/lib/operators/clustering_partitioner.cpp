@@ -4,6 +4,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
@@ -50,6 +51,7 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
     const auto expected = 0u;
     auto success = mvcc_data->compare_exchange_tid(offset, expected, _transaction_id);
     if (!success) {
+      std::cout << "Could not lock a row that was not yet invalidated" << std::endl;
       _mark_as_failed();
       return nullptr;
     } else {
@@ -72,6 +74,9 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
     _chunk_ids_per_cluster[cluster_key] = {};
   }
   _chunk_ids_per_cluster[cluster_key].insert(appended_chunk_id);
+  Hyrise::get().active_chunks_mutex->lock();
+  Hyrise::get().active_chunks.insert(appended_chunk_id);
+  Hyrise::get().active_chunks_mutex->unlock();
 }
 
 void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {

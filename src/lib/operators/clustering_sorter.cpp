@@ -5,6 +5,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -215,6 +216,9 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
       _table->append_chunk(segments, mvcc_data);
       table_chunk = _table->last_chunk();
       Assert(table_chunk, "Chunk disappeared");
+      Hyrise::get().active_chunks_mutex->lock();
+      Hyrise::get().active_chunks.insert(new_chunk_id);
+      Hyrise::get().active_chunks_mutex->unlock();
     }
 
     table_chunk->finalize();

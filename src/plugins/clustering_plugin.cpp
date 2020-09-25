@@ -10,13 +10,18 @@
 #include "clustering/chunkwise_clustering_algo.hpp"
 #include "clustering/disjoint_clusters_algo.hpp"
 #include "nlohmann/json.hpp"
+#include "operators/update.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -111,11 +116,34 @@ std::mutex _cout_mutex;
 std::vector<size_t> _executed_updates(3, 0);
 std::vector<size_t> _successful_executed_updates(3, 0);
 std::mutex _update_mutex;
+std::mutex _chunk_id_mutex;
+
+template<typename S>
+auto select_random(const S &s, size_t n) {
+  auto it = std::begin(s);
+  // 'advance' the iterator n times
+  Assert(n < s.size(), "you advance too much");
+  std::advance(it,n);
+
+  return it;
+}
+
+std::shared_ptr<const AbstractOperator> execute_prepared_plan(
+    const std::shared_ptr<AbstractOperator>& physical_plan) {
+  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  return tasks.back()->get_operator();
+}
+
+#define MAX_UPDATES_PER_SECOND 10
+
 
 void _update_rows_multithreaded(const size_t seed) {
 
   std::vector<size_t> executed_updates(3, 0);
   std::vector<size_t> successful_executed_updates(3, 0);
+  const auto ideal_update_duration = std::chrono::nanoseconds(1'000'000'000 / MAX_UPDATES_PER_SECOND);
+
 
   while(Hyrise::get().update_thread_state == 0) {
     // wait for the clustering to begin
@@ -126,30 +154,55 @@ void _update_rows_multithreaded(const size_t seed) {
   std::cout << "Thread " << seed << " started executing updates" << std::endl;
   _cout_mutex.unlock();
 
+  std::unordered_set<ChunkID>& active_chunks = Hyrise::get().active_chunks;
+  auto lineitem = Hyrise::get().storage_manager.get_table("lineitem");
 
-  std::mt19937 gen(seed);
-  std::uniform_int_distribution<> distrib(1, 60'000'000);
   auto current_step = Hyrise::get().update_thread_state;
+  std::mt19937 gen(seed);
+  Timer timer;
   while (current_step < 4) {
-    size_t l_orderkey = distrib(gen);
-    while (l_orderkey % 32 >= 8) {
-      l_orderkey -= 8;
+    Hyrise::get().active_chunks_mutex->lock();
+    std::uniform_int_distribution<> chunkidpos(0, active_chunks.size() - 1);
+    const auto chunk_id = *select_random(active_chunks, chunkidpos(gen));
+    Hyrise::get().active_chunks_mutex->unlock();
+    const auto chunk = lineitem->get_chunk(chunk_id);
+    Assert(chunk, "chunk " + std::to_string(chunk_id) + " does not exist");
+    std::uniform_int_distribution<> chunkoffset(0, chunk->size() - 1);
+    const ChunkOffset chunk_offset = chunkoffset(gen);
+    if (chunk->mvcc_data()->get_end_cid(chunk_offset) != MvccData::MAX_COMMIT_ID) {
+      //_cout_mutex.lock();
+      //std::cout << "Thread " << seed <<  ": Row " << chunk_offset << " of chunk " << chunk_id << " is already invalid. Skipping it." << std::endl;
+      //_cout_mutex.unlock();
+      continue;
     }
-    const auto l_orderkey_as_string = std::to_string(l_orderkey);
-    const std::string sql = "UPDATE lineitem SET l_orderkey = "  + l_orderkey_as_string + " WHERE l_orderkey = " + l_orderkey_as_string;
 
-    auto builder = SQLPipelineBuilder{ sql };
-    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
-    const auto [status, table] = sql_pipeline->get_result_tables();
-    if (status == SQLPipelineStatus::Success) {
+    auto pos_list = std::make_shared<RowIDPosList>(1, RowID{chunk_id, chunk_offset});
+    pos_list->guarantee_single_chunk();
+    auto reference_table = std::make_shared<Table>(lineitem->column_definitions(), TableType::References);
+    Segments segments;
+    for (ColumnID column_id{0}; column_id < lineitem->column_count(); column_id++) {
+      const auto segment = std::make_shared<ReferenceSegment>(lineitem, column_id, pos_list);
+      segments.push_back(segment);
+    }
+    reference_table->append_chunk(segments);
+    auto wrapper = std::make_shared<TableWrapper>(reference_table);
+    wrapper->execute();
 
+    auto update = std::make_shared<Update>("lineitem", wrapper, wrapper);
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    update->set_transaction_context(transaction_context);
+    update->execute();
+    executed_updates[current_step - 1]++;
+    if (!update->execute_failed()) {
       successful_executed_updates[current_step - 1]++;
+      transaction_context->commit();
     } else {
+      transaction_context->rollback(RollbackReason::Conflict);
       _cout_mutex.lock();
       std::cout << "Thread " << seed << ": Update failed at step " << current_step << std::endl;
       _cout_mutex.unlock();
     }
-    executed_updates[current_step - 1]++;
+
     auto new_step = Hyrise::get().update_thread_state;
     if (new_step != current_step) {
       _cout_mutex.lock();
@@ -157,7 +210,17 @@ void _update_rows_multithreaded(const size_t seed) {
       std::cout << "Thread " << seed << " executed " << executed_updates[current_step - 1]  << " updates in step " << current_step << std::endl;
       _cout_mutex.unlock();
     }
+
     current_step = new_step;
+
+    const auto ns_used = timer.lap();
+    if (current_step == 3 && ns_used < ideal_update_duration) {
+      if (rand() % 100 == 0) {
+        //std::cout << "Time: " << format_duration(ns_used) <<std::endl;
+      }
+      std::this_thread::sleep_for(std::chrono::nanoseconds(ideal_update_duration.count() - ns_used.count()));
+    }
+    timer.lap();
   }
 
 
@@ -183,8 +246,12 @@ void _update_rows_multithreaded(const size_t seed) {
   _update_mutex.unlock();
 }
 
+
+
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
+  Hyrise::get().active_chunks_mutex = std::make_shared<std::mutex>();
+
 
   const auto env_var_algorithm = std::getenv("CLUSTERING_ALGORITHM");
   std::string algorithm;
@@ -217,7 +284,9 @@ void ClusteringPlugin::start() {
   for (size_t step = 0; step < step_names.size(); step++) {
     const auto total = _executed_updates[step];
     const auto successful = _successful_executed_updates[step];
-    std::cout << "Executed " << total << " updates during the " << step_names[step] << ", " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
+    //const std::string runtime = _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]];
+    //const auto seconds = runtime / 1e9;
+    std::cout << "Executed " << total << " updates in " << _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]] << "s during the " << step_names[step] << " step, " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
   }
 
   for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
