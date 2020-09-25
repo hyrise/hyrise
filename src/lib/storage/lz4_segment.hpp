@@ -73,7 +73,7 @@ class LZ4Segment : public AbstractEncodedSegment {
    *                   a single block, the passed dictionary will be empty since it is not needed for independent
    *                   decompression.
    * @param string_offsets These offsets are only needed if this segment is not a pmr_string segment.
-   *                       Otherwise, this is set to a std::nullopt (see the other constructor).
+   *                       Otherwise, this is set to nullptr (see the other constructor).
    *                       It contains the offsets for the compressed strings. The offset at position 0 is the
    *                       character index of the string at index 0. Its (exclusive) end is at the offset at position 1.
    *                       The last string ends at the end of the compressed data (since there is an offset after it
@@ -96,12 +96,12 @@ class LZ4Segment : public AbstractEncodedSegment {
                       const size_t num_elements);
 
   const std::optional<pmr_vector<bool>>& null_values() const;
-  std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
+  std::unique_ptr<BaseVectorDecompressor> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
   const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
   size_t block_size() const;
   size_t last_block_size() const;
-  const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
+  const std::unique_ptr<const BaseCompressedVector>& string_offsets() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -173,7 +173,7 @@ class LZ4Segment : public AbstractEncodedSegment {
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const std::optional<pmr_vector<bool>> _null_values;
   const pmr_vector<char> _dictionary;
-  const std::optional<std::unique_ptr<const BaseCompressedVector>> _string_offsets;
+  const std::unique_ptr<const BaseCompressedVector> _string_offsets;
   const size_t _block_size;
   const size_t _last_block_size;
   const size_t _compressed_size;
