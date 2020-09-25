@@ -110,8 +110,35 @@ void _export_chunk_size_statistics() {
   std::cout << " Done" << std::endl;
 }
 
-std::mutex _cout_mutex;
+std::vector<size_t> _bytes_used;
+std::vector<size_t> _time_offset;
 
+void _track_memory_consumption(const std::chrono::nanoseconds& interval) {
+  const std::string query {"SELECT SUM(estimated_size_in_bytes) FROm meta_segments WHERE table_name = 'lineitem'"};
+
+  while(Hyrise::get().update_thread_state == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  std::cout << "Starting to track memory consumption" << std::endl;
+
+  const auto start_time = std::chrono::system_clock::now();
+  while (Hyrise::get().update_thread_state < 6) {
+    auto pipeline = SQLPipelineBuilder{query}.create_pipeline();
+    auto [status, table] = pipeline.get_result_table();
+    Assert(status == SQLPipelineStatus::Success, "Could not calculate lineitem table size");
+    std::optional<size_t> table_size = table->get_value<int64_t>(ColumnID{0}, 0);
+    Assert(table_size, "table_size is null");
+    const auto current_time = std::chrono::system_clock::now();
+    _bytes_used.push_back(*table_size);
+    _time_offset.push_back((current_time-start_time).count());
+    //std::cout << "memory consumption captured, sleeping " << format_duration(interval) << std::endl;
+    std::this_thread::sleep_for(interval);
+  }
+}
+
+
+
+std::mutex _cout_mutex;
 
 std::vector<size_t> _executed_updates(3, 0);
 std::vector<size_t> _successful_executed_updates(3, 0);
@@ -128,18 +155,11 @@ auto select_random(const S &s, size_t n) {
   return it;
 }
 
-std::shared_ptr<const AbstractOperator> execute_prepared_plan(
-    const std::shared_ptr<AbstractOperator>& physical_plan) {
-  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan);
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  return tasks.back()->get_operator();
-}
 
 #define MAX_UPDATES_PER_SECOND 10
 
 
 void _update_rows_multithreaded(const size_t seed) {
-
   std::vector<size_t> executed_updates(3, 0);
   std::vector<size_t> successful_executed_updates(3, 0);
   const auto ideal_update_duration = std::chrono::nanoseconds(1'000'000'000 / MAX_UPDATES_PER_SECOND);
@@ -273,13 +293,23 @@ void ClusteringPlugin::start() {
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 
-  constexpr size_t NUM_UPDATE_THREADS = 10;
+  constexpr size_t NUM_UPDATE_THREADS = 0;
   std::vector<std::thread> threads;
+  std::cout << "Starting " << NUM_UPDATE_THREADS << " update threads" << std::endl;
   for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
     threads.push_back(std::thread(_update_rows_multithreaded, thread_index));
     std::cout << "Started thread " << thread_index << std::endl;
   }
+
+  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::chrono::seconds(5);
+  std::thread memory_thread;
+  if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
+    std::cout << "Staring thread to track memory usage" << std::endl;
+    memory_thread = std::thread(_track_memory_consumption, *TRACK_MEMORY_CONSUMPTION_INTERVAL);
+  }
+
   _clustering_algo->run();
+
   std::vector<std::string> step_names = {"partition", "merge", "sort"};
   for (size_t step = 0; step < step_names.size(); step++) {
     const auto total = _executed_updates[step];
@@ -293,7 +323,37 @@ void ClusteringPlugin::start() {
     threads[thread_index].join();
     std::cout << "Stopped thread " << thread_index << std::endl;
   }
+  if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
+    std::cout << "Stopped memory usage tracking thread" << std::endl;
+    memory_thread.join();
 
+    std::cout << "bytes_used = [";
+    for (const auto bytes : _bytes_used) {
+      std::cout << bytes << ", ";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "times = [";
+    for (const auto offset : _time_offset) {
+      std::cout << offset << ", ";
+    }
+    std::cout << "]" << std::endl;
+
+    nlohmann::json step_times = _clustering_algo->runtime_statistics()["lineitem"]["steps"];
+    size_t offset_partition_end = step_times["partition"];
+
+    size_t offset_merge_end = step_times["merge"];
+    offset_merge_end += offset_partition_end;
+
+    size_t offset_sort_end = step_times["sort"];
+    offset_sort_end += offset_merge_end;
+
+    size_t offset_encode_end = step_times["encode"];
+    offset_encode_end += offset_sort_end;
+
+
+    std::cout << "phase_ends = [" << offset_partition_end << ", " << offset_merge_end << ", " << offset_sort_end << ", " << offset_encode_end << "]" << std::endl;
+  }
 
   _write_clustering_information();
 

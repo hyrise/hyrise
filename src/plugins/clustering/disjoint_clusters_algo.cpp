@@ -566,7 +566,6 @@ void DisjointClustersAlgo::_perform_clustering() {
 
     // signalize that the sort phase starts
     Hyrise::get().update_thread_state = 3;
-    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     // phase 2: sort within clusters
     std::cout << "There are " << chunk_ids_per_cluster.size() << " clusters" << std::endl;
@@ -630,8 +629,6 @@ void DisjointClustersAlgo::_perform_clustering() {
     // signalize that the encode phase starts
     Hyrise::get().update_thread_state = 4;
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-
     // phase 2.5: encode chunks
     std::cout << "-   Encoding clusters" << std::endl;
     for (const auto chunk_id : new_chunk_ids) {
@@ -643,6 +640,10 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto encode_duration = per_step_timer.lap();
     std::cout << "Encoding clusters done (" << format_duration(encode_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["encode"] = encode_duration.count();
+
+
+    // signalize that the clean up phase starts
+    Hyrise::get().update_thread_state = 5;
 
     // phase 3: pretend mvcc plugin were active and remove invalidated chunks
     std::cout << "-   Clean up" << std::endl;
@@ -668,6 +669,13 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto table_clustering_duration = per_table_timer.lap();
     std::cout << "-  Clustering " << table_name << " done (" << format_duration(table_clustering_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["total"] = table_clustering_duration.count();
+
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    // signalize that all phases are done
+    Hyrise::get().update_thread_state = 6;
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
 
     // print statistics
     const auto total_partition_steps = partition_steps_successful + partition_steps_failed;
