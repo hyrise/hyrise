@@ -858,8 +858,10 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
 
+      const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
+
       auto values = pmr_vector<ColumnDataType>(pos_list.size());
-      auto null_values = pmr_vector<bool>(pos_list.size());
+      auto null_values = pmr_vector<bool>(column_is_nullable ? pos_list.size() : 0);
       std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
 
       auto output_offset = ChunkOffset{0};
@@ -876,6 +878,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         }
 
         const auto& optional_value = accessor->access(row_id.chunk_offset);
+        DebugAssert(optional_value || column_is_nullable, "Only nullable columns should contain optional values");
         if (!optional_value) {
           null_values[output_offset] = true;
         } else {
@@ -884,7 +887,13 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         ++output_offset;
       }
 
-      auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
+      if (column_is_nullable) {
+        value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      } else {
+        value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      }
+
       _output_segments[output_column_id] = value_segment;
     });
   }
