@@ -23,6 +23,7 @@
 #include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
+#include "utils/timer.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
@@ -119,8 +120,6 @@ std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
-
   //This rule cannot work properly on PlaceholderExpressions
   //optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -132,6 +131,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
+
+  // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
+  // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
+  // (FDs) used by the DependentGroupByReductionRule.
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   //This rule cannot work properly on PlaceholderExpressions
   //optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
@@ -176,7 +180,9 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
   _rules.emplace_back(std::move(rule));
 }
 
-std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQPNode> input) const {
+std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
+    std::shared_ptr<AbstractLQPNode> input,
+    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -191,7 +197,16 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
   for (const auto& rule : _rules) {
+    Timer rule_timer{};
     _apply_rule(*rule, root_node);
+    auto rule_duration = rule_timer.lap();
+
+    if (rule_durations) {
+      auto& rule_reference = *rule;
+      auto rule_name = std::string(typeid(rule_reference).name());
+      rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
+    }
+
     if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
   }
 

@@ -48,6 +48,7 @@ set(
     lib/logical_query_plan/dummy_table_node_test.cpp
     lib/logical_query_plan/except_node_test.cpp
     lib/logical_query_plan/export_node_test.cpp
+    lib/logical_query_plan/functional_dependency_test.cpp
     lib/logical_query_plan/import_node_test.cpp
     lib/logical_query_plan/insert_node_test.cpp
     lib/logical_query_plan/intersect_node_test.cpp
@@ -56,6 +57,7 @@ set(
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
+    lib/logical_query_plan/lqp_unique_constraint_test.cpp
     lib/logical_query_plan/lqp_utils_test.cpp
     lib/logical_query_plan/mock_node_test.cpp
     lib/logical_query_plan/predicate_node_test.cpp
@@ -168,7 +170,6 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/table_key_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
@@ -196,6 +197,7 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
+    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
@@ -225,6 +227,7 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
+    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -252,7 +255,7 @@ set(
     gtest
     gmock
     sqlite3
-    MvccDeletePlugin  # So that we can test member methods without going through dlsym
+    hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -268,7 +271,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

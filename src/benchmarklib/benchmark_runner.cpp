@@ -353,10 +353,16 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                                                       {"statements", nlohmann::json::array()}};
 
           for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
+            nlohmann::json rule_metrics_json;
+            for (const auto& rule_duration : sql_statement_metrics->optimizer_rule_durations) {
+              rule_metrics_json[rule_duration.rule_name] += rule_duration.duration.count();
+            }
+
             auto sql_statement_metrics_json =
                 nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
                                {"cache_duration", sql_statement_metrics->cache_duration.count()},
                                {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+                               {"optimizer_rule_durations", rule_metrics_json},
                                {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
                                {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
                                {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
@@ -378,8 +384,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         {"name", name},
         {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
         {"successful_runs", runs_to_json(result.successful_runs)},
-        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
-        {"iterations", result.successful_runs.size()}};
+        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
@@ -387,17 +392,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+        static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
-    // want to touch this and potentially break the comparability across commits.
+    // want to touch this and potentially break the comparability across commits. Note that items_per_second only
+    // includes successful iterations.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = !result.successful_runs.empty()
-                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
-                                   : std::nanf("");
-    benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }

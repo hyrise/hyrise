@@ -201,7 +201,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_FALSE(delete_all->execute_failed());
   context->commit();
 
-  /* 
+  /*
    * Not setting cleanup commit ids is intentional,
    * because we delete the chunks manually for this test.
   */
@@ -243,7 +243,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_FALSE(delete_all->execute_failed());
   context->commit();
 
-  /* 
+  /*
    * Not setting cleanup commit ids is intentional,
    * because we delete the chunks manually for this test.
   */
@@ -287,10 +287,10 @@ TEST_F(OperatorsGetTableTest, Copy) {
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   auto table = Hyrise::get().storage_manager.get_table("int_int_float");
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   table->get_chunk(ChunkID{1})
-      ->set_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                       SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
+      ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
+                                    SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
 
   // single column pruned
   {
@@ -300,11 +300,12 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 2);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->sorted_by().front().column, ColumnID{0});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->sorted_by().front().sort_mode, SortMode::Ascending);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Descending);
-    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{2})->sorted_by().empty());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().column, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
+              SortMode::Descending);
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{2})->individually_sorted_by().empty());
   }
 
   // multiple columns pruned
@@ -315,9 +316,10 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 1);
-    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{0});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Descending);
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
+              SortMode::Descending);
   }
 
   // no columns pruned
@@ -328,10 +330,10 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 3);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Ascending);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().back().column, ColumnID{2});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().back().sort_mode, SortMode::Descending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().column, ColumnID{2});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().sort_mode, SortMode::Descending);
   }
 
   // pruning the columns on which chunks are sorted
@@ -342,8 +344,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 1);
-    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
-    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
   }
 }
 

@@ -104,7 +104,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnDataType, AggregateFunction function>
-  void write_aggregate_output(ColumnID column_index);
+  void write_aggregate_output(ColumnID aggregate_index);
 
   enum class OperatorSteps : uint8_t {
     GroupByKeyPartitioning,
@@ -147,6 +147,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
+  bool _has_aggregate_functions;
 };
 
 }  // namespace opossum

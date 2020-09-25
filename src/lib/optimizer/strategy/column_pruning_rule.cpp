@@ -123,7 +123,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     //   (1) were already computed and are re-used as arguments in this projection
     //   (2) cannot be computed (i.e., Aggregate and LQPColumn inputs)
     // PredicateNodes have the same requirements - if they have their own implementation, they require all columns to
-    // be already computed, if they use the ExpressionEvaluator the columns should at least be computable.
+    // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
       for (const auto& expression : node->node_expressions) {
@@ -240,54 +240,49 @@ void try_join_to_semi_rewrite(
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
+
+  // Early out, if we need output expressions from both input tables.
   if (left_input_is_used && right_input_is_used) return;
 
-  // Check whether the join predicates operate on unique columns.
-  auto join_is_unique_on_left_side = false;
-  auto join_is_unique_on_right_side = false;
-
+  /**
+   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
+   * follows:
+   * (1) From all predicates of type Equals, we collect the operand expressions by input node.
+   * (2) We determine the input node that should be used for filtering.
+   * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
+   *     a) Found match -> Rewrite to semi join
+   *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
+   */
   const auto& join_predicates = join_node->join_predicates();
+  auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
+  auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
-    const auto is_unique_column = [](const auto& expression) {
-      const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (!column) return false;
-
-      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
-      if (!stored_table_node) return false;
-
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& key_constraint : table->soft_key_constraints()) {
-        // This currently does not handle multi-column key constraints, but that should be easy to add once needed.
-        if (key_constraint.columns().size() > 1) continue;
-        if (*key_constraint.columns().cbegin() == column->original_column_id) {
-          return true;
-        }
-      }
-      return false;
-    };
-
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    // We can only rewrite an inner join to a semi join if it is an equi join
+    // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
     if (predicate->predicate_condition != PredicateCondition::Equals) continue;
 
-    const auto& left_operand = predicate->left_operand();
-    const auto& right_operand = predicate->right_operand();
-
-    join_is_unique_on_left_side |= is_unique_column(left_operand);
-    join_is_unique_on_right_side |= is_unique_column(right_operand);
+    // Collect operand expressions table-wise
+    for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
+      if (join_node->left_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_left.insert(operand_expression);
+      } else if (join_node->right_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_right.insert(operand_expression);
+      }
+    }
   }
+  // Early out, if we did not see any Equals-predicates.
+  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
-  // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
-  // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
-  // join into a semi join.
-  if (!left_input_is_used && join_is_unique_on_left_side) {
+  // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
+  if (!left_input_is_used &&
+      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
   }
-
-  if (!right_input_is_used && join_is_unique_on_right_side) {
+  if (!right_input_is_used &&
+      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }

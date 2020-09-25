@@ -30,6 +30,7 @@
 #include "operators/get_table.hpp"
 #include "operators/import.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
@@ -45,6 +46,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -604,17 +606,28 @@ int Console::_export_table(const std::string& args) {
   const std::string& filepath = arguments.at(1);
 
   const auto& storage_manager = Hyrise::get().storage_manager;
-  if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager\n");
-    return ReturnCode::Error;
+  const auto& meta_table_manager = Hyrise::get().meta_table_manager;
+
+  std::shared_ptr<AbstractOperator> table_operator = nullptr;
+  if (MetaTableManager::is_meta_table_name(tablename)) {
+    if (!meta_table_manager.has_table(tablename)) {
+      out("Error: MetaTable does not exist in MetaTableManager\n");
+      return ReturnCode::Error;
+    }
+    table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
+  } else {
+    if (!storage_manager.has_table(tablename)) {
+      out("Error: Table does not exist in StorageManager\n");
+      return ReturnCode::Error;
+    }
+    table_operator = std::make_shared<GetTable>(tablename);
   }
 
+  table_operator->execute();
   out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
-  auto get_table = std::make_shared<GetTable>(tablename);
-  get_table->execute();
 
   try {
-    auto exporter = std::make_shared<Export>(get_table, filepath);
+    auto exporter = std::make_shared<Export>(table_operator, filepath);
     exporter->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");

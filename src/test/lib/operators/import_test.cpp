@@ -45,8 +45,8 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
-  std::string reference_filename = reference_filepath + reference_filenames.at(GetParam());
-  auto importer = std::make_shared<opossum::Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, GetParam());
+  const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, GetParam());
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
@@ -60,18 +60,18 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<opossum::Import>(reference_filename, "a");
+  auto importer = std::make_shared<Import>(reference_filename, "a");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
 TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
-  std::string reference_filename =
+  const auto reference_filename =
       reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<opossum::Import>(reference_filename, "a");
+  auto importer = std::make_shared<Import>(reference_filename, "a");
   importer->execute();
 
   auto table = Hyrise::get().storage_manager.get_table("a");

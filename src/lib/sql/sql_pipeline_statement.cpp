@@ -223,16 +223,18 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   const auto done_preoptimization_cache = std::chrono::high_resolution_clock::now();
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
-  auto optimized_without_values = _optimizer->optimize(std::move(temp_unoptimized_logical_plan));
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+
+  auto optimized_without_values = _optimizer->optimize(std::move(temp_unoptimized_logical_plan), optimizer_rule_durations);
 
   // DEBUG OUTPUT
   LQPVisualizer visualizer4;
   visualizer4.visualize({optimized_without_values}, "optimized_without_values.png");
-  //
 
   const auto done_optimize = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration =
       std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
+  _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   const auto started_postoptimization_cache = std::chrono::high_resolution_clock::now();
 

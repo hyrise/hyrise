@@ -7,6 +7,7 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "functional_dependency.hpp"
+#include "lqp_unique_constraint.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -135,7 +136,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const;
 
   /**
-   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
+   * @return The ColumnID of the @param expression, or std::nullopt if it cannot be found. Note that because COUNT(*)
    *         has a special treatment (it is represented as an LQPColumnExpression with an INVALID_COLUMN_ID), it might
    *         be evaluable even if find_column_id returns nullopt.
    */
@@ -147,15 +148,49 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
+   * @return True, if the given set of expressions is a subset of the node's output expressions. False otherwise.
+   */
+  bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
+
+  /**
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
-   *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
+   * @return Unique constraints valid for the current LQP. See lqp_unique_constraint.hpp for more documentation.
    */
-  [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
+  virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
+
+  /**
+   * @return True, if there is a unique constraint matching the given subset of output expressions.
+   *         (i.e., the rows are guaranteed to be unique). This is preferred over calling
+   *         contains_matching_unique_constraint(unique_constraints(), ...) as it performs additional sanity
+   *         checks.
+   */
+  bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
+
+  /**
+   * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
+   *         They are collected from two different sources:
+   *          (1) FDs derived from the node's unique constraints. (trivial FDs)
+   *          (2) FDs provided by the child nodes (non-trivial FDs)
+   */
+  std::vector<FunctionalDependency> functional_dependencies() const;
+
+  /**
+   * This is a helper method that returns non-trivial FDs valid for the current node.
+   * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
+   *
+   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
+   * an empty vector.
+   *
+   * Nodes should override this function
+   *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
+   *  - to discard non-trivial FDs from the input nodes, if necessary.
+   *  - to specify forwarding of non-trivial FDs in case of two input nodes.
+   */
+  virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 
   /**
    * Perform a deep equality check
@@ -196,6 +231,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
+  /**
+   * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
+   * @return All unique constraints from the left input node.
+   */
+  std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
