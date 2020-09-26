@@ -18,6 +18,7 @@
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -109,6 +110,94 @@ void _export_chunk_size_statistics() {
 
   std::cout << " Done" << std::endl;
 }
+
+void _encode_partition_chunks(const std::chrono::nanoseconds& interval) {
+  auto& chunks_to_encode = Hyrise::get().chunks_to_encode;
+  auto lineitem = Hyrise::get().storage_manager.get_table("lineitem");
+
+  while(Hyrise::get().update_thread_state == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  std::cout << "Starting to encode partition chunks" << std::endl;
+
+  while (Hyrise::get().update_thread_state < 6) {
+
+    //std::cout << "Mutex locking"<< std::endl;
+    Hyrise::get().chunks_to_encode_mutex->lock();
+    //std::cout << "Mutex locked"<< std::endl;
+    std::vector<ChunkID> chunk_ids(chunks_to_encode.cbegin(), chunks_to_encode.cend());
+    chunks_to_encode.clear();
+    Hyrise::get().chunks_to_encode_mutex->unlock();
+    //std::cout << "Mutex unlocked"<< std::endl;
+
+    for (const auto chunk_id : chunk_ids) {
+      const auto& chunk = lineitem->get_chunk(chunk_id);
+      if (chunk) {
+          if (chunk->is_mutable()) chunk->finalize();
+          ChunkEncoder::encode_chunk(chunk, lineitem->column_data_types(), EncodingType::Dictionary);
+      } else {
+        std::cout << "Weird behavior: chunks_to_encode contained a deleted chunk: " << chunk_id << std::endl;
+      }
+    }
+
+    std::this_thread::sleep_for(interval);
+  }
+}
+
+bool _can_delete_chunk(const std::shared_ptr<Chunk> chunk) {
+  // Check whether there are still active transactions that might use the chunk
+  Assert(chunk->get_cleanup_commit_id().has_value(), "expected a cleanup commit id");
+
+  bool conflicting_transactions = false;
+  auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
+
+  if (lowest_snapshot_commit_id.has_value()) {
+    conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
+  }
+
+  return !conflicting_transactions;
+}
+
+
+void _physically_delete_chunks(const std::chrono::nanoseconds& interval) {
+  auto& chunks_to_delete = Hyrise::get().chunks_to_delete;
+  auto lineitem = Hyrise::get().storage_manager.get_table("lineitem");
+
+  while(Hyrise::get().update_thread_state == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  std::cout << "Starting to physically delete invalidated chunks" << std::endl;
+
+  while (Hyrise::get().update_thread_state < 6) {
+    std::vector<ChunkID> deleted_chunks;
+    //std::cout << "Mutex locking"<< std::endl;
+    Hyrise::get().chunks_to_delete_mutex->lock();
+    //std::cout << "Mutex locked"<< std::endl;
+    for (const auto chunk_id : chunks_to_delete) {
+      const auto& chunk = lineitem->get_chunk(chunk_id);
+      if (chunk) {
+        //std::cout << "checking deletability of chunk " << chunk_id << std::endl;
+        if (_can_delete_chunk(chunk)) {
+          //std::cout << "trying to delete chunk " << chunk_id << std::endl;
+          lineitem->remove_chunk(chunk_id);
+          deleted_chunks.push_back(chunk_id);
+        }
+      } else {
+        std::cout << "Weird behavior: chunks_to_delete contained a deleted chunk: " << chunk_id << std::endl;
+        chunks_to_delete.erase(chunk_id);
+      }
+    }
+
+    for (const auto chunk_id : deleted_chunks) {
+      chunks_to_delete.erase(chunk_id);
+    }
+    Hyrise::get().chunks_to_delete_mutex->unlock();
+    //std::cout << "Mutex unlocked"<< std::endl;
+
+    std::this_thread::sleep_for(interval);
+  }
+}
+
 
 std::vector<size_t> _bytes_used;
 std::vector<size_t> _time_offset;
@@ -271,7 +360,8 @@ void _update_rows_multithreaded(const size_t seed) {
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
   Hyrise::get().active_chunks_mutex = std::make_shared<std::mutex>();
-
+  Hyrise::get().chunks_to_delete_mutex = std::make_shared<std::mutex>();
+  Hyrise::get().chunks_to_encode_mutex = std::make_shared<std::mutex>();
 
   const auto env_var_algorithm = std::getenv("CLUSTERING_ALGORITHM");
   std::string algorithm;
@@ -301,11 +391,24 @@ void ClusteringPlugin::start() {
     std::cout << "Started thread " << thread_index << std::endl;
   }
 
-  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::chrono::seconds(5);
+  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::chrono::seconds(8);
   std::thread memory_thread;
   if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
     std::cout << "Staring thread to track memory usage" << std::endl;
     memory_thread = std::thread(_track_memory_consumption, *TRACK_MEMORY_CONSUMPTION_INTERVAL);
+  }
+
+
+  constexpr std::optional<std::chrono::nanoseconds> PHYSICAL_DELETE_INTERVAL = std::chrono::milliseconds(1000);
+  std::thread physical_delete_thread;
+  if (PHYSICAL_DELETE_INTERVAL) {
+    physical_delete_thread = std::thread(_physically_delete_chunks, *PHYSICAL_DELETE_INTERVAL);
+  }
+
+  constexpr std::optional<std::chrono::nanoseconds> PARTITION_ENCODING_INTERVAL = std::chrono::milliseconds(1000);
+  std::thread partition_encoding_thread;
+  if (PARTITION_ENCODING_INTERVAL) {
+    partition_encoding_thread = std::thread(_encode_partition_chunks, *PARTITION_ENCODING_INTERVAL);
   }
 
   _clustering_algo->run();
@@ -323,17 +426,34 @@ void ClusteringPlugin::start() {
     threads[thread_index].join();
     std::cout << "Stopped thread " << thread_index << std::endl;
   }
+
+  if (PHYSICAL_DELETE_INTERVAL) {
+    std::cout << "Stopped physical delete thread" << std::endl;
+    physical_delete_thread.join();
+  }
+
+  if (PARTITION_ENCODING_INTERVAL) {
+    std::cout << "Stopped partition encoding thread" << std::endl;
+    partition_encoding_thread.join();
+  }
+
   if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
     std::cout << "Stopped memory usage tracking thread" << std::endl;
     memory_thread.join();
 
-    std::cout << "bytes_used = [";
+    std::cout << "bytes_used";
+    if (PHYSICAL_DELETE_INTERVAL) std::cout << "_delete";
+    if (PARTITION_ENCODING_INTERVAL) std::cout << "_encoded";
+    std::cout << " = [";
     for (const auto bytes : _bytes_used) {
       std::cout << bytes << ", ";
     }
     std::cout << "]" << std::endl;
 
-    std::cout << "times = [";
+    std::cout << "times";
+    if (PHYSICAL_DELETE_INTERVAL) std::cout << "_delete";
+    if (PARTITION_ENCODING_INTERVAL) std::cout << "_encoded";
+    std::cout << " = [";
     for (const auto offset : _time_offset) {
       std::cout << offset << ", ";
     }
@@ -352,7 +472,10 @@ void ClusteringPlugin::start() {
     offset_encode_end += offset_sort_end;
 
 
-    std::cout << "phase_ends = [" << offset_partition_end << ", " << offset_merge_end << ", " << offset_sort_end << ", " << offset_encode_end << "]" << std::endl;
+    std::cout << "phase_ends";
+    if (PHYSICAL_DELETE_INTERVAL) std::cout << "_delete";
+    if (PARTITION_ENCODING_INTERVAL) std::cout << "_encoded";
+    std::cout << " = [" << offset_partition_end << ", " << offset_merge_end << ", " << offset_sort_end << ", " << offset_encode_end << "]" << std::endl;
   }
 
   _write_clustering_information();

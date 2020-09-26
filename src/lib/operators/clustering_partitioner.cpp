@@ -68,6 +68,12 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
   const auto& last_chunk = _table->last_chunk();
   Assert(last_chunk, "failed to get last chunk");
   const ChunkID appended_chunk_id {_table->chunk_count() - 1};
+  if (_clusters.find(cluster_key) != _clusters.cend()) {
+    // This cluster had a chunk before. Mark it for encoding
+    Hyrise::get().chunks_to_encode_mutex->lock();
+    Hyrise::get().chunks_to_encode.insert(_clusters[cluster_key].first);
+    Hyrise::get().chunks_to_encode_mutex->unlock();
+  }
   _clusters[cluster_key] = std::make_pair(appended_chunk_id, last_chunk);
 
   if (_chunk_ids_per_cluster.find(cluster_key) == _chunk_ids_per_cluster.end()) {

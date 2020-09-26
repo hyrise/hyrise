@@ -219,6 +219,10 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
       Hyrise::get().active_chunks_mutex->lock();
       Hyrise::get().active_chunks.insert(new_chunk_id);
       Hyrise::get().active_chunks_mutex->unlock();
+
+      Hyrise::get().chunks_to_encode_mutex->lock();
+      Hyrise::get().chunks_to_encode.insert(new_chunk_id);
+      Hyrise::get().chunks_to_encode_mutex->unlock();
     }
 
     table_chunk->finalize();

@@ -365,6 +365,7 @@ void DisjointClustersAlgo::_perform_clustering() {
     // get ids of chunks that shall be partitioned - mutable chunks excluded
     std::vector<ChunkID> chunks_to_partition;
     std::unordered_set<ChunkID>& active_chunks = Hyrise::get().active_chunks;
+    std::unordered_set<ChunkID>& chunks_to_delete = Hyrise::get().chunks_to_delete;
     const auto chunk_count_before_clustering = _table->chunk_count();
     Hyrise::get().active_chunks_mutex->lock();
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
@@ -423,9 +424,14 @@ void DisjointClustersAlgo::_perform_clustering() {
           } else {
             partition_transaction->commit();
             partition_steps_successful++;
+
             Hyrise::get().active_chunks_mutex->lock();
             active_chunks.erase(chunk_id);
             Hyrise::get().active_chunks_mutex->unlock();
+
+            Hyrise::get().chunks_to_delete_mutex->lock();
+            chunks_to_delete.insert(chunk_id);
+            Hyrise::get().chunks_to_delete_mutex->unlock();
             //_clustered_chunks.insert(chunk_id);
           }
         }
@@ -450,7 +456,12 @@ void DisjointClustersAlgo::_perform_clustering() {
       for (const auto chunk_id : chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
-        chunk->finalize();
+        if (chunk->is_mutable()) {
+          chunk->finalize();
+            Hyrise::get().chunks_to_encode_mutex->lock();
+            Hyrise::get().chunks_to_encode.insert(chunk_id);
+            Hyrise::get().chunks_to_encode_mutex->unlock();
+        }
       }
     }
 
@@ -531,9 +542,14 @@ void DisjointClustersAlgo::_perform_clustering() {
               merge_steps_successful++;
               // remove from the old cluster
               chunk_ids_per_cluster[cluster_key].erase(chunk_id);
+
               Hyrise::get().active_chunks_mutex->lock();
               active_chunks.erase(chunk_id);
               Hyrise::get().active_chunks_mutex->unlock();
+
+              Hyrise::get().chunks_to_delete_mutex->lock();
+              chunks_to_delete.insert(chunk_id);
+              Hyrise::get().chunks_to_delete_mutex->unlock();
               //_clustered_chunks.insert(chunk_id);
             }
           }
@@ -555,7 +571,9 @@ void DisjointClustersAlgo::_perform_clustering() {
       for (const auto chunk_id : chunk_ids_per_cluster[MERGE_CLUSTER]) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
-        chunk->finalize();
+        if (chunk->is_mutable) {
+          chunk->finalize();
+        }
       }
 
       std::cout << "Merged " << number_merged_rows << " rows from " << number_merged_chunks << " chunks." << std::endl;
@@ -606,6 +624,12 @@ void DisjointClustersAlgo::_perform_clustering() {
           }
           Hyrise::get().active_chunks_mutex->unlock();
 
+          Hyrise::get().chunks_to_delete_mutex->lock();
+          for (const auto chunk_id : chunk_ids) {
+            chunks_to_delete.insert(chunk_id);
+          }
+          Hyrise::get().chunks_to_delete_mutex->unlock();
+
           Assert(chunk_ids.size() > 0 || key == MERGE_CLUSTER, "chunk_ids disappeared");
         }
       }
@@ -626,6 +650,8 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::cout << "Sorting clusters done (" << format_duration(sort_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["sort"] = sort_duration.count();
 
+
+
     // signalize that the encode phase starts
     Hyrise::get().update_thread_state = 4;
 
@@ -640,7 +666,6 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto encode_duration = per_step_timer.lap();
     std::cout << "Encoding clusters done (" << format_duration(encode_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["encode"] = encode_duration.count();
-
 
     // signalize that the clean up phase starts
     Hyrise::get().update_thread_state = 5;
