@@ -571,7 +571,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       for (const auto chunk_id : chunk_ids_per_cluster[MERGE_CLUSTER]) {
         const auto& chunk = _table->get_chunk(chunk_id);
         Assert(chunk, "chunk disappeared");
-        if (chunk->is_mutable) {
+        if (chunk->is_mutable()) {
           chunk->finalize();
         }
       }
