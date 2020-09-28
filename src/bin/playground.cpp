@@ -5,6 +5,7 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
+#include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -178,6 +179,10 @@ int main(int argc, const char* argv[]) {
      *
      */
     exit(0);
+  }
+
+  if (env_var != nullptr) {
+    std::cout << EncodingConfig(CLIConfigParser::parse_encoding_config(std::string{env_var})).to_json() << std::endl;
   }
 
   auto BENCHMARK = std::string(env_var);
