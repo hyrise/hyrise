@@ -12,6 +12,7 @@
 #include "utils/format_duration.hpp"
 #include "visualization/abstract_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
+#include "serializer/json_serializer.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,73 @@ PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
                              VizEdgeInfo edge_info)
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
+
+void PQPVisualizer::build_json(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
+  for (const auto& plan : plans) {
+    _build_subjson(plan);
+    break;
+  }
+}
+
+void PQPVisualizer::_build_subjson(const std::shared_ptr<const AbstractOperator>& op) {
+  // _add_operator(op);
+
+  std::cout << to_json_str(op) << '\n';
+
+  /*
+  if (op->left_input()) {
+    auto left = op->left_input();
+    _build_subjson(left);
+    _build_dataflow(left, op, InputSide::Left);
+  }
+
+  if (op->right_input()) {
+    auto right = op->right_input();
+    _build_subjson(right);
+    _build_dataflow(right, op, InputSide::Right);
+  }
+
+  switch (op->type()) {
+    case OperatorType::Projection: {
+      const auto projection = std::dynamic_pointer_cast<const Projection>(op);
+      for (const auto& expression : projection->expressions) {
+        _visualize_subqueries_json(op, expression);
+      }
+    } break;
+
+    case OperatorType::TableScan: {
+      const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
+      _visualize_subqueries_json(op, table_scan->predicate());
+    } break;
+
+    case OperatorType::Limit: {
+      const auto limit = std::dynamic_pointer_cast<const Limit>(op);
+      _visualize_subqueries_json(op, limit->row_count_expression());
+    } break;
+
+    default: {
+    }  // OperatorType has no expressions
+  }
+  */
+}
+
+void PQPVisualizer::_visualize_subqueries_json(const std::shared_ptr<const AbstractOperator>& op,
+                                               const std::shared_ptr<AbstractExpression>& expression) {
+  visit_expression(expression, [&](const auto& sub_expression) {
+    const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+    if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;
+
+    _build_subjson(pqp_subquery_expression->pqp);
+
+    auto edge_info = _default_edge;
+    auto correlated_str = std::string(pqp_subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
+    edge_info.label = correlated_str + " subquery";
+    edge_info.style = "dashed";
+    _add_edge(pqp_subquery_expression->pqp, op, edge_info);
+
+    return ExpressionVisitation::VisitArguments;
+  });
+}
 
 void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
   std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;

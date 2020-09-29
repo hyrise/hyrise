@@ -35,6 +35,13 @@ target_link_libraries(
     hyrise
 )
 
+# Libraries
+set(
+    SKYRISE_LIBRARIES
+    
+    aws-cpp-sdk-core
+)
+    
 # Configure Console
 add_executable(
     hyriseConsole
@@ -49,6 +56,7 @@ target_link_libraries(
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}
+    ${SKYRISE_LIBRARIES}
 )
 
 target_include_directories(

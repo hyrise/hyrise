@@ -755,7 +755,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       PQPVisualizer visualizer;
-      visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
+      visualizer.build_json(_sql_pipeline->get_physical_plans());
     } break;
 
     case PlanType::Joins: {
