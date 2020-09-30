@@ -290,8 +290,9 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   auto validated_sql_pipeline = SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
 
+  auto unoptimized_lqp = validated_statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> values;
-  const auto cache_key = validated_statement->get_split_unoptimized_logical_plan(values);
+  const auto cache_key = validated_statement->split_logical_plan(unoptimized_lqp, values);
 
   EXPECT_EQ(values.size(), 2);
 
@@ -310,8 +311,11 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   auto not_validated_sql_pipeline =
       SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
   auto not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
+
+  auto not_validated_unoptimized_lqp = not_validated_statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> not_validated_values;
-  const auto not_validated_cache_key = not_validated_statement->get_split_unoptimized_logical_plan(not_validated_values);
+  const auto not_validated_cache_key =
+      not_validated_statement->split_logical_plan(not_validated_unoptimized_lqp, not_validated_values);
 
   EXPECT_EQ(not_validated_values.size(), 2);
 
@@ -324,7 +328,8 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   const auto validated_cached_lqp_1 = _lqp_cache->try_get(cache_key).value()->instantiate(values);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp_1));
   EXPECT_TRUE(_lqp_cache->has(not_validated_cache_key));
-  const auto validated_cached_lqp_2 = _lqp_cache->try_get(not_validated_cache_key).value()->instantiate(not_validated_values);
+  const auto validated_cached_lqp_2 =
+      _lqp_cache->try_get(not_validated_cache_key).value()->instantiate(not_validated_values);
   EXPECT_FALSE(lqp_is_validated(validated_cached_lqp_2));
 }
 
@@ -333,8 +338,9 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
       SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
   auto not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
 
+  auto not_validated_unoptimized_lqp = not_validated_statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> values;
-  auto cache_key = not_validated_statement->get_split_unoptimized_logical_plan(values);
+  auto cache_key = not_validated_statement->split_logical_plan(not_validated_unoptimized_lqp, values);
 
   EXPECT_EQ(values.size(), 2);
 
@@ -352,8 +358,10 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   // Requesting a validated version does not evict not validated version
   auto validated_sql_pipeline = SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+
+  auto unoptimized_lqp = validated_statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> validated_values;
-  auto validated_cache_key = validated_statement->get_split_unoptimized_logical_plan(validated_values);
+  auto validated_cache_key = validated_statement->split_logical_plan(unoptimized_lqp, validated_values);
 
   EXPECT_EQ(validated_values.size(), 2);
 
@@ -642,8 +650,9 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   statement->get_result_table();
 
+  auto unoptimized_lqp = statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> values;
-  auto cache_key = statement->get_split_unoptimized_logical_plan(values);
+  const auto cache_key = statement->split_logical_plan(unoptimized_lqp, values);
 
   EXPECT_EQ(_lqp_cache->size(), 1u);
   EXPECT_TRUE(_lqp_cache->has(cache_key));
@@ -770,8 +779,9 @@ TEST_F(SQLPipelineStatementTest, ParameterExtraction) {
   auto sql_pipeline = SQLPipelineBuilder{_parameter_query}.create_pipeline();
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
 
+  auto unoptimized_lqp = statement->get_unoptimized_logical_plan();
   std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
-  const auto cache_key = statement->get_split_unoptimized_logical_plan(extracted_values);
+  const auto cache_key = statement->split_logical_plan(unoptimized_lqp, extracted_values);
 
   EXPECT_EQ(extracted_values.size(), 2);
   auto value_1 = std::static_pointer_cast<ValueExpression>(extracted_values.at(0))->value;

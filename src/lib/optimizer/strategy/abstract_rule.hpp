@@ -22,6 +22,8 @@ class AbstractRule {
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
+  bool cacheable = true;
+
  protected:
   /**
    * Apply this rule to @param node's inputs and all subqueries in its expressions

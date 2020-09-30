@@ -57,7 +57,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
-                       const std::shared_ptr<Optimizer>& post_caching_optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                        const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
@@ -108,8 +107,8 @@ class SQLPipelineStatement : public Noncopyable {
   static void expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
                                               std::vector<std::shared_ptr<AbstractExpression>>& values,
                                               ParameterID& next_parameter_id);
-  const std::shared_ptr<AbstractLQPNode>& get_split_unoptimized_logical_plan(
-      std::vector<std::shared_ptr<AbstractExpression>>& values);
+  const std::shared_ptr<AbstractLQPNode> split_logical_plan(std::shared_ptr<AbstractLQPNode>& logical_plan,
+                                                            std::vector<std::shared_ptr<AbstractExpression>>& values);
 
  private:
   bool _is_transaction_statement();
@@ -126,7 +125,6 @@ class SQLPipelineStatement : public Noncopyable {
   const UseMvcc _use_mvcc;
 
   const std::shared_ptr<Optimizer> _optimizer;
-  const std::shared_ptr<Optimizer> _post_caching_optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

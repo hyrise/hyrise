@@ -56,7 +56,6 @@ class SQLPipelineBuilder final {
   UseMvcc _use_mvcc{UseMvcc::Yes};
   std::shared_ptr<TransactionContext> _transaction_context;
   std::shared_ptr<Optimizer> _optimizer;
-  std::shared_ptr<Optimizer> _post_caching_optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };

@@ -29,6 +29,8 @@ class BetweenCompositionRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
+  bool cacheable = false;
+
  private:
   /**
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a

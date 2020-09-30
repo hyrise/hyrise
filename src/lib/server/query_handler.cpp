@@ -89,9 +89,6 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   const auto optimizer = Optimizer::create_default_optimizer();
   lqp = optimizer->optimize(std::move(lqp));
 
-  const auto post_caching_optimizer = Optimizer::create_post_caching_optimizer();
-  lqp = post_caching_optimizer->optimize(std::move(lqp));
-
   auto pqp = LQPTranslator{}.translate_node(lqp);
 
   return pqp;

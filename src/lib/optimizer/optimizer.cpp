@@ -91,37 +91,14 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 
 namespace opossum {
 
-std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
+  auto optimizer = std::make_shared<Optimizer>();
+
+  //This rule cannot work properly on PlaceholderExpressions --> caching it might be problematic
   // Constant expressions can only be reduced when the predicate values are substitued.
   // However, this does not work if the predicate originates from a dummy table
   // See: SELECT * FROM meta_system_information WHERE cpu_count IN (SELECT 14 + 1)
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
-
-  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
-  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
-
-  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
-
-  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
-  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
-  // StoredTableNode as possible where the ChunkPruningRule can work with them.
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-
-  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
-  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
-  // executed after the ColumnPruningRule and ChunkPruningRule.
-  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
-
-  return optimizer;
-}
-
-std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>();
-
-  //This rule cannot work properly on PlaceholderExpressions
-  //optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
@@ -137,8 +114,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // (FDs) used by the DependentGroupByReductionRule.
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
-  //This rule cannot work properly on PlaceholderExpressions
-  //optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+  // This rule cannot work properly on PlaceholderExpressions --> caching it might be problematic
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
@@ -159,6 +136,16 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
+  // StoredTableNode as possible where the ChunkPruningRule can work with them.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
+  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
+  // executed after the ColumnPruningRule and ChunkPruningRule.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
@@ -169,6 +156,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   return optimizer;
 }
@@ -181,8 +170,8 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
-    std::shared_ptr<AbstractLQPNode> input,
-    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
+    std::shared_ptr<AbstractLQPNode> input, const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations,
+    const std::shared_ptr<bool>& cacheable) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -198,7 +187,17 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
-    _apply_rule(*rule, root_node);
+
+    if (!rule->cacheable) {
+      const auto previous_plan = root_node->deep_copy();
+      _apply_rule(*rule, root_node);
+      if (*previous_plan != *root_node) {
+        *cacheable = false;
+      }
+    } else {
+      _apply_rule(*rule, root_node);
+    }
+
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {

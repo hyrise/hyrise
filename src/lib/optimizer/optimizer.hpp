@@ -22,17 +22,10 @@ class AbstractLQPNode;
  * Applies optimization rules to an LQP.
  * On each invocation of optimize(), these Batches are applied in the same order as they were added
  * to the Optimizer.
- *
- * Optimizer::create_default_optimizer() creates the Optimizer with the default rule set.
  */
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
-  /**
-   * This Optimizer applies specific optimizer rules after reinserting the parameters
-   * into the cached lqp.
-   */
-  static std::shared_ptr<Optimizer> create_post_caching_optimizer();
 
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));
@@ -48,7 +41,8 @@ class Optimizer final {
    */
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr,
+      const std::shared_ptr<bool>& cacheable = std::make_shared<bool>(true)) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 

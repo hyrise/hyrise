@@ -37,12 +37,12 @@ for benchmark_json in data["benchmarks"]:
         for metrics in run["metrics"]:
             sum_parse_duration += metrics["parse_duration"]
 
-            for statement in metrics['statements']:
-                sum_sql_translation_duration += statement['sql_translation_duration']
-                sum_cache_duration += statement['cache_duration']
-                sum_optimization_duration += statement['optimization_duration']
-                sum_lqp_translation_duration += statement['lqp_translation_duration']
-                sum_plan_execution_duration += statement['plan_execution_duration']
+            for statement in metrics["statements"]:
+                sum_sql_translation_duration += statement["sql_translation_duration"]
+                sum_cache_duration += statement["cache_duration"]
+                sum_optimization_duration += statement["optimization_duration"]
+                sum_lqp_translation_duration += statement["lqp_translation_duration"]
+                sum_plan_execution_duration += statement["plan_execution_duration"]
 
                 if statement["optimizer_rule_durations"]:
                     for rule_name, rule_duration in statement["optimizer_rule_durations"].items():
@@ -55,7 +55,7 @@ for benchmark_json in data["benchmarks"]:
 
             benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
             benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_cache_duration / len(benchmark_json['successful_runs']))
+            benchmark.append(sum_cache_duration / len(benchmark_json["successful_runs"]))
             benchmark.append(sum_optimization_duration / len(benchmark_json["successful_runs"]))
             benchmark.append(sum_lqp_translation_duration / len(benchmark_json["successful_runs"]))
             benchmark.append(sum_plan_execution_duration / len(benchmark_json["successful_runs"]))
@@ -68,7 +68,7 @@ for benchmark_json in data["benchmarks"]:
         rule_benchmarks.append(rule_benchmark)
 
 benchmark_df = pd.DataFrame(
-    benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", 'Cache', "Optimizer", "LQPTranslator", "Execution"]
+    benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", "Cache", "Optimizer", "LQPTranslator", "Execution"]
 )
 
 # summing up the runtimes from all stages for each query
