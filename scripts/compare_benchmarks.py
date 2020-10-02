@@ -341,8 +341,8 @@ if github_format:
                                "<summary>Configuration Overview - click to expand</summary>\n\n" + \
                                "```diff\n" + \
                                create_context_overview(old_data, new_data, github_format) + \
-                               "```\n + \ " + \
-                               "</details>\n" + \
+                               "```\n" + \
+                               "</details>\n\n" + \
                                "```diff\n"
     for line in table_string.splitlines():
         if (green_control_sequence + "+" in line) or ("| Sum " in line and green_control_sequence in line):
