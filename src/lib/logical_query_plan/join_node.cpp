@@ -189,7 +189,7 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
    * An Equi Join on a = b leads to the following FDs: {a} => {b},
    *                                                   {b} => {a}
    */
-  for(const auto& predicate : join_predicates()) {
+  for (const auto& predicate : join_predicates()) {
     const auto& binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
     if (!binary_predicate || binary_predicate->predicate_condition != PredicateCondition::Equals) continue;
 
