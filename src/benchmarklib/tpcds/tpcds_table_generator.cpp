@@ -1159,4 +1159,50 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   return web_site_builder.finish_table();
 }
 
+void TPCDSTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  // Fact Tables (7)
+  const auto& store_sales_table = table_info_by_name.at("store_sales").table;
+  store_sales_table->add_soft_key_constraint(
+      {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& store_returns_table = table_info_by_name.at("store_returns").table;
+  store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
+                                                 store_returns_table->column_id_by_name("sr_ticket_number")},
+                                                KeyConstraintType::PRIMARY_KEY});
+
+  const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
+  catalog_sales_table->add_soft_key_constraint({{catalog_sales_table->column_id_by_name("cs_item_sk"),
+                                                 catalog_sales_table->column_id_by_name("cs_order_number")},
+                                                KeyConstraintType::PRIMARY_KEY});
+
+  const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
+  catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
+                                                   catalog_returns_table->column_id_by_name("cr_order_number")},
+                                                  KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_sales_table = table_info_by_name.at("web_sales").table;
+  web_sales_table->add_soft_key_constraint(
+      {{web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_returns_table = table_info_by_name.at("web_returns").table;
+  web_returns_table->add_soft_key_constraint(
+      {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& inventory_table = table_info_by_name.at("inventory").table;
+  inventory_table->add_soft_key_constraint(
+      {{inventory_table->column_id_by_name("inv_date_sk"), inventory_table->column_id_by_name("inv_item_sk"),
+        inventory_table->column_id_by_name("inv_warehouse_sk")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  // Dimension Tables (7)
+
+
+
+
+}
+
 }  // namespace opossum
