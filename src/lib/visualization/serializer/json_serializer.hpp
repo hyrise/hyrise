@@ -16,7 +16,7 @@
 #include "../types/get_inner_type.hpp"
 #include "../types/is_smart_ptr.hpp"
 #include "../types/is_vector.hpp"
-#include "class_has_properties_member.hpp"
+#include "has_member.hpp"
 #include "string.hpp"
 
 namespace opossum {
@@ -139,7 +139,7 @@ inline T as_any(const jsonView& value, const std::string& key) {
     if (value.GetObject(key).IsObject()) {
       // handle nested object (pointer)
       jsonView sub_json = value.GetObject(key);
-      if constexpr (has_properties<without_cv_value_t>::value) {
+      if constexpr (has_member_properties<without_cv_value_t>::value) {
         // T:: properties exist
         without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
         return sub_obj;
@@ -158,8 +158,7 @@ inline T as_any(const jsonView& value, const std::string& key) {
         "Unique pointers are currently not supported by this json serializer");
 
     typedef typename std::remove_cv_t<without_cv_t> smart_ptr_t;
-    smart_ptr_t s_ptr_obj;
-    typedef decltype(get_inner_t(s_ptr_obj)) inner_t;    // type of the object the pointer is pointing to
+    typedef get_inner_t<smart_ptr_t> inner_t;            // type of the object the pointer is pointing to
     inner_t* object_ptr = as_any<inner_t*>(value, key);  // a pointer to such an object
 
     return smart_ptr_t(object_ptr);
@@ -173,7 +172,7 @@ inline T as_any(const jsonView& value, const std::string& key) {
       if (value.GetObject(key).IsObject()) {
         // handle nested object (pointer or non-pointer)
         jsonView sub_json = value.GetObject(key);
-        if constexpr (has_properties<without_cv_t>::value) {
+        if constexpr (has_member_properties<without_cv_t>::value) {
           without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
           without_cv_t new_sub_obj{sub_obj};
           return new_sub_obj;
@@ -181,14 +180,14 @@ inline T as_any(const jsonView& value, const std::string& key) {
           // deserialize a vector
           const jsonView obj = value.GetObject(key);
           without_cv_t vec;
-          typedef decltype(get_inner_vec_t(vec)) vec_inner_t;
+          typedef get_inner_vec_t<without_cv_t> vec_inner_t;
           typedef std::remove_cv_t<vec_inner_t> without_cv_vec_inner_t;
 
           if constexpr (std::is_pointer<without_cv_vec_inner_t>::value) {
             typedef std::remove_pointer_t<without_cv_vec_inner_t> without_ptr_without_cv_vec_inner_t;
             for (size_t idx = 0; obj.KeyExists(std::to_string(idx)); ++idx) {
               const jsonView data = obj.GetObject(std::to_string(idx));
-              if constexpr (has_properties<without_ptr_without_cv_vec_inner_t>::value) {
+              if constexpr (has_member_properties<without_ptr_without_cv_vec_inner_t>::value) {
                 without_ptr_without_cv_vec_inner_t* tmp = from_json<without_cv_vec_inner_t>(data);
                 vec.emplace_back(tmp);  // serializer only supports vectors and no other containers
               } else if constexpr (std::is_same<without_ptr_without_cv_vec_inner_t, int>::value) {
@@ -216,7 +215,7 @@ inline T as_any(const jsonView& value, const std::string& key) {
           } else {
             for (size_t idx = 0; obj.KeyExists(std::to_string(idx)); ++idx) {
               const jsonView data = obj.GetObject(std::to_string(idx));
-              if constexpr (has_properties<without_cv_vec_inner_t>::value) {
+              if constexpr (has_member_properties<without_cv_vec_inner_t>::value) {
                 vec.emplace_back(from_json<without_cv_vec_inner_t>(
                     data));  // serializer only supports vectors and no other containers
               } else if constexpr (std::is_same<without_cv_vec_inner_t, int>::value) {
@@ -294,7 +293,7 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
     if (val == nullptr) {
       data.WithString(key, "NULL");
     } else {
-      if constexpr (has_properties<std::remove_pointer_t<T>>::value) {
+      if constexpr (has_member_properties<std::remove_pointer_t<T>>::value) {
         // nested (T::properties present)
         data.WithObject(key, to_json(val));
       } else {
@@ -312,7 +311,7 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
   } else if constexpr (is_vector<T>::value) {
     data.WithObject(key, vec_to_json(val));
   } else {
-    if constexpr (has_properties<T>::value) {
+    if constexpr (has_member_properties<T>::value) {
       // nested (T::properties present)
       data.WithObject(key, to_json(val));
     } else {
@@ -363,8 +362,7 @@ T from_json(const jsonView& data) {
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     typedef T smart_ptr_t;  // type of the smart pointer
-    smart_ptr_t s_ptr_obj;
-    typedef decltype(get_inner_t(s_ptr_obj)) inner_t;  // type of the object the pointer is pointing to
+    typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
     inner_t* object = new inner_t;
     // number of properties
     constexpr auto nb_properties = std::tuple_size<decltype(inner_t::properties)>::value;
@@ -398,34 +396,55 @@ T from_json(const jsonView& data) {
 template <typename T>
 jsonVal to_json(const T& object) {
   jsonVal data;
-  typedef typename std::remove_reference<std::remove_cv_t<T>> without_cv_t;
+  typedef typename std::remove_cv_t<std::remove_reference_t<T>> without_const_cv_t;
 
-  if constexpr (std::is_pointer<without_cv_t>::value) {
-    return to_json<std::remove_pointer_t<without_cv_t>>(*object);
+  if constexpr (std::is_same<T, AbstractOperator>::value) {
+    // cast Abstract operators
+    switch (object.type()) {
+      case OperatorType::Projection: {
+        std::cout << "projection" << std::endl;
+      } break;
 
-  } else if constexpr (is_smart_ptr<without_cv_t>::value) {
-    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
+      case OperatorType::TableScan: {
+        std::cout << "table scan\n" << std::endl;
+      } break;
+
+      case OperatorType::Limit: {
+        std::cout << "limit\n" << std::endl;
+      } break;
+
+      default: {
+        std::cout << "default\n" << std::endl;
+      }  // OperatorType has no expressions
+    }
+
+  } else if constexpr (std::is_pointer<without_const_cv_t>::value) {
+    return to_json<std::remove_pointer_t<without_const_cv_t>>(*object);
+
+  } else if constexpr (is_smart_ptr<without_const_cv_t>::value) {
+    StaticAssert<!is_weak_ptr<without_const_cv_t>::value>::stat_assert(
         "Weak pointers are currently not supported by this json serializer");
-    StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
+    StaticAssert<!is_unique_ptr<without_const_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
-    without_cv_t s_ptr_obj;
-    typedef decltype(get_inner_t(s_ptr_obj)) inner_t;  // type of the object the pointer is pointing to
-    return to_json<std::remove_reference<std::remove_cv_t<inner_t>>::value>(*object.get());
+    typedef get_inner_t<without_const_cv_t> inner_t;  // type of the object the pointer is pointing to
+    return to_json<std::remove_reference_t<std::remove_cv_t<inner_t>>>(*object.get());
 
-  } else if constexpr (has_properties<T>::value) {
+  } else if constexpr (has_member_properties<without_const_cv_t>::value) {
     // serialize a class that provides properties tuple
-    constexpr auto nb_properties = std::tuple_size<decltype(without_cv_t::properties)>::value;
+    constexpr auto nb_properties = std::tuple_size<decltype(without_const_cv_t::properties)>::value;
     details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
-      constexpr auto property = std::get<i>(without_cv_t::properties);
+      constexpr auto property = std::get<i>(without_const_cv_t::properties);
       details::with_any(data, property.name, object.*(property.member));
     });
-
     return data;
-  } else if constexpr (has_type_property<T>::value) {
+
+  } else if constexpr (has_member__type<without_const_cv_t>::value) {
+    // TODO(CAJan93): remove this case?
     Fail("hi there");
   } else {
-    Fail("unsupported type");
+    Fail(JOIN_TO_STR("unsupported type ", typeid(object).name()));
   }
+  return data;
 }
 
 template <typename T>
