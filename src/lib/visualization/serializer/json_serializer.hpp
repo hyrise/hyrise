@@ -361,7 +361,7 @@ T from_json(const jsonView& data) {
         "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
-    typedef T smart_ptr_t;  // type of the smart pointer
+    typedef T smart_ptr_t;                     // type of the smart pointer
     typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
     inner_t* object = new inner_t;
     // number of properties
@@ -396,49 +396,71 @@ T from_json(const jsonView& data) {
 template <typename T>
 jsonVal to_json(const T& object) {
   jsonVal data;
-  typedef typename std::remove_cv_t<std::remove_reference_t<T>> without_const_cv_t;
+  typedef typename std::remove_cv_t<T> without_cv;
+  typedef typename std::remove_reference_t<without_cv> without_ref_cv_t;
 
-  if constexpr (std::is_same<T, AbstractOperator>::value) {
-    // cast Abstract operators
-    switch (object.type()) {
-      case OperatorType::Projection: {
-        std::cout << "projection" << std::endl;
-      } break;
+  if constexpr (std::is_pointer<without_ref_cv_t>::value) {
+    if constexpr (std::is_same<without_ref_cv_t, const AbstractOperator*>::value) {
+      // cast Abstract operators
+      auto abstract_op = (const AbstractOperator*)object;
+      switch (abstract_op->type()) {
+        case OperatorType::Projection: {
+          const auto projection = dynamic_cast<const Projection*>(abstract_op);
+          (void)projection;  // TODO remove
+          std::cout << "projection" << std::endl;
+          for (const auto& expression : projection->expressions) {
+            std::cout << "an expression\n";
+            (void)expression;  // TODO remove
+            // _visualize_subqueries_json(object, expression);
+          }
+        } break;
 
-      case OperatorType::TableScan: {
-        std::cout << "table scan\n" << std::endl;
-      } break;
+        case OperatorType::TableScan: {
+          const auto table_scan = dynamic_cast<const TableScan*>(abstract_op);
+          (void)table_scan;  // TODO remove
+          std::cout << "TableScan" << std::endl;
+          // _visualize_subqueries_json(object, table_scan.predicate());
+        } break;
 
-      case OperatorType::Limit: {
-        std::cout << "limit\n" << std::endl;
-      } break;
+        case OperatorType::Limit: {
+          const auto limit = dynamic_cast<const Limit*>(abstract_op);
+          (void)limit;  // TODO remove
+          std::cout << "limit" << std::endl;
+          // _visualize_subqueries_json(object, limit.row_count_expression());
+        } break;
 
-      default: {
-        std::cout << "default\n" << std::endl;
-      }  // OperatorType has no expressions
+        default: {
+          std::cout << "default\n" << std::endl;
+          // TODO(CAJan93) remove this
+          auto t = abstract_op->type(); 
+          auto fkdljdflfds = t;
+          (void)fkdljdflfds;
+        }  // OperatorType has no expressions
+      }
+      // TODO remove this line
+      return data;
+
+    } else {
+      return to_json<std::remove_pointer_t<without_ref_cv_t>>(*object);
     }
 
-  } else if constexpr (std::is_pointer<without_const_cv_t>::value) {
-    return to_json<std::remove_pointer_t<without_const_cv_t>>(*object);
-
-  } else if constexpr (is_smart_ptr<without_const_cv_t>::value) {
-    StaticAssert<!is_weak_ptr<without_const_cv_t>::value>::stat_assert(
+  } else if constexpr (is_smart_ptr<without_ref_cv_t>::value) {
+    StaticAssert<!is_weak_ptr<without_ref_cv_t>::value>::stat_assert(
         "Weak pointers are currently not supported by this json serializer");
-    StaticAssert<!is_unique_ptr<without_const_cv_t>::value>::stat_assert(
+    StaticAssert<!is_unique_ptr<without_ref_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
-    typedef get_inner_t<without_const_cv_t> inner_t;  // type of the object the pointer is pointing to
-    return to_json<std::remove_reference_t<std::remove_cv_t<inner_t>>>(*object.get());
+    return to_json(object.get());  // keep const qualifier, since get() might return a const pointer
 
-  } else if constexpr (has_member_properties<without_const_cv_t>::value) {
+  } else if constexpr (has_member_properties<without_ref_cv_t>::value) {
     // serialize a class that provides properties tuple
-    constexpr auto nb_properties = std::tuple_size<decltype(without_const_cv_t::properties)>::value;
+    constexpr auto nb_properties = std::tuple_size<decltype(without_ref_cv_t::properties)>::value;
     details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
-      constexpr auto property = std::get<i>(without_const_cv_t::properties);
+      constexpr auto property = std::get<i>(without_ref_cv_t::properties);
       details::with_any(data, property.name, object.*(property.member));
     });
     return data;
 
-  } else if constexpr (has_member__type<without_const_cv_t>::value) {
+  } else if constexpr (has_member__type<without_ref_cv_t>::value) {
     // TODO(CAJan93): remove this case?
     Fail("hi there");
   } else {
