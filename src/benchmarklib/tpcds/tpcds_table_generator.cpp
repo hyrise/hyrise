@@ -1198,11 +1198,73 @@ void TPCDSTableGenerator::_add_constraints(
         inventory_table->column_id_by_name("inv_warehouse_sk")},
        KeyConstraintType::PRIMARY_KEY});
 
-  // Dimension Tables (7)
+  // Dimension Tables (17)
+  const auto& store_table = table_info_by_name.at("store").table;
+  store_table->add_soft_key_constraint(
+      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
 
+  const auto& call_center_table = table_info_by_name.at("call_center").table;
+  call_center_table->add_soft_key_constraint(
+      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
 
+  const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
+  catalog_page_table->add_soft_key_constraint(
+      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
 
+  const auto& web_site_table = table_info_by_name.at("web_site").table;
+  web_site_table->add_soft_key_constraint(
+      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
 
+  const auto& web_page_table = table_info_by_name.at("web_page").table;
+  web_page_table->add_soft_key_constraint(
+      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& warehouse_table = table_info_by_name.at("warehouse").table;
+  warehouse_table->add_soft_key_constraint(
+      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_address_table = table_info_by_name.at("customer_address").table;
+  customer_address_table->add_soft_key_constraint(
+      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
+  customer_demographics_table->add_soft_key_constraint({{customer_demographics_table->column_id_by_name("cd_demo_sk")},
+
+                                                        KeyConstraintType::PRIMARY_KEY});
+  const auto& date_dim_table = table_info_by_name.at("date_dim").table;
+  date_dim_table->add_soft_key_constraint(
+      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
+  household_demographics_table->add_soft_key_constraint(
+      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& item_table = table_info_by_name.at("item").table;
+  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& income_band_table = table_info_by_name.at("income_band").table;
+  income_band_table->add_soft_key_constraint(
+      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& promotion_table = table_info_by_name.at("promotion").table;
+  promotion_table->add_soft_key_constraint(
+      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& reason_table = table_info_by_name.at("reason").table;
+  reason_table->add_soft_key_constraint(
+      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
+  ship_mode_table->add_soft_key_constraint(
+      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& time_dim_table = table_info_by_name.at("time_dim").table;
+  time_dim_table->add_soft_key_constraint(
+      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
 }  // namespace opossum
