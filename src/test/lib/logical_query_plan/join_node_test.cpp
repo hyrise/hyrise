@@ -205,33 +205,6 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
-  // Preparations
-  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
-  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
-  _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().at(0), fd_a);
-  _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().at(0), fd_x);
-
-  // Tests
-  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-    // clang-format off
-    const auto join_node =
-        JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-                       _mock_node_a,
-                       _mock_node_b);
-    // clang-format on
-
-    // We do not want JoinNode to return the FDs of the right input node
-    const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
-    EXPECT_EQ(non_trivial_fds.size(), 1);
-    EXPECT_EQ(non_trivial_fds.at(0), fd_a);
-  }
-}
-
 TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeft) {
   for (const auto join_mode :
        {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
@@ -255,6 +228,33 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeft) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
     }
+  }
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeftSemiAndAntiJoins) {
+  // Preparations
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().at(0), fd_a);
+  _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().at(0), fd_x);
+
+  // Tests
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    // clang-format off
+    const auto join_node =
+        JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+                       _mock_node_a,
+                       _mock_node_b);
+    // clang-format on
+
+    // We do not want JoinNode to return the FDs of the right input node
+    const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
+    EXPECT_EQ(non_trivial_fds.size(), 1);
+    EXPECT_EQ(non_trivial_fds.at(0), fd_a);
   }
 }
 
