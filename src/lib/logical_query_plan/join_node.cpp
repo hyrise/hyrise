@@ -184,17 +184,24 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   // Prevent FDs with duplicate determinant expressions in the output vector
   auto fds_out = union_fds(fds_left, fds_right);
 
+  /**
+   * Create FDs from Equi-Join predicates. For example:
+   * An Equi Join on a = b leads to the following FDs: {a} => {b},
+   *                                                   {b} => {a}
+   */
+  for(const auto& predicate : join_predicates()) {
+    const auto& binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+    if (!binary_predicate || binary_predicate->predicate_condition != PredicateCondition::Equals) continue;
+
+    fds_out.emplace_back(FunctionalDependency{{binary_predicate->left_operand()}, {binary_predicate->right_operand()}});
+    fds_out.emplace_back(FunctionalDependency{{binary_predicate->right_operand()}, {binary_predicate->left_operand()}});
+  }
+
   // Outer joins lead to nullable columns, which may invalidate some FDs
   if (!fds_out.empty() &&
       (join_mode == JoinMode::FullOuter || join_mode == JoinMode::Left || join_mode == JoinMode::Right)) {
     remove_invalid_fds(shared_from_this(), fds_out);
   }
-
-  /**
-   * Future Work: In some cases, it is possible to create FDs from the join columns.
-   *              For example: a) {join_column_a} => {join_column_b}
-   *                           b) {join_column_b} => {join_column_a}
-   */
 
   return fds_out;
 }
