@@ -7,6 +7,7 @@
 #include <tpch/tpch_table_generator.hpp>
 #include "calibration_benchmark_runner.hpp"
 #include "hyrise.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -31,7 +32,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
       benchmark_runner = _build_tcph(scale_factor);
       break;
     default:
-      throw std::runtime_error("Provided unknown BenchmarkType.");
+      Fail("Provided unknown BenchmarkType.");
   }
 
   for (int execution_index = 0; execution_index < number_of_executions; ++execution_index) {
@@ -55,6 +56,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
 }
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tcph(const float scale_factor) const {
+  //_config->max_runs = 1;
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, scale_factor);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, _config),

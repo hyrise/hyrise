@@ -1,14 +1,11 @@
 #include "calibration_lqp_generator.hpp"
 
-#include <boost/hana/tuple.hpp>
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "operators/join_hash.hpp"
-#include "operators/join_nested_loop.hpp"
-#include "operators/join_sort_merge.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
 
@@ -45,6 +42,7 @@ void CalibrationLQPGenerator::generate_joins(
       _generate_joins(left_table, right_table);
     }
   }
+  //_generate_joins(tables.at(0), tables.at(1));
   std::cout << "\t- " << _generated_lqps.size() - num_table_scans << " Joins" << std::endl;
 }
 
@@ -67,6 +65,7 @@ void CalibrationLQPGenerator::_generate_table_scans(
   const auto column_count = table_wrapper->get_table()->column_count();
   const std::vector<std::string> column_names = table_wrapper->get_table()->column_names();
   const auto column_data_types = table_wrapper->get_table()->column_data_types();
+  const auto& table = table_wrapper->get_table();
 
   for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     // Column specific values
@@ -98,6 +97,24 @@ void CalibrationLQPGenerator::_generate_table_scans(
 
         // Base LQP for current iteration (without any further modifications)
         _generated_lqps.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
+
+        if (_enable_index_scans) {
+          auto has_index = false;
+          for (const auto& index_statistics : table->indexes_statistics()) {
+            const auto& index_column_ids = index_statistics.column_ids;
+            if (index_column_ids == std::vector<ColumnID>{column_id}) {
+              has_index = true;
+              break;
+            }
+          }
+
+          if (!has_index) {
+            table->create_index<GroupKeyIndex>({column_id});
+          }
+          const auto predicate_node = get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node));
+          predicate_node->scan_type = ScanType::IndexScan;
+          _generated_lqps.emplace_back(predicate_node);
+        }
 
         // Add reference scans
         if (_enable_reference_scans) {
@@ -147,15 +164,12 @@ void CalibrationLQPGenerator::_generate_joins(
   const auto left_table = left_table_wrapper->get_table();
   const auto right_table = right_table_wrapper->get_table();
   Assert(left_table->column_count() == right_table->column_count(), "Tables must have same column counts.");
-  const auto join_types = std::vector<JoinType>{JoinType::Hash, JoinType::SortMerge, JoinType::NestedLoop};
   const auto join_modes = {JoinMode::Inner, JoinMode::Left,           JoinMode::Right,          JoinMode::FullOuter,
                            JoinMode::Semi,  JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse};
   const auto predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                      PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                      PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
                                      PredicateCondition::Like,        PredicateCondition::NotLike};
-  constexpr auto JOIN_OPERATORS = hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
-  size_t join_type_index = 0;
 
   for (auto column_id = ColumnID{0}; column_id < left_table->column_count(); ++column_id) {
     Assert(left_table->column_data_type(column_id) == right_table->column_data_type(column_id),
@@ -168,12 +182,13 @@ void CalibrationLQPGenerator::_generate_joins(
         const auto right_column_expression = std::make_shared<LQPColumnExpression>(right_stored_table_node, column_id);
         const auto join_predicate =
             std::make_shared<BinaryPredicateExpression>(predicate, left_column_expression, right_column_expression);
+        size_t join_type_index = 0;
 
         if (OperatorJoinPredicate::from_expression(*join_predicate, *left_stored_table_node,
                                                    *right_stored_table_node)) {
-          boost::hana::for_each(JOIN_OPERATORS, [&](const auto join_operator_t) {
-            const auto join_type = join_types.at(join_type_index);
-            join_type_index = (join_type_index + 1) % join_types.size();
+          boost::hana::for_each(_join_operators, [&](const auto join_operator_t) {
+            const auto join_type = _join_types.at(join_type_index);
+            join_type_index = (join_type_index + 1) % _join_types.size();
 
             using JoinOperator = typename decltype(join_operator_t)::type;
             if (JoinOperator::supports({join_mode, predicate, left_table->column_data_type(column_id),
@@ -181,6 +196,14 @@ void CalibrationLQPGenerator::_generate_joins(
               const auto join_node =
                   JoinNode::make(join_mode, join_predicate, join_type, left_stored_table_node, right_stored_table_node);
               _generated_lqps.push_back(join_node);
+
+              if (_enable_reference_joins) {
+                const auto left_validate_node = ValidateNode::make(left_stored_table_node);
+                const auto right_validate_node = ValidateNode::make(right_stored_table_node);
+                const auto validated_join_node =
+                    JoinNode::make(join_mode, join_predicate, join_type, left_validate_node, right_validate_node);
+                _generated_lqps.push_back(validated_join_node);
+              }
             }
           });
         }

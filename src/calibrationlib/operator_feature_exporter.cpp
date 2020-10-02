@@ -55,6 +55,9 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
     case OperatorType::TableScan:
       _export_table_scan(static_pointer_cast<const TableScan>(op));
       break;
+    case OperatorType::IndexScan:
+      _export_index_scan(static_pointer_cast<const IndexScan>(op));
+      break;
     default:
       //_export_general_operator(op);
       break;
@@ -78,16 +81,16 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
       column_type = table_column_information.column_type;
     }
 
-    auto output_row = std::vector<AllTypeVariant>{operator_info.name,
-                                                  operator_info.left_input_rows,
-                                                  operator_info.left_input_columns,
-                                                  operator_info.output_rows,
-                                                  operator_info.output_columns,
-                                                  operator_info.walltime,
-                                                  column_type,
-                                                  table_name,
-                                                  column_name,
-                                                  ""};
+    const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
+                                                        operator_info.left_input_rows,
+                                                        operator_info.left_input_columns,
+                                                        operator_info.output_rows,
+                                                        operator_info.output_columns,
+                                                        operator_info.walltime,
+                                                        column_type,
+                                                        table_name,
+                                                        column_name,
+                                                        ""};
     _general_output_table->append(output_row);
   }
 }
@@ -166,6 +169,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                   operator_info.right_input_columns,
                                                   operator_info.output_rows,
                                                   operator_info.output_columns,
+                                                  operator_info.estimated_cardinality,
                                                   operator_info.walltime,
                                                   left_table_name,
                                                   left_column_name,
@@ -199,6 +203,7 @@ void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetT
                                                       operator_info.left_input_columns,
                                                       operator_info.output_rows,
                                                       operator_info.output_columns,
+                                                      operator_info.estimated_cardinality,
                                                       operator_info.walltime,
                                                       "",
                                                       pmr_string{op->table_name()},
@@ -227,11 +232,41 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           operator_info.left_input_columns,
                                                           operator_info.output_rows,
                                                           operator_info.output_columns,
+                                                          operator_info.estimated_cardinality,
                                                           operator_info.walltime,
                                                           table_column_information.column_type,
                                                           table_column_information.table_name,
                                                           table_column_information.column_name,
                                                           implementation};
+      _general_output_table->append(output_row);
+    }
+    return ExpressionVisitation::VisitArguments;
+  });
+}
+
+void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const IndexScan>& op) {
+  const auto& operator_info = _general_operator_information(op);
+  const auto node = op->lqp_node;
+  const auto predicate_node = static_pointer_cast<const PredicateNode>(node);
+  const auto predicate = predicate_node->predicate();
+
+  // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
+  // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
+  visit_expression(predicate, [&](const auto& expression) {
+    if (expression->type == ExpressionType::LQPColumn) {
+      const auto column_expression = static_pointer_cast<LQPColumnExpression>(expression);
+      const auto& table_column_information = _table_column_information(node, column_expression);
+      const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
+                                                          operator_info.left_input_rows,
+                                                          operator_info.left_input_columns,
+                                                          operator_info.output_rows,
+                                                          operator_info.output_columns,
+                                                          operator_info.estimated_cardinality,
+                                                          operator_info.walltime,
+                                                          table_column_information.column_type,
+                                                          table_column_information.table_name,
+                                                          table_column_information.column_name,
+                                                          operator_info.name};
       _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
@@ -304,6 +339,7 @@ const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporte
   operator_info.output_rows = static_cast<int64_t>(op->performance_data->output_row_count);
   operator_info.walltime = static_cast<int64_t>(op->performance_data->walltime.count());
   operator_info.output_columns = static_cast<int32_t>(op->performance_data->output_column_count);
+  operator_info.estimated_cardinality = _cardinality_estimator->estimate_cardinality(op->lqp_node);
 
   return operator_info;
 }

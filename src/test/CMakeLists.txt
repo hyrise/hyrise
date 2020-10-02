@@ -15,11 +15,11 @@ set(
     benchmarklib/table_builder_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    calibrationlib/calibration_table_generator_test.cpp
-    calibrationlib/calibration_table_wrapper_test.cpp
-    calibrationlib/calibration_lqp_generator_test.cpp
-    calibrationlib/operator_feature_exporter_test.cpp
-    calibrationlib/table_feature_exporter_test.cpp
+    # calibrationlib/calibration_table_generator_test.cpp
+    # calibrationlib/calibration_table_wrapper_test.cpp
+    # calibrationlib/calibration_lqp_generator_test.cpp
+    # calibrationlib/operator_feature_exporter_test.cpp
+    # calibrationlib/table_feature_exporter_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/cache/cache_test.cpp

@@ -9,7 +9,9 @@
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/table_scan.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -26,6 +28,7 @@ class OperatorFeatureExporter {
     int64_t walltime{0};
     int64_t output_rows{0};
     int32_t output_columns{0};
+    float estimated_cardinality{0.0};
   };
 
   struct TableColumnInformation {
@@ -52,6 +55,7 @@ class OperatorFeatureExporter {
   void _export_join(const std::shared_ptr<const AbstractJoinOperator>& op);
   void _export_get_table(const std::shared_ptr<const GetTable>& op);
   void _export_table_scan(const std::shared_ptr<const TableScan>& op);
+  void _export_index_scan(const std::shared_ptr<const IndexScan>& op);
 
   void _export_join_stages(const std::shared_ptr<const AbstractJoinOperator>& op);
 
@@ -69,6 +73,7 @@ class OperatorFeatureExporter {
                                                      {"INPUT_COLUMNS", DataType::Int, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
+                                                     {"ESTIMATED_CARDINALITY", DataType::Float, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
                                                      {"COLUMN_TYPE", DataType::String, false},
                                                      {"TABLE_NAME", DataType::String, false},
@@ -85,6 +90,7 @@ class OperatorFeatureExporter {
                                                      {"INPUT_COLUMNS_RIGHT", DataType::Int, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
+                                                     {"ESTIMATED_CARDINALITY", DataType::Float, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
                                                      {"LEFT_TABLE_NAME", DataType::String, false},
                                                      {"LEFT_COLUMN_NAME", DataType::String, false},
@@ -103,6 +109,8 @@ class OperatorFeatureExporter {
   const std::string _output_path;
   const std::string _join_output_path;
   const std::string _join_stages_output_path;
+  const std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator = std::make_shared<CardinalityEstimator>();
+
 
   int32_t _current_join_id{0};
   mutable std::mutex _mutex;

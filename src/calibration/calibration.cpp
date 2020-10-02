@@ -73,14 +73,17 @@ int main() {
 
   std::cout << "\t- Running queries" << std::endl;
   auto training_start = std::chrono::system_clock::now();
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   const auto lqps = lqp_generator.get_lqps();
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
+    pqp->set_transaction_context_recursively(transaction_context);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
     // Export PQP directly after generation
     feature_exporter.export_to_csv(pqp);
+    //std::cout << std::endl;
   }
 
   const auto training_duration =
