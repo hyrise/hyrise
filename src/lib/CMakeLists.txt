@@ -643,6 +643,9 @@ set(
 
 set(
     LIBRARIES
+    # skyrise libs
+    aws-cpp-sdk-core
+
     lz4
     sqlparser
     uninitialized_vector
