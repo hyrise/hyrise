@@ -205,6 +205,61 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
+TEST_F(JoinNodeTest, FunctionalDependenciesCreateFromEquiJoin) {
+  // clang-format off
+  const auto join_node =
+      JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y),
+                     _mock_node_a,
+                     _mock_node_b);
+  // clang-format on
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_b_y}};
+  const auto fd_y = FunctionalDependency{{_t_b_y}, {_t_a_a}};
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_y);
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesCreateFromMultiPredicateJoin) {
+  // clang-format off
+  const auto join_node =
+      JoinNode::make(JoinMode::Inner,
+                     expression_vector(equals_(_t_a_a, _t_b_x), less_than_(_t_a_a, _t_b_y), equals_(_t_a_b, _t_b_y)),
+                     _mock_node_a,
+                     _mock_node_b);
+  // clang-format on
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 4);
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_b_x}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a}};
+  const auto fd_b = FunctionalDependency{{_t_a_b}, {_t_b_y}};
+  const auto fd_y = FunctionalDependency{{_t_b_y}, {_t_a_b}};
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(2), fd_b);
+  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(3), fd_y);
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesCreateFromEquiOuterJoins) {
+  for (const auto join_mode : {JoinMode::FullOuter, JoinMode::Left, JoinMode::Right}) {
+    // clang-format off
+    const auto join_node =
+        JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+                       _mock_node_a,
+                       _mock_node_b);
+    // clang-format on
+    if (join_mode == JoinMode::FullOuter) {
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
+    } else if (join_mode == JoinMode::Left) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_b_y}};
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
+    } else if (join_mode == JoinMode::Right) {
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      const auto fd_y = FunctionalDependency{{_t_b_y}, {_t_a_a}};
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_y);
+    }
+  }
+}
+
 TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeft) {
   for (const auto join_mode :
        {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
