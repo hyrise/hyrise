@@ -32,8 +32,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
   std::shared_ptr<AbstractCardinalityEstimator> new_instance() const override;
 
-  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const;
+  Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp) const override;
+  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
   /**
    * Per-node-type estimation functions

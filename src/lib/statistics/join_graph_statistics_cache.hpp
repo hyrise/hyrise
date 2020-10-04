@@ -31,7 +31,7 @@ class JoinGraphStatisticsCache {
   using Bitmask = boost::dynamic_bitset<>;
 
   // Maps vertices to their index in the Bitmask
-  using VertexIndexMap = std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>;
+  using VertexIndexMap = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>;
 
   // Maps predicates to their index in the Bitmask
   using PredicateIndexMap = ExpressionUnorderedMap<size_t>;
@@ -47,7 +47,7 @@ class JoinGraphStatisticsCache {
    * Predicates or Vertices not registered in _vertex_indices and _predicate_indices are encountered. The latter can be
    * the case if `lqp` is a suplan of a vertex node.
    */
-  std::optional<Bitmask> bitmask(const std::shared_ptr<AbstractLQPNode>& lqp) const;
+  std::optional<Bitmask> bitmask(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
   /**
    * Retrieve the cached statistics associated with @param bitmask. The order of columns in the returned TableStatistics
