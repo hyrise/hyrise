@@ -47,8 +47,8 @@ class PQPColumnExpression : public AbstractExpression {
       property(&PQPColumnExpression::column_id, "column_id"), property(&PQPColumnExpression::_data_type, "_data_type"),
       property(&PQPColumnExpression::_nullable, "_nullable"),
       property(&PQPColumnExpression::_column_name, "_column_name"),
-      /*property(&PQPColumnExpression::arguments, "arguments"),*/
-      property(&PQPColumnExpression::type, "type"));
+      // from AbstractExpression
+      property(&PQPColumnExpression::arguments, "arguments"), property(&PQPColumnExpression::type, "type"));
 };
 
 }  // namespace opossum

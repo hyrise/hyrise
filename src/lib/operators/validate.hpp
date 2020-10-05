@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -46,6 +47,19 @@ class Validate : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-};
 
+  friend class JsonSerializer;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members.
+  inline constexpr static auto properties = std::make_tuple(
+      property(&Validate::_can_use_chunk_shortcut, "_can_use_chunk_shortcut"),
+      // from AbstractOperator via AbstractReadOnlyOperator
+      /*property(&Validate::lqp_node, "lqp_node"), property(&Validate::performance_data, "performance_data"),*/
+      property(&Validate::_type, "_type"), property(&Validate::_left_input, "_left_input"),
+      property(&Validate::_right_input, "_right_input")
+      /*, property(&Validate::_transaction_context, "_transaction_context")*/
+      /*property(&Validate::_output, "_output"), // should not be important*/
+  );
+};
 }  // namespace opossum

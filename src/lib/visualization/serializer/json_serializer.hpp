@@ -17,6 +17,7 @@
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
 #include "../../operators/table_scan.hpp"
+#include "../../operators/validate.hpp"
 #include "../../types.hpp"
 #include "../../utils/assert.hpp"
 #include "../types/get_inner_type.hpp"
@@ -29,6 +30,7 @@ namespace opossum {
 
 // forward declaration and alii
 class PQPColumnExpression;
+class Validate;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
 
@@ -417,9 +419,11 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
     if (val == nullptr) {
       data.WithString(key, "NULL");
     } else {
-      typedef typename std::remove_pointer_t<T> without_ptr_t;
-      if constexpr (has_member_properties<without_ptr_t>::value ||  // remove second argument? TODO(CAJan93)
-                    std::is_same<without_ptr_t, AbstractExpression>::value) {
+      // const AbstractOperator* const&
+      typedef typename std::remove_reference_t<std::remove_cv_t<std::remove_pointer_t<T>>> without_ref_cv_ptr_t;
+      if constexpr (has_member_properties<without_ref_cv_ptr_t>::value ||
+                    std::is_same<without_ref_cv_ptr_t, AbstractExpression>::value ||
+                    std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value) {
         // nested (T::properties present)
         data.WithObject(key, JsonSerializer::to_json(val));
       } else {
@@ -438,8 +442,7 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
     data.WithObject(key, vec_to_json(val));
   } else if constexpr (std::is_enum<T>::value) {
     data.WithInteger(key, static_cast<int>(val));
-  }
-  else {
+  } else {
     if constexpr (has_member_properties<T>::value) {
       // nested (T::properties present)
       data.WithObject(key, JsonSerializer::to_json(val));
@@ -548,6 +551,13 @@ jsonVal JsonSerializer::to_json(const T& object) {
           const auto limit = dynamic_cast<const Limit*>(abstract_op);
           std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<Limit>(*limit);
+        } break;
+
+        case OperatorType::Validate: {
+          const auto validate = dynamic_cast<const Validate*>(abstract_op);
+          std::cout << "Validate" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Validate>(*validate);
+          return data;
         } break;
 
           /**
