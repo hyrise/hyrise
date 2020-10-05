@@ -1165,7 +1165,7 @@ void TPCDSTableGenerator::_add_constraints(
    * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
    * (Section 2: Logical Database Design)
    */
-  
+
   // Fact Tables (7)
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
   store_sales_table->add_soft_key_constraint(
