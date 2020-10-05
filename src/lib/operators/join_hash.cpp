@@ -210,7 +210,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            static_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
+            dynamic_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -540,24 +540,56 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       probe_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_probe_input_table);
     }
 
-    auto output_chunk_count = size_t{0};
+    auto expected_output_chunk_count = size_t{0};
     for (size_t partition_id = 0; partition_id < build_side_pos_lists.size(); ++partition_id) {
       if (!build_side_pos_lists[partition_id].empty() || !probe_side_pos_lists[partition_id].empty()) {
-        ++output_chunk_count;
+        ++expected_output_chunk_count;
       }
     }
 
-    std::vector<std::shared_ptr<Chunk>> output_chunks{output_chunk_count};
+    std::vector<std::shared_ptr<Chunk>> output_chunks{};
+    output_chunks.reserve(expected_output_chunk_count);
 
     // For every partition, create a reference segment.
-    for (size_t partition_id = 0, output_chunk_id{0}; partition_id < build_side_pos_lists.size(); ++partition_id) {
+    auto partition_id = size_t{0};
+    auto output_chunk_id = size_t{0};
+    while (partition_id < build_side_pos_lists.size()) {
       // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // build_pos_lists and probe_side_pos_lists will not be used again.
       auto build_side_pos_list = std::make_shared<RowIDPosList>(std::move(build_side_pos_lists[partition_id]));
       auto probe_side_pos_list = std::make_shared<RowIDPosList>(std::move(probe_side_pos_lists[partition_id]));
 
       if (build_side_pos_list->empty() && probe_side_pos_list->empty()) {
+        ++partition_id;
         continue;
+      }
+
+      // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
+      // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
+      // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
+      // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
+      // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
+      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
+      constexpr auto MIN_SIZE = 500;
+      constexpr auto MAX_SIZE = MIN_SIZE * 2;
+      build_side_pos_list->reserve(MAX_SIZE);
+      probe_side_pos_list->reserve(MAX_SIZE);
+
+      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
+      // size or are empty (in case of semi/anti joins).
+      while (partition_id + 1 < probe_side_pos_lists.size() && probe_side_pos_list->size() < MIN_SIZE &&
+             probe_side_pos_list->size() + probe_side_pos_lists[partition_id + 1].size() < MAX_SIZE) {
+        // Copy entries from following PosList into the current working set (build_side_pos_list) and free the memory
+        // used for the merged PosList.
+        std::copy(build_side_pos_lists[partition_id + 1].begin(), build_side_pos_lists[partition_id + 1].end(),
+                  std::back_inserter(*build_side_pos_list));
+        build_side_pos_lists[partition_id + 1] = {};
+
+        std::copy(probe_side_pos_lists[partition_id + 1].begin(), probe_side_pos_lists[partition_id + 1].end(),
+                  std::back_inserter(*probe_side_pos_list));
+        probe_side_pos_lists[partition_id + 1] = {};
+
+        ++partition_id;
       }
 
       Segments output_segments;
@@ -584,7 +616,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           break;
       }
 
-      output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
+      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+      ++partition_id;
       ++output_chunk_id;
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());

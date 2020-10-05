@@ -36,14 +36,14 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   auto current_node = node;
   while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
          _is_non_filtering_node(*current_node)) {
-    if (current_node->type == LQPNodeType::Predicate) {
-      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
+    // based on the conditions found only in a single branch.
+    if (current_node->output_count() > 1) {
+      predicate_nodes.clear();
     }
 
-    // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->output_count() > 1) {
-      _apply_to_inputs(node);
-      return;
+    if (current_node->type == LQPNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
     }
 
     current_node = current_node->left_input();

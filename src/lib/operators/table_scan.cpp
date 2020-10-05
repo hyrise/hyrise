@@ -170,7 +170,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       } else {
         matches_out->guarantee_single_chunk();
 
-        // If the entire chunk is matched, create a EntireChunkPosList instead
+        // If the entire chunk is matched, create an EntireChunkPosList instead
         const auto output_pos_list = matches_out->size() == chunk_in->size()
                                          ? static_cast<std::shared_ptr<AbstractPosList>>(
                                                std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size()))
