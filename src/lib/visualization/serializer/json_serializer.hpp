@@ -12,6 +12,8 @@
 // TODO(CAJan93): #include "../string.hpp"
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
+#include "../../expression/pqp_column_expression.hpp"
+#include "../../types.hpp"
 #include "../../utils/assert.hpp"
 #include "../types/get_inner_type.hpp"
 #include "../types/is_smart_ptr.hpp"
@@ -20,6 +22,76 @@
 #include "string.hpp"
 
 namespace opossum {
+
+// TODO(CAJan93): remove and use magic enum
+std::string print_type(const OperatorType& t) {
+  switch (t) {
+    case OperatorType::Aggregate:
+      return "Aggregate";
+    case OperatorType::Alias:
+      return "Alias";
+    case OperatorType::ChangeMetaTable:
+      return "ChangeMetaTable";
+    case OperatorType::CreateTable:
+      return "CreateTable";
+    case OperatorType::CreatePreparedPlan:
+      return "CreatePreparedPlan";
+    case OperatorType::CreateView:
+      return "CreateView";
+    case OperatorType::DropTable:
+      return "DropTable";
+    case OperatorType::DropView:
+      return "DropView";
+    case OperatorType::Delete:
+      return "Delete";
+    case OperatorType::Difference:
+      return "Difference";
+    case OperatorType::Export:
+      return "Export";
+    case OperatorType::GetTable:
+      return "GetTable";
+    case OperatorType::Import:
+      return "Import";
+    case OperatorType::IndexScan:
+      return "IndexScan";
+    case OperatorType::Insert:
+      return "Insert";
+    case OperatorType::JoinHash:
+      return "JoinHash";
+    case OperatorType::JoinIndex:
+      return "JoinIndex";
+    case OperatorType::JoinNestedLoop:
+      return "JoinNestedLoop";
+    case OperatorType::JoinSortMerge:
+      return "JoinSortMerge";
+    case OperatorType::JoinVerification:
+      return "JoinVerification";
+    case OperatorType::Limit:
+      return "Limit";
+    case OperatorType::Print:
+      return "Print";
+    case OperatorType::Product:
+      return "Product";
+    case OperatorType::Projection:
+      return "Projection";
+    case OperatorType::Sort:
+      return "Sort";
+    case OperatorType::TableScan:
+      return "TableScan";
+    case OperatorType::TableWrapper:
+      return "TableWrapper";
+    case OperatorType::UnionAll:
+      return "UnionAll";
+    case OperatorType::UnionPositions:
+      return "UnionPositions";
+    case OperatorType::Update:
+      return "Update";
+    case OperatorType::Validate:
+      return "Validate";
+    default:
+      return "mock";
+  }
+}
 
 // TODO(CAJan93): Remove this function. This is from assert.hpp
 template <bool b>
@@ -244,10 +316,38 @@ inline T as_any(const jsonView& value, const std::string& key) {
 template <typename T>
 void with_any(jsonVal& data, const std::string& key, const T& val);
 
+// ColumnID alias for uint16_t
 template <>
-inline void with_any<ChunkOffset>(jsonVal& data, const std::string& key, const ChunkOffset& val) {
+inline void with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
   data.WithInteger(key, val);
 }
+
+// ChunkID alias for uint_32_t
+template <>
+inline void with_any<ChunkID>(jsonVal& data, const std::string& key, const ChunkID& val) {
+  data.WithInteger(key, val);
+}
+
+// ValueID alias for uint32_t
+template <>
+inline void with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
+  data.WithInteger(key, val);
+}
+
+// NodeID alias for uint32_t
+template <>
+inline void with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
+  data.WithInteger(key, val);
+}
+
+// CpuID alias for uint32_t
+template <>
+inline void with_any<CpuID>(jsonVal& data, const std::string& key, const CpuID& val) {
+  data.WithInteger(key, val);
+}
+
+// TODO(CAJan93): implement with_any for ColumnCount (see types.hpp)
+// STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 
 template <>
 inline void with_any<int>(jsonVal& data, const std::string& key, const int& val) {
@@ -293,7 +393,9 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
     if (val == nullptr) {
       data.WithString(key, "NULL");
     } else {
-      if constexpr (has_member_properties<std::remove_pointer_t<T>>::value) {
+      typedef typename std::remove_pointer_t<T> without_ptr_t;
+      if constexpr (has_member_properties<without_ptr_t>::value ||  // remove second argument? TODO(CAJan93)
+                    std::is_same<without_ptr_t, AbstractExpression>::value) {
         // nested (T::properties present)
         data.WithObject(key, to_json(val));
       } else {
@@ -406,51 +508,63 @@ jsonVal to_json(const T& object) {
       switch (abstract_op->type()) {
         case OperatorType::Projection: {
           const auto projection = dynamic_cast<const Projection*>(abstract_op);
-          (void)projection;  // TODO remove
-          std::cout << "projection" << std::endl;
-          for (const auto& expression : projection->expressions) {
-            std::cout << "an expression\n";
-            (void)expression;  // TODO remove
-            // _visualize_subqueries_json(object, expression);
-          }
+          std::cout << "projection" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Projection>(*projection);
         } break;
 
         case OperatorType::TableScan: {
           const auto table_scan = dynamic_cast<const TableScan*>(abstract_op);
-          (void)table_scan;  // TODO remove
-          std::cout << "TableScan" << std::endl;
-          // _visualize_subqueries_json(object, table_scan.predicate());
+          std::cout << "TableScan" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<TableScan>(*table_scan);
         } break;
 
         case OperatorType::Limit: {
           const auto limit = dynamic_cast<const Limit*>(abstract_op);
-          (void)limit;  // TODO remove
-          std::cout << "limit" << std::endl;
-          // _visualize_subqueries_json(object, limit.row_count_expression());
+          std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Limit>(*limit);
         } break;
+
+          /**
+         * cast via AbstractAggregateOperator
+        case OperatorType::Aggregate: {
+          const auto aggregate = dynamic_cast<const Aggregate*>(abstract_op);
+          std::cout << "aggregate\n";
+          return to_json<Aggregate>(*aggregate);
+        } break;
+        */
 
         default: {
           std::cout << "default\n" << std::endl;
-          // TODO(CAJan93) remove this
-          auto t = abstract_op->type(); 
-          auto fkdljdflfds = t;
-          (void)fkdljdflfds;
-        }  // OperatorType has no expressions
+          // TODO(CAJan93) remove below code
+          auto t = abstract_op->type();
+          std::cout << "type is " << print_type(t) << '\n';  // TODO(CAJan93): Remove this debug msg
+        }                                                    // OperatorType has no expressions
       }
       // TODO remove this line
       return data;
+    } else if constexpr (std::is_same<without_ref_cv_t, AbstractExpression*>::value) {
+      switch (object->type) {
+        case ExpressionType::PQPColumn: {
+          const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+          std::cout << "PQPColumn" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<PQPColumnExpression>(*pqp_col);
+        } break;
+
+        default:
+          // TODO(CAJan93): Handle the other ExpressionTypes
+          Fail(JOIN_TO_STR("Unsupported expression type"));
+          break;
+      }
 
     } else {
       return to_json<std::remove_pointer_t<without_ref_cv_t>>(*object);
     }
-
   } else if constexpr (is_smart_ptr<without_ref_cv_t>::value) {
     StaticAssert<!is_weak_ptr<without_ref_cv_t>::value>::stat_assert(
         "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<without_ref_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     return to_json(object.get());  // keep const qualifier, since get() might return a const pointer
-
   } else if constexpr (has_member_properties<without_ref_cv_t>::value) {
     // serialize a class that provides properties tuple
     constexpr auto nb_properties = std::tuple_size<decltype(without_ref_cv_t::properties)>::value;
@@ -459,16 +573,18 @@ jsonVal to_json(const T& object) {
       details::with_any(data, property.name, object.*(property.member));
     });
     return data;
-
   } else if constexpr (has_member__type<without_ref_cv_t>::value) {
-    // TODO(CAJan93): remove this case?
-    Fail("hi there");
+    // TODO(CAJan93): remove this case? If so, remove has_member__type?
+    std::cout << "type is " << print_type(object.type()) << " is currently not supported.\n";
+    return data;
   } else {
-    Fail(JOIN_TO_STR("unsupported type ", typeid(object).name()));
+    Fail(JOIN_TO_STR("\nunsupported type ", typeid(object).name(), "\ntypeid T: ", typeid(T).name(),
+                     "\ntypeid without_ref_cv_t: ", typeid(without_ref_cv_t).name()));
   }
   return data;
-}
+}  // namespace opossum
 
+// TODO(CAJan93): remove this?
 template <typename T>
 std::string to_json_str(const T& object) {
   return to_json(object).View().WriteReadable();

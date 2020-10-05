@@ -1,5 +1,8 @@
 #pragma once
 
+#include <tuple>
+
+#include "../operators/property.hpp"
 #include "abstract_expression.hpp"
 
 #include "storage/table.hpp"
@@ -25,6 +28,12 @@ class PQPColumnExpression : public AbstractExpression {
 
   const ColumnID column_id;
 
+  inline constexpr static auto properties = std::make_tuple(
+      property(&PQPColumnExpression::column_id, "column_id")
+      /*, property(&PQPColumnExpression::_data_type, "_data_type"),
+      property(&PQPColumnExpression::_nullable, "_nullable"),
+      property(&PQPColumnExpression::_column_name, "_column_name")*/);
+
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
@@ -34,6 +43,9 @@ class PQPColumnExpression : public AbstractExpression {
   const DataType _data_type;
   const bool _nullable;
   const std::string _column_name;
+
+  // TODO(CAJan93): set json_serializer as friend
+
 };
 
 }  // namespace opossum

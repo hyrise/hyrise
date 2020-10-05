@@ -12,6 +12,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "expression/abstract_expression.hpp"
+#include "property.hpp"
 
 namespace opossum {
 
@@ -51,6 +52,8 @@ class Projection : public AbstractReadOnlyOperator {
   static std::shared_ptr<Table> dummy_table();
 
   const std::vector<std::shared_ptr<AbstractExpression>> expressions;
+
+  inline constexpr static auto properties = std::make_tuple(property(&Projection::expressions, "expressions"));
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
