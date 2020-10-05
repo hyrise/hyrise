@@ -97,10 +97,16 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         }
       }
       if (has_count_star) {
-        for (const auto& input_expression : node->left_input()->output_expressions()) {
-          locally_required_expressions.emplace(input_expression);
+        const auto& unique_constraints = aggregate_node.unique_constraints();
+        if(unique_constraints->empty()) {
+          for (const auto& input_expression : node->left_input()->output_expressions()) {
+            locally_required_expressions.emplace(input_expression);
+          }
+          break;
         }
-        break;
+        // To discuss
+        const auto& expressions = unique_constraints->at(0).expressions;
+        locally_required_expressions.insert(expressions.cbegin(), expressions.cend());
       }
 
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
