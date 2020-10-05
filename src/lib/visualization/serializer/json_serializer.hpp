@@ -13,6 +13,7 @@
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
 #include "../../expression/pqp_column_expression.hpp"
+#include "../../logical_query_plan/abstract_lqp_node.hpp"
 #include "../../operators/abstract_operator.hpp"
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
@@ -28,8 +29,10 @@
 
 namespace opossum {
 
-// forward declaration and alii
+// forward declaration and aliases
+class AbstractLQPNode;
 class PQPColumnExpression;
+class TableScan;
 class Validate;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
@@ -423,7 +426,8 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
       typedef typename std::remove_reference_t<std::remove_cv_t<std::remove_pointer_t<T>>> without_ref_cv_ptr_t;
       if constexpr (has_member_properties<without_ref_cv_ptr_t>::value ||
                     std::is_same<without_ref_cv_ptr_t, AbstractExpression>::value ||
-                    std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value) {
+                    std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value ||
+                    std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {
         // nested (T::properties present)
         data.WithObject(key, JsonSerializer::to_json(val));
       } else {
@@ -592,7 +596,13 @@ jsonVal JsonSerializer::to_json(const T& object) {
           break;
       }
 
-    } else {
+    } else if constexpr (std::is_same<without_ref_cv_t, const AbstractLQPNode*>::value) {
+      // TODO(CAJan93): Support AbstractLQPNode
+      std::cout << "AbstractLQPNode currently not supported\n";
+      return data;
+    }
+
+    else {
       return to_json<std::remove_pointer_t<without_ref_cv_t>>(*object);
     }
   } else if constexpr (is_smart_ptr<without_ref_cv_t>::value) {

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "../operators/property.hpp"
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -96,6 +98,23 @@ class TableScan : public AbstractReadOnlyOperator {
 
   // The description of the impl, so that it still available after the _impl is resetted in _on_cleanup()
   std::string _impl_description{"Unset"};
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members.
+  inline constexpr static auto properties = std::make_tuple(
+      /*property(&TableScan::excluded_chunk_ids, "excluded_chunk_ids"),
+      property(&TableScan::_predicate, "_predicate"),
+      property(&TableScan::_impl, "_impl"),*/
+      property(&TableScan::_impl_description, "_impl_description"),
+
+      // from AbstractOperator via AbstractReadOnlyOperator
+      property(&TableScan::lqp_node, "lqp_node"), 
+      /*property(&TableScan::performance_data, "performance_data"),*/
+      property(&TableScan::_type, "_type"), property(&TableScan::_left_input, "_left_input"),
+      property(&TableScan::_right_input, "_right_input")
+      /*, property(&TableScan::_transaction_context, "_transaction_context")*/
+      /*property(&TableScan::_output, "_output"), // should not be important*/
+  );
 };
 
 }  // namespace opossum

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../operators/property.hpp"
 #include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
