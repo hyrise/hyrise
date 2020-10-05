@@ -25,6 +25,7 @@ OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) {
   std::lock_guard<std::mutex> lock(_mutex);
+  _cardinality_estimator = _cardinality_estimator->new_instance();
   visit_pqp(op, [&](const auto& node) {
     Assert(op->performance_data->has_output, "Expected operator to have been executed.");
     _export_operator(node);
@@ -86,6 +87,7 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
                                                         operator_info.left_input_columns,
                                                         operator_info.output_rows,
                                                         operator_info.output_columns,
+                                                        operator_info.estimated_cardinality,
                                                         operator_info.walltime,
                                                         column_type,
                                                         table_name,
@@ -110,6 +112,7 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                           operator_info.left_input_columns,
                                                           operator_info.output_rows,
                                                           operator_info.output_columns,
+                                                          operator_info.estimated_cardinality,
                                                           operator_info.walltime,
                                                           table_column_information.column_type,
                                                           table_column_information.table_name,
@@ -178,16 +181,17 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                   right_column_name,
                                                   right_column_type};
 
+
     // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
     // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
     // the predicates are in the order (left/right) as the join input tables are.
     if (operator_predicate->is_flipped()) {
-      output_row[10] = right_table_name;
-      output_row[11] = right_column_name;
-      output_row[12] = right_column_type;
-      output_row[13] = left_table_name;
-      output_row[14] = left_column_name;
-      output_row[15] = left_column_type;
+      output_row[11] = right_table_name;
+      output_row[12] = right_column_name;
+      output_row[13] = right_column_type;
+      output_row[14] = left_table_name;
+      output_row[15] = left_column_name;
+      output_row[16] = left_column_type;
     }
 
     _join_output_table->append(output_row);

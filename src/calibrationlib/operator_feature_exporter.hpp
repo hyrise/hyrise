@@ -109,8 +109,7 @@ class OperatorFeatureExporter {
   const std::string _output_path;
   const std::string _join_output_path;
   const std::string _join_stages_output_path;
-  const std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator = std::make_shared<CardinalityEstimator>();
-
+  std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator = std::make_shared<CardinalityEstimator>();
 
   int32_t _current_join_id{0};
   mutable std::mutex _mutex;
