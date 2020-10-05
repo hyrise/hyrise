@@ -16,11 +16,6 @@ struct has_member_properties_helper {
   int properties;
 };
 
-struct has_member__type_helper {
-  int _type;
-};
-}  // namespace details
-
 /**
  * True if T has attribute properties (even if properties is a private member of T)
  * 
@@ -32,8 +27,7 @@ struct has_member__type_helper {
  * }
  */
 template <typename T>
-class has_member_properties : public T, details::has_member_properties_helper {
-
+class has_member_properties : public T, has_member_properties_helper {
   /**
    * if T has properties member, has_member_properties will inherit properties member
    * from T and has_member_properties_helper. This is invalid. Check will be discared
@@ -55,6 +49,10 @@ class has_member_properties : public T, details::has_member_properties_helper {
   static constexpr auto value = type::value;
 };
 
+struct has_member__type_helper {
+  int _type;
+};
+
 /**
  * True if T has attribute properties (even if _type is a private member of T)
  * 
@@ -66,16 +64,40 @@ class has_member_properties : public T, details::has_member_properties_helper {
  * }
  */
 template <typename T>
-class has_member__type : public T, details::has_member__type_helper {
+class has_member__type : public T, has_member__type_helper {
   template <typename U = has_member__type, typename = decltype(U::_type)>
   static constexpr std::false_type check(int);
-  
+
   static constexpr std::true_type check(long);
 
   using type = decltype(check(0));
 
  public:
   static constexpr auto value = type::value;
+};
+}  // namespace details
+
+// wraps details::has_member_properties, to prevent error by inheriting from a non-class type
+template <typename T>
+struct has_member_properties {
+  static constexpr auto value = []() {
+    if constexpr (std::is_class<T>::value) {
+      return details::has_member_properties<T>::value;
+    } else {
+      return false;
+    }
+  }();
+};
+
+template <typename T>
+struct has_member__type {
+  static constexpr auto value = []() {
+    if constexpr (std::is_class<T>::value) {
+      return details::has_member__type<T>::value;
+    } else {
+      return false;
+    }
+  }();
 };
 
 }  // namespace opossum

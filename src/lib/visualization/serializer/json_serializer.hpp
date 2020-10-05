@@ -13,6 +13,10 @@
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
 #include "../../expression/pqp_column_expression.hpp"
+#include "../../operators/abstract_operator.hpp"
+#include "../../operators/limit.hpp"
+#include "../../operators/projection.hpp"
+#include "../../operators/table_scan.hpp"
 #include "../../types.hpp"
 #include "../../utils/assert.hpp"
 #include "../types/get_inner_type.hpp"
@@ -23,8 +27,13 @@
 
 namespace opossum {
 
+// forward declaration and alii
+class PQPColumnExpression;
+using jsonVal = Aws::Utils::Json::JsonValue;
+using jsonView = Aws::Utils::Json::JsonView;
+
 // TODO(CAJan93): remove and use magic enum
-std::string print_type(const OperatorType& t) {
+inline std::string print_type(const OperatorType& t) {
   switch (t) {
     case OperatorType::Aggregate:
       return "Aggregate";
@@ -117,9 +126,6 @@ inline constexpr auto JOIN_TO_STR = [](auto... args) -> std::string {
   return strs.str();
 };
 
-using jsonVal = Aws::Utils::Json::JsonValue;
-using jsonView = Aws::Utils::Json::JsonView;
-
 class JsonSerializer {
   /***
   * convert a vector<T> into a json object
@@ -156,7 +162,6 @@ class JsonSerializer {
   template <typename T>
   static std::string to_json_str(const T& object);
 };
-
 
 // sequence for
 template <typename T, T... S, typename F>
@@ -361,6 +366,12 @@ inline void JsonSerializer::with_any<CpuID>(jsonVal& data, const std::string& ke
 
 // TODO(CAJan93): implement JsonSerializer::with_any for ColumnCount (see types.hpp)
 // STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
+
+// TODO(CAJan93): implement as_any<bool>
+template <>
+inline void JsonSerializer::with_any<bool>(jsonVal& data, const std::string& key, const bool& val) {
+  data.WithBool(key, val);
+}
 
 template <>
 inline void JsonSerializer::with_any<int>(jsonVal& data, const std::string& key, const int& val) {
