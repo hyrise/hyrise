@@ -120,37 +120,53 @@ inline constexpr auto JOIN_TO_STR = [](auto... args) -> std::string {
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
 
-template <typename T>
-jsonVal to_json(const T& object);
+class JsonSerializer {
+  /***
+  * convert a vector<T> into a json object
+  * {
+  *  "0": 1
+  *  "1": {
+  *      // some nested value
+  *    }
+  * }
+  */
+  template <typename T>
+  static jsonVal vec_to_json(const std::vector<T>& vec);
 
-template <typename T>
-T from_json(const jsonView& data);
+  // sequence for
+  template <typename T, T... S, typename F>
+  static constexpr void for_sequence(std::integer_sequence<T, S...>, F&& f);
 
-namespace details {
-/***
- * convert a vector<T> into a json object
- * {
- *  "0": 1
- *  "1": {
- *      // some nested value
- *    }
- * }
- */
-template <typename T>
-jsonVal vec_to_json(const std::vector<T>& vec);
+  // retrieve data from json
+  template <typename T>
+  static T as_any(const jsonView&, const std::string&);
+
+  // set data in json
+  template <typename T>
+  static void with_any(jsonVal& data, const std::string& key, const T& val);
+
+ public:
+  // unserialize function
+  template <typename T>
+  static T from_json(const jsonView& data);
+
+  template <typename T>
+  static jsonVal to_json(const T& object);
+
+  template <typename T>
+  static std::string to_json_str(const T& object);
+};
+
 
 // sequence for
 template <typename T, T... S, typename F>
-constexpr void for_sequence(std::integer_sequence<T, S...>, F&& f) {
+constexpr void JsonSerializer::for_sequence(std::integer_sequence<T, S...>, F&& f) {
   using unpack_t = int[];
   (void)unpack_t{(static_cast<void>(f(std::integral_constant<T, S>{})), 0)..., 0};
 }
 
-template <typename T>
-T as_any(const jsonView&, const std::string&);
-
 template <>
-inline int as_any<int>(const jsonView& value, const std::string& key) {
+inline int JsonSerializer::as_any<int>(const jsonView& value, const std::string& key) {
   AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsIntegerType(),
               JOIN_TO_STR("key ", key, " is not an integer type\n", "JSON: ", value.WriteReadable()));
@@ -158,7 +174,7 @@ inline int as_any<int>(const jsonView& value, const std::string& key) {
 }
 
 template <>
-inline ChunkOffset as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
+inline ChunkOffset JsonSerializer::as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
   AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsIntegerType(),
               JOIN_TO_STR("key ", key, " is not an integer type\n", "JSON: ", value.WriteReadable()));
@@ -166,7 +182,7 @@ inline ChunkOffset as_any<ChunkOffset>(const jsonView& value, const std::string&
 }
 
 template <>
-inline std::string as_any<std::string>(const jsonView& value, const std::string& key) {
+inline std::string JsonSerializer::as_any<std::string>(const jsonView& value, const std::string& key) {
   AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsString(),
               JOIN_TO_STR("key ", key, " is not of type string\n", "JSON: ", value.WriteReadable()));
@@ -174,7 +190,7 @@ inline std::string as_any<std::string>(const jsonView& value, const std::string&
 }
 
 template <>
-inline double as_any<double>(const jsonView& value, const std::string& key) {
+inline double JsonSerializer::as_any<double>(const jsonView& value, const std::string& key) {
   AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsFloatingPointType(),
               JOIN_TO_STR("key ", key, " is not a floting point type\n", "JSON: ", value.WriteReadable()));
@@ -182,8 +198,8 @@ inline double as_any<double>(const jsonView& value, const std::string& key) {
 }
 
 template <>
-inline std::variant<int, double, std::string> as_any<std::variant<int, double, std::string>>(const jsonView& value,
-                                                                                             const std::string& key) {
+inline std::variant<int, double, std::string> JsonSerializer::as_any<std::variant<int, double, std::string>>(
+    const jsonView& value, const std::string& key) {
   if (value.GetObject(key).IsIntegerType()) {
     return value.GetInteger(key);
   }
@@ -199,7 +215,7 @@ inline std::variant<int, double, std::string> as_any<std::variant<int, double, s
 
 // for non-trivial objects
 template <typename T>
-inline T as_any(const jsonView& value, const std::string& key) {
+inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
   typedef typename std::remove_cv_t<T> without_cv_t;
   typedef typename std::remove_pointer_t<without_cv_t> without_cv_value_t;
 
@@ -313,60 +329,57 @@ inline T as_any(const jsonView& value, const std::string& key) {
   Fail("unreachable statement reached");
 }
 
-template <typename T>
-void with_any(jsonVal& data, const std::string& key, const T& val);
-
 // ColumnID alias for uint16_t
 template <>
-inline void with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
+inline void JsonSerializer::with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
   data.WithInteger(key, val);
 }
 
 // ChunkID alias for uint_32_t
 template <>
-inline void with_any<ChunkID>(jsonVal& data, const std::string& key, const ChunkID& val) {
+inline void JsonSerializer::with_any<ChunkID>(jsonVal& data, const std::string& key, const ChunkID& val) {
   data.WithInteger(key, val);
 }
 
 // ValueID alias for uint32_t
 template <>
-inline void with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
+inline void JsonSerializer::with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
   data.WithInteger(key, val);
 }
 
 // NodeID alias for uint32_t
 template <>
-inline void with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
+inline void JsonSerializer::with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
   data.WithInteger(key, val);
 }
 
 // CpuID alias for uint32_t
 template <>
-inline void with_any<CpuID>(jsonVal& data, const std::string& key, const CpuID& val) {
+inline void JsonSerializer::with_any<CpuID>(jsonVal& data, const std::string& key, const CpuID& val) {
   data.WithInteger(key, val);
 }
 
-// TODO(CAJan93): implement with_any for ColumnCount (see types.hpp)
+// TODO(CAJan93): implement JsonSerializer::with_any for ColumnCount (see types.hpp)
 // STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 
 template <>
-inline void with_any<int>(jsonVal& data, const std::string& key, const int& val) {
+inline void JsonSerializer::with_any<int>(jsonVal& data, const std::string& key, const int& val) {
   data.WithInteger(key, val);
 }
 
 template <>
-inline void with_any<std::string>(jsonVal& data, const std::string& key, const std::string& val) {
+inline void JsonSerializer::with_any<std::string>(jsonVal& data, const std::string& key, const std::string& val) {
   data.WithString(key, val);
 }
 
 template <>
-inline void with_any<double>(jsonVal& data, const std::string& key, const double& val) {
+inline void JsonSerializer::with_any<double>(jsonVal& data, const std::string& key, const double& val) {
   data.WithDouble(key, val);
 }
 
 template <>
-inline void with_any<std::variant<int, double, std::string>>(jsonVal& data, const std::string& key,
-                                                             const std::variant<int, double, std::string>& val) {
+inline void JsonSerializer::with_any<std::variant<int, double, std::string>>(
+    jsonVal& data, const std::string& key, const std::variant<int, double, std::string>& val) {
   switch (val.index()) {
     case 0:
       data.WithInteger(key, std::get<0>(val));
@@ -388,7 +401,7 @@ inline void with_any<std::variant<int, double, std::string>>(jsonVal& data, cons
 }
 
 template <typename T>
-inline void with_any(jsonVal& data, const std::string& key, const T& val) {
+inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, const T& val) {
   if constexpr (std::is_pointer<T>::value) {
     if (val == nullptr) {
       data.WithString(key, "NULL");
@@ -397,7 +410,7 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
       if constexpr (has_member_properties<without_ptr_t>::value ||  // remove second argument? TODO(CAJan93)
                     std::is_same<without_ptr_t, AbstractExpression>::value) {
         // nested (T::properties present)
-        data.WithObject(key, to_json(val));
+        data.WithObject(key, JsonSerializer::to_json(val));
       } else {
         // non-nested (T::properties not present)
         with_any(data, key, *val);
@@ -415,7 +428,7 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
   } else {
     if constexpr (has_member_properties<T>::value) {
       // nested (T::properties present)
-      data.WithObject(key, to_json(val));
+      data.WithObject(key, JsonSerializer::to_json(val));
     } else {
       with_any(data, key, val);
     }
@@ -423,18 +436,17 @@ inline void with_any(jsonVal& data, const std::string& key, const T& val) {
 }
 
 template <typename T>
-jsonVal vec_to_json(const std::vector<T>& vec) {
+jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
   jsonVal jv;
   for (size_t idx = 0; idx < vec.size(); ++idx) {
     with_any<T>(jv, std::to_string(idx), vec.at(idx));
   }
   return jv;
 }
-}  // namespace details
 
 // unserialize function
 template <typename T>
-T from_json(const jsonView& data) {
+T JsonSerializer::from_json(const jsonView& data) {
   typedef typename std::remove_cv_t<T> without_cv_t;
 
   if constexpr (std::is_pointer<without_cv_t>::value) {
@@ -444,7 +456,7 @@ T from_json(const jsonView& data) {
     T object = new std::remove_pointer_t<without_cv_t>;
     // number of properties
     constexpr auto nb_properties = std::tuple_size<decltype(std::remove_pointer_t<without_cv_t>::properties)>::value;
-    details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
+    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
       // get the property
       constexpr auto property = std::get<i>(std::remove_pointer_t<without_cv_t>::properties);
 
@@ -452,7 +464,7 @@ T from_json(const jsonView& data) {
       using Type = typename decltype(property)::Type;
 
       // set the value to the member
-      object->*(property.member) = details::as_any<Type>(data, property.name);
+      object->*(property.member) = as_any<Type>(data, property.name);
     });
     // call copy constructor to enable inheritance
     T new_object{object};
@@ -468,7 +480,7 @@ T from_json(const jsonView& data) {
     inner_t* object = new inner_t;
     // number of properties
     constexpr auto nb_properties = std::tuple_size<decltype(inner_t::properties)>::value;
-    details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
+    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
       // get the property
       constexpr auto property = std::get<i>(inner_t::properties);
 
@@ -476,7 +488,7 @@ T from_json(const jsonView& data) {
       using Type = typename decltype(property)::Type;
 
       // set the value to the member
-      object->*(property.member) = details::as_any<Type>(data, property.name);
+      object->*(property.member) = as_any<Type>(data, property.name);
     });
     // call copy constructor to enable inheritance
     smart_ptr_t sp = smart_ptr_t(object);
@@ -484,10 +496,10 @@ T from_json(const jsonView& data) {
   } else {
     T object;
     constexpr auto nb_properties = std::tuple_size<decltype(T::properties)>::value;
-    details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
+    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
       constexpr auto property = std::get<i>(T::properties);
       using Type = typename decltype(property)::Type;
-      object.*(property.member) = details::as_any<Type>(data, property.name);
+      object.*(property.member) = as_any<Type>(data, property.name);
     });
     // call copy constructor to enable inheritance
     T new_object{object};
@@ -496,7 +508,7 @@ T from_json(const jsonView& data) {
 }
 
 template <typename T>
-jsonVal to_json(const T& object) {
+jsonVal JsonSerializer::to_json(const T& object) {
   jsonVal data;
   typedef typename std::remove_cv_t<T> without_cv;
   typedef typename std::remove_reference_t<without_cv> without_ref_cv_t;
@@ -568,9 +580,9 @@ jsonVal to_json(const T& object) {
   } else if constexpr (has_member_properties<without_ref_cv_t>::value) {
     // serialize a class that provides properties tuple
     constexpr auto nb_properties = std::tuple_size<decltype(without_ref_cv_t::properties)>::value;
-    details::for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
+    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
       constexpr auto property = std::get<i>(without_ref_cv_t::properties);
-      details::with_any(data, property.name, object.*(property.member));
+      with_any(data, property.name, object.*(property.member));
     });
     return data;
   } else if constexpr (has_member__type<without_ref_cv_t>::value) {
@@ -586,7 +598,7 @@ jsonVal to_json(const T& object) {
 
 // TODO(CAJan93): remove this?
 template <typename T>
-std::string to_json_str(const T& object) {
+std::string JsonSerializer::to_json_str(const T& object) {
   return to_json(object).View().WriteReadable();
 }
 }  // namespace opossum

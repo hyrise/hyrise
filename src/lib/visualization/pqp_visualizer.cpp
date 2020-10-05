@@ -33,7 +33,7 @@ void PQPVisualizer::build_json(const std::vector<std::shared_ptr<AbstractOperato
 void PQPVisualizer::_build_subjson(const std::shared_ptr<const AbstractOperator>& op) {
   // _add_operator(op);
 
-  std::cout << to_json_str(op) << '\n';
+  std::cout << JsonSerializer::to_json_str(op) << '\n';
 
   /*
   if (op->left_input()) {
