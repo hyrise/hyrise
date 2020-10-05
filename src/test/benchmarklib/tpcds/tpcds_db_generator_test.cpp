@@ -17,23 +17,23 @@ std::shared_ptr<Table> load_csv(const std::string& file_name) {
 
 namespace opossum {
 
-class TpcdsTableGeneratorTest : public BaseTest {};
+class TPCDSTableGeneratorTest : public BaseTest {};
 
-TEST_F(TpcdsTableGeneratorTest, TableContentsFirstRows) {
+TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
   /**
-   * Check whether the data that TpcdsTableGenerator generates is the exact same that dsdgen generates.
+   * Check whether the data that TPCDSTableGenerator generates is the exact same that dsdgen generates.
    * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
    */
   const auto rows_to_check = ds_key_t{50};
 
   // Initialize with different params to check whether global state is correctly reset.
-  TpcdsTableGenerator(10, 2, 42);
+  TPCDSTableGenerator(10, 2, 42);
 
   // Run generation twice to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
   for (auto i = 1; i <= 2; i++) {
     SCOPED_TRACE("TableContentsFirstRows iteration " + std::to_string(i));
-    const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 305);  // seed 305 includes Mrs. Null
+    const auto table_generator = TPCDSTableGenerator(1, Chunk::DEFAULT_SIZE, 305);  // seed 305 includes Mrs. Null
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_call_center(rows_to_check), load_csv("call_center.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_catalog_page(rows_to_check), load_csv("catalog_page.csv"));
     const auto [catalog_sales_table, catalog_returns_table] =
@@ -68,9 +68,9 @@ TEST_F(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   }
 }
 
-TEST_F(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
+TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
- * Check whether all TPC-DS tables are created by the TpcdsTableGenerator and added to the StorageManager.
+ * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager.
  * Then check whether the row count is correct for all tables.
  */
 
@@ -101,7 +101,7 @@ TEST_F(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
 
   EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
 
-  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
+  TPCDSTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
   for (const auto& [name, size] : expected_sizes) {
     SCOPED_TRACE("checking table " + std::string{name});
