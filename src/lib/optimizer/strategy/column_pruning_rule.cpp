@@ -84,31 +84,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
-      // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
-      // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
-      // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
-      auto has_count_star = false;
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
-        if (AggregateExpression::is_count_star(*expression)) {
-          has_count_star = true;
-          break;
-        }
-      }
-      if (has_count_star) {
-        const auto& unique_constraints = aggregate_node.unique_constraints();
-        if(unique_constraints->empty()) {
-          for (const auto& input_expression : node->left_input()->output_expressions()) {
-            locally_required_expressions.emplace(input_expression);
-          }
-          break;
-        }
-        // To discuss
-        const auto& expressions = unique_constraints->at(0).expressions;
-        locally_required_expressions.insert(expressions.cbegin(), expressions.cend());
-      }
-
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
         const auto& expression = node->node_expressions[expression_idx];
 
@@ -118,9 +93,27 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           // This is a group by expression that is required from the input
           locally_required_expressions.emplace(expression);
         } else {
-          // This is an aggregate expression - we need its argument
+          // This is an aggregate expression
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
-          locally_required_expressions.emplace(expression->arguments[0]);
+          if (!AggregateExpression::is_count_star(*expression)) {
+            //  We need the argument
+            locally_required_expressions.emplace(expression->arguments[0]);
+          } else {
+            // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
+            // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
+            // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
+            // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
+            // TODO Doc
+            // Invalid column id -> Instead we mark the first input expression as required that is not part of
+            // the group-by clause
+            const auto& input_expressions = node->left_input()->output_expressions();
+            for (const auto& input_expression : input_expressions) {
+              if (locally_required_expressions.emplace(input_expression).second) {
+                // We added a single non-group-by expression which is enough.
+                break;
+              }
+            }
+          }
         }
       }
     } break;
