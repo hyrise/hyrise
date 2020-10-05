@@ -1,0 +1,666 @@
+[  0%] Built target generate-provider-hpp
+[  0%] Built target lz4
+[  6%] Built target zstd
+[  9%] Built target tpch_dbgen
+[  9%] Built target resourceLink
+[ 11%] Built target sqlparser
+[ 13%] Built target libjemalloc-build
+[ 34%] Built target tpcds_dbgen
+[ 34%] Built target AlwaysCheckGit
+Scanning dependencies of target hyrise_impl
+[ 34%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/expression/expression_utils.cpp.o
+[ 34%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/expression/evaluation/expression_evaluator.cpp.o
+[ 34%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/logical_query_plan/lqp_translator.cpp.o
+[ 36%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/expression/expression_functional.cpp.o
+[ 36%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/expression/pqp_column_expression.cpp.o
+[ 38%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/aggregate_hash.cpp.o
+[ 38%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/logical_query_plan/lqp_utils.cpp.o
+[ 38%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/aggregate_sort.cpp.o
+[ 38%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/join_ordering/join_graph_builder.cpp.o
+[ 38%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/abstract_aggregate_operator.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/between_composition_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/table_scan.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/operator_scan_predicate.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/operators/projection.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/column_pruning_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/dependent_group_by_reduction_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/expression_reduction_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/in_expression_rewrite_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/optimizer.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/predicate_merge_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/subquery_to_join_rule.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/sql/sql_translator.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/statistics/cardinality_estimator.cpp.o
+[ 40%] Building CXX object src/lib/CMakeFiles/hyrise_impl.dir/visualization/pqp_visualizer.cpp.o
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_utils.cpp:7:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.cpp:1:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/operators/abstract_aggregate_operator.cpp:5:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/operators/aggregate_sort.cpp:10:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/predicate_merge_rule.cpp:3:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/in_expression_rewrite_rule.cpp:4:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/between_composition_rule.hpp:8,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/between_composition_rule.cpp:1:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/logical_query_plan/lqp_utils.cpp:5:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.cpp:1:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/subquery_to_join_rule.cpp:13:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/dependent_group_by_reduction_rule.cpp:6:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/join_ordering/join_graph_builder.cpp:6:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/column_pruning_rule.cpp:6:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/sql/sql_translator.cpp:22:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/operators/aggregate_hash.cpp:16:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/operators/operator_scan_predicate.cpp:5:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/logical_query_plan/lqp_translator.cpp:27:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1253: src/lib/CMakeFiles/hyrise_impl.dir/operators/abstract_aggregate_operator.cpp.o] Error 1
+make[3]: *** Waiting for unfinished jobs....
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/strategy/between_composition_rule.hpp:8,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/optimizer/optimizer.cpp:10:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:548: src/lib/CMakeFiles/hyrise_impl.dir/expression/pqp_column_expression.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/operators/table_scan.cpp:20:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:398: src/lib/CMakeFiles/hyrise_impl.dir/expression/expression_utils.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:383: src/lib/CMakeFiles/hyrise_impl.dir/expression/expression_functional.cpp.o] Error 1
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2243: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/predicate_merge_rule.cpp.o] Error 1
+In file included from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/pqp_column_expression.hpp:7,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/expression/expression_functional.hpp:23,
+                 from /home/Jan.Mensch/Documents/hyrise/src/lib/statistics/cardinality_estimator.cpp:8:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp: In static member function ‘static opossum::jsonVal opossum::JsonSerializer::to_json(const T&)’:
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:45: error: ‘PQPColumnExpression’ does not name a type; did you mean ‘LQPColumnExpression’?
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             LQPColumnExpression
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘>’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:64: error: expected ‘(’ before ‘*’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                ^
+      |                                                                (
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:65: error: expected primary-expression before ‘>’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                 ^
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:563:74: error: expected ‘)’ before ‘;’ token
+  563 |           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
+      |                                                                          ^
+      |                                                                          )
+/home/Jan.Mensch/Documents/hyrise/src/lib/expression/../visualization/serializer/json_serializer.hpp:565:26: error: ‘PQPColumnExpression’ was not declared in this scope; did you mean ‘LQPColumnExpression’?
+  565 |           return to_json<PQPColumnExpression>(*pqp_col);
+      |                          ^~~~~~~~~~~~~~~~~~~
+      |                          LQPColumnExpression
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2048: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/join_ordering/join_graph_builder.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2153: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/dependent_group_by_reduction_rule.cpp.o] Error 1
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2108: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/between_composition_rule.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1073: src/lib/CMakeFiles/hyrise_impl.dir/logical_query_plan/lqp_utils.cpp.o] Error 1
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2183: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/in_expression_rewrite_rule.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2333: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/subquery_to_join_rule.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2138: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/strategy/column_pruning_rule.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1703: src/lib/CMakeFiles/hyrise_impl.dir/operators/operator_scan_predicate.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2078: src/lib/CMakeFiles/hyrise_impl.dir/optimizer/optimizer.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1343: src/lib/CMakeFiles/hyrise_impl.dir/operators/aggregate_sort.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1778: src/lib/CMakeFiles/hyrise_impl.dir/operators/table_scan.cpp.o] Error 1
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2753: src/lib/CMakeFiles/hyrise_impl.dir/statistics/cardinality_estimator.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1043: src/lib/CMakeFiles/hyrise_impl.dir/logical_query_plan/lqp_translator.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:2693: src/lib/CMakeFiles/hyrise_impl.dir/sql/sql_translator.cpp.o] Error 1
+At global scope:
+cc1plus: error: unrecognized command line option ‘-Wno-deprecated-dynamic-exception-spec’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-dollar-in-identifier-extension’ [-Werror]
+cc1plus: error: unrecognized command line option ‘-Wno-unknown-warning-option’ [-Werror]
+cc1plus: all warnings being treated as errors
+make[3]: *** [src/lib/CMakeFiles/hyrise_impl.dir/build.make:1328: src/lib/CMakeFiles/hyrise_impl.dir/operators/aggregate_hash.cpp.o] Error 1
+make[2]: *** [CMakeFiles/Makefile2:3357: src/lib/CMakeFiles/hyrise_impl.dir/all] Error 2
+make[1]: *** [CMakeFiles/Makefile2:3179: src/bin/CMakeFiles/hyriseConsole.dir/rule] Error 2
+make: *** [Makefile:1369: hyriseConsole] Error 2

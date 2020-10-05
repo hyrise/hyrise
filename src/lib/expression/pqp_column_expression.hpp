@@ -43,11 +43,11 @@ class PQPColumnExpression : public AbstractExpression {
 
  public:
   // TODO(CAJan93): Support all relevant members
-  inline constexpr static auto properties =
-      std::make_tuple(property(&PQPColumnExpression::column_id, "column_id"),
-                      /*, property(&PQPColumnExpression::_data_type, "_data_type")*/
-                      property(&PQPColumnExpression::_nullable, "_nullable"),
-                      property(&PQPColumnExpression::_column_name, "_column_name"));
+  inline constexpr static auto properties = std::make_tuple(
+      property(&PQPColumnExpression::column_id, "column_id"), property(&PQPColumnExpression::_data_type, "_data_type"),
+      property(&PQPColumnExpression::_nullable, "_nullable"),
+      property(&PQPColumnExpression::_column_name, "_column_name"));
+      // TODO(CAJan93): also serialize the members from abstract?
 };
 
 }  // namespace opossum

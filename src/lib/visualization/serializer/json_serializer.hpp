@@ -436,7 +436,10 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
     with_any(data, key, val.get());
   } else if constexpr (is_vector<T>::value) {
     data.WithObject(key, vec_to_json(val));
-  } else {
+  } else if constexpr (std::is_enum<T>::value) {
+    data.WithInteger(key, static_cast<int>(val));
+  }
+  else {
     if constexpr (has_member_properties<T>::value) {
       // nested (T::properties present)
       data.WithObject(key, JsonSerializer::to_json(val));
