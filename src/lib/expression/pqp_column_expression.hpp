@@ -42,12 +42,13 @@ class PQPColumnExpression : public AbstractExpression {
   friend class JsonSerializer;
 
  public:
-  // TODO(CAJan93): Support all relevant members
+  // TODO(CAJan93): Support all relevant members, including parent members. Done?
   inline constexpr static auto properties = std::make_tuple(
       property(&PQPColumnExpression::column_id, "column_id"), property(&PQPColumnExpression::_data_type, "_data_type"),
       property(&PQPColumnExpression::_nullable, "_nullable"),
-      property(&PQPColumnExpression::_column_name, "_column_name"));
-      // TODO(CAJan93): also serialize the members from abstract?
+      property(&PQPColumnExpression::_column_name, "_column_name"),
+      /*property(&PQPColumnExpression::arguments, "arguments"),*/
+      property(&PQPColumnExpression::type, "type"));
 };
 
 }  // namespace opossum
