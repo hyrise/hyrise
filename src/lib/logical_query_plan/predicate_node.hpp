@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "../operators/property.hpp"
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
@@ -39,6 +41,17 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members.
+  inline constexpr static auto properties = std::make_tuple(
+      property(&PredicateNode::scan_type, "scan_type"),
+      // from AbstractLQPNode
+      property(&PredicateNode::type, "type"), property(&PredicateNode::node_expressions, "node_expressions"),
+      property(&PredicateNode::comment, "comment")
+      /* property(&PredicateNode::_outputs, "_outputs"), property(&PredicateNode::_inputs, "_inputs")*/);
+// property(&PredicateNode::DescriptionMode, "DescriptionMode"),
+  friend class JsonSerialier;
 };
 
 }  // namespace opossum

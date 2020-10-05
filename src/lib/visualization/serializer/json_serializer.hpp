@@ -14,6 +14,7 @@
 // TODO(CAJan93): #include "../types/types.hpp"
 #include "../../expression/pqp_column_expression.hpp"
 #include "../../logical_query_plan/abstract_lqp_node.hpp"
+#include "../../logical_query_plan/predicate_node.hpp"
 #include "../../operators/abstract_operator.hpp"
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
@@ -32,10 +33,72 @@ namespace opossum {
 // forward declaration and aliases
 class AbstractLQPNode;
 class PQPColumnExpression;
+class PredicateNode;
 class TableScan;
 class Validate;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
+
+// TODO(CAJan93): remove and use magic enum
+inline std::string print_lqp_node_type(const LQPNodeType& t) {
+  switch (t) {
+    case LQPNodeType::Aggregate:
+      return "Aggregate";
+    case LQPNodeType::Alias:
+      return "Alias";
+    case LQPNodeType::ChangeMetaTable:
+      return "ChangeMetaTable";
+    case LQPNodeType::CreateTable:
+      return "CreateTable";
+    case LQPNodeType::CreatePreparedPlan:
+      return "CreatePreparedPlan";
+    case LQPNodeType::CreateView:
+      return "CreateView";
+    case LQPNodeType::Delete:
+      return "Delete";
+    case LQPNodeType::DropView:
+      return "DropView";
+    case LQPNodeType::DropTable:
+      return "DropTable";
+    case LQPNodeType::DummyTable:
+      return "DummyTable";
+    case LQPNodeType::Except:
+      return "Except";
+    case LQPNodeType::Export:
+      return "Export";
+    case LQPNodeType::Import:
+      return "Import";
+    case LQPNodeType::Insert:
+      return "Insert";
+    case LQPNodeType::Intersect:
+      return "Intersect";
+    case LQPNodeType::Join:
+      return "Join";
+    case LQPNodeType::Limit:
+      return "Limit";
+    case LQPNodeType::Predicate:
+      return "Predicate";
+    case LQPNodeType::Projection:
+      return "Projection";
+    case LQPNodeType::Root:
+      return "Root";
+    case LQPNodeType::Sort:
+      return "Sort";
+    case LQPNodeType::StaticTable:
+      return "StaticTable";
+    case LQPNodeType::StoredTable:
+      return "StoredTable";
+    case LQPNodeType::Update:
+      return "Update";
+    case LQPNodeType::Union:
+      return "Union";
+    case LQPNodeType::Validate:
+      return "Validate";
+
+    default:
+      return "Mock";
+  }
+}
 
 // TODO(CAJan93): remove and use magic enum
 inline std::string print_type(const OperatorType& t) {
@@ -598,7 +661,21 @@ jsonVal JsonSerializer::to_json(const T& object) {
 
     } else if constexpr (std::is_same<without_ref_cv_t, const AbstractLQPNode*>::value) {
       // TODO(CAJan93): Support AbstractLQPNode
-      std::cout << "AbstractLQPNode currently not supported\n";
+      switch (object->type) {
+        case LQPNodeType::Predicate: {
+          std::cout << "AbstractLQPNode Type is: " << print_lqp_node_type(object->type)
+                    << '\n';  // TODO(CAJan93): Remove this debug msg
+          const auto pred_default = dynamic_cast<const PredicateNode*>(object);
+          return to_json<PredicateNode>(*pred_default);
+        } break;
+
+        default:
+          std::cout << "AbstractLQPNode currently not supported\nType is: " << print_lqp_node_type(object->type)
+                    << '\n';
+          return data;
+          break;
+      }
+
       return data;
     }
 
