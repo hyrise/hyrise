@@ -10,6 +10,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace {
+using namespace opossum;  // NOLINT
+
 // Modified hash code generation for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
@@ -38,41 +40,34 @@ struct StoredTableNodeSharedPtrEqual final {
   }
 };
 
-using ColumnPruningAgnosticSet = std::unordered_set<std::shared_ptr<opossum::StoredTableNode>,
-                                                    StoredTableNodeSharedPtrHash, StoredTableNodeSharedPtrEqual>;
-
 using ColumnPruningAgnosticMultiSet =
     std::unordered_multiset<std::shared_ptr<opossum::StoredTableNode>, StoredTableNodeSharedPtrHash,
                             StoredTableNodeSharedPtrEqual>;
-}  // namespace
 
-namespace opossum {
-
-void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  // Stores exactly one representative for each StoredTableNode group. Members of the same StoredTableNode group
-  // have the same table name and pruned chunks.
-  auto group_representatives = ColumnPruningAgnosticSet{};
-
-  // Stores all StoredTableNodes grouped by key.
-  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
-
+void collect_stored_table_nodes(ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes,
+                                const std::shared_ptr<AbstractLQPNode>& root) {
   // Iterate over the LQP and store all StoredTableNodes in multiple sets/groups: nodes of the same set/group have the
   // same table name and the same pruned chunks.
   visit_lqp(root, [&](const auto& node) {
     if (node->type == LQPNodeType::StoredTable) {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       DebugAssert(stored_table_node, "LQPNode with type 'StoredTable' could not be casted to a StoredTableNode.");
-      group_representatives.emplace(stored_table_node);  // No modification if representative is already present
       grouped_stored_table_nodes.emplace(stored_table_node);
     }
     return LQPVisitation::VisitInputs;
   });
+}
 
-  // For each group of StoredTableNodes, (1) iterate over the nodes and calculate the set intersection of pruned
-  // column ids and (2) iterate over the nodes and set the aligned pruned column ids.
-  for (const auto& group_representative : group_representatives) {
+void apply_to(const ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes) {
+  /**
+   * For each group of StoredTableNodes,
+   * (1) iterate over the nodes and calculate the set intersection of pruned column ids and
+   * (2) iterate over the nodes and set the aligned pruned column ids.
+   */
+  for (auto group_representative = grouped_stored_table_nodes.begin();
+       group_representative != grouped_stored_table_nodes.end(); ++group_representative) {
     std::optional<std::vector<ColumnID>> aligned_pruned_column_ids;
-    const auto& group_range = grouped_stored_table_nodes.equal_range(group_representative);
+    const auto& group_range = grouped_stored_table_nodes.equal_range(*group_representative);
     for (auto group_iter = group_range.first; group_iter != group_range.second; ++group_iter) {
       const auto& stored_table_node = *group_iter;
       if (!aligned_pruned_column_ids) {
@@ -82,7 +77,7 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
         DebugAssert(std::is_sorted(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend()),
                     "Expected sorted vector of ColumnIDs");
         DebugAssert(std::is_sorted(stored_table_node->pruned_column_ids().cbegin(),
-                                  stored_table_node->pruned_column_ids().cend()),"Expected sorted vector of ColumnIDs");
+                                   stored_table_node->pruned_column_ids().cend()),"Expected sorted vector of ColumnIDs");
         std::set_intersection(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend(),
                               stored_table_node->pruned_column_ids().cbegin(),
                               stored_table_node->pruned_column_ids().cend(),
@@ -94,6 +89,26 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
       (*group_iter)->set_pruned_column_ids(*aligned_pruned_column_ids);
     }
   }
+}
+
+}  // namespace
+
+namespace opossum {
+
+void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+  // Stores all StoredTableNodes grouped by key (same table name and pruned chunks).
+  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
+  ::collect_stored_table_nodes(grouped_stored_table_nodes, root);
+  ::apply_to(grouped_stored_table_nodes);
+}
+
+void StoredTableColumnAlignmentRule::apply_to_optimized(const std::vector<std::shared_ptr<AbstractLQPNode>>&
+                                                            lqp_nodes) {
+  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
+  for(const auto& lqp_node : lqp_nodes) {
+    ::collect_stored_table_nodes(grouped_stored_table_nodes, lqp_node);
+  }
+  ::apply_to(grouped_stored_table_nodes);
 }
 
 }  // namespace opossum

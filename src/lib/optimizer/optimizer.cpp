@@ -139,7 +139,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
   // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
   // executed after the ColumnPruningRule and ChunkPruningRule.
-  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+//  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>()); TODO
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
@@ -197,6 +197,24 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   // Remove LogicalPlanRootNode
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
+
+  /**
+   * Optimize LQP as whole (including subqueries)
+   */
+  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
+  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
+  // executed after the ColumnPruningRule and ChunkPruningRule.
+  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, optimized_node, visited_nodes);
+
+  auto all_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
+  all_nodes.emplace_back(optimized_node);
+  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+    all_nodes.emplace_back(lqp);
+  }
+
+  StoredTableColumnAlignmentRule::apply_to_optimized(all_nodes);
 
   return optimized_node;
 }
