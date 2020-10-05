@@ -1161,6 +1161,11 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  /**
+   * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
+   * (Section 2: Logical Database Design)
+   */
+  
   // Fact Tables (7)
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
   store_sales_table->add_soft_key_constraint(
@@ -1232,9 +1237,9 @@ void TPCDSTableGenerator::_add_constraints(
       {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
-  customer_demographics_table->add_soft_key_constraint({{customer_demographics_table->column_id_by_name("cd_demo_sk")},
+  customer_demographics_table->add_soft_key_constraint(
+      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
 
-                                                        KeyConstraintType::PRIMARY_KEY});
   const auto& date_dim_table = table_info_by_name.at("date_dim").table;
   date_dim_table->add_soft_key_constraint(
       {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
