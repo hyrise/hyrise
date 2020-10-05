@@ -14,6 +14,8 @@ namespace {
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<opossum::StoredTableNode>& node) const {
+    DebugAssert(std::is_sorted(node->pruned_chunk_ids().cbegin(), node->pruned_chunk_ids().cend()),
+                "Expected sorted vector of ChunkIDs");
     size_t hash{0};
     boost::hash_combine(hash, node->table_name);
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
@@ -28,6 +30,10 @@ struct StoredTableNodeSharedPtrHash final {
 struct StoredTableNodeSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<opossum::StoredTableNode>& lhs,
                     const std::shared_ptr<opossum::StoredTableNode>& rhs) const {
+    DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
+                "Expected sorted vector of ChunkIDs");
+    DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),
+                "Expected sorted vector of ChunkIDs");
     return lhs == rhs || (lhs->table_name == rhs->table_name && lhs->pruned_chunk_ids() == rhs->pruned_chunk_ids());
   }
 };
@@ -73,9 +79,13 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
         aligned_pruned_column_ids = stored_table_node->pruned_column_ids();
       } else {
         std::vector<ColumnID> updated_pruned_column_ids{};
-        std::set_intersection(aligned_pruned_column_ids->begin(), aligned_pruned_column_ids->end(),
-                              stored_table_node->pruned_column_ids().begin(),
-                              stored_table_node->pruned_column_ids().end(),
+        DebugAssert(std::is_sorted(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend()),
+                    "Expected sorted vector of ColumnIDs");
+        DebugAssert(std::is_sorted(stored_table_node->pruned_column_ids().cbegin(),
+                                  stored_table_node->pruned_column_ids().cend()),"Expected sorted vector of ColumnIDs");
+        std::set_intersection(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend(),
+                              stored_table_node->pruned_column_ids().cbegin(),
+                              stored_table_node->pruned_column_ids().cend(),
                               std::back_inserter(updated_pruned_column_ids));
         aligned_pruned_column_ids = std::move(updated_pruned_column_ids);
       }
