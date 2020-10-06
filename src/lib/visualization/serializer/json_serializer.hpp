@@ -13,14 +13,18 @@
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
 #include "../../expression/abstract_predicate_expression.hpp"
+#include "../../expression/arithmetic_expression.hpp"
 #include "../../expression/between_expression.hpp"
 #include "../../expression/binary_predicate_expression.hpp"
 #include "../../expression/in_expression.hpp"
 #include "../../expression/is_null_expression.hpp"
+#include "../../expression/lqp_column_expression.hpp"
 #include "../../expression/pqp_column_expression.hpp"
+#include "../../expression/value_expression.hpp"
 #include "../../logical_query_plan/abstract_lqp_node.hpp"
 #include "../../logical_query_plan/predicate_node.hpp"
 #include "../../operators/abstract_operator.hpp"
+#include "../../operators/get_table.hpp"
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
 #include "../../operators/table_scan.hpp"
@@ -37,14 +41,18 @@ namespace opossum {
 
 // forward declaration and aliases
 class AbstractLQPNode;
+class ArithmeticExpression;
 class BetweenExpression;
+class GetTable;
 class BinaryPredicateExpression;
 class InExpression;
 class IsNullExpression;
+class LQPColumnExpression;
 class PQPColumnExpression;
 class PredicateNode;
 class TableScan;
 class Validate;
+class ValueExpression;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
 
@@ -362,9 +370,10 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
       without_cv_value_t* new_sub_obj = new without_cv_value_t{sub_obj};
       return new_sub_obj;
     }
+  } else if constexpr (is_weak_ptr<T>::value) {
+    Fail("weak ptr currently not supported");
+    return -1;
   } else if constexpr (is_smart_ptr<without_cv_t>::value) {
-    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
-        "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
 
@@ -418,11 +427,13 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
               }
             }
           } else if constexpr (is_smart_ptr<without_cv_vec_inner_t>::value) {
-            StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
-                "Weak pointers are currently not supported by this json serializer");
+            // TODO(CAJan93): remove this case?
+            // TODO(CAJan93): weak ptrs needed for lqp column expression
+            // StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
+            //   "Weak pointers are currently not supported by this json serializer");
             StaticAssert<!is_unique_ptr<T>::value>::stat_assert(
                 "Unique pointers are currently not supported by this json serializer");
-            Fail("smart pointers are not handled");
+            Fail("Smart pointers currently not supported");
           } else {
             for (size_t idx = 0; obj.KeyExists(std::to_string(idx)); ++idx) {
               const jsonView data = obj.GetObject(std::to_string(idx));
@@ -507,6 +518,47 @@ inline void JsonSerializer::with_any<double>(jsonVal& data, const std::string& k
 }
 
 template <>
+inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::string& key, const AllTypeVariant& val) {
+  // TODO(CAJan93): Implement this
+  const unsigned int val_t = val.which();
+  jsonVal variant_jv;
+  variant_jv.WithInteger("val_t", val_t);
+  if (val_t == 0) {
+    variant_jv.WithString("val", "NULL");
+  } else if (val_t == 1) {
+    variant_jv.WithInteger("val", boost::get<int>(val));
+  } else if (val_t == 2) {
+    variant_jv.WithInteger("val", boost::get<long int>(val));
+  } else if (val_t == 3) {
+    variant_jv.WithDouble("val", boost::get<float>(val));
+  } else if (val_t == 4) {
+    variant_jv.WithDouble("val", boost::get<double>(val));
+  } else if (val_t == 5) {
+    variant_jv.WithString(
+        "val",
+        std::string(boost::get<std::__cxx11::basic_string<char, std::char_traits<char>,
+                                                          boost::container::pmr::polymorphic_allocator<char>>>(val)));
+  }
+
+  // TODO(CAJan93): Remove comments
+  /*  if (val_t == 0) {  // int
+    variant_jv.WithInteger("val", boost::get<int>(val));
+  } else if (val_t == 1) {  // long
+    variant_jv.WithInteger("val", boost::get<long>(val));
+  } else if (val_t == 2) {  // float
+    variant_jv.WithDouble("val", boost::get<float>(val));
+  } else if (val_t == 3) {  // double
+    variant_jv.WithDouble("val", boost::get<double>(val));
+  } else if (val_t == 3) {  // string
+    Fail("String variant not supported"); // TODO(CAJan93): fix this
+    // variant_jv.WithString("val", boost::get<std::string>(val));
+  } else {
+    Fail(JOIN_TO_STR("Unsupported variant type with index", val_t));
+  }*/
+  data.WithObject(key, variant_jv);
+}
+
+template <>
 inline void JsonSerializer::with_any<std::variant<int, double, std::string>>(
     jsonVal& data, const std::string& key, const std::variant<int, double, std::string>& val) {
   switch (val.index()) {
@@ -540,7 +592,10 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
       if constexpr (has_member_properties<without_ref_cv_ptr_t>::value ||
                     std::is_same<without_ref_cv_ptr_t, AbstractExpression>::value ||
                     std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value ||
-                    std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {
+                    std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {  // TODO(CAJan93): remove lqp?
+        if (std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {
+          Fail("No AbstractLQPNode, pls");  // TODO(CAJan93): remove lqp? also statement from above?
+        }
         // nested (T::properties present)
         data.WithObject(key, JsonSerializer::to_json(val));
       } else {
@@ -549,9 +604,9 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
       }
     }
     return;
+  } else if constexpr (is_weak_ptr<T>::value) {
+    with_any(data, key, val.lock().get());
   } else if constexpr (is_smart_ptr<T>::value) {
-    StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
-        "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<T>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     with_any(data, key, val.get());
@@ -604,9 +659,9 @@ T JsonSerializer::from_json(const jsonView& data) {
     T new_object{object};
 
     return new_object;
+  } else if constexpr (is_weak_ptr<without_cv_t>::value) {
+    Fail("Weak pointers are currently not supported by this json serializer");
   } else if constexpr (is_smart_ptr<without_cv_t>::value) {
-    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
-        "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     typedef T smart_ptr_t;                     // type of the smart pointer
@@ -656,26 +711,33 @@ jsonVal JsonSerializer::to_json(const T& object) {
           const auto projection = dynamic_cast<const Projection*>(abstract_op);
           std::cout << "projection" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<Projection>(*projection);
-        } break;
+        }
 
         case OperatorType::TableScan: {
           const auto table_scan = dynamic_cast<const TableScan*>(abstract_op);
           std::cout << "TableScan" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<TableScan>(*table_scan);
-        } break;
+        }
 
         case OperatorType::Limit: {
           const auto limit = dynamic_cast<const Limit*>(abstract_op);
           std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<Limit>(*limit);
-        } break;
+        }
 
         case OperatorType::Validate: {
           const auto validate = dynamic_cast<const Validate*>(abstract_op);
           std::cout << "Validate" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<Validate>(*validate);
           return data;
-        } break;
+        }
+
+        case OperatorType::GetTable: {
+          const auto gt = dynamic_cast<const GetTable*>(abstract_op);
+          std::cout << "GetTable" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return to_json<GetTable>(*gt);
+          return data;
+        }
 
           /**
          * cast via AbstractAggregateOperator
@@ -683,26 +745,31 @@ jsonVal JsonSerializer::to_json(const T& object) {
           const auto aggregate = dynamic_cast<const Aggregate*>(abstract_op);
           std::cout << "aggregate\n";
           return to_json<Aggregate>(*aggregate);
-        } break;
-        */
+        }*/
 
         default: {
-          std::cout << "default\n" << std::endl;
           // TODO(CAJan93) remove below code
           auto t = abstract_op->type();
-          std::cout << "type is " << print_type(t) << '\n';  // TODO(CAJan93): Remove this debug msg
-        }                                                    // OperatorType has no expressions
+          std::cout << "default OperatorType, with type \n" << print_type(t) << '\n';
+        }
       }
       return data;
 
     } else if constexpr (std::is_same<without_ref_cv_t, AbstractExpression*>::value) {
       switch (object->type) {
-        // TODO(CAJan93): Support the other ExpressionTypes
+          // TODO(CAJan93): Support the other ExpressionTypes
+
+        case ExpressionType::Arithmetic: {
+          const auto arithmetic_expr = dynamic_cast<ArithmeticExpression*>(object);
+          std::cout << "Arithmetic expression" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<ArithmeticExpression>(*arithmetic_expr);
+        }
+
         case ExpressionType::PQPColumn: {
           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
-          std::cout << "PQPColumn" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          std::cout << "PQPColumn expression" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<PQPColumnExpression>(*pqp_col);
-        } break;
+        }
 
         case ExpressionType::Predicate: {
           const auto pred = dynamic_cast<AbstractPredicateExpression*>(object);
@@ -749,15 +816,20 @@ jsonVal JsonSerializer::to_json(const T& object) {
               Fail("Unknown ExpressionType\n");
               return data;
           }
-        } break;
+        }
 
         case ExpressionType::LQPColumn: {
-          std::cout << "LQPColumn supported soon\n";  // TODO(CAJan93)
-        } break;
+          Fail("No LQPCol pls");  // TODO(CAJan93): remove this?
+          const auto lqp_col_expr = dynamic_cast<LQPColumnExpression*>(object);
+          std::cout << "LQPColumn expression\n";  // TODO(CAJan93)
+          return to_json<LQPColumnExpression>(*lqp_col_expr);
+        }
 
         case ExpressionType::Value: {
-          std::cout << "Value supported soon\n";  // TODO(CAJan93)
-        } break;
+          const auto val_expr = dynamic_cast<ValueExpression*>(object);
+          std::cout << "Value expression\n";  // TODO(CAJan93): remove debug msg
+          return to_json<ValueExpression>(*val_expr);
+        }
 
         default:
           // TODO(CAJan93): Handle the other ExpressionTypes
@@ -767,17 +839,27 @@ jsonVal JsonSerializer::to_json(const T& object) {
       }
 
     } else if constexpr (std::is_same<without_ref_cv_t, const AbstractLQPNode*>::value) {
+      Fail("No LQP pls!");  // TODO(CAJan93): remove this?
       // TODO(CAJan93): Support AbstractLQPNode
       switch (object->type) {
         case LQPNodeType::Predicate: {
-          std::cout << "AbstractLQPNode Type is: " << print_lqp_node_type(object->type)
-                    << '\n';  // TODO(CAJan93): Remove this debug msg
-          const auto pred_default = dynamic_cast<const PredicateNode*>(object);
-          return to_json<PredicateNode>(*pred_default);
+          std::cout << "AbstractLQPNode Predicate\n";
+          const auto pred_node = dynamic_cast<const PredicateNode*>(object);
+          return to_json<PredicateNode>(*pred_node);
+        } break;
+
+        case LQPNodeType::Projection: {
+          std::cout << "AbstractLQPNode Projection\n";
+          const auto proj_node = dynamic_cast<const Projection*>(object);
+          return to_json<Projection>(*proj_node);
+        } break;
+
+        case LQPNodeType::StoredTable: {
+          std::cout << "We do not support LQPNodeType::StoreTable\n";
         } break;
 
         default:
-          std::cout << "AbstractLQPNode currently not supported\nType is: " << print_lqp_node_type(object->type)
+          std::cout << "AbstractLQPNode currently not supported. Type is: " << print_lqp_node_type(object->type)
                     << '\n';
           return data;
           break;
@@ -789,9 +871,9 @@ jsonVal JsonSerializer::to_json(const T& object) {
     else {
       return to_json<std::remove_pointer_t<without_ref_cv_t>>(*object);
     }
+  } else if constexpr (is_weak_ptr<without_ref_cv_t>::value) {
+    return to_json(object.lock().get());
   } else if constexpr (is_smart_ptr<without_ref_cv_t>::value) {
-    StaticAssert<!is_weak_ptr<without_ref_cv_t>::value>::stat_assert(
-        "Weak pointers are currently not supported by this json serializer");
     StaticAssert<!is_unique_ptr<without_ref_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     return to_json(object.get());  // keep const qualifier, since get() might return a const pointer

@@ -8,11 +8,11 @@
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "serializer/json_serializer.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
 #include "visualization/abstract_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
-#include "serializer/json_serializer.hpp"
 
 namespace opossum {
 
@@ -24,9 +24,11 @@ PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
                          std::move(edge_info)) {}
 
 void PQPVisualizer::build_json(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
+  unsigned int count = 1;
   for (const auto& plan : plans) {
+    std::cout << "printing sub_json " << count++ << '\n';
     _build_subjson(plan);
-    break;
+    std::cout << '\n';
   }
 }
 

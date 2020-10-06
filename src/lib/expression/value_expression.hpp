@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../operators/property.hpp"
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 
@@ -23,6 +25,13 @@ class ValueExpression : public AbstractExpression {
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+
+ public:
+  inline constexpr static auto properties = std::make_tuple(
+      // TODO(CAJan93): support value
+      property(&ValueExpression::value, "value"),
+      // From AbstractExpression
+      property(&ValueExpression::arguments, "arguments"), property(&ValueExpression::type, "type"));
 };
 
 }  // namespace opossum

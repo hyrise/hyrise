@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../operators/property.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "types.hpp"
@@ -46,5 +47,14 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::string _name;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
+
+ public:
+  inline constexpr static auto properties =
+      std::make_tuple(property(&GetTable::_name, "_name"), property(&GetTable::_pruned_chunk_ids, "_pruned_chunk_ids"),
+                      property(&GetTable::_pruned_column_ids, "_pruned_column_ids"),
+                      // from AbstractOperator via AbstractReadOnlyOperator
+                      // no support for lqp_node
+                      property(&GetTable::_type, "_type"), property(&GetTable::_left_input, "_left_input"),
+                      property(&GetTable::_right_input, "_right_input"));
 };
 }  // namespace opossum

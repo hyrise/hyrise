@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "../operators/property.hpp"
 #include "abstract_expression.hpp"
 
 namespace opossum {
@@ -33,6 +34,14 @@ class ArithmeticExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
   ExpressionPrecedence _precedence() const override;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members. Done?
+  inline constexpr static auto properties = std::make_tuple(
+      // from AbstractPredicateExpression
+      property(&ArithmeticExpression::arithmetic_operator, "arithmetic_operator"),
+      // From AbstractExpression
+      property(&ArithmeticExpression::arguments, "arguments"), property(&ArithmeticExpression::type, "type"));
 };
 
 }  // namespace opossum

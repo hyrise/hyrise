@@ -108,7 +108,7 @@ class TableScan : public AbstractReadOnlyOperator {
       property(&TableScan::_impl_description, "_impl_description"),
 
       // from AbstractOperator via AbstractReadOnlyOperator
-      property(&TableScan::lqp_node, "lqp_node"), 
+      // no support for lqp_node
       /*property(&TableScan::performance_data, "performance_data"),*/
       property(&TableScan::_type, "_type"), property(&TableScan::_left_input, "_left_input"),
       property(&TableScan::_right_input, "_right_input")

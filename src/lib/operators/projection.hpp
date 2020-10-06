@@ -53,8 +53,6 @@ class Projection : public AbstractReadOnlyOperator {
 
   const std::vector<std::shared_ptr<AbstractExpression>> expressions;
 
-  inline constexpr static auto properties = std::make_tuple(property(&Projection::expressions, "expressions"));
-
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
@@ -63,6 +61,19 @@ class Projection : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members. Done?
+  inline constexpr static auto properties = std::make_tuple(
+      // TODO(CAJan93): include expression
+      property(&Projection::expressions, "expressions"),
+      // From AbstractReadOnlyOperator
+      // TODO(CAJan93): performance_data not supported
+      // TODO(CAJan93): _output not supported
+      // TODO(CAJan93): _transaction_context not supported
+      // // No support for lqp_node
+      property(&Projection::_type, "_type"), property(&Projection::_left_input, "_left_input"),
+      property(&Projection::_right_input, "_right_input"));
 };
 
 }  // namespace opossum

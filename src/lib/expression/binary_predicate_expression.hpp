@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../operators/property.hpp"
-#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"
