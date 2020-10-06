@@ -23,6 +23,7 @@
 #include "../../logical_query_plan/predicate_node.hpp"
 #include "../../operators/abstract_operator.hpp"
 #include "../../operators/get_table.hpp"
+#include "../../operators/alias_operator.hpp"
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
 #include "../../operators/table_scan.hpp"
@@ -38,10 +39,11 @@
 namespace opossum {
 
 // forward declaration and aliases
+class AliasOperator;
 class ArithmeticExpression;
 class BetweenExpression;
-class GetTable;
 class BinaryPredicateExpression;
+class GetTable;
 class InExpression;
 class IsNullExpression;
 class PQPColumnExpression;
@@ -637,6 +639,33 @@ jsonVal JsonSerializer::to_json(const T& object) {
       // cast Abstract operators
       auto abstract_op = (const AbstractOperator*)object;
       switch (abstract_op->type()) {
+        case OperatorType::Alias: {
+          const auto alias = dynamic_cast<const AliasOperator*>(abstract_op);
+          std::cout << "AliasOperator" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return to_json<AliasOperator>(*alias);
+        }
+
+        case OperatorType::Aggregate: {
+          // TODO(CAJan93): Implement this
+        //  const auto agg = dynamic_cast<const Aggregate*>(abstract_op);
+          std::cout << "Aggregate currently not supported" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return data;
+          // return to_json<Aggregate>(*agg);
+        }
+
+        case OperatorType::GetTable: {
+          const auto gt = dynamic_cast<const GetTable*>(abstract_op);
+          std::cout << "GetTable" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return to_json<GetTable>(*gt);
+        }
+
+        // TODO(CAJan93): Check if I am using the corret limit class
+        case OperatorType::Limit: {
+          const auto limit = dynamic_cast<const Limit*>(abstract_op);
+          std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Limit>(*limit);
+        }
+
         case OperatorType::Projection: {
           const auto projection = dynamic_cast<const Projection*>(abstract_op);
           std::cout << "projection" << std::endl;  // TODO(CAJan93): Remove this debug msg
@@ -649,23 +678,10 @@ jsonVal JsonSerializer::to_json(const T& object) {
           return to_json<TableScan>(*table_scan);
         }
 
-        case OperatorType::Limit: {
-          const auto limit = dynamic_cast<const Limit*>(abstract_op);
-          std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
-          return to_json<Limit>(*limit);
-        }
-
         case OperatorType::Validate: {
           const auto validate = dynamic_cast<const Validate*>(abstract_op);
           std::cout << "Validate" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<Validate>(*validate);
-          return data;
-        }
-
-        case OperatorType::GetTable: {
-          const auto gt = dynamic_cast<const GetTable*>(abstract_op);
-          std::cout << "GetTable" << std::endl;  //  TODO(CAJan93): Remove this debug msg
-          return to_json<GetTable>(*gt);
           return data;
         }
 
