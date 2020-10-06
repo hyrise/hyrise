@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../operators/property.hpp"
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"
@@ -19,6 +21,14 @@ class IsNullExpression : public AbstractPredicateExpression {
  protected:
   ExpressionPrecedence _precedence() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members. Done?
+  inline constexpr static auto properties = std::make_tuple(
+      // from AbstractPredicateExpression
+      property(&IsNullExpression::predicate_condition, "predicate_condition"),
+      // From AbstractExpression
+      property(&IsNullExpression::arguments, "arguments"), property(&IsNullExpression::type, "type"));
 };
 
 }  // namespace opossum

@@ -12,6 +12,11 @@
 // TODO(CAJan93): #include "../string.hpp"
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
+#include "../../expression/abstract_predicate_expression.hpp"
+#include "../../expression/between_expression.hpp"
+#include "../../expression/binary_predicate_expression.hpp"
+#include "../../expression/in_expression.hpp"
+#include "../../expression/is_null_expression.hpp"
 #include "../../expression/pqp_column_expression.hpp"
 #include "../../logical_query_plan/abstract_lqp_node.hpp"
 #include "../../logical_query_plan/predicate_node.hpp"
@@ -32,12 +37,57 @@ namespace opossum {
 
 // forward declaration and aliases
 class AbstractLQPNode;
+class BetweenExpression;
+class BinaryPredicateExpression;
+class InExpression;
+class IsNullExpression;
 class PQPColumnExpression;
 class PredicateNode;
 class TableScan;
 class Validate;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
+
+inline std::string print_expr_type(const ExpressionType& t) {
+  switch (t) {
+    case ExpressionType::Aggregate:
+      return "Aggregate";
+    case ExpressionType::Arithmetic:
+      return "Arithmetic";
+    case ExpressionType::Cast:
+      return "Cast";
+    case ExpressionType::Case:
+      return "Case";
+    case ExpressionType::CorrelatedParameter:
+      return "CorrelatedParameter";
+    case ExpressionType::PQPColumn:
+      return "PQPColumn";
+    case ExpressionType::LQPColumn:
+      return "LQPColumn";
+    case ExpressionType::Exists:
+      return "Exists";
+    case ExpressionType::Extract:
+      return "Extract";
+    case ExpressionType::Function:
+      return "Function";
+    case ExpressionType::List:
+      return "List";
+    case ExpressionType::Logical:
+      return "Logical";
+    case ExpressionType::Placeholder:
+      return "Placeholder";
+    case ExpressionType::Predicate:
+      return "Predicate";
+    case ExpressionType::PQPSubquery:
+      return "PQPSubquery";
+    case ExpressionType::LQPSubquery:
+      return "LQPSubquery";
+    case ExpressionType::UnaryMinus:
+      return "UnaryMinus";
+    default:
+      return "Value";
+  }
+}
 
 // TODO(CAJan93): remove and use magic enum
 inline std::string print_lqp_node_type(const LQPNodeType& t) {
@@ -643,19 +693,76 @@ jsonVal JsonSerializer::to_json(const T& object) {
           std::cout << "type is " << print_type(t) << '\n';  // TODO(CAJan93): Remove this debug msg
         }                                                    // OperatorType has no expressions
       }
-      // TODO remove this line
       return data;
+
     } else if constexpr (std::is_same<without_ref_cv_t, AbstractExpression*>::value) {
       switch (object->type) {
+        // TODO(CAJan93): Support the other ExpressionTypes
         case ExpressionType::PQPColumn: {
           const auto pqp_col = dynamic_cast<PQPColumnExpression*>(object);
           std::cout << "PQPColumn" << std::endl;  // TODO(CAJan93): Remove this debug msg
           return to_json<PQPColumnExpression>(*pqp_col);
         } break;
 
+        case ExpressionType::Predicate: {
+          const auto pred = dynamic_cast<AbstractPredicateExpression*>(object);
+          std::cout << "abstract predicate" << std::endl;  // TODO(CAJan93): Remove debug msg
+          switch (pred->predicate_condition) {
+            case PredicateCondition::BetweenExclusive:
+            case PredicateCondition::BetweenInclusive:
+            case PredicateCondition::BetweenLowerExclusive:
+            case PredicateCondition::BetweenUpperExclusive: {
+              std::cout << "between expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              const auto pred_between = dynamic_cast<BetweenExpression*>(object);
+              return to_json<BetweenExpression>(*pred_between);
+            }
+
+            // TODO(CAJan93): Is this correct? Does the binary pred. expr. cover all these cases?
+            case PredicateCondition::Equals:
+            case PredicateCondition::GreaterThan:
+            case PredicateCondition::GreaterThanEquals:
+            case PredicateCondition::LessThan:
+            case PredicateCondition::LessThanEquals:
+            case PredicateCondition::Like:
+            case PredicateCondition::NotEquals:
+            case PredicateCondition::NotLike: {
+              std::cout << "binary predicate expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              const auto pred_binary = dynamic_cast<BinaryPredicateExpression*>(object);
+              return to_json<BinaryPredicateExpression>(*pred_binary);
+            }
+
+            case PredicateCondition::In:
+            case PredicateCondition::NotIn: {
+              std::cout << "in expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              const auto pred_in = dynamic_cast<InExpression*>(object);
+              return to_json<InExpression>(*pred_in);
+            }
+
+            case PredicateCondition::IsNotNull:
+            case PredicateCondition::IsNull: {
+              std::cout << "is null expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              const auto pred_null = dynamic_cast<IsNullExpression*>(object);
+              return to_json<IsNullExpression>(*pred_null);
+            }
+
+            default:
+              Fail("Unknown ExpressionType\n");
+              return data;
+          }
+        } break;
+
+        case ExpressionType::LQPColumn: {
+          std::cout << "LQPColumn supported soon\n";  // TODO(CAJan93)
+        } break;
+
+        case ExpressionType::Value: {
+          std::cout << "Value supported soon\n";  // TODO(CAJan93)
+        } break;
+
         default:
           // TODO(CAJan93): Handle the other ExpressionTypes
-          Fail(JOIN_TO_STR("Unsupported expression type"));
+          std::cout << "Failure. Unsupported ExpressionType " << print_expr_type(object->type) << '\n';
+          return data;
           break;
       }
 

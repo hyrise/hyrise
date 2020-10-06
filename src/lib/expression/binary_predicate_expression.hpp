@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../operators/property.hpp"
+#include "../visualization/serializer/json_serializer.hpp"
 #include "abstract_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"
@@ -20,6 +22,14 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
 
  protected:
   ExpressionPrecedence _precedence() const override;
+
+ public:
+  // TODO(CAJan93): Support all relevant members, including parent members. Done?
+  inline constexpr static auto properties = std::make_tuple(
+      // from AbstractPredicateExpression
+      property(&BinaryPredicateExpression::predicate_condition, "predicate_condition"),
+      // From AbstractExpression
+      property(&BinaryPredicateExpression::arguments, "arguments"), property(&BinaryPredicateExpression::type, "type"));
 };
 
 }  // namespace opossum
