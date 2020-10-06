@@ -18,10 +18,8 @@
 #include "../../expression/binary_predicate_expression.hpp"
 #include "../../expression/in_expression.hpp"
 #include "../../expression/is_null_expression.hpp"
-#include "../../expression/lqp_column_expression.hpp"
 #include "../../expression/pqp_column_expression.hpp"
 #include "../../expression/value_expression.hpp"
-#include "../../logical_query_plan/abstract_lqp_node.hpp"
 #include "../../logical_query_plan/predicate_node.hpp"
 #include "../../operators/abstract_operator.hpp"
 #include "../../operators/get_table.hpp"
@@ -40,14 +38,12 @@
 namespace opossum {
 
 // forward declaration and aliases
-class AbstractLQPNode;
 class ArithmeticExpression;
 class BetweenExpression;
 class GetTable;
 class BinaryPredicateExpression;
 class InExpression;
 class IsNullExpression;
-class LQPColumnExpression;
 class PQPColumnExpression;
 class PredicateNode;
 class TableScan;
@@ -94,67 +90,6 @@ inline std::string print_expr_type(const ExpressionType& t) {
       return "UnaryMinus";
     default:
       return "Value";
-  }
-}
-
-// TODO(CAJan93): remove and use magic enum
-inline std::string print_lqp_node_type(const LQPNodeType& t) {
-  switch (t) {
-    case LQPNodeType::Aggregate:
-      return "Aggregate";
-    case LQPNodeType::Alias:
-      return "Alias";
-    case LQPNodeType::ChangeMetaTable:
-      return "ChangeMetaTable";
-    case LQPNodeType::CreateTable:
-      return "CreateTable";
-    case LQPNodeType::CreatePreparedPlan:
-      return "CreatePreparedPlan";
-    case LQPNodeType::CreateView:
-      return "CreateView";
-    case LQPNodeType::Delete:
-      return "Delete";
-    case LQPNodeType::DropView:
-      return "DropView";
-    case LQPNodeType::DropTable:
-      return "DropTable";
-    case LQPNodeType::DummyTable:
-      return "DummyTable";
-    case LQPNodeType::Except:
-      return "Except";
-    case LQPNodeType::Export:
-      return "Export";
-    case LQPNodeType::Import:
-      return "Import";
-    case LQPNodeType::Insert:
-      return "Insert";
-    case LQPNodeType::Intersect:
-      return "Intersect";
-    case LQPNodeType::Join:
-      return "Join";
-    case LQPNodeType::Limit:
-      return "Limit";
-    case LQPNodeType::Predicate:
-      return "Predicate";
-    case LQPNodeType::Projection:
-      return "Projection";
-    case LQPNodeType::Root:
-      return "Root";
-    case LQPNodeType::Sort:
-      return "Sort";
-    case LQPNodeType::StaticTable:
-      return "StaticTable";
-    case LQPNodeType::StoredTable:
-      return "StoredTable";
-    case LQPNodeType::Update:
-      return "Update";
-    case LQPNodeType::Union:
-      return "Union";
-    case LQPNodeType::Validate:
-      return "Validate";
-
-    default:
-      return "Mock";
   }
 }
 
@@ -428,9 +363,8 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
             }
           } else if constexpr (is_smart_ptr<without_cv_vec_inner_t>::value) {
             // TODO(CAJan93): remove this case?
-            // TODO(CAJan93): weak ptrs needed for lqp column expression
-            // StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
-            //   "Weak pointers are currently not supported by this json serializer");
+            StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
+                "Weak pointers are currently not supported by this json serializer");
             StaticAssert<!is_unique_ptr<T>::value>::stat_assert(
                 "Unique pointers are currently not supported by this json serializer");
             Fail("Smart pointers currently not supported");
@@ -591,11 +525,7 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
       typedef typename std::remove_reference_t<std::remove_cv_t<std::remove_pointer_t<T>>> without_ref_cv_ptr_t;
       if constexpr (has_member_properties<without_ref_cv_ptr_t>::value ||
                     std::is_same<without_ref_cv_ptr_t, AbstractExpression>::value ||
-                    std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value ||
-                    std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {  // TODO(CAJan93): remove lqp?
-        if (std::is_same<without_ref_cv_ptr_t, AbstractLQPNode>::value) {
-          Fail("No AbstractLQPNode, pls");  // TODO(CAJan93): remove lqp? also statement from above?
-        }
+                    std::is_same<without_ref_cv_ptr_t, AbstractOperator>::value) {
         // nested (T::properties present)
         data.WithObject(key, JsonSerializer::to_json(val));
       } else {
@@ -819,10 +749,8 @@ jsonVal JsonSerializer::to_json(const T& object) {
         }
 
         case ExpressionType::LQPColumn: {
-          Fail("No LQPCol pls");  // TODO(CAJan93): remove this?
-          const auto lqp_col_expr = dynamic_cast<LQPColumnExpression*>(object);
-          std::cout << "LQPColumn expression\n";  // TODO(CAJan93)
-          return to_json<LQPColumnExpression>(*lqp_col_expr);
+          Fail("JsonSerializer does not support ExpressionType::LQPColumn");  // TODO(CAJan93): remove this?
+          return data;
         }
 
         case ExpressionType::Value: {
@@ -839,32 +767,7 @@ jsonVal JsonSerializer::to_json(const T& object) {
       }
 
     } else if constexpr (std::is_same<without_ref_cv_t, const AbstractLQPNode*>::value) {
-      Fail("No LQP pls!");  // TODO(CAJan93): remove this?
-      // TODO(CAJan93): Support AbstractLQPNode
-      switch (object->type) {
-        case LQPNodeType::Predicate: {
-          std::cout << "AbstractLQPNode Predicate\n";
-          const auto pred_node = dynamic_cast<const PredicateNode*>(object);
-          return to_json<PredicateNode>(*pred_node);
-        } break;
-
-        case LQPNodeType::Projection: {
-          std::cout << "AbstractLQPNode Projection\n";
-          const auto proj_node = dynamic_cast<const Projection*>(object);
-          return to_json<Projection>(*proj_node);
-        } break;
-
-        case LQPNodeType::StoredTable: {
-          std::cout << "We do not support LQPNodeType::StoreTable\n";
-        } break;
-
-        default:
-          std::cout << "AbstractLQPNode currently not supported. Type is: " << print_lqp_node_type(object->type)
-                    << '\n';
-          return data;
-          break;
-      }
-
+      Fail("JsonSerializer does not support ExpressionType::AbstractLQPNode");  // TODO(CAJan93): remove this?
       return data;
     }
 

@@ -2,7 +2,6 @@
 
 #include "abstract_expression.hpp"
 
-#include "../operators/property.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 
@@ -29,14 +28,6 @@ class LQPColumnExpression : public AbstractExpression {
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
-
-/* public:
-  // TODO(CAJan93): Support all relevant members, including parent members. Done?
-  inline constexpr static auto properties = std::make_tuple(
-      property(&LQPColumnExpression::original_column_id, "original_column_id"),
-      property(&LQPColumnExpression::original_node, "original_node"),
-      // from AbstractExpression
-      property(&LQPColumnExpression::arguments, "arguments"), property(&LQPColumnExpression::type, "type"));*/
 };
 
 }  // namespace opossum
