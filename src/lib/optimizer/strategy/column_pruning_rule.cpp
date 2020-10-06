@@ -84,35 +84,24 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
+      const auto& node_expressions = node->node_expressions;
+      for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+        const auto& expression = node_expressions[expression_idx];
 
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
-          // This is a group by expression that is required from the input
+          // Group by expressions are required
           locally_required_expressions.emplace(expression);
         } else {
-          // This is an aggregate expression
+          // We require the argument expressions of Aggregates
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
           if (!AggregateExpression::is_count_star(*expression)) {
-            //  We need the argument
             locally_required_expressions.emplace(expression->arguments[0]);
-          } else {
-            // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
-            // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
-            // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
-            // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
-            // TODO Doc
-            // Invalid column id -> Instead we mark the first input expression as required that is not part of
-            // the group-by clause
-            const auto& input_expressions = node->left_input()->output_expressions();
-            for (const auto& input_expression : input_expressions) {
-              if (locally_required_expressions.emplace(input_expression).second) {
-                // We added a single non-group-by expression which is enough.
-                break;
-              }
-            }
+          } else if (locally_required_expressions.empty() && expression_idx == (node_expressions.size() - 1)) {
+            // Ensure, that we require at least one output expression for ungrouped COUNT(*) aggregations.
+            DebugAssert(!node->left_input()->output_expressions().empty(), "Did not expect empty output expressions");
+            locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
         }
       }
