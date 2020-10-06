@@ -83,22 +83,24 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For aggregate nodes, we need the group by columns and the arguments to the aggregate functions
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
-
       const auto& node_expressions = node->node_expressions;
+
       for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
         const auto& expression = node_expressions[expression_idx];
-
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
-          // Group by expressions are required
+          // All group_by-expressions are required
           locally_required_expressions.emplace(expression);
         } else {
-          // We require the argument expressions of Aggregates
+          // We require all ArregateExpressions' arguments
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
           if (!AggregateExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
-          } else if (locally_required_expressions.empty() && expression_idx == (node_expressions.size() - 1)) {
+          } else {
+            // COUNT(*) edge case: There is no argument expression that we can add. In the end, we should require
+            // TODO Continue Doc
+            if(!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
             // Ensure, that we require at least one output expression for ungrouped COUNT(*) aggregations.
             DebugAssert(!node->left_input()->output_expressions().empty(), "Did not expect empty output expressions");
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
