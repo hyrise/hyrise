@@ -110,7 +110,7 @@ void OperatorTask::_on_execute() {
     }
     // If someone else still holds a shared_ptr to the table (e.g., a ReferenceSegment pointing to a materialized
     // temporary table), it will not yet get deleted
-    if (!previous_operator_still_needed) predecessor->get_operator()->clear_output();
+//    if (!previous_operator_still_needed) predecessor->get_operator()->clear_output();
   }
 }
 }  // namespace opossum
