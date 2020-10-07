@@ -1,6 +1,7 @@
 #include "sort.hpp"
 
 #include "storage/segment_iterate.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 
@@ -220,7 +221,8 @@ namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
            const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
-    : AbstractReadOnlyOperator(OperatorType::Sort, in),
+    : AbstractReadOnlyOperator(OperatorType::Sort, in, nullptr,
+                               std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
       _force_materialization(force_materialization) {
@@ -243,6 +245,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  Timer timer;
   const auto& input_table = left_input_table();
 
   for (const auto& column_sort_definition : _sort_definitions) {
@@ -277,6 +280,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
     });
   }
+
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
@@ -326,6 +332,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     output_chunk->finalize();
     output_chunk->set_individually_sorted_by(final_sort_definition);
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
 }
 
