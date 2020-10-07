@@ -322,33 +322,56 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
 
     auto build_side_bloom_filter = BloomFilter{};
+    auto probe_side_bloom_filter = BloomFilter{};
 
-    Timer timer_materialization;
-    if (keep_nulls_build_column) {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
-    } else {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
-    }
-    _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+    const auto materialize_build_side = [&](const auto& input_bloom_filter) {
+      if (keep_nulls_build_column) {
+        materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+      } else {
+        materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+      }
+    };
 
     /**
      * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
-    auto probe_side_bloom_filter = BloomFilter{};
+    const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
+      if (keep_nulls_probe_column) {
+        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+            input_bloom_filter);
+      } else {
+        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+            input_bloom_filter);
+      }
+    };
 
-    if (keep_nulls_probe_column) {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-          build_side_bloom_filter);
+    Timer timer_materialization;
+    if (_build_input_table->row_count() < _probe_input_table->row_count()) {
+      // TODO fix default arg
+      materialize_build_side(EMPTY_BLOOM_FILTER);
+      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      materialize_probe_side(build_side_bloom_filter);
+      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-          build_side_bloom_filter);
+      materialize_probe_side(EMPTY_BLOOM_FILTER);
+      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      materialize_build_side(probe_side_bloom_filter);
+      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
-    _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+
+    auto build_side_rows = size_t{0};
+    for (const auto& partition : materialized_build_column) {
+      build_side_rows += partition.elements.size();
+    }
+    auto probe_side_rows = size_t{0};
+    for (const auto& partition : materialized_probe_column) {
+      probe_side_rows += partition.elements.size();
+    }
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
