@@ -562,7 +562,162 @@ jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
 template <typename T>
 T JsonSerializer::from_json(const jsonView& data) {
   typedef typename std::remove_cv_t<T> without_cv_t;
+  if constexpr (is_smart_ptr<without_cv_t>::value) {
+    StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
+        "Unique pointers are currently not supported by this json serializer");
+    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
+        "Weak pointers are currently not supported by this json serializer");
+    typedef T smart_ptr_t;                     // type of the smart pointer
+    typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
+    inner_t* object = from_json<inner_t*>(data);
+    smart_ptr_t sp = smart_ptr_t(object);
+    return sp;
+  } else {
+    // pointer or object
+    constexpr bool is_raw_ptr = std::is_pointer<without_cv_t>::value;
+    typedef typename std::remove_pointer_t<without_cv_t> without_ptr_t;
 
+    if constexpr (std::is_same<AggregateExpression, without_ptr_t>::value ||
+                  std::is_same<IsNullExpression, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0));
+        return t;
+      }
+    } else if constexpr (std::is_same<ArithmeticExpression, without_ptr_t>::value ||
+                         std::is_same<BinaryPredicateExpression, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
+                              as_any<property_1_t>(data, property_1).at(1));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
+                        as_any<property_1_t>(data, property_1).at(1));
+        return t;
+      }
+    } else if constexpr (std::is_same<BetweenExpression, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+      if constexpr (is_raw_ptr) {
+        without_cv_t t = new without_ptr_t(
+            as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
+            as_any<property_1_t>(data, property_1).at(1), as_any<property_1_t>(data, property_1).at(2));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
+                        as_any<property_1_t>(data, property_1).at(1), as_any<property_1_t>(data, property_1).at(2));
+        return t;
+      }
+    } else if constexpr (std::is_same<PQPColumnExpression, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+
+      constexpr auto property_2 = std::get<2>(without_ptr_t::properties);
+      typedef typename decltype(property_2)::Type property_2_t;
+
+      constexpr auto property_3 = std::get<3>(without_ptr_t::properties);
+      typedef typename decltype(property_3)::Type property_3_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
+                              as_any<property_2_t>(data, property_2), as_any<property_3_t>(data, property_3));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
+                        as_any<property_2_t>(data, property_2), as_any<property_3_t>(data, property_3));
+        return t;
+      }
+    } else if constexpr (std::is_same<ValueExpression, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0));
+        return t;
+      }
+    } else if constexpr (std::is_same<AggregateHash, without_ptr_t>::value ||
+                         std::is_same<AggregateSort, without_ptr_t>::value ||
+                         std::is_same<AliasOperator, without_ptr_t>::value ||
+                         std::is_same<GetTable, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+
+      constexpr auto property_2 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_2)::Type property_2_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
+                              as_any<property_2_t>(data, property_2));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
+                        as_any<property_2_t>(data, property_2));
+        return t;
+      }
+    } else if constexpr (std::is_same<Projection, without_ptr_t>::value ||
+                         std::is_same<TableScan, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1));
+        return t;
+      }
+    } else if constexpr (std::is_same<Validate, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      typedef typename decltype(property_0)::Type property_0_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0));
+        return t;
+      }
+    } else {
+      Fail("Unsupported Type in json deserialization");
+    }
+  }
+
+  /*
+  // old code
+  // typedef typename std::remove_cv_t<T> without_cv_t; // TODO(CAJan93): remove line
   if constexpr (std::is_pointer<without_cv_t>::value) {
     // check if we have nullptr
     if (data.IsString() && data.AsString() == "NULL") return nullptr;
@@ -584,11 +739,11 @@ T JsonSerializer::from_json(const jsonView& data) {
     T new_object{object};
 
     return new_object;
-  } else if constexpr (is_weak_ptr<without_cv_t>::value) {
-    Fail("Weak pointers are currently not supported by this json serializer");
   } else if constexpr (is_smart_ptr<without_cv_t>::value) {
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
+    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
+        "Weak pointers are currently not supported by this json serializer");
     typedef T smart_ptr_t;                     // type of the smart pointer
     typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
     inner_t* object = new inner_t;
@@ -618,7 +773,7 @@ T JsonSerializer::from_json(const jsonView& data) {
     // call copy constructor to enable inheritance
     T new_object{object};
     return new_object;
-  }
+  }*/
 }
 
 template <typename T>

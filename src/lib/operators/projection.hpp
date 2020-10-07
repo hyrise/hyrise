@@ -66,14 +66,14 @@ class Projection : public AbstractReadOnlyOperator {
   // TODO(CAJan93): Support all relevant members, including parent members. Done?
   inline constexpr static auto properties = std::make_tuple(
       // TODO(CAJan93): include expression
-      property(&Projection::expressions, "expressions"),
+      property(&Projection::_left_input, "_left_input"), property(&Projection::expressions, "expressions"),
       // From AbstractReadOnlyOperator
       // TODO(CAJan93): performance_data not supported
       // TODO(CAJan93): _output not supported
       // TODO(CAJan93): _transaction_context not supported
       // // No support for lqp_node
-      property(&Projection::_type, "_type"), property(&Projection::_left_input, "_left_input"),
-      property(&Projection::_right_input, "_right_input"));
+      property(&Projection::_type, "_type")
+      /*, property(&Projection::_right_input, "_right_input")*/);
 };
 
 }  // namespace opossum

@@ -54,7 +54,7 @@ class GetTable : public AbstractReadOnlyOperator {
                       property(&GetTable::_pruned_column_ids, "_pruned_column_ids"),
                       // from AbstractOperator via AbstractReadOnlyOperator
                       // no support for lqp_node
-                      property(&GetTable::_type, "_type"), property(&GetTable::_left_input, "_left_input"),
-                      property(&GetTable::_right_input, "_right_input"));
+                      property(&GetTable::_type, "_type")/*, property(&GetTable::_left_input, "_left_input"),
+                      property(&GetTable::_right_input, "_right_input")*/);
 };
 }  // namespace opossum

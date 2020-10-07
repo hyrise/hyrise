@@ -103,15 +103,15 @@ class TableScan : public AbstractReadOnlyOperator {
   // TODO(CAJan93): Support all relevant members, including parent members.
   inline constexpr static auto properties = std::make_tuple(
       /*property(&TableScan::excluded_chunk_ids, "excluded_chunk_ids"),
-      property(&TableScan::_predicate, "_predicate"),
       property(&TableScan::_impl, "_impl"),*/
-      property(&TableScan::_impl_description, "_impl_description"),
+      property(&TableScan::_left_input, "_left_input"), property(&TableScan::_predicate, "_predicate"),
+      /*      property(&TableScan::_impl_description, "_impl_description"),
+      property(&TableScan::_right_input, "_right_input"),*/
 
       // from AbstractOperator via AbstractReadOnlyOperator
       // no support for lqp_node
       /*property(&TableScan::performance_data, "performance_data"),*/
-      property(&TableScan::_type, "_type"), property(&TableScan::_left_input, "_left_input"),
-      property(&TableScan::_right_input, "_right_input")
+      property(&TableScan::_type, "_type")
       /*, property(&TableScan::_transaction_context, "_transaction_context")*/
       /*property(&TableScan::_output, "_output"), // should not be important*/
   );

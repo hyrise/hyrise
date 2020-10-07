@@ -129,11 +129,12 @@ class AggregateSort : public AbstractAggregateOperator {
   inline constexpr static auto properties = std::make_tuple(
       // from AbstractAggregateOperator
       // TODO(CAJan93): Support this attribute?
-      property(&AggregateSort::_aggregates, "_aggregates"), property(&AggregateSort::_groupby_column_ids, "_groupby_column_ids"),
+      property(&AggregateSort::_right_input, "_right_input"), property(&AggregateSort::_aggregates, "_aggregates"),
+      property(&AggregateSort::_groupby_column_ids, "_groupby_column_ids"),
       /*property(&AggregateSort::_output_column_definitions, "_output_column_definitions"),*/
       // from AbstractOperator via AbstractReadOnlyOperator
-      property(&AggregateSort::_type, "_type"), property(&AggregateSort::_left_input, "_left_input"),
-      property(&AggregateSort::_right_input, "_right_input"));
+      property(&AggregateSort::_type, "_type") /*, property(&AggregateSort::_left_input, "_left_input"),*/
+  );
 };
 
 }  // namespace opossum

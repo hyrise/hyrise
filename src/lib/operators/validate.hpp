@@ -54,11 +54,12 @@ class Validate : public AbstractReadOnlyOperator {
  public:
   // TODO(CAJan93): Support all relevant members, including parent members.
   inline constexpr static auto properties = std::make_tuple(
-      property(&Validate::_can_use_chunk_shortcut, "_can_use_chunk_shortcut"),
+      property(&Validate::_left_input, "_left_input"),
+      /*property(&Validate::_can_use_chunk_shortcut, "_can_use_chunk_shortcut"),*/
       // from AbstractOperator via AbstractReadOnlyOperator
       /*property(&Validate::lqp_node, "lqp_node"), property(&Validate::performance_data, "performance_data"),*/
-      property(&Validate::_type, "_type"), property(&Validate::_left_input, "_left_input"),
-      property(&Validate::_right_input, "_right_input")
+      property(&Validate::_type, "_type")
+      /* property(&Validate::_right_input, "_right_input")*/
       /*, property(&Validate::_transaction_context, "_transaction_context")*/
       /*property(&Validate::_output, "_output"), // should not be important*/
   );
