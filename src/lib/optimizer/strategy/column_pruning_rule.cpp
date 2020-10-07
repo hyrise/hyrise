@@ -108,7 +108,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
              *     is the only type of aggregate function, we simply require the first output expression from the
              *     left input node.
              */
-            if(!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
+            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
             DebugAssert(!node->left_input()->output_expressions().empty(), "Did not expect empty output expressions");
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
