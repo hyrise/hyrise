@@ -117,6 +117,26 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
+TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({1});
+  table->append({opossum::NULL_VALUE});
+  table->append({2});
+  table->append({opossum::NULL_VALUE});
+  table->append({5});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
 // It assumes that the TableScan produces one output segment per input segment.

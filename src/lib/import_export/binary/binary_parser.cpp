@@ -123,11 +123,11 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
 }
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
-                                                               DataType data_type, bool is_nullable) {
+                                                               DataType data_type, bool column_is_nullable) {
   std::shared_ptr<AbstractSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    result = _import_segment<ColumnDataType>(file, row_count, is_nullable);
+    result = _import_segment<ColumnDataType>(file, row_count, column_is_nullable);
   });
 
   return result;
@@ -135,12 +135,12 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 
 template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
-                                                               bool is_nullable) {
+                                                               bool column_is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
 
   switch (column_type) {
     case EncodingType::Unencoded:
-      return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
+      return _import_value_segment<ColumnDataType>(file, row_count, column_is_nullable);
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
     case EncodingType::FixedStringDictionary:
@@ -168,15 +168,18 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
-                                                                     bool is_nullable) {
-  if (is_nullable) {
-    auto nullables = _read_values<bool>(file, row_count);
-    auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
-  } else {
-    auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(std::move(values));
+                                                                     bool column_is_nullable) {
+  if (column_is_nullable) {
+    const auto segment_is_nullable = _read_value<bool>(file);
+    if (segment_is_nullable) {
+      auto nullables = _read_values<bool>(file, row_count);
+      auto values = _read_values<T>(file, row_count);
+      return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
+    }
   }
+
+  auto values = _read_values<T>(file, row_count);
+  return std::make_shared<ValueSegment<T>>(std::move(values));
 }
 
 template <typename T>

@@ -70,6 +70,42 @@ TEST_P(SortTest, Sort) {
   }
 }
 
+TEST_P(SortTest, UnchangedNullability) {
+  const auto param = GetParam();
+
+  auto segment_nullability_implies_column_nullablility = [](const std::shared_ptr<const Table>& table) {
+    bool correct_nullability = true;
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+        auto column_is_nullable = table->column_is_nullable(column_id);
+        auto abstract_segment = chunk->get_segment(column_id);
+
+        resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          using SegmentType = std::decay_t<decltype(segment)>;
+          if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+            // if the segment is nullable, the column must be nullable as well
+            if (segment.is_nullable() && !column_is_nullable) {
+              correct_nullability = false;
+            }
+          }
+        });
+      }
+    }
+    return correct_nullability;
+  };
+
+  EXPECT_TRUE(segment_nullability_implies_column_nullablility(input_table));
+
+  auto sort = Sort{input_table_wrapper, param.sort_columns, param.output_chunk_size, param.force_materialization};
+  sort.execute();
+
+  const auto output_table = sort.get_output();
+
+  EXPECT_TRUE(segment_nullability_implies_column_nullablility(output_table));
+}
+
 inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestParam>& param_info) {
   const auto& param = param_info.param;
 
