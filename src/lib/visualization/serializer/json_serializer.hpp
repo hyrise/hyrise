@@ -13,6 +13,7 @@
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
 #include "../../expression/abstract_predicate_expression.hpp"
+#include "../../expression/aggregate_expression.hpp"
 #include "../../expression/arithmetic_expression.hpp"
 #include "../../expression/between_expression.hpp"
 #include "../../expression/binary_predicate_expression.hpp"
@@ -21,9 +22,12 @@
 #include "../../expression/pqp_column_expression.hpp"
 #include "../../expression/value_expression.hpp"
 #include "../../logical_query_plan/predicate_node.hpp"
+#include "../../operators/abstract_aggregate_operator.hpp"
 #include "../../operators/abstract_operator.hpp"
-#include "../../operators/get_table.hpp"
+#include "../../operators/aggregate_hash.hpp"
+#include "../../operators/aggregate_sort.hpp"
 #include "../../operators/alias_operator.hpp"
+#include "../../operators/get_table.hpp"
 #include "../../operators/limit.hpp"
 #include "../../operators/projection.hpp"
 #include "../../operators/table_scan.hpp"
@@ -39,6 +43,11 @@
 namespace opossum {
 
 // forward declaration and aliases
+class AbstractExpression;
+class AbstractAggregateOperator;
+class AggregateExpression;
+class AggregateHash;
+class AggregateSort;
 class AliasOperator;
 class ArithmeticExpression;
 class BetweenExpression;
@@ -475,22 +484,6 @@ inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::s
         std::string(boost::get<std::__cxx11::basic_string<char, std::char_traits<char>,
                                                           boost::container::pmr::polymorphic_allocator<char>>>(val)));
   }
-
-  // TODO(CAJan93): Remove comments
-  /*  if (val_t == 0) {  // int
-    variant_jv.WithInteger("val", boost::get<int>(val));
-  } else if (val_t == 1) {  // long
-    variant_jv.WithInteger("val", boost::get<long>(val));
-  } else if (val_t == 2) {  // float
-    variant_jv.WithDouble("val", boost::get<float>(val));
-  } else if (val_t == 3) {  // double
-    variant_jv.WithDouble("val", boost::get<double>(val));
-  } else if (val_t == 3) {  // string
-    Fail("String variant not supported"); // TODO(CAJan93): fix this
-    // variant_jv.WithString("val", boost::get<std::string>(val));
-  } else {
-    Fail(JOIN_TO_STR("Unsupported variant type with index", val_t));
-  }*/
   data.WithObject(key, variant_jv);
 }
 
@@ -646,11 +639,17 @@ jsonVal JsonSerializer::to_json(const T& object) {
         }
 
         case OperatorType::Aggregate: {
-          // TODO(CAJan93): Implement this
-        //  const auto agg = dynamic_cast<const Aggregate*>(abstract_op);
-          std::cout << "Aggregate currently not supported" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          const auto abstract_agg = dynamic_cast<const AbstractAggregateOperator*>(abstract_op);
+          if (const auto agg_hash = dynamic_cast<const AggregateHash*>(abstract_agg); agg_hash) {
+            std::cout << "Aggregate Hash" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+            return to_json<AggregateHash>(*agg_hash);
+          } else if (const auto agg_sort = dynamic_cast<const AggregateSort*>(abstract_agg); agg_sort) {
+            // TODO(CAJan93): Test this path
+            std::cout << "Aggregate Sort" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+            return to_json<AggregateSort>(*agg_sort);
+          }
+          Fail("Unable to cast AbastractAggregator to concrete instance");
           return data;
-          // return to_json<Aggregate>(*agg);
         }
 
         case OperatorType::GetTable: {
@@ -684,14 +683,6 @@ jsonVal JsonSerializer::to_json(const T& object) {
           return to_json<Validate>(*validate);
           return data;
         }
-
-          /**
-         * cast via AbstractAggregateOperator
-        case OperatorType::Aggregate: {
-          const auto aggregate = dynamic_cast<const Aggregate*>(abstract_op);
-          std::cout << "aggregate\n";
-          return to_json<Aggregate>(*aggregate);
-        }*/
 
         default: {
           // TODO(CAJan93) remove below code

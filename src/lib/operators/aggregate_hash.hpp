@@ -18,6 +18,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "bytell_hash_map.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "property.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -148,6 +149,21 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
+
+ public:
+  inline constexpr static auto properties = std::make_tuple(
+      /* TODO(CAJan93): Support these?
+      property(&AggregateHash::_groupby_segments, "_groupby_segments"),
+      property(&AggregateHash::_contexts_per_column, "_contexts_per_column"),*/
+      property(&AggregateHash::_has_aggregate_functions, "_has_aggregate_functions"),
+      // from AbstractAggregateOperator
+      // TODO(CAJan93): Support this attribute?
+      property(&AggregateHash::_aggregates, "_aggregates"),
+      property(&AggregateHash::_groupby_column_ids, "_groupby_column_ids"),
+      /*property(&AggregateHash::_output_column_definitions, "_output_column_definitions"),*/
+      // from AbstractOperator via AbstractReadOnlyOperator
+      property(&AggregateHash::_type, "_type"), property(&AggregateHash::_left_input, "_left_input"),
+      property(&AggregateHash::_right_input, "_right_input"));
 };
 
 }  // namespace opossum

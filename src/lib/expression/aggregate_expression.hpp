@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../operators/property.hpp"
 #include "abstract_expression.hpp"
 
 namespace opossum {
@@ -31,6 +32,12 @@ class AggregateExpression : public AbstractExpression {
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+
+ public:
+  inline constexpr static auto properties = std::make_tuple(
+      property(&AggregateExpression::aggregate_function, "aggregate_function"),
+      // from AbstractExpression
+      property(&AggregateExpression::type, "type"), property(&AggregateExpression::arguments, "arguments"));
 };
 
 }  // namespace opossum

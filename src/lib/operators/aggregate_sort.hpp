@@ -124,6 +124,16 @@ class AggregateSort : public AbstractAggregateOperator {
                                                        const std::vector<ColumnID>& groupby_column_ids);
 
   static Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
+
+ public:
+  inline constexpr static auto properties = std::make_tuple(
+      // from AbstractAggregateOperator
+      // TODO(CAJan93): Support this attribute?
+      property(&AggregateSort::_aggregates, "_aggregates"), property(&AggregateSort::_groupby_column_ids, "_groupby_column_ids"),
+      /*property(&AggregateSort::_output_column_definitions, "_output_column_definitions"),*/
+      // from AbstractOperator via AbstractReadOnlyOperator
+      property(&AggregateSort::_type, "_type"), property(&AggregateSort::_left_input, "_left_input"),
+      property(&AggregateSort::_right_input, "_right_input"));
 };
 
 }  // namespace opossum
