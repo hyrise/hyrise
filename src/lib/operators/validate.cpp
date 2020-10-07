@@ -145,9 +145,15 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
+  // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
+  // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues.
+  auto entirely_visible_chunks = std::vector<bool>{};
+
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+    const auto expected_number_of_valid_rows = chunk_in->size() - chunk_in->invalid_row_count();
 
     Segments output_segments;
     std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
@@ -170,7 +176,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         auto mvcc_data = referenced_chunk->mvcc_data();
 
         if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
-          // We can reuse the old PosList since it is entirely visible.
+          // We can reuse the old PosList since it is entirely visible. Not using the entirely_visible_chunks cache for
+          // this shortcut to keep the code short.
           pos_list_out = pos_list_in;
         } else {
           RowIDPosList temp_pos_list;
@@ -185,7 +192,25 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
         RowIDPosList temp_pos_list;
+        temp_pos_list.reserve(expected_number_of_valid_rows);
+
+        if (entirely_visible_chunks.empty()) {
+          // Check _is_entire_chunk_visible once for every chunk, even if we do not know if it is referenced or not.
+          // While this might introduce a small overhead in the case of many unreferenced chunks, it allows us to avoid
+          // a branch in the hot loop.
+          entirely_visible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
+          for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count(); ++referenced_table_chunk_id) {
+            const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
+            entirely_visible_chunks[referenced_table_chunk_id] = _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
+          }
+        }
+
         for (auto row_id : *pos_list_in) {
+          if (entirely_visible_chunks[row_id.chunk_id]) {
+            temp_pos_list.emplace_back(row_id);
+            continue;
+          }
+
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->mvcc_data();
@@ -212,10 +237,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
       if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
+        // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.
         pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
       } else {
         const auto mvcc_data = chunk_in->mvcc_data();
         RowIDPosList temp_pos_list;
+        temp_pos_list.reserve(expected_number_of_valid_rows);
         temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(

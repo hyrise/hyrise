@@ -206,7 +206,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            static_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
+            dynamic_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -253,7 +253,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const size_t _radix_bits;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -322,33 +322,56 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
 
     auto build_side_bloom_filter = BloomFilter{};
+    auto probe_side_bloom_filter = BloomFilter{};
 
-    Timer timer_materialization;
-    if (keep_nulls_build_column) {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
-    } else {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
-    }
-    _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+    const auto materialize_build_side = [&](const auto& input_bloom_filter) {
+      if (keep_nulls_build_column) {
+        materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+      } else {
+        materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+      }
+    };
 
     /**
      * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
-    auto probe_side_bloom_filter = BloomFilter{};
+    const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
+      if (keep_nulls_probe_column) {
+        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+            input_bloom_filter);
+      } else {
+        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+            input_bloom_filter);
+      }
+    };
 
-    if (keep_nulls_probe_column) {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-          build_side_bloom_filter);
+    Timer timer_materialization;
+    if (_build_input_table->row_count() < _probe_input_table->row_count()) {
+      // TODO fix default arg
+      materialize_build_side(~BloomFilter(BLOOM_FILTER_SIZE));
+      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      materialize_probe_side(build_side_bloom_filter);
+      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-          build_side_bloom_filter);
+      materialize_probe_side(~BloomFilter(BLOOM_FILTER_SIZE));
+      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      materialize_build_side(probe_side_bloom_filter);
+      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
-    _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+
+    auto build_side_rows = size_t{0};
+    for (const auto& partition : materialized_build_column) {
+      build_side_rows += partition.elements.size();
+    }
+    auto probe_side_rows = size_t{0};
+    for (const auto& partition : materialized_probe_column) {
+      probe_side_rows += partition.elements.size();
+    }
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
@@ -356,6 +379,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
      */
+    const auto post_bloom_radix_bits = calculate_radix_bits<BuildColumnType>(build_side_rows, probe_side_rows);
+//    std::cout << _join_hash.description(DescriptionMode::SingleLine) << ": " << _radix_bits << " -> " << post_bloom_radix_bits << std::endl;
+    if (post_bloom_radix_bits == 0) {
+      _radix_bits = 0;
+    }
+
     if (_radix_bits > 0) {
       Timer timer_clustering;
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -566,7 +595,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
       // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
       // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-      constexpr auto MIN_SIZE = 500;
+      constexpr auto MIN_SIZE = 1;
       constexpr auto MAX_SIZE = MIN_SIZE * 2;
       build_side_pos_list->reserve(MAX_SIZE);
       probe_side_pos_list->reserve(MAX_SIZE);

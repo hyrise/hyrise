@@ -195,22 +195,27 @@ class PosHashTable {
 // `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
 // (1) Dynamically check whether bloom filters are worth the memory and computational costs This could be based on the
 //     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
-// (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
+// (2) Choosing an appropriate filter size. 2^24 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
 // (3) Check whether using multiple hash functions (k>1) brings any improvement.
 // (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
-//     intermediary results. When a bloom filter-supported materialization has been done (i.e., materialization has not
+//     intermediary results. When a bloom filter-supported partitioning has been done (i.e., partitioning has not
 //     been skipped), we do not need to use a bloom filter in the build phase anymore.
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
-static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
+static constexpr auto BLOOM_FILTER_SIZE = 1 << 24;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
 // needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
 using BloomFilter = boost::dynamic_bitset<>;
+
+// EMPTY_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
+// negation (~x). As the negation is surprisingly expensive, we create a static empty bloom filter and reference
+// it where needed.
+static const auto EMPTY_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
 // @param column_id            Column within that table to materialize
@@ -225,10 +230,7 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
-                                    const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
-  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
-  // negation (~x).
-
+                                    const BloomFilter& input_bloom_filter = EMPTY_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -463,9 +465,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                     const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
-  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
-  // negation (~x).
+                                     const BloomFilter& input_bloom_filter = EMPTY_BLOOM_FILTER) {
   if (radix_container.empty()) return radix_container;
 
   if constexpr (keep_null_values) {

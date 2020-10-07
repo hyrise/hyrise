@@ -21,6 +21,7 @@
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/semi_join_reduction_rule.hpp"
+#include "strategy/semi_join_removal_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
@@ -111,8 +112,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
-
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
@@ -120,7 +119,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
-  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
+ optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.
@@ -150,6 +151,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+ optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
 
   return optimizer;
 }

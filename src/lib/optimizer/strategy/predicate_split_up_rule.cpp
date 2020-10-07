@@ -1,11 +1,57 @@
 #include "predicate_split_up_rule.hpp"
 
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
 
 namespace opossum {
+
+namespace {
+bool can_use_union_all(const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
+  // Optimization: The ExpressionReductionRule transforms `x NOT LIKE 'foo%'` into `x < 'foo' OR x >= 'fop'`. For this
+  // special case, we know that the two OR arguments are mutually exclusive. In this case, we do not need to use
+  // SetOperationMode::Positions but can use SetOperationMode::All. This surely applies to other cases, too, but those
+  // are not covered yet. Note that this is not equal to XOR. Here, we know that both sides cannot be true at the same
+  // time. XOR would require us to check if both are true and discard the row if they are.
+  if (predicates.size() != 2) return false;
+
+  const auto first_binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[0]);
+  const auto second_binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[1]);
+  if (!first_binary_predicate || !second_binary_predicate) return false;
+
+  // Check for pattern `col_x < 'val' AND col_x >= 'vam'`
+  if (first_binary_predicate->predicate_condition != PredicateCondition::LessThan || second_binary_predicate->predicate_condition != PredicateCondition::GreaterThanEquals) {
+    // Wrong predicates
+    return false;
+  }
+
+  if (first_binary_predicate->left_operand()->type != ExpressionType::LQPColumn || first_binary_predicate->left_operand() != second_binary_predicate->left_operand()) {
+    // Left side of predicates is not a column or is a different column for both expressions
+    return false;
+  }
+
+  if (first_binary_predicate->right_operand()->type != ExpressionType::Value || first_binary_predicate->right_operand()->type != ExpressionType::Value) {
+    // Right side of predicates is not a value
+    return false;
+  }
+
+  if (first_binary_predicate->right_operand()->data_type() != DataType::String || first_binary_predicate->right_operand()->data_type() != DataType::String) {
+    // Right side of predicates is not a string
+    return false;
+  }
+
+  const auto lower_string_expression = static_cast<const ValueExpression&>(*first_binary_predicate->right_operand());
+  auto lower_string_plus_one = boost::get<pmr_string>(lower_string_expression.value);
+  const auto upper_string_expression = static_cast<const ValueExpression&>(*second_binary_predicate->right_operand());
+  const auto upper_string = boost::get<pmr_string>(upper_string_expression.value);
+
+  ++lower_string_plus_one[lower_string_plus_one.size() - 1];
+  return lower_string_plus_one == upper_string;
+}
+}
 
 PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions) : _split_disjunctions(split_disjunctions) {}
 
@@ -83,7 +129,8 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   }
 
   // Step 1: Insert initial diamond
-  auto top_union_node = UnionNode::make(SetOperationMode::Positions);
+  const auto set_operation_mode = can_use_union_all(flat_disjunction) ? SetOperationMode::All : SetOperationMode::Positions;
+  auto top_union_node = UnionNode::make(set_operation_mode);
   const auto diamond_bottom = predicate_node->left_input();
   lqp_replace_node(predicate_node, top_union_node);
   {

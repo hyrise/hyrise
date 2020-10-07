@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "../../third_party/robin-map/include/tsl/robin_map.h"
 #include <boost/container/small_vector.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
@@ -55,10 +56,10 @@ This result contains:
 */
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateResult {
-  std::optional<AggregateType> current_primary_aggregate;
-  std::vector<AggregateType> current_secondary_aggregates;
+  AggregateType current_primary_aggregate;  // TODO use aggregate_count instead of optional?
+//  std::vector<AggregateType> current_secondary_aggregates;
   size_t aggregate_count = 0;
-  std::set<ColumnDataType> distinct_values;
+//  std::set<ColumnDataType> distinct_values;
   RowID row_id;
 };
 
@@ -73,7 +74,7 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+    tsl::robin_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
                          AggregateResultIdMapAllocator<AggregateKey>>;
 
 // The key type that is used for the aggregation map.
@@ -149,7 +150,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
-  std::optional<size_t> _num_results{};
+  mutable std::optional<size_t> _num_results{};
 };
 
 }  // namespace opossum

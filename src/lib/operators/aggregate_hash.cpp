@@ -65,19 +65,16 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
       }
     }
 
-    auto it = result_ids.find(key);
-    if (it != result_ids.end()) {
-      const auto result_id = it->second;
+    auto result_id = results.size();
+    auto [it, inserted] = result_ids.emplace(key, result_id);
+    if (!inserted) {
+      result_id = it->second;
       if constexpr(CacheResultIds) {
         first_key_entry.get() = mask | result_id;
       }
       // std::cout << 'h';
       return results[result_id];
     }
-
-    auto result_id = results.size();
-
-    result_ids.emplace_hint(it, key, result_id);
 
     // If it was added to the id map, add the current row id to the result list so that we can revert the
     // value(s) -> key mapping
@@ -141,7 +138,8 @@ template <typename ColumnDataType, typename AggregateType>
 struct AggregateResultContext : SegmentVisitorContext {
   using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, AggregateType>>;
 
-  AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {}
+  AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {
+  }
 
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, AggregateType> results;
@@ -186,18 +184,24 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     */
     if (!position.is_null()) {
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(ColumnDataType{position.value()}, result.current_primary_aggregate, result.current_secondary_aggregates);
-
-      if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
-                    function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        // Increase the counter of non-NULL values only for aggregation functions that use it.
-        ++result.aggregate_count;
+auto optional = result.aggregate_count > 0 ? std::optional<AggregateType>{result.current_primary_aggregate} : std::optional<AggregateType>{};
+auto v = std::vector<AggregateType>{};
+      aggregator(ColumnDataType{position.value()}, optional, v);
+      if (optional) {
+        result.current_primary_aggregate = *optional;
       }
+//      aggregator(ColumnDataType{position.value()}, result.current_primary_aggregate, result.current_secondary_aggregates);
+
+      // if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
+      //               function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+      //   // Increase the counter of non-NULL values only for aggregation functions that use it.
+        ++result.aggregate_count;
+      // }
 
       if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
         // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
         // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-        result.distinct_values.insert(ColumnDataType{position.value()});
+//        result.distinct_values.insert(ColumnDataType{position.value()});
       }
     }
 
@@ -776,10 +780,10 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    null_values[output_offset] = !result.current_primary_aggregate;
+    null_values[output_offset] = result.aggregate_count == 0;
 
-    if (result.current_primary_aggregate) {
-      values[output_offset] = *result.current_primary_aggregate;
+    if (result.aggregate_count > 0) {
+      values[output_offset] = result.current_primary_aggregate;
     }
     ++output_offset;
   }
@@ -806,11 +810,11 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
     const AggregateResults<ColumnDataType, AggregateType>& results) {
   values.resize(results.size());
 
-  size_t output_offset = 0;
-  for (const auto& result : results) {
-    values[output_offset] = result.distinct_values.size();
-    ++output_offset;
-  }
+//  size_t output_offset = 0;
+//  for (const auto& result : results) {
+//    values[output_offset] = result.distinct_values.size();
+//    ++output_offset;
+//  }
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
@@ -823,10 +827,10 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 
   auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
-    null_values[output_offset] = !result.current_primary_aggregate;
+    null_values[output_offset] = result.aggregate_count == 0;
 
-    if (result.current_primary_aggregate) {
-      values[output_offset] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    if (result.aggregate_count > 0) {
+      values[output_offset] = result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++output_offset;
   }
@@ -852,8 +856,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     const auto count = static_cast<AggregateType>(result.aggregate_count);
 
-    if (result.current_primary_aggregate && count > 1) {
-      values[output_offset] = *result.current_primary_aggregate;
+    if (count > 1) {
+      values[output_offset] = result.current_primary_aggregate;
     } else {
       null_values[output_offset] = true;
     }
