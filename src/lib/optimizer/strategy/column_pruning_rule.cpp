@@ -93,15 +93,22 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           // All group_by-expressions are required
           locally_required_expressions.emplace(expression);
         } else {
-          // We require all ArregateExpressions' arguments
+          // We need the arguments of all aggregate functions
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
           if (!AggregateExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
           } else {
-            // COUNT(*) edge case: There is no argument expression that we can add. In the end, we should require
-            // TODO Continue Doc
+            /**
+             * COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
+             * INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
+             * ensure that the AggregateNode requires at least one expression from other nodes.
+             * For
+             *  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
+             *  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
+             *     is the only type of aggregate function, we simply require the first output expression from the
+             *     left input node.
+             */
             if(!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
-            // Ensure, that we require at least one output expression for ungrouped COUNT(*) aggregations.
             DebugAssert(!node->left_input()->output_expressions().empty(), "Did not expect empty output expressions");
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
