@@ -32,9 +32,18 @@ class DictionarySegment : public BaseDictionarySegment {
 
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
+  template <typename Decompressor = void>
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    const auto value_id = _decompressor->get(chunk_offset);
+    auto value_id = ValueID{};
+    if constexpr (std::is_same_v<Decompressor, void>) {
+      // No decompressor type supplied, use virtual method call
+      value_id = _decompressor->get(chunk_offset);
+    } else {
+      // Use static cast instead of virtual method call
+      value_id = static_cast<Decompressor&>(*_decompressor).get(chunk_offset);
+    }
+
     if (value_id == _dictionary->size()) {
       return std::nullopt;
     }
