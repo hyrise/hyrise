@@ -37,7 +37,7 @@ class AggregateExpression : public AbstractExpression {
   inline constexpr static auto properties = std::make_tuple(
       property(&AggregateExpression::aggregate_function, "aggregate_function"),
       // from AbstractExpression
-      property(&AggregateExpression::type, "type"), property(&AggregateExpression::arguments, "arguments"));
+      property(&AggregateExpression::arguments, "arguments"), property(&AggregateExpression::type, "type"));
 };
 
 }  // namespace opossum
