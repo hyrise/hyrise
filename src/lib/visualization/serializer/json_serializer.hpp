@@ -452,6 +452,31 @@ jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
   return jv;
 }
 
+template <OperatorType>
+struct get_operator_type;
+
+template <>
+struct get_operator_type<OperatorType::Alias> {
+  using Type = AliasOperator;
+};
+template <>
+struct get_operator_type<OperatorType::Limit> {
+  using Type = Limit;
+};
+template <>
+struct get_operator_type<OperatorType::Projection> {
+  using Type = Projection;
+};
+template <>
+struct get_operator_type<OperatorType::TableScan> {
+  using Type = TableScan;
+};
+
+template <>
+struct get_operator_type<OperatorType::Validate> {
+  using Type = Validate;
+};
+
 // unserialize function
 template <typename T>
 T JsonSerializer::from_json(const jsonView& data) {
@@ -487,11 +512,12 @@ T JsonSerializer::from_json(const jsonView& data) {
       }
       OperatorType operator_type = operator_type_opt.value();
 
+     // std::cout << magic_enum::enum_name(operator_type).data() << std::endl;  // TODO(CAJan93): remove debug msg
+     // return from_json<get_operator_type<operator_type>::Type*>(data);
+
       // TODO(CAJan93): Basically the same as the serializer. This should be in a separate function
       switch (operator_type) {
         case OperatorType::Alias: {
-          std::cout << "Alias" << std::endl;
-          return from_json<AliasOperator*>(data);
         } break;
 
         case OperatorType::Aggregate: {
