@@ -108,7 +108,9 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpNotLike) {
   // SELECT * FROM a WHERE a < 'foo' OR a >= 'fop' - should identify the conditions as mutually exclusive and use
-  // SetOperationMode::All
+  // SetOperationMode::All. The expression could have been the result of the ExpressionReductionRule being applied
+  // to `a NOT LIKE 'foo%'`.
+
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_c, value_("fop"))),
