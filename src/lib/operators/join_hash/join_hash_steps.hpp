@@ -206,7 +206,7 @@ using BloomFilter = boost::dynamic_bitset<>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
 // negation (~x). As the negation is surprisingly expensive, we create a static empty bloom filter and reference
-// it where needed. Having a bloom filter that always returns true means avoids a branch in the hot loop.
+// it where needed. Having a bloom filter that always returns true avoids a branch in the hot loop.
 static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
