@@ -27,7 +27,7 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
   const auto second_binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[1]);
   if (!first_binary_predicate || !second_binary_predicate) return false;
 
-  // Check for pattern `col_x < 'val' AND col_x >= 'vam'`
+  // Check for pattern `col_x < 'val' OR col_x >= 'vam'`
   if (first_binary_predicate->predicate_condition != PredicateCondition::LessThan ||
       second_binary_predicate->predicate_condition != PredicateCondition::GreaterThanEquals) {
     // Wrong predicates
