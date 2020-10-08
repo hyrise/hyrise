@@ -365,27 +365,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
 
-    auto build_side_rows = size_t{0};
-    for (const auto& partition : materialized_build_column) {
-      build_side_rows += partition.elements.size();
-    }
-    auto probe_side_rows = size_t{0};
-    for (const auto& partition : materialized_probe_column) {
-      probe_side_rows += partition.elements.size();
-    }
-
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
      *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
      */
-    const auto post_bloom_radix_bits = calculate_radix_bits<BuildColumnType>(build_side_rows, probe_side_rows);
-//    std::cout << _join_hash.description(DescriptionMode::SingleLine) << ": " << _radix_bits << " -> " << post_bloom_radix_bits << std::endl;
-    if (post_bloom_radix_bits == 0) {
-      _radix_bits = 0;
-    }
-
     if (_radix_bits > 0) {
       Timer timer_clustering;
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
