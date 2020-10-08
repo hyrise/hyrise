@@ -64,14 +64,14 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
   // SELECT * FROM a WHERE a < 3 OR a >= 5
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(or_(less_than_(a_a, value_(3)), greater_than_equals_(a_a, value_(5))),
+  PredicateNode::make(or_(less_than_(a_a, value_(3)), greater_than_(a_a, value_(5))),
     node_a);
 
   const auto expected_lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, value_(3)),
       node_a),
-    PredicateNode::make(greater_than_equals_(a_a, value_(5)),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
       node_a));
   // clang-format on
 
@@ -131,14 +131,14 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply1) {
   // SELECT * FROM a WHERE c < 'foo' OR c >= 'foq' - looks like SplitUpNotLike, but the optimization does not apply
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_c, value_("foq"))),
+  PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_c, value_("bar"))),
     node_a);
 
   const auto expected_lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_c, value_("foo")),
       node_a),
-    PredicateNode::make(greater_than_equals_(a_c, value_("foq")),
+    PredicateNode::make(greater_than_equals_(a_c, value_("bar")),
       node_a));
   // clang-format on
 
@@ -159,6 +159,27 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply2) {
     PredicateNode::make(less_than_(a_c, value_("foo")),
       node_a),
     PredicateNode::make(greater_than_equals_(a_d, value_("fop")),
+      node_a));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateSplitUpRuleTest, SplitUpMutuallyExclusiveInts) {
+  // SELECT * FROM a WHERE a < 5 OR b >= 8 - should identify the conditions as mutually exclusive and use
+  // SetOperationMode::All
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_(a_a, value_(5)), greater_than_equals_(a_a, value_(8))),
+    node_a);
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::All,
+    PredicateNode::make(less_than_(a_a, value_(5)),
+      node_a),
+    PredicateNode::make(greater_than_equals_(a_a, value_(8)),
       node_a));
   // clang-format on
 
