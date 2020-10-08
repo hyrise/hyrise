@@ -199,9 +199,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           // While this might introduce a small overhead in the case of many unreferenced chunks, it allows us to avoid
           // a branch in the hot loop.
           entirely_visible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
-          for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count(); ++referenced_table_chunk_id) {
+          for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count();
+               ++referenced_table_chunk_id) {
             const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
-            entirely_visible_chunks[referenced_table_chunk_id] = _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
+            entirely_visible_chunks[referenced_table_chunk_id] =
+                _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
           }
         }
 
