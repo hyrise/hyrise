@@ -352,7 +352,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
-      // TODO fix default arg
       materialize_build_side(EMPTY_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
