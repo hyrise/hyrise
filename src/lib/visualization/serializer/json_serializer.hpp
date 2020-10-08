@@ -7,6 +7,7 @@
 #include <variant>
 
 #include <aws/core/utils/json/JsonSerializer.h>
+#include <magic_enum.hpp>
 
 // TODO(CAJan93): #include "../assert.hpp"
 // TODO(CAJan93): #include "../string.hpp"
@@ -63,117 +64,6 @@ class ValueExpression;
 using jsonVal = Aws::Utils::Json::JsonValue;
 using jsonView = Aws::Utils::Json::JsonView;
 
-inline std::string print_expr_type(const ExpressionType& t) {
-  switch (t) {
-    case ExpressionType::Aggregate:
-      return "Aggregate";
-    case ExpressionType::Arithmetic:
-      return "Arithmetic";
-    case ExpressionType::Cast:
-      return "Cast";
-    case ExpressionType::Case:
-      return "Case";
-    case ExpressionType::CorrelatedParameter:
-      return "CorrelatedParameter";
-    case ExpressionType::PQPColumn:
-      return "PQPColumn";
-    case ExpressionType::LQPColumn:
-      return "LQPColumn";
-    case ExpressionType::Exists:
-      return "Exists";
-    case ExpressionType::Extract:
-      return "Extract";
-    case ExpressionType::Function:
-      return "Function";
-    case ExpressionType::List:
-      return "List";
-    case ExpressionType::Logical:
-      return "Logical";
-    case ExpressionType::Placeholder:
-      return "Placeholder";
-    case ExpressionType::Predicate:
-      return "Predicate";
-    case ExpressionType::PQPSubquery:
-      return "PQPSubquery";
-    case ExpressionType::LQPSubquery:
-      return "LQPSubquery";
-    case ExpressionType::UnaryMinus:
-      return "UnaryMinus";
-    default:
-      return "Value";
-  }
-}
-
-// TODO(CAJan93): remove and use magic enum
-inline std::string print_type(const OperatorType& t) {
-  switch (t) {
-    case OperatorType::Aggregate:
-      return "Aggregate";
-    case OperatorType::Alias:
-      return "Alias";
-    case OperatorType::ChangeMetaTable:
-      return "ChangeMetaTable";
-    case OperatorType::CreateTable:
-      return "CreateTable";
-    case OperatorType::CreatePreparedPlan:
-      return "CreatePreparedPlan";
-    case OperatorType::CreateView:
-      return "CreateView";
-    case OperatorType::DropTable:
-      return "DropTable";
-    case OperatorType::DropView:
-      return "DropView";
-    case OperatorType::Delete:
-      return "Delete";
-    case OperatorType::Difference:
-      return "Difference";
-    case OperatorType::Export:
-      return "Export";
-    case OperatorType::GetTable:
-      return "GetTable";
-    case OperatorType::Import:
-      return "Import";
-    case OperatorType::IndexScan:
-      return "IndexScan";
-    case OperatorType::Insert:
-      return "Insert";
-    case OperatorType::JoinHash:
-      return "JoinHash";
-    case OperatorType::JoinIndex:
-      return "JoinIndex";
-    case OperatorType::JoinNestedLoop:
-      return "JoinNestedLoop";
-    case OperatorType::JoinSortMerge:
-      return "JoinSortMerge";
-    case OperatorType::JoinVerification:
-      return "JoinVerification";
-    case OperatorType::Limit:
-      return "Limit";
-    case OperatorType::Print:
-      return "Print";
-    case OperatorType::Product:
-      return "Product";
-    case OperatorType::Projection:
-      return "Projection";
-    case OperatorType::Sort:
-      return "Sort";
-    case OperatorType::TableScan:
-      return "TableScan";
-    case OperatorType::TableWrapper:
-      return "TableWrapper";
-    case OperatorType::UnionAll:
-      return "UnionAll";
-    case OperatorType::UnionPositions:
-      return "UnionPositions";
-    case OperatorType::Update:
-      return "Update";
-    case OperatorType::Validate:
-      return "Validate";
-    default:
-      return "mock";
-  }
-}
-
 // TODO(CAJan93): Remove this function. This is from assert.hpp
 template <bool b>
 struct StaticAssert {};
@@ -227,6 +117,9 @@ class JsonSerializer {
   // unserialize function
   template <typename T>
   static T from_json(const jsonView& data);
+
+  template <typename T>
+  static auto from_json_str(const std::string& json_str);
 
   template <typename T>
   static jsonVal to_json(const T& object);
@@ -302,9 +195,9 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
       return nullptr;
     }
     if (value.GetObject(key).IsObject()) {
-      // handle nested object (pointer)
-      jsonView sub_json = value.GetObject(key);
       if constexpr (has_member_properties<without_cv_value_t>::value) {
+        // handle nested object (pointer)
+        jsonView sub_json = value.GetObject(key);
         // T:: properties exist
         without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
         return sub_obj;
@@ -332,13 +225,13 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
     if constexpr (std::is_enum<without_cv_t>::value) {
       if (value.GetObject(key).IsIntegerType()) {
         // handle enum
-        return static_cast<without_cv_t>(value.GetInteger(key));
+        return static_cast<without_cv_t>(value.GetString(key));
       }
     } else {
       if (value.GetObject(key).IsObject()) {
-        // handle nested object (pointer or non-pointer)
-        jsonView sub_json = value.GetObject(key);
         if constexpr (has_member_properties<without_cv_t>::value) {
+          // handle nested object (pointer or non-pointer)
+          jsonView sub_json = value.GetObject(key);
           without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
           without_cv_t new_sub_obj{sub_obj};
           return new_sub_obj;
@@ -538,7 +431,8 @@ inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, cons
   } else if constexpr (is_vector<T>::value) {
     data.WithObject(key, vec_to_json(val));
   } else if constexpr (std::is_enum<T>::value) {
-    data.WithInteger(key, static_cast<int>(val));
+    const std::string enum_name = magic_enum::enum_name(val).data();
+    data.WithString(key, enum_name);
   } else {
     if constexpr (has_member_properties<T>::value) {
       // nested (T::properties present)
@@ -562,13 +456,15 @@ jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
 template <typename T>
 T JsonSerializer::from_json(const jsonView& data) {
   typedef typename std::remove_cv_t<T> without_cv_t;
+
   if constexpr (is_smart_ptr<without_cv_t>::value) {
     StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
         "Unique pointers are currently not supported by this json serializer");
     StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
         "Weak pointers are currently not supported by this json serializer");
-    typedef T smart_ptr_t;                     // type of the smart pointer
-    typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
+    std::cout << "is shared ptr" << std::endl;  // TODO(CAJan93): remove debug msg
+    typedef T smart_ptr_t;                      // type of the smart pointer
+    typedef get_inner_t<smart_ptr_t> inner_t;   // type of the object the pointer is pointing to
     inner_t* object = from_json<inner_t*>(data);
     smart_ptr_t sp = smart_ptr_t(object);
     return sp;
@@ -577,8 +473,104 @@ T JsonSerializer::from_json(const jsonView& data) {
     constexpr bool is_raw_ptr = std::is_pointer<without_cv_t>::value;
     typedef typename std::remove_pointer_t<without_cv_t> without_ptr_t;
 
-    if constexpr (std::is_same<AggregateExpression, without_ptr_t>::value ||
-                  std::is_same<IsNullExpression, without_ptr_t>::value) {
+    if constexpr (std::is_same<AbstractOperator, without_ptr_t>::value) {
+      std::cout << "AbstractOperator" << std::endl;  // TODO(CAJan93) remove debug msg
+
+      Assert(data.KeyExists("_type") || data.KeyExists("type"),
+             JOIN_TO_STR("AbstractOperator needs type in order to be casted to concrete operator. Json was ",
+                         data.WriteReadable()));
+
+      const std::string type_key = data.KeyExists("_type") ? "_type" : "type";
+      auto operator_type_opt = magic_enum::enum_cast<OperatorType>(data.GetString(type_key));
+      if (!operator_type_opt.has_value()) {
+        Fail(JOIN_TO_STR("Unable to create OperatorType from string '", data.GetString(type_key)));
+      }
+      OperatorType operator_type = operator_type_opt.value();
+
+      // TODO(CAJan93): Basically the same as the serializer. This should be in a separate function
+      switch (operator_type) {
+        case OperatorType::Alias: {
+          std::cout << "Alias" << std::endl;
+          return from_json<AliasOperator*>(data);
+        } break;
+
+        case OperatorType::Aggregate: {
+          std::cout << " OperatorType::Aggregate" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+          /*const auto abstract_agg = dynamic_cast<const AbstractAggregateOperator*>(abstract_op);
+          if (const auto agg_hash = dynamic_cast<const AggregateHash*>(abstract_agg); agg_hash) {
+            std::cout << "Aggregate Hash" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+            return to_json<AggregateHash>(*agg_hash);
+          } else if (const auto agg_sort = dynamic_cast<const AggregateSort*>(abstract_agg); agg_sort) {
+            // TODO(CAJan93): Test this path
+            std::cout << "Aggregate Sort" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+            return to_json<AggregateSort>(*agg_sort);
+          }
+          Fail("Unable to cast AbastractAggregator to concrete instance");
+          return data;
+          */
+        } break;
+
+        case OperatorType::GetTable: {
+          std::cout << "OperatorType::GetTable" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+                         /*
+          const auto gt = dynamic_cast<const GetTable*>(abstract_op);
+          std::cout << "GetTable" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return to_json<GetTable>(*gt);
+          */
+        } break;
+
+        // TODO(CAJan93): Check if I am using the corret limit class
+        case OperatorType::Limit: {
+          std::cout << "OperatorType::Limit" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+                         /*
+          const auto limit = dynamic_cast<const Limit*>(abstract_op);
+          std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Limit>(*limit);
+          */
+        } break;
+
+        case OperatorType::Projection: {
+          std::cout << "OperatorType::Projection" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+                         /*
+          const auto projection = dynamic_cast<const Projection*>(abstract_op);
+          std::cout << "projection" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Projection>(*projection);*/
+        } break;
+
+        case OperatorType::TableScan: {
+          std::cout << "OperatorType::TableScan" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+                         /*
+          const auto table_scan = dynamic_cast<const TableScan*>(abstract_op);
+          std::cout << "TableScan" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<TableScan>(*table_scan);*/
+        } break;
+
+        case OperatorType::Validate: {
+          std::cout << "OperatorType::Validate" << std::endl;
+          Fail("fail");  // TODO(CAJan93): remove
+                         /*
+          const auto validate = dynamic_cast<const Validate*>(abstract_op);
+          std::cout << "Validate" << std::endl;  // TODO(CAJan93): Remove this debug msg
+          return to_json<Validate>(*validate);
+          return data;*/
+        } break;
+
+        default: {
+          // TODO(CAJan93) remove below code
+          std::cout << "default OperatorType, with type \n" << magic_enum::enum_name(operator_type).data() << '\n';
+          Fail("fail");  // TODO(CAJan93): remove
+        }
+      }
+
+    } else if constexpr (std::is_same<AbstractExpression, without_ptr_t>::value) {
+      Fail("AbstractExpression is currently not supported");  // TODO(CAJan93) Is this required?
+    } else if constexpr (std::is_same<AggregateExpression, without_ptr_t>::value ||
+                         std::is_same<IsNullExpression, without_ptr_t>::value) {
       constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
       typedef typename decltype(property_0)::Type property_0_t;
 
@@ -586,11 +578,11 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_1)::Type property_1_t;
 
       if constexpr (is_raw_ptr) {
-        without_cv_t t =
-            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0));
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0.name),
+                                           as_any<property_1_t>(data, property_1.name).at(0));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name).at(0));
         return t;
       }
     } else if constexpr (std::is_same<ArithmeticExpression, without_ptr_t>::value ||
@@ -602,13 +594,13 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_1)::Type property_1_t;
 
       if constexpr (is_raw_ptr) {
-        without_cv_t t =
-            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
-                              as_any<property_1_t>(data, property_1).at(1));
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0.name),
+                                           as_any<property_1_t>(data, property_1.name).at(0),
+                                           as_any<property_1_t>(data, property_1.name).at(1));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
-                        as_any<property_1_t>(data, property_1).at(1));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name).at(0),
+                        as_any<property_1_t>(data, property_1.name).at(1));
         return t;
       }
     } else if constexpr (std::is_same<BetweenExpression, without_ptr_t>::value) {
@@ -619,12 +611,13 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_1)::Type property_1_t;
       if constexpr (is_raw_ptr) {
         without_cv_t t = new without_ptr_t(
-            as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
-            as_any<property_1_t>(data, property_1).at(1), as_any<property_1_t>(data, property_1).at(2));
+            as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name).at(0),
+            as_any<property_1_t>(data, property_1.name).at(1), as_any<property_1_t>(data, property_1.name).at(2));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1).at(0),
-                        as_any<property_1_t>(data, property_1).at(1), as_any<property_1_t>(data, property_1).at(2));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name).at(0),
+                        as_any<property_1_t>(data, property_1.name).at(1),
+                        as_any<property_1_t>(data, property_1.name).at(2));
         return t;
       }
     } else if constexpr (std::is_same<PQPColumnExpression, without_ptr_t>::value) {
@@ -642,12 +635,12 @@ T JsonSerializer::from_json(const jsonView& data) {
 
       if constexpr (is_raw_ptr) {
         without_cv_t t =
-            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
-                              as_any<property_2_t>(data, property_2), as_any<property_3_t>(data, property_3));
+            new without_ptr_t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                              as_any<property_2_t>(data, property_2.name), as_any<property_3_t>(data, property_3.name));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
-                        as_any<property_2_t>(data, property_2), as_any<property_3_t>(data, property_3));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                        as_any<property_2_t>(data, property_2.name), as_any<property_3_t>(data, property_3.name));
         return t;
       }
     } else if constexpr (std::is_same<ValueExpression, without_ptr_t>::value) {
@@ -671,17 +664,17 @@ T JsonSerializer::from_json(const jsonView& data) {
       constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
       typedef typename decltype(property_1)::Type property_1_t;
 
-      constexpr auto property_2 = std::get<0>(without_ptr_t::properties);
+      constexpr auto property_2 = std::get<2>(without_ptr_t::properties);
       typedef typename decltype(property_2)::Type property_2_t;
 
       if constexpr (is_raw_ptr) {
         without_cv_t t =
-            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
-                              as_any<property_2_t>(data, property_2));
+            new without_ptr_t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                              as_any<property_2_t>(data, property_2.name));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1),
-                        as_any<property_2_t>(data, property_2));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                        as_any<property_2_t>(data, property_2.name));
         return t;
       }
     } else if constexpr (std::is_same<Projection, without_ptr_t>::value ||
@@ -693,10 +686,10 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_1)::Type property_1_t;
       if constexpr (is_raw_ptr) {
         without_cv_t t =
-            new without_ptr_t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1));
+            new without_ptr_t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0), as_any<property_1_t>(data, property_1));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name));
         return t;
       }
     } else if constexpr (std::is_same<Validate, without_ptr_t>::value) {
@@ -704,76 +697,16 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_0)::Type property_0_t;
 
       if constexpr (is_raw_ptr) {
-        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0));
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0.name));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name));
         return t;
       }
     } else {
       Fail("Unsupported Type in json deserialization");
     }
   }
-
-  /*
-  // old code
-  // typedef typename std::remove_cv_t<T> without_cv_t; // TODO(CAJan93): remove line
-  if constexpr (std::is_pointer<without_cv_t>::value) {
-    // check if we have nullptr
-    if (data.IsString() && data.AsString() == "NULL") return nullptr;
-
-    T object = new std::remove_pointer_t<without_cv_t>;
-    // number of properties
-    constexpr auto nb_properties = std::tuple_size<decltype(std::remove_pointer_t<without_cv_t>::properties)>::value;
-    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
-      // get the property
-      constexpr auto property = std::get<i>(std::remove_pointer_t<without_cv_t>::properties);
-
-      // get the type of the property
-      using Type = typename decltype(property)::Type;
-
-      // set the value to the member
-      object->*(property.member) = as_any<Type>(data, property.name);
-    });
-    // call copy constructor to enable inheritance
-    T new_object{object};
-
-    return new_object;
-  } else if constexpr (is_smart_ptr<without_cv_t>::value) {
-    StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
-        "Unique pointers are currently not supported by this json serializer");
-    StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
-        "Weak pointers are currently not supported by this json serializer");
-    typedef T smart_ptr_t;                     // type of the smart pointer
-    typedef get_inner_t<smart_ptr_t> inner_t;  // type of the object the pointer is pointing to
-    inner_t* object = new inner_t;
-    // number of properties
-    constexpr auto nb_properties = std::tuple_size<decltype(inner_t::properties)>::value;
-    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
-      // get the property
-      constexpr auto property = std::get<i>(inner_t::properties);
-
-      // get the type of the property
-      using Type = typename decltype(property)::Type;
-
-      // set the value to the member
-      object->*(property.member) = as_any<Type>(data, property.name);
-    });
-    // call copy constructor to enable inheritance
-    smart_ptr_t sp = smart_ptr_t(object);
-    return sp;
-  } else {
-    T object;
-    constexpr auto nb_properties = std::tuple_size<decltype(T::properties)>::value;
-    for_sequence(std::make_index_sequence<nb_properties>{}, [&](auto i) {
-      constexpr auto property = std::get<i>(T::properties);
-      using Type = typename decltype(property)::Type;
-      object.*(property.member) = as_any<Type>(data, property.name);
-    });
-    // call copy constructor to enable inheritance
-    T new_object{object};
-    return new_object;
-  }*/
 }
 
 template <typename T>
@@ -842,7 +775,7 @@ jsonVal JsonSerializer::to_json(const T& object) {
         default: {
           // TODO(CAJan93) remove below code
           auto t = abstract_op->type();
-          std::cout << "default OperatorType, with type \n" << print_type(t) << '\n';
+          std::cout << "default OperatorType, with type \n" << magic_enum::enum_name(t).data() << '\n';
         }
       }
       return data;
@@ -923,7 +856,7 @@ jsonVal JsonSerializer::to_json(const T& object) {
 
         default:
           // TODO(CAJan93): Handle the other ExpressionTypes
-          std::cout << "Failure. Unsupported ExpressionType " << print_expr_type(object->type) << '\n';
+          std::cout << "Failure. Unsupported ExpressionType " << magic_enum::enum_name(object->type).data() << '\n';
           return data;
           break;
       }
@@ -952,7 +885,7 @@ jsonVal JsonSerializer::to_json(const T& object) {
     return data;
   } else if constexpr (has_member__type<without_ref_cv_t>::value) {
     // TODO(CAJan93): remove this case? If so, remove has_member__type?
-    std::cout << "type is " << print_type(object.type()) << " is currently not supported.\n";
+    std::cout << "type is " << magic_enum::enum_name(object.type()).data() << " is currently not supported.\n";
     return data;
   } else {
     Fail(JOIN_TO_STR("\nunsupported type ", typeid(object).name(), "\ntypeid T: ", typeid(T).name(),
@@ -965,5 +898,12 @@ jsonVal JsonSerializer::to_json(const T& object) {
 template <typename T>
 std::string JsonSerializer::to_json_str(const T& object) {
   return to_json(object).View().WriteReadable();
+}
+
+template <typename T>
+auto JsonSerializer::from_json_str(const std::string& json_str) {
+  const jsonVal data(json_str);
+  const jsonView jv = data.View();
+  return from_json<T>(jv);
 }
 }  // namespace opossum
