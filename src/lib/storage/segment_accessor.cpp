@@ -39,13 +39,6 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
       } else {
         accessor = std::make_unique<MultipleChunkReferenceSegmentAccessor<T>>(typed_segment);
       }
-    } else if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
-      // For DictionarySegments, cook the attribute vector decompressor type into the accessor's type. This saves us
-      // one virtual method call.
-      resolve_compressed_vector_type(*typed_segment.attribute_vector(), [&](const auto& attribute_vector) {
-        accessor = std::make_unique<SegmentAccessor<T, SegmentType, decltype(attribute_vector.create_decompressor())>>(
-            typed_segment);
-      });
     } else {
       accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
     }

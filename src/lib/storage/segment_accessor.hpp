@@ -41,18 +41,14 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
  * Accessors are not guaranteed to be thread-safe. For multiple threads that access the same segment, create one
  * accessor each.
  */
-template <typename T, typename SegmentType, typename... ForwardedTypes>
+template <typename T, typename SegmentType>
 class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
-    if constexpr (sizeof...(ForwardedTypes) == 0) {
-      return _segment.get_typed_value(offset);
-    } else {
-      return _segment.template get_typed_value<ForwardedTypes...>(offset);
-    }
+    return _segment.get_typed_value(offset);
   }
 
   ~SegmentAccessor() { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
