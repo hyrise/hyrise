@@ -130,7 +130,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLike) {
 }
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply1) {
-  // SELECT * FROM a WHERE c < 'foo' OR c >= 'foq' - looks like SplitUpNotLike, but the optimization does not apply
+  // SELECT * FROM a WHERE c < 'foo' OR c >= 'bar' - looks like SplitUpNotLike, but the optimization does not apply
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_c, value_("bar"))),
