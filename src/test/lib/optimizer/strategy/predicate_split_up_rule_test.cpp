@@ -61,7 +61,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
 }
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
-  // SELECT * FROM a WHERE a < 3 OR a >= 5
+  // SELECT * FROM a WHERE a < 3 OR a > 5
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(less_than_(a_a, value_(3)), greater_than_(a_a, value_(5))),
