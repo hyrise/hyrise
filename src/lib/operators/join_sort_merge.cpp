@@ -792,10 +792,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
         this->_join_cluster(cluster_number, multi_predicate_join_evaluator);
       }));
-      jobs.back()->schedule();
     }
 
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
