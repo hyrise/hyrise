@@ -67,7 +67,7 @@ int main(int argc, const char* argv[]) {
   // auto start_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(start_config, use_prepared_statements, SCALE_FACTOR);
   BenchmarkRunner(*start_config, std::move(start_item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, start_config), start_context).run();
 
-  std::string path = "configurations/";
+  std::string path = "configurations_TPC-H/";
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
     const auto conf_path = entry.path();
     const auto conf_name = conf_path.stem();
@@ -89,14 +89,13 @@ int main(int argc, const char* argv[]) {
       Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
       auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-      config->max_runs = 50;
+      config->max_runs = 10;
       config->enable_visualization = false;
       config->output_file_path = conf_name.string() + ".json";
       config->cache_binary_tables = false;
-      config->max_duration = std::chrono::seconds(300);
+      config->max_duration = std::chrono::seconds(600);
 
       std::vector<std::shared_ptr<AbstractTask>> jobs;
-      
 
       auto context = BenchmarkRunner::create_context(*config);
 
