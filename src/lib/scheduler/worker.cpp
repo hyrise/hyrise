@@ -33,7 +33,7 @@ namespace opossum {
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
 Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _queue(queue), _id(id), _cpu_id(cpu_id) {}
+    : _next_task{nullptr}, _queue(queue), _id(id), _cpu_id(cpu_id) {}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -54,7 +54,13 @@ void Worker::operator()() {
 }
 
 void Worker::_work() {
-  auto task = _queue->pull();
+  auto task = std::shared_ptr<AbstractTask>{};
+  if (_next_task) {
+    task = std::move(_next_task);
+    _next_task = nullptr;
+  } else {
+    task = _queue->pull();
+  }
 
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
@@ -83,15 +89,20 @@ void Worker::_work() {
     }
   }
 
-  execute_immediately(task);
-}
-
-void Worker::execute_immediately(const std::shared_ptr<AbstractTask>& task) {
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
   _num_finished_tasks++;
+}
+
+void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
+  if (!_next_task) {
+    if (!task->try_mark_as_enqueued()) return;
+    _next_task = task;
+  } else {
+    _queue->push(task, static_cast<uint32_t>(SchedulePriority::High));
+  }
 }
 
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }

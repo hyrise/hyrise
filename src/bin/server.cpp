@@ -1,6 +1,8 @@
 #include "cxxopts.hpp"
 
+#include "benchmark_config.hpp"
 #include "server/server.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 cxxopts::Options get_server_cli_options() {
   cxxopts::Options cli_options("./hyriseServer", "Starts Hyrise server in order to accept network requests.");
@@ -8,6 +10,7 @@ cxxopts::Options get_server_cli_options() {
   // clang-format off
   cli_options.add_options()
     ("help", "Display this help and exit") // NOLINT
+    ("s,scale_factor", "TPC-H Scale Factor", cxxopts::value<float>()) // NOLINT
     ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))  // NOLINT
     ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the the server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))  // NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
@@ -25,6 +28,15 @@ int main(int argc, char* argv[]) {
   if (parsed_options.count("help")) {
     std::cout << cli_options.help() << std::endl;
     return 0;
+  }
+
+  if (parsed_options.count("scale_factor")) {
+    const auto scale_factor = parsed_options["scale_factor"].as<float>();
+    if (scale_factor > 0) {
+      auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+      config->cache_binary_tables = true;
+      opossum::TPCHTableGenerator{scale_factor, config}.generate_and_store();
+    }
   }
 
   const auto execution_info = parsed_options["execution_info"].as<bool>();

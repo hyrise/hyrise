@@ -118,4 +118,23 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   auto queue = _queues[preferred_node_id];
   queue->push(task, static_cast<uint32_t>(priority));
 }
+
+void NodeQueueScheduler::group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto num_groups = 10;
+
+  auto round_robin_counter = 0;
+
+  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
+  for (const auto& task : tasks) {
+    if (!task->predecessors().empty() || !task->successors().empty()) return;
+    const auto group_id = round_robin_counter % num_groups;
+    const auto& first_task_in_group = grouped_tasks[group_id];
+    if (first_task_in_group) {
+      task->set_as_predecessor_of(first_task_in_group);
+    }
+    grouped_tasks[group_id] = task;
+    ++round_robin_counter;
+  }
+}
+
 }  // namespace opossum

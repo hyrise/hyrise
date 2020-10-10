@@ -35,7 +35,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void start();
   void join();
 
-  void execute_immediately(const std::shared_ptr<AbstractTask>& task);
+  void execute_next(const std::shared_ptr<AbstractTask>& task);
 
   uint64_t num_finished_tasks() const;
 
@@ -70,6 +70,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
    */
   void _set_affinity();
 
+  std::shared_ptr<AbstractTask> _next_task;
   std::shared_ptr<TaskQueue> _queue;
   WorkerID _id;
   CpuID _cpu_id;

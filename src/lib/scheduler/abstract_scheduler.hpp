@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "scheduler/abstract_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
@@ -10,7 +11,6 @@
 
 namespace opossum {
 
-class AbstractTask;
 class TaskQueue;
 
 class AbstractScheduler : public Noncopyable {
@@ -41,45 +41,14 @@ class AbstractScheduler : public Noncopyable {
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
 
-  template <typename TaskType>
-  void wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-    DebugAssert(([&]() {
-                  for (auto& task : tasks) {
-                    if (!task->is_scheduled()) {
-                      return false;
-                    }
-                  }
-                  return true;
-                }()),
-                "In order to wait for a task’s completion, it needs to have been scheduled first.");
+  void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-    /**
-   * In case wait_for_tasks() is called from a Task being executed in a Worker, let the Worker handle the join()-ing,
-   * otherwise join right here
-   */
-    auto worker = Worker::get_this_thread_worker();
-    if (worker) {
-      worker->_wait_for_tasks(tasks);
-    } else {
-      for (auto& task : tasks) task->_join();
-    }
-  }
+  // TODO
+  virtual void group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 
-  template <typename TaskType>
-  void schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-    DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
-    for (auto& task : tasks) {
-      DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
-      task->schedule();
-    }
-  }
+  void schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  template <typename TaskType>
-  void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-    schedule_tasks(tasks);
-    DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS_AND_WAIT, tasks.size());
-    wait_for_tasks(tasks);
-  }
+  void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 };
 
 }  // namespace opossum

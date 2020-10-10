@@ -116,16 +116,16 @@ void AbstractTask::_mark_as_scheduled() {
 void AbstractTask::_on_predecessor_done() {
   auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
-    auto worker = Worker::get_this_thread_worker();
+    auto current_worker = Worker::get_this_thread_worker();
 
-    if (worker) {
+    if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
       // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
       // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
       if (!_is_scheduled) return;
 
-      worker->execute_immediately(shared_from_this());
-      // worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
+      current_worker->execute_next(shared_from_this());
+      // current_worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"
