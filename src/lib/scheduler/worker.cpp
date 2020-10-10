@@ -83,6 +83,10 @@ void Worker::_work() {
     }
   }
 
+  execute_immediately(task);
+}
+
+void Worker::execute_immediately(const std::shared_ptr<AbstractTask>& task) {
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the

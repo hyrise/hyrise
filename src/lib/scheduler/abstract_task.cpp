@@ -89,7 +89,7 @@ void AbstractTask::execute() {
   // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
   // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
   // spawned the task are pushed down to a point where this thread is already running.
-  Assert(_is_scheduled, "Task should be have been scheduled before being executed");
+  Assert(_is_scheduled, "Task should have been scheduled before being executed");
 
   _on_execute();
 
@@ -124,7 +124,8 @@ void AbstractTask::_on_predecessor_done() {
       // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
       if (!_is_scheduled) return;
 
-      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
+      worker->execute_immediately(shared_from_this());
+      // worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"

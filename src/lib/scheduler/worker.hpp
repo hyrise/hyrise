@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 
+#include "scheduler/abstract_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -33,6 +34,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
   void start();
   void join();
+
+  void execute_immediately(const std::shared_ptr<AbstractTask>& task);
 
   uint64_t num_finished_tasks() const;
 
