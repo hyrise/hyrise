@@ -59,7 +59,7 @@ struct AggregateResult {
   AggregateType current_primary_aggregate;  // TODO use aggregate_count instead of optional?
 //  std::vector<AggregateType> current_secondary_aggregates;
   size_t aggregate_count = 0;
-//  std::set<ColumnDataType> distinct_values;
+//  std::set<ColumnDataType> distinct_values; // TODO use robin_set?
   RowID row_id;
 };
 
