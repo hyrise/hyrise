@@ -14,8 +14,10 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "utils/timer.hpp"
 
 using namespace opossum;  // NOLINT
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -52,35 +54,44 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
+  const auto BENCHMARKS = std::vector<std::string>{"TPC-C", "TPC-DS", "JOB", "TPC-H"};
+
+  const auto env_var_playback = std::getenv("BENCHMARK_TO_EVALUATE");
+  if (env_var_playback == nullptr) {
+    std::cerr << "Please pass environment variable \"BENCHMARK_TO_EVALUATE\" to set a target benchmark.\nExiting Plugin." << std::flush;
+    exit(17);
+  }
+  auto BENCHMARK_TO_EVALUATE = std::string(env_var_playback);
+
   auto SCALE_FACTOR = 10.0f;
 
-  auto start_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-  start_config->max_runs = 5;
-  start_config->enable_visualization = false;
-  start_config->cache_binary_tables = false;
+  std::string path = "../compression_selection_v3/configurations_CH/";
+  if (BENCHMARK_TO_EVALUATE == "TPC-H") {
+    auto start_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+    start_config->max_runs = 5;
+    start_config->enable_visualization = false;
+    start_config->cache_binary_tables = false;
 
-  const bool use_prepared_statements = false;
-  auto start_context = BenchmarkRunner::create_context(*start_config);
+    const bool use_prepared_statements = false;
+    auto start_context = BenchmarkRunner::create_context(*start_config);
 
-  const std::vector<BenchmarkItemID> tpch_query_ids_warmup = {BenchmarkItemID{5}};
-  auto start_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(start_config, use_prepared_statements, SCALE_FACTOR, tpch_query_ids_warmup);
-  // auto start_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(start_config, use_prepared_statements, SCALE_FACTOR);
-  BenchmarkRunner(*start_config, std::move(start_item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, start_config), start_context).run();
+    const std::vector<BenchmarkItemID> tpch_query_ids_warmup = {BenchmarkItemID{5}};
+    auto start_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(start_config, use_prepared_statements, SCALE_FACTOR, tpch_query_ids_warmup);
+    BenchmarkRunner(*start_config, std::move(start_item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, start_config), start_context).run();
 
-  std::string path = "configurations_TPC-H/";
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    const auto conf_path = entry.path();
-    const auto conf_name = conf_path.stem();
-    const auto filename = conf_path.filename().string();
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      const auto conf_path = entry.path();
+      const auto conf_name = conf_path.stem();
+      const auto filename = conf_path.filename().string();
 
-    if (filename.find("conf") != 0 || filename.find(".json") != std::string::npos) {
-      std::cout << "Skipping " << conf_path << std::endl;
-      continue;
-    }
+      if (filename.find("conf") != 0 || filename.find(".json") != std::string::npos) {
+        std::cout << "Skipping " << conf_path << std::endl;
+        continue;
+      }
 
-    std::cout << "Benchmarking " << conf_name << " ..." << std::endl;
+      std::cout << "######\n#####\n##### Benchmarking: " << conf_name << "\n#####\n#####" << std::endl;
 
-    {
+      
       // To speed up the table generation, the node scheduler is used. To not interfere with any settings for the actual
       // Hyrise process (e.g., the test runner or the calibration), the current scheduler is stored, replaced, and
       // eventually set again.
@@ -161,9 +172,177 @@ int main(int argc, const char* argv[]) {
       size_result << get_all_segments_memory_usage();
       size_result.close();
     }
-  }
+  } else if (BENCHMARK_TO_EVALUATE == "CH" || BENCHMARK_TO_EVALUATE == "TPC-C") {
+    auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+    auto warehouse_count = int{1};
+    config->max_duration = std::chrono::seconds{20};
 
-  const auto BENCHMARKS = std::vector<std::string>{"TPC-C", "TPC-DS", "JOB", "TPC-H"};
+    if (BENCHMARK_TO_EVALUATE == "CH") {
+      warehouse_count = 1;
+      config->max_duration = std::chrono::seconds{30};
+    }
+
+    config->max_runs = -1;
+    config->benchmark_mode = BenchmarkMode::Shuffled;
+    config->warmup_duration = std::chrono::seconds(0);
+    config->enable_scheduler = true;
+    config->clients = 5;
+    config->cores = 10;
+
+    auto run_ch_benchmark_queries = std::atomic<bool>{false};
+    auto ch_benchmark_queries = std::vector<std::string>{};
+    if (BENCHMARK_TO_EVALUATE == "CH") {
+      constexpr auto TPC_H_SCALE_FACTOR = 0.1f;
+      auto tpch_table_generator = std::make_unique<TPCHTableGenerator>(TPC_H_SCALE_FACTOR, config);
+      tpch_table_generator->generate_and_store();
+
+      const auto ch_benchmark_queries_path = "hyrise/resources/ch_benchmark_queries.sql";
+      std::ifstream ch_benchmark_queries_file(ch_benchmark_queries_path);
+
+      std::string sql_query_string;
+      while (std::getline(ch_benchmark_queries_file, sql_query_string)) {
+        if (sql_query_string.size() > 0 && !sql_query_string.starts_with("--")) {
+          ch_benchmark_queries.emplace_back(sql_query_string);
+        }
+      }
+      Assert(ch_benchmark_queries.size() > 0, "Failed to read CH-benCHmark queries.");
+    }
+
+
+    auto ch_plan_cache = std::make_shared<SQLPhysicalPlanCache>(100'000);
+    auto ch_benchmark_thread = std::thread([&ch_benchmark_queries, &run_ch_benchmark_queries, &ch_plan_cache]() {
+      while (true) { 
+        while (!run_ch_benchmark_queries) {
+          std::this_thread::sleep_for(1s);
+        }
+
+        auto& storage_manager = Hyrise::get().storage_manager;
+        while (run_ch_benchmark_queries && !storage_manager.has_table("ITEM")) {
+          std::this_thread::sleep_for(1s);
+        }
+
+        std::cout << "Starting CH-benCHmark queries in 1s." << std::endl;
+        std::this_thread::sleep_for(1s);
+
+        auto query_id = size_t{0};
+        const auto query_count = ch_benchmark_queries.size();
+        while (run_ch_benchmark_queries) {
+          query_id = query_id % query_count;
+          std::cout << "CH-benCHmark - Query #" << query_id << ": ";
+          auto sql_pipeline = SQLPipelineBuilder{ch_benchmark_queries[query_id]}.with_pqp_cache(ch_plan_cache).create_pipeline();
+          Timer timer;
+          const auto& [status, result] = sql_pipeline.get_result_table();
+          std::cout << static_cast<size_t>(timer.lap().count()) << " ns" << std::endl;
+
+          Assert(status == SQLPipelineStatus::Success, "Execution of query #" + std::to_string(query_id) + " did not succeed.");
+          ++query_id;
+        }
+      }  
+    });
+
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      const auto conf_path = entry.path();
+      const auto conf_name = conf_path.stem();
+      const auto filename = conf_path.filename().string();
+
+      if (filename.find("conf") != 0 || filename.find(".json") != std::string::npos) {
+        std::cout << "Skipping " << conf_path << std::endl;
+        continue;
+      }
+
+      std::cout << "######\n#####\n##### Benchmarking: " << conf_name << "\n#####\n#####" << std::endl;
+
+      std::set<std::string> tpcc_tables = {"ITEM", "WAREHOUSE", "STOCK", "DISTRICT", "CUSTOMER", "HISTORY", "ORDER", "ORDER_LINE", "NEW_ORDER"};
+      for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+        if (tpcc_tables.contains(table_name)) {
+          Hyrise::get().storage_manager.drop_table(table_name);
+        }
+      }
+      TPCCTableGenerator(warehouse_count, config).generate_and_store();
+
+      // To speed up the table generation, the node scheduler is used. To not interfere with any settings for the actual
+      // Hyrise process (e.g., the test runner or the calibration), the current scheduler is stored, replaced, and
+      // eventually set again.
+      Hyrise::get().scheduler()->wait_for_all_tasks();
+      const auto previous_scheduler = Hyrise::get().scheduler();
+      Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+      config->output_file_path = conf_name.string() + ".json";
+
+      std::vector<std::shared_ptr<AbstractTask>> jobs;
+      auto context = BenchmarkRunner::create_context(*config);
+      context.emplace("scale_factor", warehouse_count);
+
+      std::ifstream configuration_file(entry.path().string());
+      const auto line_count = std::count(std::istreambuf_iterator<char>(configuration_file), std::istreambuf_iterator<char>(), '\n');
+      jobs.reserve(line_count + 10);
+      std::string line;
+      configuration_file.seekg(0, std::ios::beg);
+      std::cout << "Reencoding: " << std::flush;
+      while (std::getline(configuration_file, line))
+      {
+        std::vector<std::string> line_values;
+        std::istringstream linestream(line);
+        std::string value;
+        while (std::getline(linestream, value, ','))
+        {
+          line_values.push_back(value);
+        }
+
+        const auto table_name = line_values[0];
+        const auto column_name = line_values[1];
+        const auto chunk_id = ChunkID{static_cast<uint32_t>(std::stoi(line_values[2]))};
+        const auto encoding_type_str = line_values[3];
+        const auto vector_compression_type_str = line_values[4];
+
+        const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+        if (chunk_id >= table->chunk_count()) {
+          continue;
+        }
+        const auto& chunk = table->get_chunk(chunk_id);
+        const auto& column_id = table->column_id_by_name(column_name);
+        const auto& segment = chunk->get_segment(column_id);
+        const auto& data_type = table->column_data_type(column_id);
+
+        const auto encoding_type = encoding_type_to_string.right.at(encoding_type_str);
+
+        SegmentEncodingSpec spec = {encoding_type};
+        if (vector_compression_type_str != "None") {
+          const auto vector_compression_type = vector_compression_type_to_string.right.at(vector_compression_type_str);
+          spec.vector_compression_type = vector_compression_type;
+        }
+
+        jobs.emplace_back(std::make_shared<JobTask>([chunk, segment, data_type, spec, column_id]() {
+          const auto& encoded_segment = ChunkEncoder::encode_segment(segment, data_type, spec);
+          chunk->replace_segment(column_id, encoded_segment);
+        }));
+        jobs.back()->schedule();
+      }
+      configuration_file.close();
+
+      Hyrise::get().scheduler()->wait_for_tasks(jobs);
+      Hyrise::get().scheduler()->wait_for_all_tasks();
+      Hyrise::get().set_scheduler(previous_scheduler);  // set scheduler back to previous one.
+
+      std::cout << " done." << std::endl;
+      std::cout << "Starting benchmark." << std::endl;
+
+      if (BENCHMARK_TO_EVALUATE == "CH") {
+        run_ch_benchmark_queries = true;
+      }
+
+      auto item_runner = std::make_unique<TPCCBenchmarkItemRunner>(config, warehouse_count);
+      auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(item_runner), nullptr, context);
+
+      Hyrise::get().benchmark_runner = benchmark_runner;
+      benchmark_runner->run();
+      std::cout << "TPC-C done." << std::endl;
+
+      if (BENCHMARK_TO_EVALUATE == "CH") {
+        run_ch_benchmark_queries = false;
+      }
+    }
+  }
 
   const auto env_var = std::getenv("BENCHMARK_TO_RUN");
   if (env_var == nullptr) {
