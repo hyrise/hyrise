@@ -77,12 +77,6 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   } else {
     stored_table->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
-
-  std::cout << "CHUNKS: ";
-  for (const auto r : pruned_chunk_ids) {
-    std::cout << r << ", ";
-  }
-  std::cout << std::endl;
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, const AbstractExpression& predicate,
