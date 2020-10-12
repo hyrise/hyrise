@@ -192,19 +192,40 @@ inline double JsonSerializer::as_any<double>(const jsonView& value, const std::s
   return value.GetDouble(key);
 }
 
+// TODO(CAJan93): remove below case
 template <>
 inline std::variant<int, double, std::string> JsonSerializer::as_any<std::variant<int, double, std::string>>(
     const jsonView& value, const std::string& key) {
-  if (value.GetObject(key).IsIntegerType()) {
-    return value.GetInteger(key);
-  }
-  if (value.GetObject(key).IsFloatingPointType()) {
-    return value.GetDouble(key);
-  }
-  if (value.GetObject(key).IsString()) {
-    return value.GetString(key);
-  }
+  if (value.GetObject(key).IsIntegerType()) return value.GetInteger(key);
+  if (value.GetObject(key).IsFloatingPointType()) return value.GetDouble(key);
+  if (value.GetObject(key).IsString()) return value.GetString(key);
   Fail("json deserializer only support variants with <int, double, string>");
+  return -1;
+}
+
+template <>
+inline AllTypeVariant JsonSerializer::as_any<AllTypeVariant>(const jsonView& value, const std::string& key) {
+  // TODO(CAJan93): Check if key val_t and key exist
+  // TODO(CAJan93): Write convenience function key_of_typ_exists<type>
+  const int value_t = value.GetInteger("val_t");
+  switch (value_t) {
+    case 0:
+      return nullptr;
+    case 1:
+    case 2:
+      return value.GetInteger(key);
+    case 3:
+    case 4:
+      return value.GetDouble(key);
+    case 5: {
+      const std::string s = value.GetString(key);
+      return std::__cxx11::basic_string<char, std::char_traits<char>,
+                                        boost::container::pmr::polymorphic_allocator<char>>(s);
+    }
+    
+    default:
+      Fail(JOIN_TO_STR("Unable to retrieve value for AllTypeVariant. Json was ", value.GetObject(key).WriteReadable()));
+  }
   return -1;
 }
 
@@ -352,9 +373,11 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
           }
           return vec;
         } else {
-          // TODO(CAJan93): Implement this. Call as_any???
-          // Do we ever get this case?
-          Fail("Not sure what to do here...");
+          // TODO(CAJan93): same case as above. Simplify!
+          jsonView sub_json = value.GetObject(key);
+          without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
+          without_cv_t new_sub_obj{sub_obj};
+          return new_sub_obj;
         }
       } else {
         Fail(JOIN_TO_STR("Unable to process key ", key, " Current JSON object is\n", value.WriteReadable()));
@@ -419,7 +442,6 @@ inline void JsonSerializer::with_any<double>(jsonVal& data, const std::string& k
 
 template <>
 inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::string& key, const AllTypeVariant& val) {
-  // TODO(CAJan93): Implement this
   const unsigned int val_t = val.which();
   jsonVal variant_jv;
   variant_jv.WithInteger("val_t", val_t);
@@ -870,8 +892,10 @@ T JsonSerializer::from_json(const jsonView& data) {
         without_ptr_t t(as_any<property_0_t>(data, property_0.name));
         return t;
       }
+    } else if constexpr (std::is_same<T, AllTypeVariant>::value) {
+      return as_any<AllTypeVariant>(data, "val");
     } else {
-      Fail("Unsupported Type in json deserialization");
+      Fail(JOIN_TO_STR("Unsupported type", typeid(T).name(), " in json deserialization"));
     }
   }
 }  // namespace opossum
