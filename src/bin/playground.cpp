@@ -66,8 +66,9 @@ int main(int argc, const char* argv[]) {
 
   auto SCALE_FACTOR = 10.0f;
 
-  std::string path = "../compression_selection_v3/configurations_CH/";
   if (BENCHMARK_TO_EVALUATE == "TPC-H") {
+    std::string path = "configurations_TPC-H";
+
     auto start_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
     start_config->max_runs = 5;
     start_config->enable_visualization = false;
@@ -101,7 +102,10 @@ int main(int argc, const char* argv[]) {
       Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
       auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-      config->max_runs = 10;
+      config->max_runs = 30;
+      config->enable_scheduler = true;
+      config->clients = 5;
+      config->cores = 10;
       config->enable_visualization = false;
       config->output_file_path = conf_name.string() + ".json";
       config->cache_binary_tables = false;
@@ -174,13 +178,15 @@ int main(int argc, const char* argv[]) {
       size_result.close();
     }
   } else if (BENCHMARK_TO_EVALUATE == "CH" || BENCHMARK_TO_EVALUATE == "TPC-C") {
+    std::string path = "configurations_CH";
+
     auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
     auto warehouse_count = int{1};
     config->max_duration = std::chrono::seconds{20};
 
     if (BENCHMARK_TO_EVALUATE == "CH") {
-      warehouse_count = 1;
-      config->max_duration = std::chrono::seconds{30};
+      warehouse_count = 10;
+      config->max_duration = std::chrono::seconds{300};
     }
 
     config->max_runs = -1;
@@ -192,7 +198,7 @@ int main(int argc, const char* argv[]) {
 
     auto ch_benchmark_queries = std::vector<std::string>{};
     if (BENCHMARK_TO_EVALUATE == "CH") {
-      constexpr auto TPC_H_SCALE_FACTOR = 0.1f;
+      constexpr auto TPC_H_SCALE_FACTOR = 1.0f;
       auto tpch_table_generator = std::make_unique<TPCHTableGenerator>(TPC_H_SCALE_FACTOR, config);
       tpch_table_generator->generate_and_store();
 
