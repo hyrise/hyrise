@@ -316,12 +316,20 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
               }
             }
           } else if constexpr (is_smart_ptr<without_cv_vec_inner_t>::value) {
-            // TODO(CAJan93): remove this case?
-            StaticAssert<!is_weak_ptr<T>::value>::stat_assert(
-                "Weak pointers are currently not supported by this json serializer");
-            StaticAssert<!is_unique_ptr<T>::value>::stat_assert(
+            StaticAssert<!is_unique_ptr<without_cv_t>::value>::stat_assert(
                 "Unique pointers are currently not supported by this json serializer");
-            Fail("Smart pointers currently not supported");
+            StaticAssert<!is_weak_ptr<without_cv_t>::value>::stat_assert(
+                "Weak pointers are currently not supported by this json serializer");
+            typedef without_cv_vec_inner_t smart_ptr_t;  // type of the smart pointer
+            typedef get_inner_t<without_cv_vec_inner_t>
+                smart_ptr_inner_t;  // type of the object the pointer is pointing to
+            for (size_t idx = 0; obj.KeyExists(std::to_string(idx)); ++idx) {
+              const jsonView data = obj.GetObject(std::to_string(idx));
+              //  if constexpr (has_member_properties<without_cv_vec_inner_t>::value) {
+              smart_ptr_inner_t* t = from_json<smart_ptr_inner_t*>(data);
+              smart_ptr_t ptr(t);
+              vec.emplace_back(ptr);
+            }
           } else {
             for (size_t idx = 0; obj.KeyExists(std::to_string(idx)); ++idx) {
               const jsonView data = obj.GetObject(std::to_string(idx));
@@ -337,13 +345,15 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
               } else if constexpr (std::is_same<without_cv_vec_inner_t, bool>::value) {
                 vec.emplace_back(data.AsBool());
               } else {
-                Fail("Unsupported vector type");
+                Fail(JOIN_TO_STR("Unsupported vector type '", typeid(without_cv_vec_inner_t).name(), "'. Json is ",
+                                 obj.WriteReadable()));
               }
             }
           }
           return vec;
         } else {
           // TODO(CAJan93): Implement this. Call as_any???
+          // Do we ever get this case?
           Fail("Not sure what to do here...");
         }
       } else {
@@ -689,7 +699,7 @@ T JsonSerializer::from_json(const jsonView& data) {
           }
           // TODO(CAJan93): Implement AbstractPredicateExpression
           Fail("AbstractPredicateExpression currently not supported");
-        } 
+        }
 
         case ExpressionType::PQPSubquery:
           return from_json<PQPSubqueryExpression*>(data);
