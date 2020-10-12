@@ -144,6 +144,36 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   ASSERT_EQ(counter, 3u);
 }
 
+TEST_F(SchedulerTest, Grouping) {
+  // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
+  // NodeQueueScheduler::_group_tasks. Also test that successor tasks are called immediately after their dependencies
+  // finish. Not really a multi-threading test, though.
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto output = std::vector<size_t>{};
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+  for (auto i = 0; i < 50; ++i) {
+    tasks.emplace_back(std::make_shared<JobTask>([&output, i] { output.emplace_back(i); }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->finish();
+
+  // We expect num_groups (currently 10) chains of tasks to be created. As tasks are added to the chains by calling
+  // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called.
+  // This results in [40 30 20 10 0 41 31 21 11 1 ...]
+  const auto num_groups = 10;
+  auto expected_output = std::vector<size_t>{};
+  for (auto group = 0; group < num_groups; ++group) {
+    for (auto task_id = 0; task_id < 5; ++task_id) {
+      expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
+    }
+  }
+
+  EXPECT_EQ(output, expected_output);
+}
+
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());

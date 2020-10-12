@@ -33,7 +33,7 @@ namespace opossum {
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
 Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _next_task{nullptr}, _queue(queue), _id(id), _cpu_id(cpu_id) {}
+    : _queue(queue), _id(id), _cpu_id(cpu_id) {}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -54,6 +54,7 @@ void Worker::operator()() {
 }
 
 void Worker::_work() {
+  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   if (_next_task) {
     task = std::move(_next_task);
@@ -97,6 +98,8 @@ void Worker::_work() {
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
+  DebugAssert(&*get_this_thread_worker() == this,
+              "execute_next must be called from the same thread that the worker works in");
   if (!_next_task) {
     if (!task->try_mark_as_enqueued()) return;
     _next_task = task;
@@ -113,6 +116,22 @@ void Worker::join() {
 }
 
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
+
+void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+  auto tasks_completed = [&tasks]() {
+    // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
+    for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
+      if (!(*it)->is_done()) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  while (!tasks_completed()) {
+    _work();
+  }
+}
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT

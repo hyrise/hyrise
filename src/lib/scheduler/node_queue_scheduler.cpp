@@ -119,7 +119,15 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   queue->push(task, static_cast<uint32_t>(priority));
 }
 
-void NodeQueueScheduler::group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  // Adds predecessor/successor relationships between tasks so that only num_groups tasks can be executed in parallel.
+  // The optimal value of num_groups depends on the number of cores and the number of queries being executed
+  // concurrently. The current value has been found with a divining rod.
+  //
+  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
+  // introduce cyclic dependencies. This ignores the preferred node of tasks. Again, this is far from perfect, but
+  // better than not grouping the tasks.
+
   const auto num_groups = 10;
 
   auto round_robin_counter = 0;

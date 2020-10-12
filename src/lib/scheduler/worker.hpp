@@ -35,6 +35,10 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void start();
   void join();
 
+  // Try to execute task immediately after this worker finishes the execution of the current task. Useful for making
+  // sure that a task's successor is executed without having to go through the queue again (at which point all data
+  // would have been removed from the caches). Adds task to the queue if called multiple times without having had the
+  // chance to execute the tasks in between.
   void execute_next(const std::shared_ptr<AbstractTask>& task);
 
   uint64_t num_finished_tasks() const;
@@ -46,22 +50,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator()();
   void _work();
 
-  template <typename TaskType>
-  void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-    auto tasks_completed = [&tasks]() {
-      // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
-      for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
-        if (!(*it)->is_done()) {
-          return false;
-        }
-      }
-      return true;
-    };
-
-    while (!tasks_completed()) {
-      _work();
-    }
-  }
+  void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  private:
   /**
@@ -70,7 +59,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
    */
   void _set_affinity();
 
-  std::shared_ptr<AbstractTask> _next_task;
+  std::shared_ptr<AbstractTask> _next_task{};
   std::shared_ptr<TaskQueue> _queue;
   WorkerID _id;
   CpuID _cpu_id;

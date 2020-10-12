@@ -206,7 +206,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  const auto copied_result = tasks.back()->get_operator()->get_output();
+  const auto copied_result = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
 
   auto expected_copied = std::make_shared<Table>(column_definitions, TableType::Data);
   expected_copied->append({11, 10, 11});

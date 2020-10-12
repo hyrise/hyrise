@@ -42,7 +42,7 @@ class Topology final : public Noncopyable {
 
   /**
    * Use a NUMA topology.
-   * The topology has a number of cores equal to either max_num_cores or the number of physically availyble cores,
+   * The topology has a number of cores equal to either max_num_cores or the number of physically available cores,
    * whichever one is lower. The cores are distributed among the available NUMA nodes in a way that a node is filled up
    * to it's maximum core count first, bevor a new node is added.
    *

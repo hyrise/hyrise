@@ -124,8 +124,9 @@ void AbstractTask::_on_predecessor_done() {
       // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
       if (!_is_scheduled) return;
 
+      // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
+      // predecessor. This should improve cache locality and reduce the scheduling costs.
       current_worker->execute_next(shared_from_this());
-      // current_worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"

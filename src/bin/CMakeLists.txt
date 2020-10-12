@@ -7,7 +7,6 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
-    hyriseBenchmarkLib
 )
 
 # Configure playground

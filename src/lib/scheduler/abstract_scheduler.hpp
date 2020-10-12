@@ -41,14 +41,24 @@ class AbstractScheduler : public Noncopyable {
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
 
-  void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
-
-  // TODO
-  virtual void group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
-
+  // Schedules the given tasks for execution and returns immediately.
+  // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
   void schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
+  // Blocks until all specified tasks are completed.
+  // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
+  void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
+
+  // Schedules the given tasks for execution and waits for them to complete before returning. Tasks may be reorganized
+  // internally, e.g., to reduce the number of tasks being executed in parallel. For example, a scan on 1,000 chunks
+  // would usually create the same number of tasks. By grouping the work into 10 tasks, the scheduling overhead is
+  // reduced.
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
+
+ protected:
+  // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
+  // parallelism and reduce scheduling overhead.
+  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 };
 
 }  // namespace opossum
