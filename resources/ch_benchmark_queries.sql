@@ -273,12 +273,12 @@ SELECT 100.00 * SUM(CASE WHEN I_DATA LIKE 'PR%' THEN OL_AMOUNT ELSE 0 END) / (1+
 -- (iii) Discarding of MOD().
 -- (iv) Use of views.
 -- 
-CREATE VIEW REVENUE (SUPPLIER_NO, TOTAL_REVENUE) AS SELECT S_W_ID * S_I_ID AS SUPPLIER_NO, SUM(OL_AMOUNT) AS TOTAL_REVENUE FROM ORDER_LINE, STOCK WHERE OL_I_ID = S_I_ID AND OL_SUPPLY_W_ID = S_W_ID AND OL_DELIVERY_D >= 1170288000 GROUP BY S_W_ID * S_I_ID;
-SELECT s_suppkey, s_name, s_address, s_phone, TOTAL_REVENUE FROM supplier, REVENUE WHERE s_suppkey = SUPPLIER_NO AND TOTAL_REVENUE = (SELECT MAX(TOTAL_REVENUE) FROM REVENUE) ORDER BY s_suppkey;
-DROP VIEW REVENUE;
+CREATE VIEW REVENUE_VIEW (SUPPLIER_NO, TOTAL_REVENUE) AS SELECT S_W_ID * S_I_ID AS SUPPLIER_NO, SUM(OL_AMOUNT) AS TOTAL_REVENUE FROM ORDER_LINE, STOCK WHERE OL_I_ID = S_I_ID AND OL_SUPPLY_W_ID = S_W_ID AND OL_DELIVERY_D >= 1170288000 GROUP BY S_W_ID * S_I_ID;
+SELECT s_suppkey, s_name, s_address, s_phone, TOTAL_REVENUE FROM supplier, REVENUE_VIEW WHERE s_suppkey = SUPPLIER_NO AND TOTAL_REVENUE = (SELECT MAX(TOTAL_REVENUE) FROM REVENUE_VIEW) ORDER BY s_suppkey;
+DROP VIEW REVENUE_VIEW;
 
 
--- Query 15
+-- Query 16
 -- 
 -- Original:
 --
@@ -301,3 +301,22 @@ DROP VIEW REVENUE;
 -- (ii) Discarding of MOD().
 --
 SELECT I_NAME, SUBSTR(I_DATA, 1, 3) AS BRAND, I_PRICE, COUNT(DISTINCT (S_W_ID * S_I_ID)) AS SUPPLIER_CNT FROM STOCK, ITEM WHERE I_ID = S_I_ID AND I_DATA NOT LIKE 'ZZ%' AND (S_W_ID * S_I_ID NOT IN (SELECT s_suppkey FROM supplier WHERE s_comment LIKE '%BAD%')) GROUP BY I_NAME, SUBSTR(I_DATA, 1, 3), I_PRICE ORDER BY SUPPLIER_CNT DESC;
+
+
+-- Query 17
+-- 
+-- Original:
+--
+-- select	sum(ol_amount) / 2.0 as avg_yearly
+-- from	orderline, (select   i_id, avg(ol_quantity) as a
+-- 		    from     item, orderline
+-- 		    where    i_data like '%b'
+-- 			     and ol_i_id = i_id
+-- 		    group by i_id) t
+-- where	ol_i_id = t.i_id
+-- 	and ol_quantity < t.a
+--
+-- Changes:
+-- (i) Capitalization.
+--
+SELECT SUM(OL_AMOUNT) / 2.0 AS AVG_YEARLY FROM ORDER_LINE, (SELECT I_ID, AVG(OL_QUANTITY) AS A FROM ITEM, ORDER_LINE WHERE I_DATA LIKE '%B' AND OL_I_ID = I_ID GROUP BY I_ID) T WHERE OL_I_ID = T.I_ID AND OL_QUANTITY < T.A;

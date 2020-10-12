@@ -1,3 +1,4 @@
+#include <chrono>
 #include <fstream>
 
 #include "hyrise.hpp"
@@ -190,7 +191,6 @@ int main(int argc, const char* argv[]) {
     config->clients = 5;
     config->cores = 10;
 
-    auto run_ch_benchmark_queries = std::atomic<bool>{false};
     auto ch_benchmark_queries = std::vector<std::string>{};
     if (BENCHMARK_TO_EVALUATE == "CH") {
       constexpr auto TPC_H_SCALE_FACTOR = 0.1f;
@@ -208,38 +208,6 @@ int main(int argc, const char* argv[]) {
       }
       Assert(ch_benchmark_queries.size() > 0, "Failed to read CH-benCHmark queries.");
     }
-
-
-    auto ch_plan_cache = std::make_shared<SQLPhysicalPlanCache>(100'000);
-    auto ch_benchmark_thread = std::thread([&ch_benchmark_queries, &run_ch_benchmark_queries, &ch_plan_cache]() {
-      while (true) { 
-        while (!run_ch_benchmark_queries) {
-          std::this_thread::sleep_for(1s);
-        }
-
-        auto& storage_manager = Hyrise::get().storage_manager;
-        while (run_ch_benchmark_queries && !storage_manager.has_table("ITEM")) {
-          std::this_thread::sleep_for(1s);
-        }
-
-        std::cout << "Starting CH-benCHmark queries in 1s." << std::endl;
-        std::this_thread::sleep_for(1s);
-
-        auto query_id = size_t{0};
-        const auto query_count = ch_benchmark_queries.size();
-        while (run_ch_benchmark_queries) {
-          query_id = query_id % query_count;
-          std::cout << "CH-benCHmark - Query #" << query_id << ": ";
-          auto sql_pipeline = SQLPipelineBuilder{ch_benchmark_queries[query_id]}.with_pqp_cache(ch_plan_cache).create_pipeline();
-          Timer timer;
-          const auto& [status, result] = sql_pipeline.get_result_table();
-          std::cout << static_cast<size_t>(timer.lap().count()) << " ns" << std::endl;
-
-          Assert(status == SQLPipelineStatus::Success, "Execution of query #" + std::to_string(query_id) + " did not succeed.");
-          ++query_id;
-        }
-      }  
-    });
 
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
       const auto conf_path = entry.path();
@@ -328,6 +296,44 @@ int main(int argc, const char* argv[]) {
       std::cout << " done." << std::endl;
       std::cout << "Starting benchmark." << std::endl;
 
+      auto run_ch_benchmark_queries = std::atomic<bool>{false};
+      auto ch_benchmark_thread = std::thread([&ch_benchmark_queries, &run_ch_benchmark_queries]() {
+        // Obtain a debuggable ID for view rewriting per thread
+        const auto timestamp_str = std::to_string(std::chrono::system_clock::now().time_since_epoch() /
+                                                  std::chrono::milliseconds(1));
+
+        auto& storage_manager = Hyrise::get().storage_manager;
+        while (true) {
+          while (!run_ch_benchmark_queries) {
+            std::this_thread::sleep_for(1s);
+          }
+
+          while (run_ch_benchmark_queries && !storage_manager.has_table("ITEM")) {
+            std::this_thread::sleep_for(1s);
+          }
+
+          std::cout << "Starting CH-benCHmark queries in 1s." << std::endl;
+          std::this_thread::sleep_for(1s);
+
+          auto query_id = size_t{0};
+          const auto query_count = ch_benchmark_queries.size();
+          while (run_ch_benchmark_queries) {
+            query_id = query_id % query_count;
+            std::cout << "CH-benCHmark - Query #" << query_id << ": ";
+            const auto adapted_query = std::regex_replace(ch_benchmark_queries[query_id],
+                                                          std::regex("REVENUE_VIEW"),
+                                                          "REVENUE__" + timestamp_str);
+            auto sql_pipeline = SQLPipelineBuilder{adapted_query}.create_pipeline();
+            Timer timer;
+            const auto& [status, result] = sql_pipeline.get_result_table();
+            std::cout << static_cast<size_t>(timer.lap().count()) << " ns (execution finished)." << std::endl << std::flush;
+
+            Assert(status == SQLPipelineStatus::Success, "Execution of query #" + std::to_string(query_id) + " did not succeed.");
+            ++query_id;
+          }
+        }
+      });
+
       if (BENCHMARK_TO_EVALUATE == "CH") {
         run_ch_benchmark_queries = true;
       }
@@ -342,7 +348,16 @@ int main(int argc, const char* argv[]) {
       if (BENCHMARK_TO_EVALUATE == "CH") {
         run_ch_benchmark_queries = false;
       }
+
+      std::ofstream size_result;
+      size_result.open(conf_name.string() + ".size");
+      size_result << get_all_segments_memory_usage();
+      size_result.close();
+
+      // This is bad!
+      ch_benchmark_thread.detach();
     }
+    std::this_thread::sleep_for(180s);
   }
 
   const auto env_var = std::getenv("BENCHMARK_TO_RUN");
