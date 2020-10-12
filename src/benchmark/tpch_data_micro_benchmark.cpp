@@ -88,7 +88,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 0.1f;
+    const auto scale_factor = 10.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();

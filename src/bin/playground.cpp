@@ -101,14 +101,13 @@ int main(int argc, const char* argv[]) {
       Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
       auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-      config->max_runs = 50;
+      config->max_runs = 10;
       config->enable_visualization = false;
       config->output_file_path = conf_name.string() + ".json";
       config->cache_binary_tables = false;
-      config->max_duration = std::chrono::seconds(300);
+      config->max_duration = std::chrono::seconds(600);
 
       std::vector<std::shared_ptr<AbstractTask>> jobs;
-      
 
       auto context = BenchmarkRunner::create_context(*config);
 
