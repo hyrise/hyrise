@@ -154,16 +154,17 @@ class AggregateHash : public AbstractAggregateOperator {
   inline constexpr static auto properties = std::make_tuple(
       /* TODO(CAJan93): Support these?
       property(&AggregateHash::_groupby_segments, "_groupby_segments"),
-      property(&AggregateHash::_contexts_per_column, "_contexts_per_column"),
-      property(&AggregateHash::_has_aggregate_functions, "_has_aggregate_functions"),*/
+      property(&AggregateHash::_contexts_per_column, "_contexts_per_column"),,
       // from AbstractAggregateOperator
       // TODO(CAJan93): Support this attribute?
-      property(&AggregateHash::_right_input, "_right_input"),
+      property(&AggregateHash::_right_input, "_right_input"),*/
+      property(&AggregateHash::_left_input, "_left_input"),
       property(&AggregateHash::_aggregates, "_aggregates"),
       property(&AggregateHash::_groupby_column_ids, "_groupby_column_ids"),
       /*property(&AggregateHash::_output_column_definitions, "_output_column_definitions"),*/
       // from AbstractOperator via AbstractReadOnlyOperator
-      property(&AggregateHash::_type, "_type"));
+      property(&AggregateHash::_type, "_type"),
+      property(&AggregateHash::_has_aggregate_functions, "_has_aggregate_functions"));
 };
 
 }  // namespace opossum

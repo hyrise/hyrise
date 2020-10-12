@@ -13,14 +13,24 @@
 // TODO(CAJan93): #include "../string.hpp"
 // TODO(CAJan93): #include "assert.hpp"
 // TODO(CAJan93): #include "../types/types.hpp"
+#include "../../expression/abstract_expression.hpp"
 #include "../../expression/abstract_predicate_expression.hpp"
 #include "../../expression/aggregate_expression.hpp"
 #include "../../expression/arithmetic_expression.hpp"
 #include "../../expression/between_expression.hpp"
 #include "../../expression/binary_predicate_expression.hpp"
+#include "../../expression/case_expression.hpp"
+#include "../../expression/cast_expression.hpp"
+#include "../../expression/exists_expression.hpp"
+#include "../../expression/extract_expression.hpp"
 #include "../../expression/in_expression.hpp"
 #include "../../expression/is_null_expression.hpp"
+#include "../../expression/list_expression.hpp"
+#include "../../expression/logical_expression.hpp"
+#include "../../expression/placeholder_expression.hpp"
 #include "../../expression/pqp_column_expression.hpp"
+#include "../../expression/pqp_subquery_expression.hpp"
+#include "../../expression/unary_minus_expression.hpp"
 #include "../../expression/value_expression.hpp"
 #include "../../logical_query_plan/predicate_node.hpp"
 #include "../../operators/abstract_aggregate_operator.hpp"
@@ -137,33 +147,48 @@ constexpr void JsonSerializer::for_sequence(std::integer_sequence<T, S...>, F&& 
 
 template <>
 inline int JsonSerializer::as_any<int>(const jsonView& value, const std::string& key) {
-  AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
+  AssertInput(value.KeyExists(key),
+              JOIN_TO_STR("key ", key, " does not exist           ", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsIntegerType(),
-              JOIN_TO_STR("key ", key, " is not an integer type\n", "JSON: ", value.WriteReadable()));
+              JOIN_TO_STR("key ", key, " is not an integer type\n           ", "JSON: ", value.WriteReadable()));
   return value.GetInteger(key);
+}
+
+// TODO(CAJan93): with_any should also reuse things, just like here
+template <>
+inline ColumnID JsonSerializer::as_any<ColumnID>(const jsonView& value, const std::string& key) {
+  return static_cast<ColumnID>(as_any<int>(value, key));
 }
 
 template <>
 inline ChunkOffset JsonSerializer::as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
-  AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
-  AssertInput(value.GetObject(key).IsIntegerType(),
-              JOIN_TO_STR("key ", key, " is not an integer type\n", "JSON: ", value.WriteReadable()));
-  return value.GetInteger(key);
+  return as_any<int>(value, key);
+}
+
+template <>
+inline bool JsonSerializer::as_any<bool>(const jsonView& value, const std::string& key) {
+  AssertInput(value.KeyExists(key),
+              JOIN_TO_STR("key ", key, " does not exist\n           ", "JSON: ", value.WriteReadable()));
+  AssertInput(value.GetObject(key).IsBool(),
+              JOIN_TO_STR("key ", key, " is not a boolean\n           ", "JSON: ", value.WriteReadable()));
+  return value.GetBool(key);
 }
 
 template <>
 inline std::string JsonSerializer::as_any<std::string>(const jsonView& value, const std::string& key) {
-  AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
+  AssertInput(value.KeyExists(key),
+              JOIN_TO_STR("key ", key, " does not exist\n           ", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsString(),
-              JOIN_TO_STR("key ", key, " is not of type string\n", "JSON: ", value.WriteReadable()));
+              JOIN_TO_STR("key ", key, " is not of type string\n           ", "JSON: ", value.WriteReadable()));
   return value.GetString(key);
 }
 
 template <>
 inline double JsonSerializer::as_any<double>(const jsonView& value, const std::string& key) {
-  AssertInput(value.KeyExists(key), JOIN_TO_STR("key ", key, " does not exist\n", "JSON: ", value.WriteReadable()));
+  AssertInput(value.KeyExists(key),
+              JOIN_TO_STR("key ", key, " does not exist\n           ", "JSON: ", value.WriteReadable()));
   AssertInput(value.GetObject(key).IsFloatingPointType(),
-              JOIN_TO_STR("key ", key, " is not a floting point type\n", "JSON: ", value.WriteReadable()));
+              JOIN_TO_STR("key ", key, " is not a floting point type\n           ", "JSON: ", value.WriteReadable()));
   return value.GetDouble(key);
 }
 
@@ -189,25 +214,42 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
   typedef typename std::remove_cv_t<T> without_cv_t;
   typedef typename std::remove_pointer_t<without_cv_t> without_cv_value_t;
 
+  // e.g. as_any<std::string>(v, k) == as_any<const std::string>(v, k)
+  if constexpr (!std::is_same<without_cv_t, T>::value) return as_any<without_cv_t>(value, key);
+
   if constexpr (std::is_pointer<without_cv_t>::value) {
     // nullpointers
     if (value.GetObject(key).IsString() && value.GetString(key) == "NULL") {
       return nullptr;
     }
     if (value.GetObject(key).IsObject()) {
-      if constexpr (has_member_properties<without_cv_value_t>::value) {
+      if constexpr (has_member_properties<without_cv_value_t>::value ||
+                    std::is_same<without_cv_value_t, AbstractOperator>::value ||
+                    std::is_same<without_cv_value_t, AbstractExpression>::value) {
         // handle nested object (pointer)
         jsonView sub_json = value.GetObject(key);
         // T:: properties exist
         without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
         return sub_obj;
       }
-      Fail(JOIN_TO_STR("Unable to process key ", key, "\nKey is is refering to an object of type ", typeid(T).name(),
-                       "*. Current JSON object is ", value.WriteReadable()));
+      Fail(JOIN_TO_STR("Unable to process key ", key, "\n           Key is a raw pointer with the type ",
+                       typeid(T).name(), "*. Current JSON object is\n", value.WriteReadable()));
     } else {
-      without_cv_value_t sub_obj = as_any<without_cv_value_t>(value, key);
-      without_cv_value_t* new_sub_obj = new without_cv_value_t{sub_obj};
-      return new_sub_obj;
+      /*
+      TODO(CAJan93): Hotfix. I think I get an issue here, because the
+      compiler does not know that this path is never chosen at runtime with
+      without_cv_value_t == AbstractOperator
+      */
+      if constexpr (!std::is_same<without_cv_value_t, AbstractOperator>::value &&
+                    !std::is_same<without_cv_value_t, AbstractExpression>::value) {
+        without_cv_value_t sub_obj = as_any<without_cv_value_t>(value, key);
+        without_cv_value_t* new_sub_obj = new without_cv_value_t{sub_obj};
+        return new_sub_obj;
+      } else {
+        const std::string type =
+            std::is_same<without_cv_value_t, AbstractOperator>::value ? "AbstractOperator" : "AbstractExpression";
+        Fail(JOIN_TO_STR("Unable to serialize abstract type ", type));
+      }
     }
   } else if constexpr (is_weak_ptr<T>::value) {
     Fail("weak ptr currently not supported");
@@ -223,10 +265,18 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
     return smart_ptr_t(object_ptr);
   } else {
     if constexpr (std::is_enum<without_cv_t>::value) {
-      if (value.GetObject(key).IsIntegerType()) {
-        // handle enum
-        return static_cast<without_cv_t>(value.GetString(key));
+      Assert(value.KeyExists(key),
+             JOIN_TO_STR("Unable to extract key '", key, "' from Json. Json is ", value.WriteReadable()));
+      Assert(value.GetObject(key).IsString(),
+             JOIN_TO_STR("Value at key '", key,
+                         "' is representing an enum. Value has to be of type string, but is not. Value is ",
+                         value.GetObject(key).WriteReadable(), "Json is ", value.WriteReadable()));
+      auto enum_opt = magic_enum::enum_cast<without_cv_t>(value.GetString(key));
+      if (!enum_opt.has_value()) {
+        Fail(JOIN_TO_STR("Unable to create enum of type ", typeid(without_cv_t).name(), "from string '",
+                         value.GetString(key), "'"));
       }
+      return enum_opt.value();
     } else {
       if (value.GetObject(key).IsObject()) {
         if constexpr (has_member_properties<without_cv_t>::value) {
@@ -235,7 +285,7 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
           without_cv_t sub_obj = from_json<without_cv_t>(sub_json);
           without_cv_t new_sub_obj{sub_obj};
           return new_sub_obj;
-        } else {
+        } else if constexpr (is_vector<without_cv_t>::value) {
           // deserialize a vector
           const jsonView obj = value.GetObject(key);
           without_cv_t vec;
@@ -292,9 +342,12 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
             }
           }
           return vec;
+        } else {
+          // TODO(CAJan93): Implement this. Call as_any???
+          Fail("Not sure what to do here...");
         }
       } else {
-        Fail(JOIN_TO_STR("Unable to process key ", key, " Current JSON object is ", value.WriteReadable()));
+        Fail(JOIN_TO_STR("Unable to process key ", key, " Current JSON object is\n", value.WriteReadable()));
       }
     }
   }
@@ -334,7 +387,6 @@ inline void JsonSerializer::with_any<CpuID>(jsonVal& data, const std::string& ke
 // TODO(CAJan93): implement JsonSerializer::with_any for ColumnCount (see types.hpp)
 // STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 
-// TODO(CAJan93): implement as_any<bool>
 template <>
 inline void JsonSerializer::with_any<bool>(jsonVal& data, const std::string& key, const bool& val) {
   data.WithBool(key, val);
@@ -398,8 +450,8 @@ inline void JsonSerializer::with_any<std::variant<int, double, std::string>>(
 
     default:
       Fail(JOIN_TO_STR("Error at key '", key,
-                       "'. Json serializer only support variants with <int, double, std::string>", "\nJson was ",
-                       data.View().WriteReadable()));
+                       "'. Json serializer only support variants with <int, double, std::string>",
+                       "\n           Json was ", data.View().WriteReadable()));
   }
 }
 
@@ -452,6 +504,7 @@ jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
   return jv;
 }
 
+// TODO(CAJan93): Use decltype(some_function(OperatorType o))
 template <OperatorType>
 struct get_operator_type;
 
@@ -505,96 +558,151 @@ T JsonSerializer::from_json(const jsonView& data) {
              JOIN_TO_STR("AbstractOperator needs type in order to be casted to concrete operator. Json was ",
                          data.WriteReadable()));
 
+      // TODO(CAJan93): Do I really have to support _type and type? Not just _type?
       const std::string type_key = data.KeyExists("_type") ? "_type" : "type";
       auto operator_type_opt = magic_enum::enum_cast<OperatorType>(data.GetString(type_key));
       if (!operator_type_opt.has_value()) {
-        Fail(JOIN_TO_STR("Unable to create OperatorType from string '", data.GetString(type_key)));
+        Fail(JOIN_TO_STR("Unable to create OperatorType from string '", data.GetString(type_key), "'"));
       }
-      OperatorType operator_type = operator_type_opt.value();
 
-     // std::cout << magic_enum::enum_name(operator_type).data() << std::endl;  // TODO(CAJan93): remove debug msg
-     // return from_json<get_operator_type<operator_type>::Type*>(data);
-
-      // TODO(CAJan93): Basically the same as the serializer. This should be in a separate function
-      switch (operator_type) {
-        case OperatorType::Alias: {
-        } break;
-
-        case OperatorType::Aggregate: {
-          std::cout << " OperatorType::Aggregate" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-          /*const auto abstract_agg = dynamic_cast<const AbstractAggregateOperator*>(abstract_op);
-          if (const auto agg_hash = dynamic_cast<const AggregateHash*>(abstract_agg); agg_hash) {
-            std::cout << "Aggregate Hash" << std::endl;  //  TODO(CAJan93): Remove this debug msg
-            return to_json<AggregateHash>(*agg_hash);
-          } else if (const auto agg_sort = dynamic_cast<const AggregateSort*>(abstract_agg); agg_sort) {
-            // TODO(CAJan93): Test this path
-            std::cout << "Aggregate Sort" << std::endl;  //  TODO(CAJan93): Remove this debug msg
-            return to_json<AggregateSort>(*agg_sort);
-          }
-          Fail("Unable to cast AbastractAggregator to concrete instance");
-          return data;
-          */
-        } break;
-
-        case OperatorType::GetTable: {
-          std::cout << "OperatorType::GetTable" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-                         /*
-          const auto gt = dynamic_cast<const GetTable*>(abstract_op);
-          std::cout << "GetTable" << std::endl;  //  TODO(CAJan93): Remove this debug msg
-          return to_json<GetTable>(*gt);
-          */
-        } break;
-
-        // TODO(CAJan93): Check if I am using the corret limit class
-        case OperatorType::Limit: {
-          std::cout << "OperatorType::Limit" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-                         /*
-          const auto limit = dynamic_cast<const Limit*>(abstract_op);
-          std::cout << "limit" << std::endl;  // TODO(CAJan93): Remove this debug msg
-          return to_json<Limit>(*limit);
-          */
-        } break;
-
-        case OperatorType::Projection: {
-          std::cout << "OperatorType::Projection" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-                         /*
-          const auto projection = dynamic_cast<const Projection*>(abstract_op);
-          std::cout << "projection" << std::endl;  // TODO(CAJan93): Remove this debug msg
-          return to_json<Projection>(*projection);*/
-        } break;
-
-        case OperatorType::TableScan: {
-          std::cout << "OperatorType::TableScan" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-                         /*
-          const auto table_scan = dynamic_cast<const TableScan*>(abstract_op);
-          std::cout << "TableScan" << std::endl;  // TODO(CAJan93): Remove this debug msg
-          return to_json<TableScan>(*table_scan);*/
-        } break;
-
-        case OperatorType::Validate: {
-          std::cout << "OperatorType::Validate" << std::endl;
-          Fail("fail");  // TODO(CAJan93): remove
-                         /*
-          const auto validate = dynamic_cast<const Validate*>(abstract_op);
-          std::cout << "Validate" << std::endl;  // TODO(CAJan93): Remove this debug msg
-          return to_json<Validate>(*validate);
-          return data;*/
-        } break;
-
-        default: {
-          // TODO(CAJan93) remove below code
-          std::cout << "default OperatorType, with type \n" << magic_enum::enum_name(operator_type).data() << '\n';
-          Fail("fail");  // TODO(CAJan93): remove
+      const OperatorType operator_type = operator_type_opt.value();
+      if (operator_type == OperatorType::Aggregate) {
+        if (data.KeyExists("_has_aggregate_functions")) {
+          std::cout << "AggregateHash" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return from_json<AggregateHash*>(data);
+        } else {
+          std::cout << "AggregateSort" << std::endl;  //  TODO(CAJan93): Remove this debug msg
+          return from_json<AggregateSort*>(data);
         }
+      }
+      std::cout << "OperatorType: " << magic_enum::enum_name(operator_type).data()
+                << std::endl;  // TODO(CAJan93): remove debug msg
+      switch (operator_type) {
+        case OperatorType::Alias:
+          return from_json<AliasOperator*>(data);
+        case OperatorType::GetTable:
+          return from_json<GetTable*>(data);
+        case OperatorType::Limit:
+          return from_json<Limit*>(data);
+        case OperatorType::Projection:
+          return from_json<Projection*>(data);
+        case OperatorType::TableScan:
+          return from_json<TableScan*>(data);
+        case OperatorType::Validate:
+          return from_json<Validate*>(data);
+
+        default:
+          Fail(JOIN_TO_STR("Unsupported OperatorType '", data.GetString(type_key), "'"));
       }
 
     } else if constexpr (std::is_same<AbstractExpression, without_ptr_t>::value) {
-      Fail("AbstractExpression is currently not supported");  // TODO(CAJan93) Is this required?
+      auto expression_type_opt = magic_enum::enum_cast<ExpressionType>(data.GetString("type"));
+      if (!expression_type_opt.has_value()) {
+        Fail(JOIN_TO_STR("Unable to create ExpressionType enum from string ", data.GetString("type")));
+      }
+
+      const ExpressionType expression_type = expression_type_opt.value();
+      std::cout << "ExpressionType: " << magic_enum::enum_name(expression_type).data()
+                << std::endl;  // TODO(CAJan93): remove debug msg
+
+      switch (expression_type) {
+        case ExpressionType::Aggregate:
+          return from_json<AggregateExpression*>(data);
+        case ExpressionType::Arithmetic:
+          return from_json<ArithmeticExpression*>(data);
+        case ExpressionType::Cast:
+          return from_json<CastExpression*>(data);
+        case ExpressionType::Case:
+          return from_json<CaseExpression*>(data);
+        case ExpressionType::CorrelatedParameter:
+          return from_json<CorrelatedParameterExpression*>(data);
+        case ExpressionType::PQPColumn:
+          return from_json<PQPColumnExpression*>(data);
+        case ExpressionType::LQPColumn:
+          Fail("Serializer does not support LQPColumn expression");
+        case ExpressionType::Exists:
+          return from_json<ExistsExpression*>(data);
+        case ExpressionType::Extract:
+          return from_json<ExtractExpression*>(data);
+        case ExpressionType::Function:
+          return from_json<FunctionExpression*>(data);
+        case ExpressionType::List:
+          return from_json<ListExpression*>(data);
+        case ExpressionType::Logical:
+          return from_json<LogicalExpression*>(data);
+        case ExpressionType::Placeholder:
+          return from_json<PlaceholderExpression*>(data);
+        case ExpressionType::Predicate: {
+          Assert(data.KeyExists("type"),
+                 JOIN_TO_STR("Json does not contain key 'type' required to cast AbstractPredicateExpression to "
+                             "concrete type\nJson is.\n           ",
+                             data.WriteReadable()));
+          Assert(data.GetObject("type").IsString(),
+                 JOIN_TO_STR("Json does contain key 'type' required to cast AbstractPredicateExpression to "
+                             "concrete type, but 'type' is not a string.\nJson is\n           ",
+                             data.WriteReadable()));
+          const std::string predicate_type = data.GetString("predicate_condition");
+          const auto predicate_contition_opt = magic_enum::enum_cast<PredicateCondition>(predicate_type);
+          // TODO(CAJan93): Write these statements as Asserts
+          if (!predicate_contition_opt.has_value()) {
+            Fail(JOIN_TO_STR("Unable to create enum of type PredicateCondition from string '", predicate_type, "'"));
+          }
+          const PredicateCondition pred_cond = predicate_contition_opt.value();
+
+          switch (pred_cond) {
+            // TODO(CAJan93): simplify this switch case: is_between_expression, is_binary_pred_expr, ...
+            case PredicateCondition::BetweenExclusive:
+            case PredicateCondition::BetweenInclusive:
+            case PredicateCondition::BetweenLowerExclusive:
+            case PredicateCondition::BetweenUpperExclusive: {
+              std::cout << "between expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              return from_json<BetweenExpression*>(data);
+            }
+
+            // TODO(CAJan93): Is this correct? Does the binary pred. expr. cover all these cases?
+            case PredicateCondition::Equals:
+            case PredicateCondition::GreaterThan:
+            case PredicateCondition::GreaterThanEquals:
+            case PredicateCondition::LessThan:
+            case PredicateCondition::LessThanEquals:
+            case PredicateCondition::Like:
+            case PredicateCondition::NotEquals:
+            case PredicateCondition::NotLike: {
+              std::cout << "binary predicate expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              return from_json<BinaryPredicateExpression*>(data);
+            }
+
+            case PredicateCondition::In:
+            case PredicateCondition::NotIn: {
+              std::cout << "in expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              return from_json<InExpression*>(data);
+            }
+
+            case PredicateCondition::IsNotNull:
+            case PredicateCondition::IsNull: {
+              std::cout << "is null expression" << std::endl;  // TODO(CAJan93): Remove debug msg
+              return from_json<IsNullExpression*>(data);
+            }
+
+            default:
+              Fail("Unknown ExpressionType\n");
+          }
+          // TODO(CAJan93): Implement AbstractPredicateExpression
+          Fail("AbstractPredicateExpression currently not supported");
+        } 
+
+        case ExpressionType::PQPSubquery:
+          return from_json<PQPSubqueryExpression*>(data);
+        case ExpressionType::LQPSubquery:
+          Fail("Serializer does not support LQPSubquery expression");
+        case ExpressionType::UnaryMinus:
+          return from_json<UnaryMinusExpression*>(data);
+        case ExpressionType::Value:
+          return from_json<ValueExpression*>(data);
+        default:
+          Fail(JOIN_TO_STR("ExpressionType: ", magic_enum::enum_name(expression_type).data()));
+      }
+      Fail("not implemented");
     } else if constexpr (std::is_same<AggregateExpression, without_ptr_t>::value ||
                          std::is_same<IsNullExpression, without_ptr_t>::value) {
       constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
@@ -674,18 +782,40 @@ T JsonSerializer::from_json(const jsonView& data) {
       typedef typename decltype(property_0)::Type property_0_t;
 
       if constexpr (is_raw_ptr) {
-        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0));
+        without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0.name));
         return t;
       } else {
-        without_ptr_t t(as_any<property_0_t>(data, property_0));
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name));
         return t;
       }
-    } else if constexpr (std::is_same<AggregateHash, without_ptr_t>::value ||
-                         std::is_same<AggregateSort, without_ptr_t>::value ||
-                         std::is_same<AliasOperator, without_ptr_t>::value ||
-                         std::is_same<GetTable, without_ptr_t>::value) {
+    } else if constexpr (std::is_same<GetTable, without_ptr_t>::value) {
       constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
       typedef typename decltype(property_0)::Type property_0_t;
+
+      constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
+      typedef typename decltype(property_1)::Type property_1_t;
+
+      constexpr auto property_2 = std::get<2>(without_ptr_t::properties);
+      typedef typename decltype(property_2)::Type property_2_t;
+
+      if constexpr (is_raw_ptr) {
+        without_cv_t t =
+            new without_ptr_t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                              as_any<property_2_t>(data, property_2.name));
+        return t;
+      } else {
+        without_ptr_t t(as_any<property_0_t>(data, property_0.name), as_any<property_1_t>(data, property_1.name),
+                        as_any<property_2_t>(data, property_2.name));
+        return t;
+      }
+    }
+
+    else if constexpr (std::is_same<AggregateHash, without_ptr_t>::value ||
+                       std::is_same<AggregateSort, without_ptr_t>::value ||
+                       std::is_same<AliasOperator, without_ptr_t>::value) {
+      constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
+      // typedef typename decltype(property_0) property_0_t; // TODO(CAJan93): do not hardcode this
+      typedef typename std::shared_ptr<AbstractOperator> property_0_t;
 
       constexpr auto property_1 = std::get<1>(without_ptr_t::properties);
       typedef typename decltype(property_1)::Type property_1_t;
@@ -720,7 +850,8 @@ T JsonSerializer::from_json(const jsonView& data) {
       }
     } else if constexpr (std::is_same<Validate, without_ptr_t>::value) {
       constexpr auto property_0 = std::get<0>(without_ptr_t::properties);
-      typedef typename decltype(property_0)::Type property_0_t;
+      // typedef typename decltype(property_0) property_0_t; // TODO(CAJan93): do not hardcode this
+      typedef typename std::shared_ptr<AbstractOperator> property_0_t;
 
       if constexpr (is_raw_ptr) {
         without_cv_t t = new without_ptr_t(as_any<property_0_t>(data, property_0.name));
@@ -733,7 +864,7 @@ T JsonSerializer::from_json(const jsonView& data) {
       Fail("Unsupported Type in json deserialization");
     }
   }
-}
+}  // namespace opossum
 
 template <typename T>
 jsonVal JsonSerializer::to_json(const T& object) {
@@ -801,7 +932,7 @@ jsonVal JsonSerializer::to_json(const T& object) {
         default: {
           // TODO(CAJan93) remove below code
           auto t = abstract_op->type();
-          std::cout << "default OperatorType, with type \n" << magic_enum::enum_name(t).data() << '\n';
+          std::cout << "default OperatorType, with type \n           " << magic_enum::enum_name(t).data() << '\n';
         }
       }
       return data;
@@ -914,8 +1045,8 @@ jsonVal JsonSerializer::to_json(const T& object) {
     std::cout << "type is " << magic_enum::enum_name(object.type()).data() << " is currently not supported.\n";
     return data;
   } else {
-    Fail(JOIN_TO_STR("\nunsupported type ", typeid(object).name(), "\ntypeid T: ", typeid(T).name(),
-                     "\ntypeid without_ref_cv_t: ", typeid(without_ref_cv_t).name()));
+    Fail(JOIN_TO_STR("\nunsupported type ", typeid(object).name(), "\n           typeid T: ", typeid(T).name(),
+                     "\n           typeid without_ref_cv_t: ", typeid(without_ref_cv_t).name()));
   }
   return data;
 }  // namespace opossum

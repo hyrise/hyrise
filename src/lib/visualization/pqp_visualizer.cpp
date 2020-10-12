@@ -37,7 +37,7 @@ void PQPVisualizer::_build_subjson(const std::shared_ptr<const AbstractOperator>
 
   const std::string json_str = JsonSerializer::to_json_str(op);
   std::cout << json_str << std::endl;
-
+  
   std::cout << "\nDeserializing..." << std::endl;
 
   auto pqp = JsonSerializer::from_json_str<std::shared_ptr<const AbstractOperator>>(json_str);
@@ -46,7 +46,7 @@ void PQPVisualizer::_build_subjson(const std::shared_ptr<const AbstractOperator>
 
   const std::string json_str_new = JsonSerializer::to_json_str(pqp);
   std::cout << "Old and new json prepresentation of pqp are equal? " << std::boolalpha << (json_str == json_str_new)
-                                                                                                          << '\n';
+   << '\n';
 
   /*
   if (op->left_input()) {
