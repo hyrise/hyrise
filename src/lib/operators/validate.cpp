@@ -113,7 +113,6 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
     // Small chunks are bundled together to avoid unnecessary scheduling overhead.
     // Therefore, we count the number of rows to ensure a minimum of rows per job (default chunk size).
-    // TODO throw this out
     job_row_count += chunk->size();
     if (job_row_count >= Chunk::DEFAULT_SIZE || job_end_chunk_id == (chunk_count - 1)) {
       // Single tasks are executed directly instead of scheduling a single job.
