@@ -490,32 +490,6 @@ jsonVal JsonSerializer::vec_to_json(const std::vector<T>& vec) {
   return jv;
 }
 
-// TODO(CAJan93): Use decltype(some_function(OperatorType o))
-template <OperatorType>
-struct get_operator_type;
-
-template <>
-struct get_operator_type<OperatorType::Alias> {
-  using Type = AliasOperator;
-};
-template <>
-struct get_operator_type<OperatorType::Limit> {
-  using Type = Limit;
-};
-template <>
-struct get_operator_type<OperatorType::Projection> {
-  using Type = Projection;
-};
-template <>
-struct get_operator_type<OperatorType::TableScan> {
-  using Type = TableScan;
-};
-
-template <>
-struct get_operator_type<OperatorType::Validate> {
-  using Type = Validate;
-};
-
 // unserialize function
 template <typename T>
 T JsonSerializer::from_json(const jsonView& data) {
