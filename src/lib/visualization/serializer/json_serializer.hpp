@@ -392,41 +392,6 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
   Fail("unreachable statement reached");
 }
 
-// alias for uint_32_t
-template <>
-inline void JsonSerializer::with_any<ChunkID>(jsonVal& data, const std::string& key, const ChunkID& val) {
-  data.WithInteger(key, val);
-}
-
-// alias for uint_32_T
-template <>
-inline void JsonSerializer::with_any<ChunkOffset>(jsonVal& data, const std::string& key, const ChunkOffset& val) {
-  data.WithInteger(key, val);
-}
-
-// alias for uint16_t
-template <>
-inline void JsonSerializer::with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
-  data.WithInteger(key, val);
-}
-
-// alias for uint32_t
-template <>
-inline void JsonSerializer::with_any<CpuID>(jsonVal& data, const std::string& key, const CpuID& val) {
-  data.WithInteger(key, val);
-}
-
-// alias for uint32_t
-template <>
-inline void JsonSerializer::with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
-  data.WithInteger(key, val);
-}
-
-// alias for uint32_t
-template <>
-inline void JsonSerializer::with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
-  data.WithInteger(key, val);
-}
 
 template <>
 inline void JsonSerializer::with_any<bool>(jsonVal& data, const std::string& key, const bool& val) {
@@ -475,6 +440,9 @@ inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::s
 
 template <typename T>
 inline void JsonSerializer::with_any(jsonVal& data, const std::string& key, const T& val) {
+  // process any kind of integral number as int
+  if constexpr (is_integral<T>::value) return with_any<int>(data, key, val);
+
   if constexpr (std::is_pointer<T>::value) {
     if (val == nullptr) {
       data.WithString(key, "NULL");
