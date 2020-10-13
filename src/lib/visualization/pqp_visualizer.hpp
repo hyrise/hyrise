@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <chrono> // only needed for benchmarking json (de)serilizer
 
 #include "expression/abstract_expression.hpp"
 #include "operators/abstract_operator.hpp"
