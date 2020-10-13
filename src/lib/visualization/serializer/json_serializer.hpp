@@ -123,6 +123,9 @@ class JsonSerializer {
   template <typename T>
   static void with_any(jsonVal& data, const std::string& key, const T& val);
 
+  using string_t =
+      std::__cxx11::basic_string<char, std::char_traits<char>, boost::container::pmr::polymorphic_allocator<char>>;
+
  public:
   // unserialize function
   template <typename T>
@@ -203,26 +206,46 @@ inline std::variant<int, double, std::string> JsonSerializer::as_any<std::varian
   return -1;
 }
 
+/**
+ * AllTypeVariant is encoded like this:
+ * "value": {
+ *      "val_t":  5
+ *      "val":    "some string"
+ * }
+ * Retrieve an AllTypeVariant by passing the key "value". This function will then use the key
+ * "val_t" to determine the type of the value. The key "val" will be used to retrieve the value
+ */
 template <>
 inline AllTypeVariant JsonSerializer::as_any<AllTypeVariant>(const jsonView& value, const std::string& key) {
   // TODO(CAJan93): Check if key val_t and key exist
-  // TODO(CAJan93): Write convenience function key_of_typ_exists<type>
-  const int value_t = value.GetInteger("val_t");
+  Assert(value.GetObject(key).KeyExists("val_t"), JOIN_TO_STR("val_t does not exist in json ", value.WriteReadable()));
+  Assert(value.GetObject(key).GetObject("val_t").IsIntegerType(),
+         JOIN_TO_STR("val_t is not of integer type ", value.WriteReadable()));
+  const int value_t = value.GetObject(key).GetInteger("val_t");
   switch (value_t) {
     case 0:
       return nullptr;
     case 1:
     case 2:
-      return value.GetInteger(key);
+      // use one convenience function for this
+      Assert(value.GetObject(key).KeyExists("val"), JOIN_TO_STR("val does not exist in json ", value.WriteReadable()));
+      Assert(value.GetObject(key).GetObject("val").IsIntegerType(),
+             JOIN_TO_STR("val is not of integer type ", value.WriteReadable()));
+      return value.GetObject(key).GetInteger("val");
     case 3:
     case 4:
-      return value.GetDouble(key);
+      Assert(value.GetObject(key).KeyExists("val"), JOIN_TO_STR("val does not exist in json ", value.WriteReadable()));
+      Assert(value.GetObject(key).GetObject("val").IsFloatingPointType(),
+             JOIN_TO_STR("val is not of integer type ", value.WriteReadable()));
+      return value.GetObject(key).GetDouble("val");
     case 5: {
-      const std::string s = value.GetString(key);
-      return std::__cxx11::basic_string<char, std::char_traits<char>,
-                                        boost::container::pmr::polymorphic_allocator<char>>(s);
+      Assert(value.GetObject(key).KeyExists("val"), JOIN_TO_STR("val does not exist in json ", value.WriteReadable()));
+      Assert(value.GetObject(key).GetObject("val").IsString(),
+             JOIN_TO_STR("val is not of integer type ", value.WriteReadable()));
+      const std::string s = value.GetObject(key).GetString("val");
+      return string_t(s);
     }
-    
+
     default:
       Fail(JOIN_TO_STR("Unable to retrieve value for AllTypeVariant. Json was ", value.GetObject(key).WriteReadable()));
   }
@@ -437,6 +460,10 @@ inline void JsonSerializer::with_any<std::string>(jsonVal& data, const std::stri
 
 template <>
 inline void JsonSerializer::with_any<double>(jsonVal& data, const std::string& key, const double& val) {
+  // TODO(CAJan93): Always Assert that key of type exists
+  // TODO(CAJan93): Write convenience function
+  // TODO(CAJan93): Maybe write WithType<T> this function then does the assertions?
+  // TODO(CAJan93): Check policy Skyrise (assert vs. throw exception)
   data.WithDouble(key, val);
 }
 
@@ -458,8 +485,7 @@ inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::s
   } else if (val_t == 5) {
     variant_jv.WithString(
         "val",
-        std::string(boost::get<std::__cxx11::basic_string<char, std::char_traits<char>,
-                                                          boost::container::pmr::polymorphic_allocator<char>>>(val)));
+        std::string(boost::get<string_t>(val)));
   }
   data.WithObject(key, variant_jv);
 }
@@ -893,7 +919,7 @@ T JsonSerializer::from_json(const jsonView& data) {
         return t;
       }
     } else if constexpr (std::is_same<T, AllTypeVariant>::value) {
-      return as_any<AllTypeVariant>(data, "val");
+      return as_any<AllTypeVariant>(data, "value");
     } else {
       Fail(JOIN_TO_STR("Unsupported type", typeid(T).name(), " in json deserialization"));
     }
