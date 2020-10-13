@@ -101,7 +101,8 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
   DebugAssert(&*get_this_thread_worker() == this,
               "execute_next must be called from the same thread that the worker works in");
   if (!_next_task) {
-    if (!task->try_mark_as_enqueued()) return;
+    const auto already_enqueued = task->try_mark_as_enqueued();
+    Assert(!already_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
     _next_task = task;
   } else {
     _queue->push(task, static_cast<uint32_t>(SchedulePriority::High));
