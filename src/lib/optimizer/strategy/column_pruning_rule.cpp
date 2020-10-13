@@ -147,11 +147,27 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     case LQPNodeType::Union: {
       const auto& union_node = static_cast<const UnionNode&>(*node);
-      Assert(union_node.set_operation_mode == SetOperationMode::Positions,
-             "Currently, ColumnPruningRule can only handle UnionNodes in Positions mode");
-      // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
-      // tables, we will probably have to change something here in this rule that the required expressions are kept on
-      // both the left and right sides.
+      switch (union_node.set_operation_mode) {
+        case SetOperationMode::Positions: {
+          // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
+          // tables, we will probably have to change something here in this rule that the required expressions are kept on
+          // both the left and right sides.
+        } break;
+
+        case SetOperationMode::All: {
+          // Similarly, if the two input tables are only glued together, the UnionNode itself does not require any
+          // expressions. Currently, this mode is used to merge the result of two mutually exclusive or conditions (see
+          // PredicateSplitUpRule). Once we have a union operator that merges data from different tables, we have to look
+          // into this more deeply.
+          Assert(union_node.left_input()->output_expressions() == union_node.right_input()->output_expressions(),
+                 "Can only handle SetOperationMode::All if both inputs have the same expressions");
+        } break;
+
+        case SetOperationMode::Unique: {
+          // This probably needs all expressions, as all of them are used to establish uniqueness
+          Fail("SetOperationMode::Unique is not supported yet");
+        }
+      }
     } break;
 
     case LQPNodeType::Intersect:
