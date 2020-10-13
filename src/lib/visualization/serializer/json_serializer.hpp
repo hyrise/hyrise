@@ -159,36 +159,6 @@ inline int JsonSerializer::as_any<int>(const jsonView& value, const std::string&
 }
 
 template <>
-inline ChunkID JsonSerializer::as_any<ChunkID>(const jsonView& value, const std::string& key) {
-  return static_cast<ChunkID>(as_any<int>(value, key));
-}
-
-template <>
-inline ChunkOffset JsonSerializer::as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
-  return static_cast<ChunkOffset>(as_any<int>(value, key));
-}
-
-template <>
-inline ColumnID JsonSerializer::as_any<ColumnID>(const jsonView& value, const std::string& key) {
-  return static_cast<ColumnID>(as_any<int>(value, key));
-}
-
-template <>
-inline CpuID JsonSerializer::as_any<CpuID>(const jsonView& value, const std::string& key) {
-  return static_cast<CpuID>(as_any<int>(value, key));
-}
-
-template <>
-inline NodeID JsonSerializer::as_any<NodeID>(const jsonView& value, const std::string& key) {
-  return static_cast<NodeID>(as_any<int>(value, key));
-}
-
-template <>
-inline ValueID JsonSerializer::as_any<ValueID>(const jsonView& value, const std::string& key) {
-  return static_cast<ValueID>(as_any<int>(value, key));
-}
-
-template <>
 inline bool JsonSerializer::as_any<bool>(const jsonView& value, const std::string& key) {
   AssertInput(value.KeyExists(key),
               JOIN_TO_STR("key ", key, " does not exist\n           ", "JSON: ", value.WriteReadable()));
@@ -213,17 +183,6 @@ inline double JsonSerializer::as_any<double>(const jsonView& value, const std::s
   AssertInput(value.GetObject(key).IsFloatingPointType(),
               JOIN_TO_STR("key ", key, " is not a floting point type\n           ", "JSON: ", value.WriteReadable()));
   return value.GetDouble(key);
-}
-
-// TODO(CAJan93): remove below case
-template <>
-inline std::variant<int, double, std::string> JsonSerializer::as_any<std::variant<int, double, std::string>>(
-    const jsonView& value, const std::string& key) {
-  if (value.GetObject(key).IsIntegerType()) return value.GetInteger(key);
-  if (value.GetObject(key).IsFloatingPointType()) return value.GetDouble(key);
-  if (value.GetObject(key).IsString()) return value.GetString(key);
-  Fail("json deserializer only support variants with <int, double, string>");
-  return -1;
 }
 
 /**
@@ -280,6 +239,9 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
 
   // e.g. as_any<std::string>(v, k) == as_any<const std::string>(v, k)
   if constexpr (!std::is_same<without_cv_t, T>::value) return as_any<without_cv_t>(value, key);
+
+  // process any kind of integral number as int
+  if constexpr (is_integral<T>::value) return static_cast<T>(as_any<int>(value, key));
 
   if constexpr (std::is_pointer<without_cv_t>::value) {
     // nullpointers
@@ -509,29 +471,6 @@ inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::s
     variant_jv.WithString("val", std::string(boost::get<string_t>(val)));
   }
   data.WithObject(key, variant_jv);
-}
-
-template <>
-inline void JsonSerializer::with_any<std::variant<int, double, std::string>>(
-    jsonVal& data, const std::string& key, const std::variant<int, double, std::string>& val) {
-  switch (val.index()) {
-    case 0:
-      data.WithInteger(key, std::get<0>(val));
-      break;
-
-    case 1:
-      data.WithDouble(key, std::get<1>(val));
-      break;
-
-    case 2:
-      data.WithString(key, std::get<2>(val));
-      break;
-
-    default:
-      Fail(JOIN_TO_STR("Error at key '", key,
-                       "'. Json serializer only support variants with <int, double, std::string>",
-                       "\n           Json was ", data.View().WriteReadable()));
-  }
 }
 
 template <typename T>
