@@ -91,7 +91,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
     // clang-format off
     lqp =
     ProjectionNode::make(expression_vector(a),
-      UnionNode::make(SetOperationMode::Positions,
+      UnionNode::make(union_mode,
         PredicateNode::make(greater_than_(a, 5),
           node_a),
         PredicateNode::make(greater_than_(b, 5),
@@ -110,7 +110,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
     // Column c is not used anywhere above the union, so it can be pruned at least in the Positions mode
     const auto expected_lqp =
     ProjectionNode::make(expression_vector(pruned_a),
-      UnionNode::make(SetOperationMode::Positions,
+      UnionNode::make(union_mode,
         PredicateNode::make(greater_than_(pruned_a, 5),
           pruned_node_a),
         PredicateNode::make(greater_than_(pruned_b, 5),
