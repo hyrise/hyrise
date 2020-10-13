@@ -157,8 +157,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
     Segments output_segments;
     std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
-    auto referenced_table = std::shared_ptr<const Table>();
+
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
+
+    // Holds the table that contains the MVCC information. For data segments, this is the table that we operate on.
+    // If we are validating a reference segment, this is the table referenced by ref_segment_in.
+    auto referenced_table = std::shared_ptr<const Table>{};
 
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_segment_in) {
@@ -190,7 +194,10 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));
         }
       } else {
-        // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+        // Slow path - we are looking at multiple referenced chunks and have to look at each row individually. We first
+        // build a list of entirely visible chunks. Rows with chunk ids from that list do not need to be tested
+        // individually. For chunk ids that are NOT in the list of entirely visible chunks, we need to actually look at
+        // their MVCC information.
         RowIDPosList temp_pos_list;
         temp_pos_list.reserve(expected_number_of_valid_rows);
 
