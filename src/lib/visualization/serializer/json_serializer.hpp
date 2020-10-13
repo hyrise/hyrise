@@ -46,6 +46,7 @@
 #include "../../types.hpp"
 #include "../../utils/assert.hpp"
 #include "../types/get_inner_type.hpp"
+#include "../types/is_integral.hpp"
 #include "../types/is_smart_ptr.hpp"
 #include "../types/is_vector.hpp"
 #include "has_member.hpp"
@@ -157,15 +158,34 @@ inline int JsonSerializer::as_any<int>(const jsonView& value, const std::string&
   return value.GetInteger(key);
 }
 
-// TODO(CAJan93): with_any should also reuse things, just like here
+template <>
+inline ChunkID JsonSerializer::as_any<ChunkID>(const jsonView& value, const std::string& key) {
+  return static_cast<ChunkID>(as_any<int>(value, key));
+}
+
+template <>
+inline ChunkOffset JsonSerializer::as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
+  return static_cast<ChunkOffset>(as_any<int>(value, key));
+}
+
 template <>
 inline ColumnID JsonSerializer::as_any<ColumnID>(const jsonView& value, const std::string& key) {
   return static_cast<ColumnID>(as_any<int>(value, key));
 }
 
 template <>
-inline ChunkOffset JsonSerializer::as_any<ChunkOffset>(const jsonView& value, const std::string& key) {
-  return as_any<int>(value, key);
+inline CpuID JsonSerializer::as_any<CpuID>(const jsonView& value, const std::string& key) {
+  return static_cast<CpuID>(as_any<int>(value, key));
+}
+
+template <>
+inline NodeID JsonSerializer::as_any<NodeID>(const jsonView& value, const std::string& key) {
+  return static_cast<NodeID>(as_any<int>(value, key));
+}
+
+template <>
+inline ValueID JsonSerializer::as_any<ValueID>(const jsonView& value, const std::string& key) {
+  return static_cast<ValueID>(as_any<int>(value, key));
 }
 
 template <>
@@ -380,7 +400,7 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
               if constexpr (has_member_properties<without_cv_vec_inner_t>::value) {
                 vec.emplace_back(from_json<without_cv_vec_inner_t>(
                     data));  // serializer only supports vectors and no other containers
-              } else if constexpr (std::is_same<without_cv_vec_inner_t, int>::value) {
+              } else if constexpr (is_integral<without_cv_vec_inner_t>::value) {
                 vec.emplace_back(data.AsInteger());
               } else if constexpr (std::is_same<without_cv_vec_inner_t, double>::value) {
                 vec.emplace_back(data.AsDouble());
@@ -410,38 +430,41 @@ inline T JsonSerializer::as_any(const jsonView& value, const std::string& key) {
   Fail("unreachable statement reached");
 }
 
-// ColumnID alias for uint16_t
-template <>
-inline void JsonSerializer::with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
-  data.WithInteger(key, val);
-}
-
-// ChunkID alias for uint_32_t
+// alias for uint_32_t
 template <>
 inline void JsonSerializer::with_any<ChunkID>(jsonVal& data, const std::string& key, const ChunkID& val) {
   data.WithInteger(key, val);
 }
 
-// ValueID alias for uint32_t
+// alias for uint_32_T
 template <>
-inline void JsonSerializer::with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
+inline void JsonSerializer::with_any<ChunkOffset>(jsonVal& data, const std::string& key, const ChunkOffset& val) {
   data.WithInteger(key, val);
 }
 
-// NodeID alias for uint32_t
+// alias for uint16_t
 template <>
-inline void JsonSerializer::with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
+inline void JsonSerializer::with_any<ColumnID>(jsonVal& data, const std::string& key, const ColumnID& val) {
   data.WithInteger(key, val);
 }
 
-// CpuID alias for uint32_t
+// alias for uint32_t
 template <>
 inline void JsonSerializer::with_any<CpuID>(jsonVal& data, const std::string& key, const CpuID& val) {
   data.WithInteger(key, val);
 }
 
-// TODO(CAJan93): implement JsonSerializer::with_any for ColumnCount (see types.hpp)
-// STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
+// alias for uint32_t
+template <>
+inline void JsonSerializer::with_any<NodeID>(jsonVal& data, const std::string& key, const NodeID& val) {
+  data.WithInteger(key, val);
+}
+
+// alias for uint32_t
+template <>
+inline void JsonSerializer::with_any<ValueID>(jsonVal& data, const std::string& key, const ValueID& val) {
+  data.WithInteger(key, val);
+}
 
 template <>
 inline void JsonSerializer::with_any<bool>(jsonVal& data, const std::string& key, const bool& val) {
@@ -483,9 +506,7 @@ inline void JsonSerializer::with_any<AllTypeVariant>(jsonVal& data, const std::s
   } else if (val_t == 4) {
     variant_jv.WithDouble("val", boost::get<double>(val));
   } else if (val_t == 5) {
-    variant_jv.WithString(
-        "val",
-        std::string(boost::get<string_t>(val)));
+    variant_jv.WithString("val", std::string(boost::get<string_t>(val)));
   }
   data.WithObject(key, variant_jv);
 }
