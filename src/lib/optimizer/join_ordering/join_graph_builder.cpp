@@ -4,6 +4,8 @@
 #include <stack>
 
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -21,6 +23,12 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
 
   _traverse(lqp);
 
+  for (auto& vertex : _vertices) {
+    auto root_node = std::make_shared<LogicalPlanRootNode>();
+    root_node->set_left_input(vertex);
+    vertex = root_node;
+  }
+
   /**
    * Turn the predicates into JoinEdges and build the JoinGraph
    */
@@ -31,6 +39,11 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
 
   // A single vertex without predicates is not considered a JoinGraph
   if (_vertices.size() <= 1u && edges.empty()) return std::nullopt;
+
+  for (auto& vertex : _vertices) {
+    DebugAssert(vertex->type == LQPNodeType::Root, "Expected root of vertex to be LogicalPlanRootNode");
+    vertex = vertex->left_input();
+  }
 
   return JoinGraph{_vertices, edges};
 }
@@ -116,7 +129,7 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_join_edges_from_predicates(
   std::vector<JoinGraphEdge> edges;
 
   for (const auto& predicate : predicates) {
-    const auto vertex_set = _get_vertex_set_accessed_by_expression(*predicate, vertices);
+    const auto vertex_set = _get_vertex_set_accessed_by_expression(predicate, vertices);
     auto iter = vertices_to_edge_idx.find(vertex_set);
     if (iter == vertices_to_edge_idx.end()) {
       iter = vertices_to_edge_idx.emplace(vertex_set, edges.size()).first;
@@ -213,10 +226,22 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
 }
 
 JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(
-    const AbstractExpression& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) {
+    const std::shared_ptr<AbstractExpression>& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) {
   auto vertex_set = JoinGraphVertexSet{vertices.size()};
   for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
-    if (vertices[vertex_idx]->find_column_id(expression)) {
+    const auto& vertex = vertices[vertex_idx];
+    if (vertex->find_column_id(*expression)) {
+      vertex_set.set(vertex_idx);
+    } else if (expression_evaluable_on_lqp(expression, *vertex)) {
+      // The join expression can be made evaluable by adding a projection to the vertex.
+      // TODO: Check if vertex root is a projection - if so, just add `expression`
+      // TODO: Good chance that this adds projections in places where we do not want them. Run benchmark_all and check if this
+      //       messes up anything
+      auto expressions = vertex->output_expressions();
+      expressions.emplace_back(expression);
+      const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+      lqp_insert_node(vertex, LQPInputSide::Left, projection_node);
+
       vertex_set.set(vertex_idx);
     }
   }
@@ -226,8 +251,8 @@ JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(
     return vertex_set;
   }
 
-  for (const auto& argument : expression.arguments) {
-    vertex_set |= _get_vertex_set_accessed_by_expression(*argument, vertices);
+  for (const auto& argument : expression->arguments) {
+    vertex_set |= _get_vertex_set_accessed_by_expression(argument, vertices);
   }
 
   return vertex_set;

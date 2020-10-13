@@ -254,9 +254,24 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     } break;
 
     case LQPNodeType::Alias:
-    case LQPNodeType::Sort:
-    case LQPNodeType::Projection: {
+    case LQPNodeType::Sort: {
       // We can push predicates past these nodes without further consideration
+      _push_down_traversal(input_node, LQPInputSide::Left, push_down_nodes, estimator);
+    } break;
+
+    case LQPNodeType::Projection: {
+      // Joins with predicates that operate on columns created by a Projection cannot be pushed past that Projection
+      auto push_down_nodes_iter = push_down_nodes.begin();
+      while (push_down_nodes_iter != push_down_nodes.end()) {
+        const auto& push_down_node = *push_down_nodes_iter;
+
+        if (push_down_node->type != LQPNodeType::Join || _is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
+          ++push_down_nodes_iter;
+        } else {
+          _insert_nodes(current_node, input_side, {push_down_node});
+          push_down_nodes_iter = push_down_nodes.erase(push_down_nodes_iter);
+        }
+      }
       _push_down_traversal(input_node, LQPInputSide::Left, push_down_nodes, estimator);
     } break;
 

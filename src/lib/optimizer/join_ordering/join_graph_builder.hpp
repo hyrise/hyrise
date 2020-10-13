@@ -83,7 +83,7 @@ class JoinGraphBuilder final {
    * Lookup which vertices an expression references
    */
   static JoinGraphVertexSet _get_vertex_set_accessed_by_expression(
-      const AbstractExpression& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices);
+      const std::shared_ptr<AbstractExpression>& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices);
 
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<AbstractExpression>> _predicates;
