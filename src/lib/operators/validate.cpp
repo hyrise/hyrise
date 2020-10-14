@@ -146,8 +146,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
   // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
-  // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues.
+  // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues. This assumes that
+  // only one table is referenced over all chunks. If, in the future, this is not true anymore, entirely_visible_chunks
+  // either needs to be moved into the loop or turn into an `unordered_map<shared_ptr<Table>, vector<bool>>`.
   auto entirely_visible_chunks = std::vector<bool>{};
+  auto entirely_visible_chunks_table = std::shared_ptr<const Table>{};  // used only for sanity check
 
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
@@ -172,6 +175,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data");
+
+      if (!entirely_visible_chunks_table) {
+        entirely_visible_chunks_table = referenced_table;
+      } else {
+        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than once table");
+      }
 
       const auto& pos_list_in = ref_segment_in->pos_list();
       if (pos_list_in->references_single_chunk() && !pos_list_in->empty()) {
