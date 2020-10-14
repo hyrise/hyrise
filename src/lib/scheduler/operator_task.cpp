@@ -71,7 +71,6 @@ void OperatorTask::_on_execute() {
           // Essentially a noop, because no modifications are recorded yet. Better be on the safe side though.
           read_write_operator->rollback_records();
         }
-        std::cout << "OperatorTask.execute() – (RolledBackAfterConflict)" << std::endl;
         return;
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
@@ -114,8 +113,11 @@ void OperatorTask::_on_execute() {
 //    // temporary table), it will not yet get deleted
 //    if (!previous_operator_still_needed) predecessor->get_operator()->clear_output();
 //  }
-  const auto walltime = performance_timer.lap();
-  std::cout << "OperatorTask.execute(): "  << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>
-      (walltime)) << std::endl;
+  if constexpr (HYRISE_DEBUG) {
+    const auto walltime = performance_timer.lap();
+    std::cout << _op->name() << _op
+              << "\n time: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime))
+              << std::endl;
+  }
 }
 }  // namespace opossum
