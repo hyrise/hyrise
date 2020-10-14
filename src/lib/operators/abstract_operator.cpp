@@ -33,9 +33,13 @@ void AbstractOperator::execute() {
   DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
   DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
   // TODO Print:
-  if (_output && performance_data->executed) return;
+  if (_output && performance_data->executed) {
+    std::cout << "Operator results available:\n" << *this << std::endl;
+    return;
+  }
+  std::cout << "Operator execution:\n" << *this << std::endl;
   // TODO folgenden DebugAssert raus
-  DebugAssert(!performance_data->executed, "Operator has already been executed");
+  //DebugAssert(!performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -172,6 +176,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  if(parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
   if (right_input()) mutable_right_input()->set_parameters(parameters);
@@ -208,7 +213,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
   };
 
   const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
-    fn_stream << op->description();
+    fn_stream << op->description() << "\n Pointer: " << op;
 
     // If the operator was already executed, print some info about data and performance
     const auto output = op->get_output();

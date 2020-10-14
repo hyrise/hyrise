@@ -21,11 +21,14 @@ PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOpera
     : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(init_pqp), parameters(init_parameters) {}
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
+  // TODO Temporary deep_copy() Hack
   if (_data_type_info) {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), _data_type_info->data_type,
+    //return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), _data_type_info->data_type,
+    return std::make_shared<PQPSubqueryExpression>(pqp, _data_type_info->data_type,
                                                    _data_type_info->nullable, parameters);
   } else {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), parameters);
+//    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), parameters);
+    return std::make_shared<PQPSubqueryExpression>(pqp, parameters);
   }
 }
 
