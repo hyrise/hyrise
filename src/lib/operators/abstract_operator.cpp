@@ -33,11 +33,12 @@ void AbstractOperator::execute() {
   DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
   DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
   // TODO Print:
+  std::cout << this->name() << " – " << this;
   if (_output && performance_data->executed) {
-    std::cout << "Operator results available:\n" << *this << std::endl;
+    std::cout << " – results available" << std::endl;
     return;
   }
-  std::cout << "Operator execution:\n" << *this << std::endl;
+  std::cout << " – execute" << std::endl;
   // TODO folgenden DebugAssert raus
   //DebugAssert(!performance_data->executed, "Operator has already been executed");
 
