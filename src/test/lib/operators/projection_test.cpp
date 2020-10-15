@@ -81,7 +81,7 @@ TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
   EXPECT_EQ(total_invalid_row_count, rows_to_delete);
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
+TEST_F(OperatorsProjectionTest, ForwardsDataTable) {
   // The Projection will forward segments from its input if all expressions are segment references.
   // Why would you enforce something like this? E.g., Update relies on it.
 
@@ -95,9 +95,12 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
   EXPECT_TRUE(projection->get_output()->uses_mvcc() == UseMvcc::Yes);
   EXPECT_TRUE(projection->get_output()->get_chunk(ChunkID{0})->mvcc_data());
+
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<int>*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
+TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
   const auto projection =
       std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
@@ -107,25 +110,34 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
 
   EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<int>*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
+TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
-  const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
-  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2})));
+
+  for (const auto& row : projection->get_output()->get_rows()) {
+    EXPECT_EQ(boost::get<float>(row[0]) + boost::get<int>(row[1]), boost::get<float>(row[2]));
+  }
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
-  // See ForwardsIfPossibleDataTable
-
+TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
@@ -135,6 +147,10 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
             projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
   EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
             projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}));
+
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
@@ -154,42 +170,6 @@ TEST_F(OperatorsProjectionTest, SetParameters) {
   ASSERT_TRUE(correlated_parameter_expression);
   EXPECT_TRUE(correlated_parameter_expression->value());
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});
-}
-
-TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
-  // Checks that instead of materializing all values in an imperfectly forwarded DictionarySegment, the dictionary
-  // is re-used and only the attribute vector is materialized.
-
-  auto dict_table = load_table("resources/test_data/tbl/int_float4.tbl", 3);
-  ChunkEncoder::encode_all_chunks(dict_table, EncodingType::Dictionary);
-  auto table_wrapper = std::make_shared<TableWrapper>(dict_table);
-  table_wrapper->execute();
-
-  const auto table_scan = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, 123456);
-  table_scan->execute();
-  const auto projection =
-      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
-  projection->execute();
-
-  const auto input_segment = dict_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  const auto input_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(input_segment);
-  ASSERT_TRUE(input_dictionary_segment);
-
-  const auto& output_table = projection->get_output();
-  ASSERT_EQ(output_table->chunk_count(), 3);
-
-  // Note that column a now has column id 1
-  const auto output_segment = output_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
-  const auto output_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(output_segment);
-  ASSERT_TRUE(output_dictionary_segment);
-
-  EXPECT_TRUE(output_dictionary_segment->dictionary() == input_dictionary_segment->dictionary());
-
-  const auto& output_attribute_vector = output_dictionary_segment->attribute_vector();
-  EXPECT_EQ(output_attribute_vector->size(), 1);
-
-  const auto output_attribute_vector_decompressor = output_attribute_vector->create_base_decompressor();
-  EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
 }
 
 TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
