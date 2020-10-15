@@ -28,12 +28,12 @@ namespace opossum {
  * data can no longer be generated. We decided that being able to generate tpcds data multiple times in for example a
  * hyriseConsole session is more important than fixing these small memory leaks (<1MB for 1GB of generated data).
  */
-class TpcdsTableGenerator final : public AbstractTableGenerator {
+class TPCDSTableGenerator final : public AbstractTableGenerator {
  public:
   // rng seed 19620718 is the same dsdgen uses as default
-  explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+  explicit TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718);
-  TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+  TPCDSTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                       int rng_seed = 19620718);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
@@ -63,6 +63,9 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_web_sales_and_returns(
       ds_key_t max_rows = _ds_key_max) const;
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = _ds_key_max) const;
+
+ protected:
+  void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
  private:
   std::shared_ptr<Table> _generate_table(const std::string& table_name) const;
