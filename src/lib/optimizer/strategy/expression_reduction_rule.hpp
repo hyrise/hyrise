@@ -34,9 +34,9 @@ class AbstractLQPNode;
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  ExpressionReductionRule();
 
-  bool cacheable = false;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   /**
    * Use the law of boolean distributivity to reduce an expression

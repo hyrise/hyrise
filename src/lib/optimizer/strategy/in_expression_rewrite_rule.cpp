@@ -97,6 +97,10 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
+InExpressionRewriteRule::InExpressionRewriteRule() {
+  cacheable = false;
+}
+
 void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us

@@ -18,6 +18,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
+BetweenCompositionRule::BetweenCompositionRule(){
+  cacheable = false;
+}
+
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode
  * as its input and returns a standardized ColumnBoundary. This function checks where the

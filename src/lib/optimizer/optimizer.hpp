@@ -26,6 +26,10 @@ class AbstractLQPNode;
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
+  /**
+   * This Optimizer applies specific optimizer rules that cannot be executed before caching
+   */
+  static std::shared_ptr<Optimizer> create_post_caching_optimizer();
 
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));

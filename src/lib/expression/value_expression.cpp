@@ -8,12 +8,15 @@
 namespace opossum {
 
 ValueExpression::ValueExpression(const AllTypeVariant& init_value)
-    : AbstractExpression(ExpressionType::Value, {}), value(init_value) {}
+    : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(std::nullopt) {}
+
+ValueExpression::ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_expression_id)
+    : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(init_value_expression_id) {}
 
 bool ValueExpression::requires_computation() const { return false; }
 
 std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
-  return std::make_shared<ValueExpression>(value);
+  return std::make_shared<ValueExpression>(value, *value_expression_id);
 }
 
 std::string ValueExpression::description(const DescriptionMode mode) const {

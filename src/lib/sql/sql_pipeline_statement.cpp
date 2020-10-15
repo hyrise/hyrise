@@ -29,13 +29,13 @@
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
-//DEBUG
 #include "visualization/lqp_visualizer.hpp"
 
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                                           const std::shared_ptr<Optimizer>& post_caching_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
@@ -43,6 +43,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _optimizer(optimizer),
+      _post_caching_optimizer(post_caching_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
@@ -114,21 +115,20 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
 }
 
 void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
-                                                           std::vector<std::shared_ptr<AbstractExpression>>& values,
-                                                           ParameterID& next_parameter_id) {
+                                                           std::vector<std::shared_ptr<AbstractExpression>>& values) {
   if (expression->type == ExpressionType::Value) {
+    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
     if (expression->replaced_by) {
-      const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
       expression = expression->replaced_by;
     } else {
-      const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
       if (value_expression->data_type() != DataType::Null) {
         Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
+        Assert(value_expression->value_expression_id, "ValueExpression has no ValueExpressionID.");
         values.push_back(expression);
-        auto new_expression = std::make_shared<TypedPlaceholderExpression>(next_parameter_id, expression->data_type());
+        auto parameter_id = static_cast<ParameterID>(*value_expression->value_expression_id);
+        auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
         expression->replaced_by = new_expression;
         expression = new_expression;
-        next_parameter_id++;
       }
     }
   }
@@ -137,13 +137,12 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
 const std::shared_ptr<AbstractLQPNode> SQLPipelineStatement::split_logical_plan(
     std::shared_ptr<AbstractLQPNode>& logical_plan, std::vector<std::shared_ptr<AbstractExpression>>& values) {
   auto logical_plan_copy = logical_plan->deep_copy();
-  ParameterID next_parameter_id(0);
 
-  visit_lqp(logical_plan_copy, [&values, &next_parameter_id](const auto& node) {
+  visit_lqp(logical_plan_copy, [&values](const auto& node) {
     if (node) {
       for (auto& root_expression : node->node_expressions) {
-        visit_expression(root_expression, [&values, &next_parameter_id](auto& expression) {
-          expression_parameter_extraction(expression, values, next_parameter_id);
+        visit_expression(root_expression, [&values](auto& expression) {
+          expression_parameter_extraction(expression, values);
           return ExpressionVisitation::VisitArguments;
         });
       }
@@ -156,20 +155,29 @@ const std::shared_ptr<AbstractLQPNode> SQLPipelineStatement::split_logical_plan(
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan) {
+    
+    // LQPVisualizer visualizer;
+    // visualizer.visualize({_optimized_logical_plan}, "./member_optimized_plan.png");
+
     return _optimized_logical_plan;
   }
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
   std::shared_ptr<AbstractLQPNode> unoptimized_lqp_with_placeholders;
+  std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values;
 
   // Check if similar plan (with same structure but maybe different parameters) is cached
   if (lqp_cache && _translation_info.cacheable) {
     const auto start_cache_check_read = std::chrono::high_resolution_clock::now();
 
-    std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
+    unoptimized_lqp_with_placeholders = split_logical_plan(unoptimized_lqp, unoptimized_extracted_values);
 
-    unoptimized_lqp_with_placeholders = split_logical_plan(unoptimized_lqp, extracted_values);
+    // std::cout << "unoptimized value ids" << std::endl;
+    // for (const auto extracted_value : unoptimized_extracted_values) {
+    //   const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
+    //   std::cout << *extracted_value_expression->value_expression_id << " " << extracted_value_expression->value << std::endl;
+    // }
 
     // Handle logical query plan if statement has been cached
     if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp_with_placeholders)) {
@@ -179,12 +187,16 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       if (lqp_is_validated(plan->lqp) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict
-        _optimized_logical_plan = plan->instantiate(extracted_values)->deep_copy();
+        auto temp_optimized_logical_plan = plan->instantiate(unoptimized_extracted_values)->deep_copy();
+        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
         _metrics->query_plan_cache_hit = true;
 
         const auto done_cache_check_read = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration =
             std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
+
+        // LQPVisualizer visualizer;
+        // visualizer.visualize({_optimized_logical_plan}, "./cached_optimized_plan.png");
 
         return _optimized_logical_plan;
       }
@@ -200,7 +212,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
 
-  // TODO: make sure that usecount of unoptimized_lqp is 1
+  // Need to copy since the optimizer requires exclusive ownership of the plan
   auto unoptimized_lqp_copy = unoptimized_lqp->deep_copy();
   _optimized_logical_plan =
       _optimizer->optimize(std::move(unoptimized_lqp_copy), optimizer_rule_durations, cacheable_plan);
@@ -218,8 +230,19 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
     const auto optimized_lqp_with_placeholders = split_logical_plan(_optimized_logical_plan, extracted_values);
 
-    std::vector<ParameterID> all_parameter_ids(extracted_values.size());
-    std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
+    // std::cout << "optimized value ids" << std::endl;
+    // for (const auto extracted_value : extracted_values) {
+    //   const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
+    //   std::cout << *extracted_value_expression->value_expression_id << " " << extracted_value_expression->value << std::endl;
+    // }
+
+    std::vector<ParameterID> all_parameter_ids(unoptimized_extracted_values.size());
+    auto all_parameter_ids_it = all_parameter_ids.begin();
+    for (const auto extracted_value : unoptimized_extracted_values) {
+      const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
+      *all_parameter_ids_it = static_cast<ParameterID>(*extracted_value_expression->value_expression_id);
+      ++all_parameter_ids_it;
+    }
     auto prepared_plan = std::make_shared<PreparedPlan>(optimized_lqp_with_placeholders, all_parameter_ids);
 
     lqp_cache->set(unoptimized_lqp_with_placeholders, prepared_plan);
@@ -228,6 +251,12 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     _metrics->cache_duration +=
         std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_write - start_cache_write);
   }
+
+  auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
+  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
+
+  // LQPVisualizer visualizer;
+  // visualizer.visualize({_optimized_logical_plan}, "./optimized_plan.png");
 
   return _optimized_logical_plan;
 }

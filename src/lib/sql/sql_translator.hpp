@@ -11,6 +11,7 @@
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "parameter_id_allocator.hpp"
+#include "value_expression_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
 #include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp"
@@ -124,6 +125,7 @@ class SQLTranslator final {
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                const std::shared_ptr<ValueExpressionIDAllocator>& value_expression_id_allocator,
                 const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
                 const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
 
@@ -212,6 +214,7 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
+  std::shared_ptr<ValueExpressionIDAllocator> _value_expression_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
   std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
   std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> _meta_tables;

@@ -138,6 +138,7 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
+                    std::make_shared<ValueExpressionIDAllocator>(),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{},
                     std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>()) {}
 
@@ -165,17 +166,19 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
 SQLTranslator::SQLTranslator(
     const UseMvcc use_mvcc, const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
     const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+    const std::shared_ptr<ValueExpressionIDAllocator>& value_expression_id_allocator,
     const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
     const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),
+      _value_expression_id_allocator(value_expression_id_allocator),
       _with_descriptions(with_descriptions),
       _meta_tables(meta_tables) {}
 
 SQLTranslator::SQLTranslator(
     const UseMvcc use_mvcc, const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
-    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(), std::make_shared<ValueExpressionIDAllocator>(),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
@@ -312,7 +315,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
-  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions, _meta_tables};
+  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _value_expression_id_allocator, _with_descriptions, _meta_tables};
   const auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
@@ -637,7 +640,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
+      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _value_expression_id_allocator,
                                         _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
@@ -1157,7 +1160,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
   // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
-  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
+  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _value_expression_id_allocator,
                                       _with_descriptions, _meta_tables};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
   const auto right_output_expressions = right_input_lqp->output_expressions();
@@ -1491,17 +1494,17 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprLiteralFloat:
-      return std::make_shared<ValueExpression>(expr.fval);
+      return std::make_shared<ValueExpression>(expr.fval, _value_expression_id_allocator->allocate());
 
     case hsql::kExprLiteralString:
       AssertInput(expr.name, "No value given for string literal");
-      return std::make_shared<ValueExpression>(pmr_string{name});
+      return std::make_shared<ValueExpression>(pmr_string{name}, _value_expression_id_allocator->allocate());
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
-        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival));
+        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival), _value_expression_id_allocator->allocate());
       } else {
-        return std::make_shared<ValueExpression>(expr.ival);
+        return std::make_shared<ValueExpression>(expr.ival, _value_expression_id_allocator->allocate());
       }
 
     case hsql::kExprLiteralNull:
@@ -1735,7 +1738,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
   auto subquery_translator =
-      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions, _meta_tables};
+      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _value_expression_id_allocator, _with_descriptions, _meta_tables};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 

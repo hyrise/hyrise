@@ -27,9 +27,8 @@ class PredicateNode;
 **/
 class BetweenCompositionRule : public AbstractRule {
  public:
+  BetweenCompositionRule();
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
-
-  bool cacheable = false;
 
  private:
   /**

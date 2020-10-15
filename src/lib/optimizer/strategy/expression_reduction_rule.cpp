@@ -17,6 +17,10 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
+ExpressionReductionRule::ExpressionReductionRule() {
+  cacheable = false;
+}
+
 void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 

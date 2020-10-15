@@ -365,6 +365,8 @@ set(
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
+    sql/value_expression_id_allocator.cpp
+    sql/value_expression_id_allocator.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp

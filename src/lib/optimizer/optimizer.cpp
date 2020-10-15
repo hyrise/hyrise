@@ -25,6 +25,9 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
+//DEBUG
+#include "visualization/lqp_visualizer.hpp"
+
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
  *
@@ -91,6 +94,16 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 
 namespace opossum {
 
+std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
+  const auto optimizer = std::make_shared<Optimizer>();
+  // This rule is like the BetweenCompositionRule, the ExpressionReductionRule and the InExpressionRewriteRule
+  // not reuse-safe. However since this rule has an impact on nearly every plan, excluding queries from caching
+  // that get optimized by this rule would make the whole cache useless. Therefore, this rule is applied after
+  // caching.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+  return optimizer;
+}
+
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
@@ -136,11 +149,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
-  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
-  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
-  // StoredTableNode as possible where the ChunkPruningRule can work with them.
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-
   // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
   // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
   // executed after the ColumnPruningRule and ChunkPruningRule.
@@ -185,17 +193,31 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
+  //int i = 0;
   for (const auto& rule : _rules) {
     Timer rule_timer{};
 
     if (!rule->cacheable) {
       const auto previous_plan = root_node->deep_copy();
       _apply_rule(*rule, root_node);
+      //auto& rule_reference = *rule;
+      //auto rule_name = std::string(typeid(rule_reference).name());
+      //std::cout << rule_name << " " << (rule->cacheable ? "yes" : "no") << std::endl;
+      //LQPVisualizer visualizer;
+      //visualizer.visualize({root_node}, "./" +  std::to_string(i) + rule_name + ".png");
+      //++i;
+
       if (*previous_plan != *root_node) {
         *cacheable = false;
       }
     } else {
       _apply_rule(*rule, root_node);
+      //auto& rule_reference = *rule;
+      //auto rule_name = std::string(typeid(rule_reference).name());
+      //std::cout << rule_name << " " << (rule->cacheable ? "yes" : "no") << std::endl;
+      //LQPVisualizer visualizer;
+      //visualizer.visualize({root_node}, "./" +  std::to_string(i) + rule_name + ".png");
+      //++i;
     }
 
     auto rule_duration = rule_timer.lap();
