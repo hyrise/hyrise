@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include <robin_map.h>
+#include <robin_map.h>  // NOLINT
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
