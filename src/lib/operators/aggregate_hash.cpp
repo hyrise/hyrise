@@ -642,8 +642,8 @@ void AggregateHash::_aggregate() {
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
-  // The reason we only have specializations up to 2 is because every specialization increases the compile time.
-  // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
+  // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
+  // columns.
   switch (_groupby_column_ids.size()) {
     case 0:
       _aggregate<EmptyAggregateKey>();
@@ -653,12 +653,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<AggregateKeyEntry>();
       break;
     case 2:
-      // We need to explicitly list all array sizes that we want to support
       _aggregate<std::array<AggregateKeyEntry, 2>>();
       break;
     default:
-      PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<std::vector<AggregateKeyEntry>>();
+      _aggregate<AggregateKeySmallVector>();
       break;
   }
 

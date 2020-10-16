@@ -122,8 +122,11 @@ using AggregateKeyEntry = uint64_t;
 // A dummy type used as AggregateKey if no GROUP BY columns are present
 struct EmptyAggregateKey {};
 
+// Used to store AggregateKeys if more than 2 GROUP BY columns are used
+using AggregateKeySmallVector = boost::container::small_vector<AggregateKeyEntry, 4, PolymorphicAllocator<AggregateKeyEntry>>;
+
 template <typename AggregateKey>
-using AggregateKeys = std::vector<AggregateKey>;
+using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, AggregateKeySmallVector>, pmr_vector<AggregateKey>, uninitialized_vector<AggregateKey, PolymorphicAllocator<AggregateKey>>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -201,8 +204,8 @@ struct hash<opossum::EmptyAggregateKey> {
 };
 
 template <>
-struct hash<std::vector<opossum::AggregateKeyEntry>> {
-  size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
+struct hash<opossum::AggregateKeySmallVector> {
+  size_t operator()(const opossum::AggregateKeySmallVector& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };
