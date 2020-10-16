@@ -208,22 +208,17 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * In parallel, add the Tables to the StorageManager. Do not use JobTask as we want this to be parallel
-   * even if Hyrise is running without a scheduler.
+   * Add the Tables to the StorageManager
    */
   std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
   auto& storage_manager = Hyrise::get().storage_manager;
-  auto threads = std::vector<std::thread>{};
   for (auto& [table_name, table_info] : table_info_by_name) {
-    threads.emplace_back([&, table_name, table_info] {
-      Timer per_table_timer;
-      if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
-      storage_manager.add_table(table_name, table_info.table);
-      const auto output = std::string{"-  Added '"} + table_name + "' " +  "(" + per_table_timer.lap_formatted() + ")\n";
-      std::cout << output << std::flush;
-    });
+    std::cout << "-  Adding '" << table_name << "' " << std::flush;
+    Timer per_table_timer;
+    if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+    storage_manager.add_table(table_name, table_info.table);
+    std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
-  for (auto& thread : threads) thread.join();
 
   metrics.store_duration = timer.lap();
 
