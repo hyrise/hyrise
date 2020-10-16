@@ -146,16 +146,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
   // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
-<<<<<<< HEAD
-  // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues.
-  auto entirely_visible_chunks = std::vector<bool>{};
-=======
   // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues. This assumes that
   // only one table is referenced over all chunks. If, in the future, this is not true anymore, entirely_visible_chunks
   // either needs to be moved into the loop or turn into an `unordered_map<shared_ptr<Table>, vector<bool>>`.
   auto entirely_visible_chunks = std::vector<bool>{};
   auto entirely_visible_chunks_table = std::shared_ptr<const Table>{};  // used only for sanity check
->>>>>>> origin/master
 
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
@@ -220,17 +215,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           // While this might introduce a small overhead in the case of many unreferenced chunks, it allows us to avoid
           // a branch in the hot loop.
           entirely_visible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
-<<<<<<< HEAD
-          for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count(); ++referenced_table_chunk_id) {
-            const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
-            entirely_visible_chunks[referenced_table_chunk_id] = _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
-=======
           for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count();
                ++referenced_table_chunk_id) {
             const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
             entirely_visible_chunks[referenced_table_chunk_id] =
                 _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
->>>>>>> origin/master
           }
         }
 
