@@ -10,12 +10,12 @@
 #include <utility>
 #include <vector>
 
+#include <robin_map.h>
+#include <robin_set.h>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
-#include <robin_map.h>
-#include <robin_set.h>
 #include <uninitialized_vector.hpp>
 
 #include "abstract_aggregate_operator.hpp"
@@ -62,7 +62,8 @@ class AggregateResult {
   size_t aggregate_count = 0;
   RowID row_id;
 
-  using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>, PolymorphicAllocator<ColumnDataType>>;
+  using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
+                                        PolymorphicAllocator<ColumnDataType>>;
 
   // SecondaryAggregates and DistinctValues are unused in most cases. We store them in a separate variant that is
   // initialized as needed. This saves us a lot of memory in this critical data structure.
@@ -70,7 +71,8 @@ class AggregateResult {
 
   void ensure_secondary_aggregates_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
     if (_details) return;
-    _details = std::make_unique<Details>(SecondaryAggregates<AggregateType>{/*PolymorphicAllocator<AggregateType>(&buffer)*/});  // TODO move to cpp
+    _details = std::make_unique<Details>(
+        SecondaryAggregates<AggregateType>{/*PolymorphicAllocator<AggregateType>(&buffer)*/});  // TODO move to cpp
   }
 
   SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
@@ -123,10 +125,14 @@ using AggregateKeyEntry = uint64_t;
 struct EmptyAggregateKey {};
 
 // Used to store AggregateKeys if more than 2 GROUP BY columns are used
-using AggregateKeySmallVector = boost::container::small_vector<AggregateKeyEntry, 4, PolymorphicAllocator<AggregateKeyEntry>>;
+constexpr auto AGGREGATE_KEY_SMALL_VECTOR_SIZE = 4;
+using AggregateKeySmallVector = boost::container::small_vector<AggregateKeyEntry, AGGREGATE_KEY_SMALL_VECTOR_SIZE,
+                                                               PolymorphicAllocator<AggregateKeyEntry>>;
 
 template <typename AggregateKey>
-using AggregateKeys = std::conditional_t<std::is_same_v<AggregateKey, AggregateKeySmallVector>, pmr_vector<AggregateKey>, uninitialized_vector<AggregateKey, PolymorphicAllocator<AggregateKey>>>;
+using AggregateKeys =
+    std::conditional_t<std::is_same_v<AggregateKey, AggregateKeySmallVector>, pmr_vector<AggregateKey>,
+                       uninitialized_vector<AggregateKey, PolymorphicAllocator<AggregateKey>>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;

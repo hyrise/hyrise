@@ -244,9 +244,9 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, SecondaryAggregates<AggregateType>& current_secondary_aggregates,
-    [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
-    [[maybe_unused]] const uint64_t unique_value_count) const {
+    std::optional<AggregateType>& current_primary_aggregate,
+    SecondaryAggregates<AggregateType>& current_secondary_aggregates, [[maybe_unused]] const uint64_t value_count,
+    [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
     const auto input_column_id = pqp_column.column_id;
