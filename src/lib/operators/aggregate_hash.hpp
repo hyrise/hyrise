@@ -19,7 +19,7 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-#include "bytell_hash_map.hpp"
+#include "bytell_hash_map.hpp"  // TODO remove submodule
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
