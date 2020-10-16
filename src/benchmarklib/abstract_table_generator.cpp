@@ -44,8 +44,8 @@ void AbstractTableGenerator::generate_and_store() {
     if (!sort_order_by_table.empty()) {
       std::cout << "- Sorting tables" << std::endl;
 
-      // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even if
-      // Hyrise uses no scheduler.
+      // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even
+      // if Hyrise uses no scheduler.
       auto threads = std::vector<std::thread>{};
       for (const auto& [table_name, column_name] : sort_order_by_table) {
         threads.emplace_back([&] {
