@@ -329,7 +329,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-            auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+            auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
                                              std::equal_to<>, decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
