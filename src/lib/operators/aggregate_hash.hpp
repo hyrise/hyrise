@@ -10,9 +10,13 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
+#include <robin_map.h>
+#include <robin_set.h>
+#include <uninitialized_vector.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -52,12 +56,50 @@ This result contains:
 
 */
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateResult {
+class AggregateResult {
+ public:
   std::optional<AggregateType> current_primary_aggregate;
-  std::vector<AggregateType> current_secondary_aggregates;
   size_t aggregate_count = 0;
-  std::set<ColumnDataType> distinct_values;
   RowID row_id;
+
+  using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>, PolymorphicAllocator<ColumnDataType>>;
+
+  // SecondaryAggregates and DistinctValues are unused in most cases. We store them in a separate variant that is
+  // initialized as needed. This saves us a lot of memory in this critical data structure.
+  using Details = std::variant<SecondaryAggregates<AggregateType>, DistinctValues>;
+
+  void ensure_secondary_aggregates_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
+    if (_details) return;
+    _details = std::make_unique<Details>(SecondaryAggregates<AggregateType>{/*PolymorphicAllocator<AggregateType>(&buffer)*/});  // TODO move to cpp
+  }
+
+  SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<SecondaryAggregates<AggregateType>>(*_details);
+  }
+
+  const SecondaryAggregates<AggregateType>& current_secondary_aggregates() const {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<SecondaryAggregates<AggregateType>>(*_details);
+  }
+
+  void ensure_distinct_values_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
+    if (_details) return;
+    _details = std::make_unique<Details>(DistinctValues{&buffer});  // TODO move to cpp
+  }
+
+  DistinctValues& distinct_values() {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<DistinctValues>(*_details);
+  }
+
+  const DistinctValues& distinct_values() const {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<DistinctValues>(*_details);
+  }
+
+ protected:
+  std::unique_ptr<Details> _details;
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.

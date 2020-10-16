@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <magic_enum.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
@@ -157,19 +156,26 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     * If the value is NULL, the current aggregate value does not change.
     */
     if (!position.is_null()) {
-      // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
+      if constexpr (function == AggregateFunction::CountDistinct) {
+        result.ensure_distinct_values_initialized(context.buffer);
+
+        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
+        // For the case of CountDistinct, insert this value into the set to keep track of distinct values
+        result.distinct_values().emplace(position.value());
+      }
+
+      if constexpr (function == AggregateFunction::StandardDeviationSample) {
+        result.ensure_secondary_aggregates_initialized(context.buffer);
+        aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
+      } else {
+        aggregator(position.value(), result.current_primary_aggregate);
+      }
+
 
       if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
                     function == AggregateFunction::StandardDeviationSample) {  // NOLINT
         // Increase the counter of non-NULL values only for aggregation functions that use it.
         ++result.aggregate_count;
-      }
-
-      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-        // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-        result.distinct_values.insert(position.value());
       }
     }
 
@@ -761,7 +767,7 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    values[output_offset] = result.distinct_values.size();
+    values[output_offset] = result.distinct_values().size();
     ++output_offset;
   }
 }

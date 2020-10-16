@@ -95,7 +95,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   const auto chunk_count = sorted_table->chunk_count();
 
   std::optional<AggregateType> current_primary_aggregate;
-  std::vector<AggregateType> current_secondary_aggregates{};
+  SecondaryAggregates<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
@@ -167,7 +167,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
-          current_secondary_aggregates = std::vector<AggregateType>{};
+          current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
           unique_values.clear();
           value_count = 0u;
           value_count_with_null = 0u;
@@ -179,7 +179,11 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
         // Update helper variables
         if (!position.is_null()) {
-          aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregates);
+          if constexpr (function == AggregateFunction::StandardDeviationSample) {
+            aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregates);
+          } else {
+            aggregate_function(new_value, current_primary_aggregate);
+          }
           value_count++;
           if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
             unique_values.insert(new_value);
@@ -240,7 +244,7 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, std::vector<AggregateType>& current_secondary_aggregates,
+    std::optional<AggregateType>& current_primary_aggregate, SecondaryAggregates<AggregateType>& current_secondary_aggregates,
     [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
     [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
@@ -272,7 +276,7 @@ void AggregateSort::_set_and_write_aggregate_value(
 
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
-      current_secondary_aggregates = std::vector<AggregateType>{};
+      current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
     }
   }
   if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/container/small_vector.hpp>
+
 #include "expression/aggregate_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -19,12 +21,14 @@ class AggregateFunctionBuilder {
   void get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
+template <typename AggregateType>
+using SecondaryAggregates = boost::container::small_vector<AggregateType, 3, PolymorphicAllocator<AggregateType>>;
+
 template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
       if (!current_primary_aggregate || value_smaller(new_value, *current_primary_aggregate)) {
         // New minimum found
         current_primary_aggregate = new_value;
@@ -37,8 +41,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
       if (!current_primary_aggregate || value_greater(new_value, *current_primary_aggregate)) {
         // New maximum found
         current_primary_aggregate = new_value;
@@ -51,8 +54,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
       // add new value to sum
       if (current_primary_aggregate) {
         *current_primary_aggregate += static_cast<AggregateType>(new_value);
@@ -81,7 +83,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {
+              SecondaryAggregates<AggregateType>& current_secondary_aggregates) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
@@ -127,8 +129,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate) {};
   }
 };
 
@@ -136,8 +137,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::vector<AggregateType>& current_secondary_aggregates) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate) {};
   }
 };
 
