@@ -354,6 +354,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
+      // When materializing the first side (here: the build side), we do not yet have a bloom filter. To keep the number
+      // of code paths low, materialize_*_side always expects a bloom filter. For the first step, we thus pass in a
+      // bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
@@ -363,15 +366,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
-    }
-
-    auto build_side_rows = size_t{0};
-    for (const auto& partition : materialized_build_column) {
-      build_side_rows += partition.elements.size();
-    }
-    auto probe_side_rows = size_t{0};
-    for (const auto& partition : materialized_probe_column) {
-      probe_side_rows += partition.elements.size();
     }
 
     /**
