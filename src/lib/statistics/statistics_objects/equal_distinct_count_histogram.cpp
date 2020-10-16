@@ -12,13 +12,15 @@
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 
+ #include "../../third_party/robin-map/include/tsl/robin_map.h" 
+
 namespace {
 
 using namespace opossum;  // NOLINT
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment,
-                                       std::unordered_map<T, HistogramCountType>& value_distribution,
+                                       tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>, std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) return;
@@ -42,7 +44,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
                                                                              const HistogramDomain<T>& domain) {
   // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
   //               resources.
-  std::unordered_map<T, HistogramCountType> value_distribution_map;
+  tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>, std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>> value_distribution_map;
 
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
