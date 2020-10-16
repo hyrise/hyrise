@@ -62,7 +62,7 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
-  const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{105}, ChunkOffset{205}},
+  const auto expected_pos_list = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>{RowID{ChunkID{105}, ChunkOffset{205}},
                                                                           RowID{ChunkID{105}, ChunkOffset{206}}};
   {
     EXPECT_TRUE(table.contains(5));
@@ -85,7 +85,7 @@ TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
-  const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{150}, ChunkOffset{250}}};
+  const auto expected_pos_list = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>{RowID{ChunkID{150}, ChunkOffset{250}}};
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
