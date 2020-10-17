@@ -328,10 +328,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
+            input_bloom_filter);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, input_bloom_filter);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
+            input_bloom_filter);
       }
     };
 
@@ -353,13 +355,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
-      // TODO fix default arg
-      materialize_build_side(~BloomFilter(BLOOM_FILTER_SIZE));
+      // When materializing the first side (here: the build side), we do not yet have a bloom filter. To keep the number
+      // of code paths low, materialize_*_side always expects a bloom filter. For the first step, we thus pass in a
+      // bloom filter that returns true for every probe.
+      materialize_build_side(ALL_TRUE_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
-      materialize_probe_side(~BloomFilter(BLOOM_FILTER_SIZE));
+      materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
