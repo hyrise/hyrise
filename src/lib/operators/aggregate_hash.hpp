@@ -47,13 +47,13 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 /*
 For each group in the output, one AggregateResult is created.
 This result contains:
-[1] the current (primary) aggregated value,
-[2] the number of rows that were used,
-[3] a vector for additional current (secondary) aggregated values.
+- the current (primary) aggregated value,
+- the number of rows that were used, which are used for AVG, COUNT, and STDDEV_SAMP,
+- a RowID for any row that belongs into this group. This is needed to fill the GROUP BY columns later
 
-[2] is used for AVG and COUNT.
-[3] is used for STDDEV_SAMP.
-
+Optionally, the result may also contain:
+- a set of DISTINCT values OR
+- secondary aggregates, which are currently only used by STDDEV_SAMP
 */
 template <typename ColumnDataType, typename AggregateType>
 class AggregateResult {
@@ -71,8 +71,11 @@ class AggregateResult {
 
   void ensure_secondary_aggregates_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
     if (_details) return;
-    _details = std::make_unique<Details>(
-        SecondaryAggregates<AggregateType>{/*PolymorphicAllocator<AggregateType>(&buffer)*/});  // TODO move to cpp
+
+    // For some reason, we can't pass &buffer into SecondaryAggregates. Boost does something weird with the allocator.
+    // As SecondaryAggregates does not allocate memory right now anyway (but might once we support additional aggregate
+    // functions), we just use the default allocator for now.
+    _details = std::make_unique<Details>(SecondaryAggregates<AggregateType>{});
   }
 
   SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
@@ -87,7 +90,7 @@ class AggregateResult {
 
   void ensure_distinct_values_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
     if (_details) return;
-    _details = std::make_unique<Details>(DistinctValues{&buffer});  // TODO move to cpp
+    _details = std::make_unique<Details>(DistinctValues{&buffer});
   }
 
   DistinctValues& distinct_values() {

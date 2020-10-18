@@ -21,6 +21,9 @@ class AggregateFunctionBuilder {
   void get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
+// Some aggregates need to hold more than a single value. Currently, this is used for StandardDeviationSample, which
+// requires three fields. As such, we use a small_vector, which could also be used for other purposes and set the
+// in-object storage size to three.
 template <typename AggregateType>
 using SecondaryAggregates = boost::container::small_vector<AggregateType, 3, PolymorphicAllocator<AggregateType>>;
 

@@ -29,4 +29,21 @@
 | valgrind                  | any              |    All   |            Yes, memory checking in CI |
 
 
-For dependencies that are integrated in our build process via git submodules, please check .gitmodules
+## Dependencies that are integrated in our build process via git submodules
+- benchmark (https://github.com/google/benchmark)
+- cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
+- cpplint (https://github.com/cpplint/cpplint.git)
+- cxxopts (https://github.com/jarro2783/cxxopts.git)
+- flash_hash_map (https://github.com/skarupke/flat_hash_map)
+- googletest (https://github.com/google/googletest)
+- jemalloc (https://github.com/jemalloc/jemalloc)
+- join-order-benchmark (https://github.com/gregrahn/join-order-benchmark)
+- libpqxx (https://github.com/jtv/libpqxx)
+- lz4 (https://github.com/lz4/lz4)
+- magic_enum (https://github.com/Neargye/magic_enum)
+- nlohmann_json (https://github.com/nlohmann/json)
+- pgasus (https://github.com/kateyy/pgasus)
+- sql-parser (https://github.com/hyrise/sql-parser)
+- tpcds-kit (https://github.com/hyrise-mp/tpcds-kit.git)
+- tpcds-result-reproduction (https://github.com/hyrise-mp/tpcds-result-reproduction.git)
+- zstd (https://github.com/facebook/zstd)

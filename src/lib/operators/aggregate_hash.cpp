@@ -158,14 +158,10 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
     */
     if (!position.is_null()) {
       if constexpr (function == AggregateFunction::CountDistinct) {
+        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
         result.ensure_distinct_values_initialized(context.buffer);
-
-        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-        // For the case of CountDistinct, insert this value into the set to keep track of distinct values
         result.distinct_values().emplace(position.value());
-      }
-
-      if constexpr (function == AggregateFunction::StandardDeviationSample) {
+      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {
         result.ensure_secondary_aggregates_initialized(context.buffer);
         aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
       } else {
