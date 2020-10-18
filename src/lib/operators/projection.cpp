@@ -59,6 +59,28 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // table, the projection_result_table. The life time of this table is managed by the shared_ptr in
   // ReferenceSegment::_referenced_table. The ReferenceSegments created for this use an EntireChunkPosList, so
   // segment_iterate on the ReferenceSegment decays to the underlying ValueSegment virtually without overhead.
+
+  //           +-----+     +------+  Case 1
+  //           |a |b |     |a |a+1|   * Input TableType::Data
+  //           |DS|DS| --> |DS|VS |   * A column (a) is forwarded
+  //           +-----+     +------+   Result: No type change needed, output TableType::Data
+  // 
+  //           +-----+        +---+  Case 2
+  //           |a |b |        |a+1|   * Input TableType::References
+  //           |RS|RS| -->    |VS |   * No column is forwarded
+  //           +-----+        +---+   Result: Output TableType::Data
+  // 
+  // +------+  +-----+     +------+  Case 3
+  // |orig_a|  |a |b |     |a |a+1|   * Input TableType::References
+  // |VS    |  |RS|RS| --> |RS|RS |   * A column (a) is forwarded
+  // +------+  +-----+     +------+   Result: Type change needed, output TableType::References, RS a is forwarded, a+1
+  //    ^        |          |   |             is a new RS pointing to a new dummy table.
+  //    +--------+----------+   v
+  //                          +---+  (VS: ValueSegment, DS: DictionarySegment, RS: ReferenceSegment)
+  //                          |a+1|
+  //                          |VS |
+  //                          +---+
+
   const auto forwards_any_columns = std::any_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
