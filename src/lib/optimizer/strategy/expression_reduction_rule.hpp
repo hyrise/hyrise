@@ -55,11 +55,6 @@ class ExpressionReductionRule : public AbstractRule {
   static void rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
-   * TODO
-   */
-  static void rewrite_case_expression(std::shared_ptr<AbstractExpression>& input_expression);
-
-  /**
    * Rewrite `SELECT SUM(a), COUNT(a), AVG(a)` to `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`
    */
   static void remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,

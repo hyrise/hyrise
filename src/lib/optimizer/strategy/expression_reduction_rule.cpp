@@ -28,7 +28,6 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
       rewrite_like_prefix_wildcard(expression);
-      rewrite_case_expression(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -340,27 +339,6 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
     const auto alias_node = AliasNode::make(root_expressions_replaced, old_column_names);
     lqp_insert_node(root_node, LQPInputSide::Left, alias_node);
-  }
-}
-
-void ExpressionReductionRule::rewrite_case_expression(std::shared_ptr<AbstractExpression>& input_expression) {
-  for (auto& argument : input_expression->arguments) {
-    rewrite_case_expression(argument);
-  }
-
-  const auto case_expression = std::dynamic_pointer_cast<CaseExpression>(input_expression);
-  if (!case_expression) return;
-
-  const auto else_literal = std::dynamic_pointer_cast<ValueExpression>(case_expression->otherwise());
-  if (!else_literal) return;
-
-  if (else_literal->value != AllTypeVariant{0}) return;
-
-  const auto then_literal = std::dynamic_pointer_cast<ValueExpression>(case_expression->then());
-  if (then_literal && then_literal->value == AllTypeVariant{1}) {
-    input_expression = case_expression->when();
-  } else {
-    input_expression = mul_(case_expression->when(), case_expression->then());
   }
 }
 
