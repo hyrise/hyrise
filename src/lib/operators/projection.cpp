@@ -64,12 +64,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //           |a |b |     |a |a+1|   * Input TableType::Data
   //           |DS|DS| --> |DS|VS |   * A column (a) is forwarded
   //           +-----+     +------+   Result: No type change needed, output TableType::Data
-  // 
+  //
   //           +-----+        +---+  Case 2
   //           |a |b |        |a+1|   * Input TableType::References
   //           |RS|RS| -->    |VS |   * No column is forwarded
   //           +-----+        +---+   Result: Output TableType::Data
-  // 
+  //
   // +------+  +-----+     +------+  Case 3
   // |orig_a|  |a |b |     |a |a+1|   * Input TableType::References
   // |VS    |  |RS|RS| --> |RS|RS |   * A column (a) is forwarded
