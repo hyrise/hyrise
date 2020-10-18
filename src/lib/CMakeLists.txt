@@ -646,6 +646,7 @@ set(
 set(
     LIBRARIES
     lz4
+    robin_map
     sqlparser
     uninitialized_vector
     zstd

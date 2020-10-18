@@ -878,117 +878,116 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    // bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
-    // bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
-    // auto radix_clusterer = RadixClusterSort<T>(
-    //     _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-    //     _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
-    //     include_null_left, include_null_right, _cluster_count);
-    // // Sort and cluster the input tables
-    // auto sort_output = radix_clusterer.execute();
-    // _sorted_left_table = std::move(sort_output.clusters_left);
-    // _sorted_right_table = std::move(sort_output.clusters_right);
-    // _null_rows_left = std::move(sort_output.null_rows_left);
-    // _null_rows_right = std::move(sort_output.null_rows_right);
-    // _end_of_left_table = _end_of_table(_sorted_left_table);
-    // _end_of_right_table = _end_of_table(_sorted_right_table);
+    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    auto radix_clusterer = RadixClusterSort<T>(
+        _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
+        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
+        include_null_left, include_null_right, _cluster_count);
+    // Sort and cluster the input tables
+    auto sort_output = radix_clusterer.execute();
+    _sorted_left_table = std::move(sort_output.clusters_left);
+    _sorted_right_table = std::move(sort_output.clusters_right);
+    _null_rows_left = std::move(sort_output.null_rows_left);
+    _null_rows_right = std::move(sort_output.null_rows_right);
+    _end_of_left_table = _end_of_table(_sorted_left_table);
+    _end_of_right_table = _end_of_table(_sorted_right_table);
 
-    // _perform_join();
+    _perform_join();
 
-    // if (include_null_left || include_null_right) {
-    //   auto null_output_left = std::make_shared<RowIDPosList>();
-    //   auto null_output_right = std::make_shared<RowIDPosList>();
+    if (include_null_left || include_null_right) {
+      auto null_output_left = std::make_shared<RowIDPosList>();
+      auto null_output_right = std::make_shared<RowIDPosList>();
 
-    //   // Add the outer join rows which had a null value in their join column
-    //   if (include_null_left) {
-    //     null_output_left->reserve(_null_rows_left->size());
-    //     null_output_right->insert(null_output_right->end(), _null_rows_left->size(), NULL_ROW_ID);
-    //     for (const auto& row_id_left : *_null_rows_left) {
-    //       null_output_left->push_back(row_id_left);
-    //     }
-    //   }
-    //   if (include_null_right) {
-    //     null_output_left->insert(null_output_left->end(), _null_rows_right->size(), NULL_ROW_ID);
-    //     null_output_right->reserve(_null_rows_right->size());
-    //     for (const auto& row_id_right : *_null_rows_right) {
-    //       null_output_right->push_back(row_id_right);
-    //     }
-    //   }
+      // Add the outer join rows which had a null value in their join column
+      if (include_null_left) {
+        null_output_left->reserve(_null_rows_left->size());
+        null_output_right->insert(null_output_right->end(), _null_rows_left->size(), NULL_ROW_ID);
+        for (const auto& row_id_left : *_null_rows_left) {
+          null_output_left->push_back(row_id_left);
+        }
+      }
+      if (include_null_right) {
+        null_output_left->insert(null_output_left->end(), _null_rows_right->size(), NULL_ROW_ID);
+        null_output_right->reserve(_null_rows_right->size());
+        for (const auto& row_id_right : *_null_rows_right) {
+          null_output_right->push_back(row_id_right);
+        }
+      }
 
-    //   DebugAssert(null_output_left->size() == null_output_right->size(),
-    //               "Null positions lists are expected to be of equal length.");
-    //   if (!null_output_left->empty()) {
-    //     _output_pos_lists_left.push_back(null_output_left);
-    //     _output_pos_lists_right.push_back(null_output_right);
-    //   }
-    // }
+      DebugAssert(null_output_left->size() == null_output_right->size(),
+                  "Null positions lists are expected to be of equal length.");
+      if (!null_output_left->empty()) {
+        _output_pos_lists_left.push_back(null_output_left);
+        _output_pos_lists_right.push_back(null_output_right);
+      }
+    }
 
-    // // Intermediate structure for output chunks (to avoid concurrent appending to table)
-    // std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
+    // Intermediate structure for output chunks (to avoid concurrent appending to table)
+    std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
-    // // Threshold of expected rows per partition over which parallel output jobs are spawned.
-    // constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
+    // Threshold of expected rows per partition over which parallel output jobs are spawned.
+    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
 
-    // // Determine if writing output in parallel is necessary.
-    // // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
-    // const auto first_output_size = _output_pos_lists_left[0]->size();
-    // const auto write_output_concurrently = _cluster_count > 1 && first_output_size > PARALLEL_OUTPUT_THRESHOLD;
+    // Determine if writing output in parallel is necessary.
+    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+    const auto first_output_size = _output_pos_lists_left[0]->size();
+    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > PARALLEL_OUTPUT_THRESHOLD;
 
-    // std::vector<std::shared_ptr<AbstractTask>> output_jobs;
-    // output_jobs.reserve(_output_pos_lists_left.size());
-    // const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    // const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
-    //                                                          _sort_merge_join._primary_predicate.column_ids.second);
-    // for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-    //   if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
-    //     continue;
-    //   }
+    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+    output_jobs.reserve(_output_pos_lists_left.size());
+    const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
+                                                             _sort_merge_join._primary_predicate.column_ids.second);
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
+        continue;
+      }
 
-    //   auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
-    //     Segments segments;
-    //     _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
-    //     _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
-    //     auto output_chunk = std::make_shared<Chunk>(std::move(segments));
-    //     if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-    //         _mode == JoinMode::Inner) {
-    //       output_chunk->finalize();
-    //       // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-    //       output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-    //                                                 SortColumnDefinition(right_join_column, SortMode::Ascending)});
-    //     }
-    //     output_chunks[pos_list_id] = output_chunk;
-    //   };
+      auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
+        Segments segments;
+        _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
+        _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
+        auto output_chunk = std::make_shared<Chunk>(std::move(segments));
+        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+            _mode == JoinMode::Inner) {
+          output_chunk->finalize();
+          // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+          output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                                    SortColumnDefinition(right_join_column, SortMode::Ascending)});
+        }
+        output_chunks[pos_list_id] = output_chunk;
+      };
 
-    //   if (write_output_concurrently) {
-    //     auto job = std::make_shared<JobTask>(write_output_chunk);
-    //     output_jobs.push_back(job);
-    //     output_jobs.back()->schedule();
-    //   } else {
-    //     write_output_chunk();
-    //   }
-    // }
+      if (write_output_concurrently) {
+        auto job = std::make_shared<JobTask>(write_output_chunk);
+        output_jobs.push_back(job);
+        output_jobs.back()->schedule();
+      } else {
+        write_output_chunk();
+      }
+    }
 
-    // if (write_output_concurrently) {
-    //   // Wait for all chunk creation tasks to finish
-    //   Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
-    // }
+    if (write_output_concurrently) {
+      // Wait for all chunk creation tasks to finish
+      Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+    }
 
-    // // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
-    // output_chunks.erase(
-    //     std::remove_if(output_chunks.begin(), output_chunks.end(),
-    //                    [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
-    //     output_chunks.end());
+    // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
+    output_chunks.erase(
+        std::remove_if(output_chunks.begin(), output_chunks.end(),
+                       [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
+        output_chunks.end());
 
-    // auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    // if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
-    //     _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
-    //   // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
-    //   // non-equal predicates.
-    //   result_table->set_value_clustered_by({left_join_column, right_join_column});
-    // }
+    auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
+    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+      // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
+      // non-equal predicates.
+      result_table->set_value_clustered_by({left_join_column, right_join_column});
+    }
 
-    // return result_table;
-    return nullptr;
+    return result_table;
   }
 };
 

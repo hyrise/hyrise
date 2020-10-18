@@ -358,67 +358,69 @@ template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractIndex>& index) const {
   std::vector<IndexRange> index_ranges{};
-  // index_ranges.reserve(2);
+  index_ranges.reserve(2);
 
-  // // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
-  // // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
-  // // has a match.
-  // if (_mode == JoinMode::AntiNullAsTrue) {
-  //   const auto indexed_null_values = index->null_cbegin() != index->null_cend();
-  //   if (probe_side_position.is_null() || indexed_null_values) {
-  //     index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
-  //     index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
-  //     return index_ranges;
-  //   }
-  // }
+  // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
+  // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
+  // has a match.
+  if (_mode == JoinMode::AntiNullAsTrue) {
+    const auto indexed_null_values = index->null_cbegin() != index->null_cend();
+    if (probe_side_position.is_null() || indexed_null_values) {
+      index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
+      index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      return index_ranges;
+    }
+  }
 
-  // if (!probe_side_position.is_null()) {
-  //   auto range_begin = AbstractIndex::Iterator{};
-  //   auto range_end = AbstractIndex::Iterator{};
+  if (!probe_side_position.is_null()) {
+    auto range_begin = AbstractIndex::Iterator{};
+    auto range_end = AbstractIndex::Iterator{};
 
-  //   switch (_adjusted_primary_predicate.predicate_condition) {
-  //     case PredicateCondition::Equals: {
-  //       range_begin = index->lower_bound({probe_side_position.value()});
-  //       range_end = index->upper_bound({probe_side_position.value()});
-  //       break;
-  //     }
-  //     case PredicateCondition::NotEquals: {
-  //       // first, get all values less than the search value
-  //       range_begin = index->cbegin();
-  //       range_end = index->lower_bound({probe_side_position.value()});
-  //       index_ranges.emplace_back(IndexRange{range_begin, range_end});
+    const auto& value = typename SegmentPosition::Type{probe_side_position.value()};
 
-  //       // set range for second half to all values greater than the search value
-  //       range_begin = index->upper_bound({probe_side_position.value()});
-  //       range_end = index->cend();
-  //       break;
-  //     }
-  //     case PredicateCondition::GreaterThan: {
-  //       range_begin = index->cbegin();
-  //       range_end = index->lower_bound({probe_side_position.value()});
-  //       break;
-  //     }
-  //     case PredicateCondition::GreaterThanEquals: {
-  //       range_begin = index->cbegin();
-  //       range_end = index->upper_bound({probe_side_position.value()});
-  //       break;
-  //     }
-  //     case PredicateCondition::LessThan: {
-  //       range_begin = index->upper_bound({probe_side_position.value()});
-  //       range_end = index->cend();
-  //       break;
-  //     }
-  //     case PredicateCondition::LessThanEquals: {
-  //       range_begin = index->lower_bound({probe_side_position.value()});
-  //       range_end = index->cend();
-  //       break;
-  //     }
-  //     default: {
-  //       Fail("Unsupported comparison type encountered");
-  //     }
-  //   }
-  //   index_ranges.emplace_back(IndexRange{range_begin, range_end});
-  // }
+    switch (_adjusted_primary_predicate.predicate_condition) {
+      case PredicateCondition::Equals: {
+        range_begin = index->lower_bound({value});
+        range_end = index->upper_bound({value});
+        break;
+      }
+      case PredicateCondition::NotEquals: {
+        // first, get all values less than the search value
+        range_begin = index->cbegin();
+        range_end = index->lower_bound({value});
+        index_ranges.emplace_back(IndexRange{range_begin, range_end});
+
+        // set range for second half to all values greater than the search value
+        range_begin = index->upper_bound({value});
+        range_end = index->cend();
+        break;
+      }
+      case PredicateCondition::GreaterThan: {
+        range_begin = index->cbegin();
+        range_end = index->lower_bound({value});
+        break;
+      }
+      case PredicateCondition::GreaterThanEquals: {
+        range_begin = index->cbegin();
+        range_end = index->upper_bound({value});
+        break;
+      }
+      case PredicateCondition::LessThan: {
+        range_begin = index->upper_bound({value});
+        range_end = index->cend();
+        break;
+      }
+      case PredicateCondition::LessThanEquals: {
+        range_begin = index->lower_bound({value});
+        range_end = index->cend();
+        break;
+      }
+      default: {
+        Fail("Unsupported comparison type encountered");
+      }
+    }
+    index_ranges.emplace_back(IndexRange{range_begin, range_end});
+  }
   return index_ranges;
 }
 

@@ -6,9 +6,8 @@
 #include <uninitialized_vector.hpp>
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include "../../third_party/robin-map/include/tsl/robin_map.h"
+#include <robin_map.h>
 
-#include "flat_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -195,7 +194,7 @@ class PosHashTable {
 // `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
 // (1) Dynamically check whether bloom filters are worth the memory and computational costs This could be based on the
 //     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
-// (2) Choosing an appropriate filter size. 2^24 was experimentally found to be good for TPC-H SF 10, but is certainly
+// (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
 // (3) Check whether using multiple hash functions (k>1) brings any improvement.
 // (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
@@ -204,7 +203,7 @@ class PosHashTable {
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
-static constexpr auto BLOOM_FILTER_SIZE = 1 << 24;
+static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is

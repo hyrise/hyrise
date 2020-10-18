@@ -92,7 +92,7 @@ ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
 plt.tight_layout()
-plt.savefig(basename + "_breakdown.pdf")
+plt.savefig(basename + "_breakdown.png")
 
 rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(sum_optimizer_rule_durations.keys()))
 # sort optimizer rules
@@ -131,4 +131,4 @@ for label_id, label in enumerate(xlabels):
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
-plt.savefig(basename + "_optimizer_breakdown.pdf")
+plt.savefig(basename + "_optimizer_breakdown.png")
