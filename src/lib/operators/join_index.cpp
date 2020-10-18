@@ -376,7 +376,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
     auto range_begin = AbstractIndex::Iterator{};
     auto range_end = AbstractIndex::Iterator{};
 
-    const auto& value = typename SegmentPosition::Type{probe_side_position.value()};
+    const auto& value = std::conditional_t<std::is_same_v<typename SegmentPosition::Type, std::string_view>, pmr_string, typename SegmentPosition::Type>{probe_side_position.value()};
 
     switch (_adjusted_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
