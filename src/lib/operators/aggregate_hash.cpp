@@ -161,7 +161,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
         result.ensure_distinct_values_initialized(context.buffer);
         result.distinct_values().emplace(position.value());
-      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {
+      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
         result.ensure_secondary_aggregates_initialized(context.buffer);
         aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
       } else {
