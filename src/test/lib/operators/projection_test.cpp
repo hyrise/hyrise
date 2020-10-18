@@ -133,7 +133,7 @@ TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2})));
 
   for (const auto& row : projection->get_output()->get_rows()) {
-    EXPECT_EQ(boost::get<float>(row[0]) + boost::get<int>(row[1]), boost::get<float>(row[2]));
+    EXPECT_FLOAT_EQ(boost::get<float>(row[0]) + static_cast<float>(boost::get<int>(row[1])), boost::get<float>(row[2]));
   }
 }
 

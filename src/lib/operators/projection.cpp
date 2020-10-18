@@ -57,7 +57,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // columns. However, we cannot return a table that mixes data and reference segments, so if the forwarded columns are
   // reference columns, the newly generated columns contain reference segments, too. These point to an internal dummy
   // table, the projection_result_table. The life time of this table is managed by the shared_ptr in
-  // ReferenceSegment::_referenced_table.
+  // ReferenceSegment::_referenced_table. The ReferenceSegments created for this use an EntireChunkPosList, so
+  // segment_iterate on the ReferenceSegment decays to the underlying ValueSegment virtually without overhead.
   const auto forwards_any_columns = std::any_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
@@ -156,7 +157,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       input_column_to_output_column[original_id] = expression_id;
     }
   }
-
 
   // Create the actual chunks, and, if needed, fill the projection_result_table. Also set MVCC and
   // individually_sorted_by information as needed.
