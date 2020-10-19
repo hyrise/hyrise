@@ -15,7 +15,7 @@
 namespace opossum {
 class OperatorsUnionAllTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  virtual void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
 
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));

@@ -139,6 +139,10 @@ if (${ENABLE_LTO})
         else()
             message(WARNING "LTO not supported: ${ipo_output}")
         endif()
+
+        if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.0) # TODO change to PCH_INSTANTIATE_TEMPLATES with clang 3.19
+            add_compile_options(-fpch-instantiate-templates -fwhole-program-vtables)
+        endif()
     endif()
 endif()
 
@@ -146,7 +150,7 @@ endif()
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 
 # Some third-party libs don't support LTO (if enabled above):
-foreach(no_lto_target gtest gtest_main gmock gmock_main)
+foreach(no_lto_target gtest gtest_main gmock gmock_main nlohmann_json::nlohmann_json) # TODO properly exclude json
     if(TARGET no_lto_target)
         set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
     endif()

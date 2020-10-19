@@ -1,5 +1,10 @@
 #include "constant_mappings.hpp"
 
+// TODO clang10:
+// - Test LTO
+// - Test Flags from Blog Article
+// - Remove boost hack
+
 #include <unordered_map>
 
 #include <boost/bimap.hpp>

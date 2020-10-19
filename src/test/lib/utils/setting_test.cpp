@@ -6,12 +6,12 @@ namespace opossum {
 
 class SettingTest : public BaseTest {
  protected:
-  void SetUp() {
+  void SetUp() override {
     Hyrise::reset();
     mock_setting = std::make_shared<MockSetting>("mock_setting");
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   std::shared_ptr<AbstractSetting> mock_setting;
 };
