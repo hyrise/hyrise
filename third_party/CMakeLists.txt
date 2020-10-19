@@ -183,6 +183,18 @@ add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
 
+add_library(robin_map INTERFACE)
+target_include_directories(robin_map SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl)
+target_sources(
+  robin_map
+  INTERFACE
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_growth_policy.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_hash.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_map.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_set.h
+)
+
 if(NOT APPLE)
   # Only configure jemalloc for non-Apple builds, as we cannot properly replace the allocator on Mac using static linking:
   #   If you ./configure jemalloc with --with-jemalloc-prefix="" on OSX and static link the library, your malloc's will
