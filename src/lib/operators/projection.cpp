@@ -217,7 +217,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       chunk->finalize();
 
       if (projection_result_table) {
-        projection_result_table->append_chunk(std::move(projection_result_segments), input_chunk->mvcc_data());
+        projection_result_table->append_chunk(projection_result_segments, input_chunk->mvcc_data());
         projection_result_table->last_chunk()->increase_invalid_row_count(input_chunk->invalid_row_count());
       }
     }
