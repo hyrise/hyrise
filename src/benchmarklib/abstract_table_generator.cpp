@@ -47,7 +47,12 @@ void AbstractTableGenerator::generate_and_store() {
       // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even
       // if Hyrise uses no scheduler.
       auto threads = std::vector<std::thread>{};
-      for (const auto& [table_name, column_name] : sort_order_by_table) {
+      for (const auto& sort_order_pair : sort_order_by_table) {
+        // Cannot use structured binding here as it cannot be captured in the lambda:
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#2313
+        const auto& table_name = sort_order_pair.first;
+        const auto& column_name = sort_order_pair.second;
+
         threads.emplace_back([&] {
           auto& table = table_info_by_name[table_name].table;
           const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
@@ -171,7 +176,10 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
 
     auto threads = std::vector<std::thread>{};
-    for (auto& [table_name, table_info] : table_info_by_name) {
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
+
       threads.emplace_back([&] {
         Timer per_table_timer;
         table_info.re_encoded =
@@ -235,7 +243,10 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
     auto& storage_manager = Hyrise::get().storage_manager;
     auto threads = std::vector<std::thread>{};
-    for (auto& [table_name, table_info] : table_info_by_name) {
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
+
       threads.emplace_back([&] {
         Timer per_table_timer;
         if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
