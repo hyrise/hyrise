@@ -99,8 +99,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   // Perform the actual projection on a per-chunk level. `output_segments_by_chunk` will contain both forwarded and
-  // newly generated columns. In this loop, we do not yet deal with the projection_result_table indirection described
-  // above.
+  // newly generated columns. In the upcoming loop, we do not yet deal with the projection_result_table indirection
+  // described above.
   auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
 
   auto forwarding_cost = std::chrono::nanoseconds{};
