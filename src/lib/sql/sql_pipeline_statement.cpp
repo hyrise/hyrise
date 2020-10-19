@@ -170,6 +170,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   std::shared_ptr<AbstractLQPNode> unoptimized_lqp_with_placeholders;
   std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values;
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
 
   // Check if similar plan (with same structure but maybe different parameters) is cached
   if (lqp_cache && _translation_info.cacheable) {
@@ -195,12 +196,16 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict
         auto temp_optimized_logical_plan = plan->instantiate(unoptimized_extracted_values)->deep_copy();
-        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
-        _metrics->query_plan_cache_hit = true;
-
         const auto done_cache_check_read = std::chrono::high_resolution_clock::now();
-        _metrics->cache_duration =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
+        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
+
+        const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
+        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
+        const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
+
+        _metrics->query_plan_cache_hit = true;
+        _metrics->optimizer_rule_durations = *optimizer_rule_durations;
+        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
 
         // LQPVisualizer visualizer;
         // visualizer.visualize({_optimized_logical_plan}, "./cached_optimized_plan.png");
@@ -216,7 +221,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // Optimize plan with original parameters
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
-  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
 
   // Need to copy since the optimizer requires exclusive ownership of the plan
@@ -227,9 +231,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   //std::cout << "cacheable " << *cacheable_plan << std::endl;
 
   const auto done_optimize = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
-  _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache plan without parameters
   if (lqp_cache && *cacheable_plan && _translation_info.cacheable) {
@@ -261,8 +262,15 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_write - start_cache_write);
   }
 
+  const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
   auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
-  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
+  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
+  const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
+
+   _metrics->optimization_duration =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize) +
+      std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
+  _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // LQPVisualizer visualizer;
   // visualizer.visualize({_optimized_logical_plan}, "./optimized_plan.png");

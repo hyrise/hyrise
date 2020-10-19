@@ -53,19 +53,19 @@ for benchmark_json in data["benchmarks"]:
                         else:
                             sum_optimizer_rule_durations[rule_name] += rule_duration
 
-            benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_cache_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_optimization_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_lqp_translation_duration / len(benchmark_json["successful_runs"]))
-            benchmark.append(sum_plan_execution_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_cache_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_optimization_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_lqp_translation_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_plan_execution_duration / len(benchmark_json["successful_runs"]))
 
-        benchmarks.append(benchmark)
+    benchmarks.append(benchmark)
 
-        for rule_durations in sum_optimizer_rule_durations.values():
-            rule_duration = sum(rule_durations)
-            rule_benchmark.append(rule_duration / len(benchmark_json["successful_runs"]))
-        rule_benchmarks.append(rule_benchmark)
+    for rule_durations in sum_optimizer_rule_durations.values():
+        rule_duration = sum(rule_durations)
+        rule_benchmark.append(rule_duration / len(benchmark_json["successful_runs"]))
+    rule_benchmarks.append(rule_benchmark)
 
 benchmark_df = pd.DataFrame(
     benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", "Cache", "Optimizer", "LQPTranslator", "Execution"]
