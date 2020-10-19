@@ -94,7 +94,7 @@ void AbstractTableGenerator::generate_and_store() {
           });
 
           if (is_sorted) {
-            auto output = std::stringstream;
+            auto output = std::stringstream{};
             output << "-  Table '" << table_name << "' is already sorted by '" << column_name << "'\n";
             std::cout << output.str() << std::flush;
             const SortColumnDefinition sort_column{sort_column_id, sort_mode};
