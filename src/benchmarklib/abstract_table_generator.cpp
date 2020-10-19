@@ -140,9 +140,10 @@ void AbstractTableGenerator::generate_and_store() {
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 
-          auto output = std::string{"-  Sorted '"} + table_name + "' by '" + column_name + "' (" +
-                        per_table_timer.lap_formatted() + ")\n";
-          std::cout << output << std::flush;
+          auto output = std::stringstream{};
+          output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
+                 << ")\n";
+          std::cout << output.str() << std::flush;
         });
       }
       for (auto& thread : threads) thread.join();
@@ -184,10 +185,11 @@ void AbstractTableGenerator::generate_and_store() {
         Timer per_table_timer;
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-        auto output = std::string{"-  Encoding '"} + table_name + "' - " +
-                      (table_info.re_encoded ? "encoding applied" : "no encoding necessary") + " (" +
-                      per_table_timer.lap_formatted() + ")\n";
-        std::cout << output << std::flush;
+        auto output = std::stringstream{};
+        output << "-  Encoding '" + table_name << "' - "
+               << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
+               << per_table_timer.lap_formatted() << ")\n";
+        std::cout << output.str() << std::flush;
       });
     }
 
