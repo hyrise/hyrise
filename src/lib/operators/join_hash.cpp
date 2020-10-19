@@ -102,7 +102,6 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
   // slightly skewed data distributions and aim for a fill level of 80%.
-  // TODO adapt to new hash map
   const auto complete_hash_map_size =
       // number of items in map
       static_cast<double>(build_relation_size) *
@@ -254,7 +253,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  size_t _radix_bits;
+  const size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -585,7 +584,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
       // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
       // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-      constexpr auto MIN_SIZE = 1;
+      constexpr auto MIN_SIZE = 500;
       constexpr auto MAX_SIZE = MIN_SIZE * 2;
       build_side_pos_list->reserve(MAX_SIZE);
       probe_side_pos_list->reserve(MAX_SIZE);
