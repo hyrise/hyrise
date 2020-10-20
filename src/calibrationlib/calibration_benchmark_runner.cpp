@@ -25,7 +25,8 @@ CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_t
 }
 
 void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const float scale_factor,
-                                               const int number_of_executions) {
+                                               const int number_of_executions, const int item_runs) {
+  _config->max_runs = item_runs;
   std::shared_ptr<BenchmarkRunner> benchmark_runner;
   switch (type) {
     case BenchmarkType::TCPH:
@@ -56,7 +57,6 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
 }
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tcph(const float scale_factor) const {
-  _config->max_runs = 1;
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, scale_factor);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, _config),

@@ -103,7 +103,7 @@ class OperatorFeatureExporter {
                                                      {"RIGHT_TABLE_NAME", DataType::String, false},
                                                      {"RIGHT_COLUMN_NAME", DataType::String, false},
                                                      {"RIGHT_COLUMN_TYPE", DataType::String, false},
-                                                     {"PREDICATE_CONDITION", DataType::String, false}},
+                                                     {"PROBE_SIDE_FLIP", DataType::Int, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},

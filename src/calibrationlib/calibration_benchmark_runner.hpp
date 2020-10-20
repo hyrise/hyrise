@@ -16,7 +16,8 @@ class CalibrationBenchmarkRunner {
   explicit CalibrationBenchmarkRunner(const std::string& path_to_dir);
   CalibrationBenchmarkRunner(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config);
 
-  void run_benchmark(const BenchmarkType type, const float scale_factor, const int number_of_executions);
+  void run_benchmark(const BenchmarkType type, const float scale_factor, const int number_of_executions,
+                     const int item_runs);
 
  private:
   std::shared_ptr<OperatorFeatureExporter> _feature_exporter;

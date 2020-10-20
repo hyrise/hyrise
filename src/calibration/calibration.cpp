@@ -34,6 +34,7 @@ int main() {
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
+  constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 100;
 
   // Execute calibration
   auto table_config = std::make_shared<TableGeneratorConfig>(
@@ -53,9 +54,10 @@ int main() {
     std::cout << "Generating test data" << std::endl;
     auto test_start = std::chrono::system_clock::now();
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
-    benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
+    benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS,
+                                   NUMBER_BENCHMARK_ITEM_RUNS);
     const auto test_duration =
-        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() test_start).count();
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
     std::cout << "Generated test data in " << test_duration << " s" << std::endl;
   }
 

@@ -161,8 +161,8 @@ void CalibrationLQPGenerator::_generate_table_scans(
 void CalibrationLQPGenerator::_generate_joins(
     const std::shared_ptr<const CalibrationTableWrapper>& left_table_wrapper,
     const std::shared_ptr<const CalibrationTableWrapper>& right_table_wrapper) {
-  const auto left_table = left_table_wrapper->get_table();
-  const auto right_table = right_table_wrapper->get_table();
+  const auto& left_table = left_table_wrapper->get_table();
+  const auto& right_table = right_table_wrapper->get_table();
   Assert(left_table->column_count() == right_table->column_count(), "Tables must have same column counts.");
   const auto join_modes = {JoinMode::Inner, JoinMode::Left,           JoinMode::Right,          JoinMode::FullOuter,
                            JoinMode::Semi,  JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse};
@@ -176,8 +176,8 @@ void CalibrationLQPGenerator::_generate_joins(
     // only create Joins on Int columns
     if (left_column_type != DataType::Int) continue;
     Assert(left_column_type == right_table->column_data_type(column_id), "DataTypes must match.");
-    for (auto join_mode : join_modes) {
-      for (auto predicate : predicate_conditions) {
+    for (const auto& join_mode : join_modes) {
+      for (const auto& predicate : predicate_conditions) {
         const auto left_stored_table_node = StoredTableNode::make(left_table_wrapper->get_name());
         const auto right_stored_table_node = StoredTableNode::make(right_table_wrapper->get_name());
         const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, column_id);

@@ -172,6 +172,13 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_column_type = right_table_column_information.column_type;
   }
 
+  const auto mode = op->mode();
+  const auto operator_flipped_inputs = static_cast<int32_t>(
+      op->type() == OperatorType::JoinHash &&
+      (mode == JoinMode::Left || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse ||
+       mode == JoinMode::Semi ||
+       (mode == JoinMode::Inner && operator_info.left_input_rows > operator_info.right_input_rows)));
+
   auto output_row = std::vector<AllTypeVariant>{_current_join_id,
                                                 operator_info.name,
                                                 join_mode,
@@ -191,7 +198,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                 right_table_name,
                                                 right_column_name,
                                                 right_column_type,
-                                                predicate_condition_string};
+                                                operator_flipped_inputs};
 
   // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
   // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
