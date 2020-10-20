@@ -1,12 +1,13 @@
 #include "equal_distinct_count_histogram.hpp"
 
 #include <cmath>
-
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <robin_map.h>  // NOLINT
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
@@ -16,9 +17,17 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+// Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
+// defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
+// so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
+// where hashing is somewhat expensive.
 template <typename T>
-void add_segment_to_value_distribution(const AbstractSegment& segment,
-                                       std::unordered_map<T, HistogramCountType>& value_distribution,
+using ValueDistributionMap =
+    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
+                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+
+template <typename T>
+void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) return;
@@ -42,7 +51,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
                                                                              const HistogramDomain<T>& domain) {
   // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
   //               resources.
-  std::unordered_map<T, HistogramCountType> value_distribution_map;
+  ValueDistributionMap<T> value_distribution_map;
 
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
