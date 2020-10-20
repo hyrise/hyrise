@@ -24,9 +24,9 @@ int main() {
   const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
       ColumnDataDistribution::make_uniform_config(0.0, 1000.0)};
   const std::set<ChunkOffset> CHUNK_SIZES = {Chunk::DEFAULT_SIZE};
-  const std::set<int> ROW_COUNTS = {5,       25,      100,       1500,      2000,      3000,     6000,   8000};
-                                    //10'000,  15'000,  20'000,    30'000,    40'000,    50'000,   60'175, 100'000,
-                                    //250'000, 500'000, 1'000'000, 2'500'000, 5'000'000, 6'000'000};
+  const std::set<int> ROW_COUNTS = {5,       25,      100,       1500,      2000,      3000,     6000,   8000,
+                                    10'000,  15'000,  20'000,    30'000,    40'000,    50'000,   60'175, 100'000,
+                                    250'000, 500'000, 1'000'000, 2'500'000, 5'000'000, 6'000'000};
   const bool GENERATE_SORTED_TABLES = true;
 
   // test data generation settings
@@ -40,26 +40,27 @@ int main() {
       TableGeneratorConfig{TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS,
                            GENERATE_SORTED_TABLES});
 
-  std::cout << "- Generating tables" << std::endl;
+  std::cout << "Generating tables" << std::endl;
   auto table_generation_start = std::chrono::system_clock::now();
   auto table_generator = CalibrationTableGenerator(table_config);
   const auto tables = table_generator.generate();
   const auto table_generation_duration =
-        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - table_generation_start).count();
-  std::cout << "- Generated tables in " << table_generation_duration << " s" << std::endl;
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - table_generation_start)
+          .count();
+  std::cout << "Generated tables in " << table_generation_duration << " s" << std::endl;
 
   if (GENERATE_TEST_DATA) {
-    std::cout << "- Generating test data" << std::endl;
+    std::cout << "Generating test data" << std::endl;
     auto test_start = std::chrono::system_clock::now();
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
     benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
     const auto test_duration =
-        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
-    std::cout << "- Generated test data in " << test_duration << " s" << std::endl;
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() test_start).count();
+    std::cout << "Generated test data in " << test_duration << " s" << std::endl;
   }
 
-  std::cout << "- Generating training data" << std::endl;
-  std::cout << "\t- Generating LQPS" << std::endl;
+  std::cout << "Generating training data" << std::endl;
+  std::cout << "- Generating LQPS" << std::endl;
   auto generation_start = std::chrono::system_clock::now();
 
   auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
@@ -75,9 +76,9 @@ int main() {
   lqp_generator.generate_joins(tables);
   const auto generation_duration =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - generation_start).count();
-  std::cout << "\t- Generated LQPs in " << generation_duration << " s" << std::endl;
+  std::cout << "- Generated LQPs in " << generation_duration << " s" << std::endl;
 
-  std::cout << "\t- Running queries" << std::endl;
+  std::cout << "- Running queries" << std::endl;
   auto training_start = std::chrono::system_clock::now();
   const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   const auto lqps = lqp_generator.get_lqps();
@@ -87,14 +88,13 @@ int main() {
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-    // Export PQP directly after generation
+    // Export PQP directly after execution
     feature_exporter.export_to_csv(pqp);
-    //std::cout << std::endl;
   }
 
   const auto training_duration =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - training_start).count();
-  std::cout << "\t- Ran queries in " << training_duration << " s" << std::endl;
+  std::cout << "- Ran queries in " << training_duration << " s" << std::endl;
 
   std::cout << "- Exporting training data" << std::endl;
   auto export_start = std::chrono::system_clock::now();
