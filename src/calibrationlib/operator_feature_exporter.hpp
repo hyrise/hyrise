@@ -29,6 +29,8 @@ class OperatorFeatureExporter {
     int64_t output_rows{0};
     int32_t output_columns{0};
     float estimated_cardinality{0.0};
+    float estimated_left_input_rows{0.0};
+    float estimated_right_input_rows{0.0};
   };
 
   struct TableColumnInformation {
@@ -71,6 +73,7 @@ class OperatorFeatureExporter {
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
                                                      {"INPUT_ROWS", DataType::Long, false},
                                                      {"INPUT_COLUMNS", DataType::Int, false},
+                                                     {"ESTIMATED_INPUT_ROWS", DataType::Float, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"ESTIMATED_CARDINALITY", DataType::Float, false},
@@ -88,6 +91,8 @@ class OperatorFeatureExporter {
                                                      {"INPUT_ROWS_RIGHT", DataType::Long, false},
                                                      {"INPUT_COLUMNS_LEFT", DataType::Int, false},
                                                      {"INPUT_COLUMNS_RIGHT", DataType::Int, false},
+                                                     {"ESTIMATED_INPUT_ROWS_LEFT", DataType::Float, false},
+                                                     {"ESTIMATED_INPUT_ROWS_RIGHT", DataType::Float, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"ESTIMATED_CARDINALITY", DataType::Float, false},
@@ -97,7 +102,8 @@ class OperatorFeatureExporter {
                                                      {"LEFT_COLUMN_TYPE", DataType::String, false},
                                                      {"RIGHT_TABLE_NAME", DataType::String, false},
                                                      {"RIGHT_COLUMN_NAME", DataType::String, false},
-                                                     {"RIGHT_COLUMN_TYPE", DataType::String, false}},
+                                                     {"RIGHT_COLUMN_TYPE", DataType::String, false},
+                                                     {"PREDICATE_CONDITION", DataType::String, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},

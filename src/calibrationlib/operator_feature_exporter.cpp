@@ -85,6 +85,7 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
     const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                         operator_info.left_input_rows,
                                                         operator_info.left_input_columns,
+                                                        operator_info.estimated_left_input_rows,
                                                         operator_info.output_rows,
                                                         operator_info.output_columns,
                                                         operator_info.estimated_cardinality,
@@ -110,6 +111,7 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
       const auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
                                                           operator_info.left_input_rows,
                                                           operator_info.left_input_columns,
+                                                          operator_info.estimated_left_input_rows,
                                                           operator_info.output_rows,
                                                           operator_info.output_columns,
                                                           operator_info.estimated_cardinality,
@@ -136,67 +138,78 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
 
   const auto node = op->lqp_node;
   const auto join_node = static_pointer_cast<const JoinNode>(node);
-  const auto operator_predicate = OperatorJoinPredicate::from_expression(*(join_node->node_expressions[0]),
-                                                                         *node->left_input(), *node->right_input());
+  // const auto operator_predicate = OperatorJoinPredicate::from_expression(*(join_node->node_expressions[0]),
+  //                                                                       *node->left_input(), *node->right_input());
+  const auto& operator_predicate = op->primary_predicate();
 
-  if (operator_predicate.has_value()) {
-    const auto predicate_expression =
-        static_pointer_cast<const AbstractPredicateExpression>(join_node->node_expressions[0]);
+  //if (operator_predicate.has_value()) {
+  const auto predicate_expression =
+      static_pointer_cast<const AbstractPredicateExpression>(join_node->node_expressions[0]);
 
-    const auto first_predicate_expression = predicate_expression->arguments[0];
-    if (first_predicate_expression->type == ExpressionType::LQPColumn) {
-      const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(first_predicate_expression);
-      const auto& left_table_column_information =
-          _table_column_information(node, left_column_expression, InputSide::Left);
-      left_table_name = left_table_column_information.table_name;
-      left_column_name = left_table_column_information.column_name;
-      left_column_type = left_table_column_information.column_type;
-    }
-
-    const auto second_predicate_expression = predicate_expression->arguments[1];
-    if (second_predicate_expression->type == ExpressionType::LQPColumn) {
-      const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(second_predicate_expression);
-      const auto& right_table_column_information =
-          _table_column_information(node, right_column_expression, InputSide::Right);
-      right_table_name = right_table_column_information.table_name;
-      right_column_name = right_table_column_information.column_name;
-      right_column_type = right_table_column_information.column_type;
-    }
-
-    auto output_row = std::vector<AllTypeVariant>{_current_join_id,
-                                                  operator_info.name,
-                                                  join_mode,
-                                                  operator_info.left_input_rows,
-                                                  operator_info.right_input_rows,
-                                                  operator_info.left_input_columns,
-                                                  operator_info.right_input_columns,
-                                                  operator_info.output_rows,
-                                                  operator_info.output_columns,
-                                                  operator_info.estimated_cardinality,
-                                                  operator_info.walltime,
-                                                  left_table_name,
-                                                  left_column_name,
-                                                  left_column_type,
-                                                  right_table_name,
-                                                  right_column_name,
-                                                  right_column_type};
-
-
-    // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
-    // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
-    // the predicates are in the order (left/right) as the join input tables are.
-    if (operator_predicate->is_flipped()) {
-      output_row[11] = right_table_name;
-      output_row[12] = right_column_name;
-      output_row[13] = right_column_type;
-      output_row[14] = left_table_name;
-      output_row[15] = left_column_name;
-      output_row[16] = left_column_type;
-    }
-
-    _join_output_table->append(output_row);
-    ++_current_join_id;
+  auto predicate_condition = operator_predicate.predicate_condition;  //.value().predicate_condition;
+  if (operator_predicate.is_flipped()) {
+    predicate_condition = flip_predicate_condition(predicate_condition);
   }
+  const auto predicate_condition_string = pmr_string{predicate_condition_to_string.left.at(predicate_condition)};
+
+  const auto first_predicate_expression = predicate_expression->arguments[0];
+  if (first_predicate_expression->type == ExpressionType::LQPColumn) {
+    const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(first_predicate_expression);
+    const auto& left_table_column_information =
+        _table_column_information(node, left_column_expression, InputSide::Left);
+    left_table_name = left_table_column_information.table_name;
+    left_column_name = left_table_column_information.column_name;
+    left_column_type = left_table_column_information.column_type;
+  }
+
+  const auto second_predicate_expression = predicate_expression->arguments[1];
+  if (second_predicate_expression->type == ExpressionType::LQPColumn) {
+    const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(second_predicate_expression);
+    const auto& right_table_column_information =
+        _table_column_information(node, right_column_expression, InputSide::Right);
+    right_table_name = right_table_column_information.table_name;
+    right_column_name = right_table_column_information.column_name;
+    right_column_type = right_table_column_information.column_type;
+  }
+
+  auto output_row = std::vector<AllTypeVariant>{_current_join_id,
+                                                operator_info.name,
+                                                join_mode,
+                                                operator_info.left_input_rows,
+                                                operator_info.right_input_rows,
+                                                operator_info.left_input_columns,
+                                                operator_info.right_input_columns,
+                                                operator_info.estimated_left_input_rows,
+                                                operator_info.estimated_right_input_rows,
+                                                operator_info.output_rows,
+                                                operator_info.output_columns,
+                                                operator_info.estimated_cardinality,
+                                                operator_info.walltime,
+                                                left_table_name,
+                                                left_column_name,
+                                                left_column_type,
+                                                right_table_name,
+                                                right_column_name,
+                                                right_column_type,
+                                                predicate_condition_string};
+
+  // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
+  // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
+  // the predicates are in the order (left/right) as the join input tables are.
+  if (operator_predicate.is_flipped()) {
+    output_row[7] = operator_info.estimated_right_input_rows;
+    output_row[8] = operator_info.estimated_left_input_rows;
+    output_row[13] = right_table_name;
+    output_row[14] = right_column_name;
+    output_row[15] = right_column_type;
+    output_row[16] = left_table_name;
+    output_row[17] = left_column_name;
+    output_row[18] = left_column_type;
+  }
+
+  _join_output_table->append(output_row);
+  ++_current_join_id;
+  //}
 }
 
 void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetTable>& op) {
@@ -205,6 +218,7 @@ void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetT
   const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                       operator_info.left_input_rows,
                                                       operator_info.left_input_columns,
+                                                      operator_info.estimated_left_input_rows,
                                                       operator_info.output_rows,
                                                       operator_info.output_columns,
                                                       operator_info.estimated_cardinality,
@@ -234,6 +248,7 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,
                                                           operator_info.left_input_columns,
+                                                          operator_info.estimated_left_input_rows,
                                                           operator_info.output_rows,
                                                           operator_info.output_columns,
                                                           operator_info.estimated_cardinality,
@@ -263,6 +278,7 @@ void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const Ind
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,
                                                           operator_info.left_input_columns,
+                                                          operator_info.estimated_left_input_rows,
                                                           operator_info.output_rows,
                                                           operator_info.output_columns,
                                                           operator_info.estimated_cardinality,
@@ -340,10 +356,19 @@ const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporte
     operator_info.right_input_columns = static_cast<int32_t>(op->right_input()->performance_data->output_column_count);
   }
 
+  const auto lqp_node = op->lqp_node;
+  if (lqp_node->left_input()) {
+    operator_info.estimated_left_input_rows = _cardinality_estimator->estimate_cardinality(lqp_node->left_input());
+  }
+
+  if (lqp_node->right_input()) {
+    operator_info.estimated_right_input_rows = _cardinality_estimator->estimate_cardinality(lqp_node->right_input());
+  }
+
   operator_info.output_rows = static_cast<int64_t>(op->performance_data->output_row_count);
   operator_info.walltime = static_cast<int64_t>(op->performance_data->walltime.count());
   operator_info.output_columns = static_cast<int32_t>(op->performance_data->output_column_count);
-  operator_info.estimated_cardinality = _cardinality_estimator->estimate_cardinality(op->lqp_node);
+  operator_info.estimated_cardinality = _cardinality_estimator->estimate_cardinality(lqp_node);
 
   return operator_info;
 }

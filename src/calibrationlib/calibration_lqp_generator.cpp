@@ -172,8 +172,10 @@ void CalibrationLQPGenerator::_generate_joins(
                                      PredicateCondition::Like,        PredicateCondition::NotLike};
 
   for (auto column_id = ColumnID{0}; column_id < left_table->column_count(); ++column_id) {
-    Assert(left_table->column_data_type(column_id) == right_table->column_data_type(column_id),
-           "DataTypes must match.");
+    const auto left_column_type = left_table->column_data_type(column_id);
+    // only create Joins on Int columns
+    if (left_column_type != DataType::Int) continue;
+    Assert(left_column_type == right_table->column_data_type(column_id), "DataTypes must match.");
     for (auto join_mode : join_modes) {
       for (auto predicate : predicate_conditions) {
         const auto left_stored_table_node = StoredTableNode::make(left_table_wrapper->get_name());

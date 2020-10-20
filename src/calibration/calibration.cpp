@@ -24,23 +24,29 @@ int main() {
   const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
       ColumnDataDistribution::make_uniform_config(0.0, 1000.0)};
   const std::set<ChunkOffset> CHUNK_SIZES = {Chunk::DEFAULT_SIZE};
-  const std::set<int> ROW_COUNTS = {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100};
+  const std::set<int> ROW_COUNTS = {5,       25,      100,       1500,      2000,      3000,     6000,   8000};
+                                    //10'000,  15'000,  20'000,    30'000,    40'000,    50'000,   60'175, 100'000,
+                                    //250'000, 500'000, 1'000'000, 2'500'000, 5'000'000, 6'000'000};
   const bool GENERATE_SORTED_TABLES = true;
 
   // test data generation settings
   constexpr bool GENERATE_TEST_DATA = true;
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
-  constexpr float SCALE_FACTOR = 0.01f;
+  constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
 
   // Execute calibration
-
   auto table_config = std::make_shared<TableGeneratorConfig>(
       TableGeneratorConfig{TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS,
                            GENERATE_SORTED_TABLES});
 
+  std::cout << "- Generating tables" << std::endl;
+  auto table_generation_start = std::chrono::system_clock::now();
   auto table_generator = CalibrationTableGenerator(table_config);
   const auto tables = table_generator.generate();
+  const auto table_generation_duration =
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - table_generation_start).count();
+  std::cout << "- Generated tables in " << table_generation_duration << " s" << std::endl;
 
   if (GENERATE_TEST_DATA) {
     std::cout << "- Generating test data" << std::endl;
