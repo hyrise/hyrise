@@ -83,38 +83,34 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For aggregate nodes, we need the group by columns and the arguments to the aggregate functions
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+      const auto& node_expressions = node->node_expressions;
 
-      // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
-      // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
-      // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
-      // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
-      auto has_count_star = false;
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
-        if (AggregateExpression::is_count_star(*expression)) {
-          has_count_star = true;
-          break;
-        }
-      }
-      if (has_count_star) {
-        for (const auto& input_expression : node->left_input()->output_expressions()) {
-          locally_required_expressions.emplace(input_expression);
-        }
-        break;
-      }
-
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
-
+      for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+        const auto& expression = node_expressions[expression_idx];
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
-          // This is a group by expression that is required from the input
+          // All group_by-expressions are required
           locally_required_expressions.emplace(expression);
         } else {
-          // This is an aggregate expression - we need its argument
+          // We need the arguments of all aggregate functions
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
-          locally_required_expressions.emplace(expression->arguments[0]);
+          if (!AggregateExpression::is_count_star(*expression)) {
+            locally_required_expressions.emplace(expression->arguments[0]);
+          } else {
+            /**
+             * COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
+             * INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
+             * ensure that the AggregateNode requires at least one expression from other nodes.
+             * For
+             *  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
+             *  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
+             *     is the only type of aggregate function, we simply require the first output expression from the
+             *     left input node.
+             */
+            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
+            locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
+          }
         }
       }
     } break;
@@ -151,11 +147,26 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     case LQPNodeType::Union: {
       const auto& union_node = static_cast<const UnionNode&>(*node);
-      Assert(union_node.set_operation_mode == SetOperationMode::Positions,
-             "Currently, ColumnPruningRule can only handle UnionNodes in Positions mode");
-      // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
-      // tables, we will probably have to change something here in this rule that the required expressions are kept on
-      // both the left and right sides.
+      switch (union_node.set_operation_mode) {
+        case SetOperationMode::Positions: {
+          // UnionNode does not require any expressions itself for the Positions mode. As Positions by definition
+          // operates on the same table left and right, we simply require the same input expressions from both sides.
+        } break;
+
+        case SetOperationMode::All: {
+          // Similarly, if the two input tables are only glued together, the UnionNode itself does not require any
+          // expressions. Currently, this mode is used to merge the result of two mutually exclusive or conditions (see
+          // PredicateSplitUpRule). Once we have a union operator that merges data from different tables, we have to
+          // look into this more deeply.
+          Assert(union_node.left_input()->output_expressions() == union_node.right_input()->output_expressions(),
+                 "Can only handle SetOperationMode::All if both inputs have the same expressions");
+        } break;
+
+        case SetOperationMode::Unique: {
+          // This probably needs all expressions, as all of them are used to establish uniqueness
+          Fail("SetOperationMode::Unique is not supported yet");
+        }
+      }
     } break;
 
     case LQPNodeType::Intersect:

@@ -79,6 +79,9 @@ do
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+
+      echo "Running $benchmark for $commit... (single-threaded, SF 10)"
+      ( ${build_folder}/$benchmark -s 10 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
@@ -138,7 +141,7 @@ for benchmark in $benchmarks
 do
   configs="st mt"
   if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 mt"
+    configs="st st_s01 st_s10 mt"
   fi
 
   for config in $configs
@@ -150,6 +153,7 @@ do
     case "${config}" in
       "st") echo -n "single-threaded" ;;
       "st_s01") echo -n "single-threaded, SF 0.01" ;;
+      "st_s10") echo -n "single-threaded, SF 10" ;;
       "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
     esac
     echo "**"
