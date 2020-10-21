@@ -61,8 +61,9 @@ std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date
   date = date + boost::gregorian::months(months) + boost::gregorian::days(days);
 
   std::stringstream output;
-  output << static_cast<short>(date.year()) << "-" << std::setw(2) << std::setfill('0') << date.month().as_number()
-         << "-" << std::setw(2) << std::setfill('0') << static_cast<short>(date.day());
+  output << static_cast<short>(date.year()) << "-" << std::setw(2) << std::setfill('0')  // NOLINT
+         << static_cast<short>(date.month())                                             // NOLINT
+         << "-" << std::setw(2) << std::setfill('0') << static_cast<short>(date.day());  // NOLINT
   return output.str();
 }
 
@@ -445,7 +446,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   }
 
   return _substitute_placeholders(item_id, parameters);
-}
+}  // NOLINT
 
 std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) {
   DebugAssert(item_id < 22, "There are only 22 TPC-H queries");

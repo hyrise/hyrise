@@ -59,7 +59,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
 
     // Call qgen a couple of times with different PRNG seeds and store the resulting query parameters in queries/params.
     // dbgen doesn't like `-r 0`, so we start at 1.
-    for (auto seed = 1; seed < 100'000; ++seed) {
+    for (auto seed = 1; seed <= (_config->max_runs > 0 ? _config->max_runs : 100'000); ++seed) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen -k -s " << _scale_factor << " -b "
           << _dbgen_path << "/dists.dss -r " << seed << " -l params >/dev/null";
@@ -94,7 +94,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   // Choose a random parameterization from _all_params
   static thread_local std::minstd_rand random_engine{_random_seed++};
   std::uniform_int_distribution<> params_dist{0, static_cast<int>(this_item_params.size() - 1)};
-  const auto raw_params_iter = this_item_params.begin() + params_dist(random_engine);  // TODO naming
+  const auto raw_params_iter = this_item_params.begin() + params_dist(random_engine);
 
   std::vector<std::string> parameters;
   auto sql = std::string{};
