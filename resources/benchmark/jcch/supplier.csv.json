@@ -1,0 +1,49 @@
+{
+    "columns": [
+        {
+            "name": "s_suppkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "s_name",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "s_address",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "s_nationkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "s_phone",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "s_acctbal",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "s_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

@@ -80,9 +80,12 @@ set(
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
+add_dependencies(hyriseBenchmarkLib jcchDbgen)
 
 target_link_libraries(
     hyriseBenchmarkLib
+    PUBLIC
+
     hyrise
     tpch_dbgen
     tpcds_dbgen

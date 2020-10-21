@@ -10,11 +10,11 @@ namespace opossum {
 class JCCHBenchmarkItemRunner : public TPCHBenchmarkItemRunner {
  public:
   // Constructor for a JCCHBenchmarkItemRunner containing all TPC-H queries
-  JCCHBenchmarkItemRunner(const std::string& jcch_path, const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+  JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor);
 
   // Constructor for a JCCHBenchmarkItemRunner containing a subset of TPC-H queries
-  JCCHBenchmarkItemRunner(const std::string& jcch_path, const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+  JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& items);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
@@ -24,7 +24,8 @@ class JCCHBenchmarkItemRunner : public TPCHBenchmarkItemRunner {
   
   void _load_params();
 
-  const std::string _jcch_path;
+  const std::string _dbgen_path;
+  const std::string _data_path;
   std::array<std::vector<std::vector<std::string>>, 22> _all_params;
 };
 

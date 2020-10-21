@@ -42,7 +42,6 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
- private:
   float _scale_factor;
 };
 }  // namespace opossum

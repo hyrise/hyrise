@@ -2,9 +2,11 @@
 
 set -e
 
-DBGEN=/Users/markus/Projekte/Opossum/Git/third_party/jcch-dbgen
-SCALE=0.1
-ln -s ${DBGEN}/dists.dss || true
+SCRIPTS_DIR=${BASH_SOURCE[0]%/*}
+
+# DBGEN=/Users/markus/Projekte/Opossum/Git/third_party/jcch-dbgen
+# SCALE=0.1
+# ln -s ${DBGEN}/dists.dss || true
 
 # Generate tables
 # mkdir -p sf-${SCALE}/tables
@@ -41,22 +43,22 @@ ln -s ${DBGEN}/dists.dss || true
 
 # cd -
 
-# Generate queries
-mkdir -p sf-${SCALE}/queries
-cd sf-${SCALE}/queries
+# # Generate queries
+# mkdir -p sf-${SCALE}/queries
+# cd sf-${SCALE}/queries
 
-ln -s ${DBGEN}/queries/*.sql .
+# ln -s ${DBGEN}/queries/*.sql .
 
-for n in {1..1}
-do
-	${DBGEN}/qgen -k -s ${SCALE} -b ../../dists.dss -r $n -l params_unsorted # > /dev/null
-done
+# for n in {1..1}
+# do
+# 	${DBGEN}/qgen -k -s ${SCALE} -b ../../dists.dss -r $n -l params_unsorted # > /dev/null
+# done
 
-sort params_unsorted | uniq > params
-rm params_unsorted
+# sort params_unsorted | uniq > params
+# rm params_unsorted
 
-rm *.sql
+# rm *.sql
 
-cd -
+# cd -
 
-rm dists.dss
+# rm dists.dss

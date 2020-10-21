@@ -13,7 +13,7 @@ class FileBasedTableGenerator : virtual public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
- private:
+ protected:
   const std::string _path;
 };
 

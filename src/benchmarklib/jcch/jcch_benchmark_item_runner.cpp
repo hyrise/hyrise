@@ -5,19 +5,20 @@
 
 #include "tpch/tpch_queries.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& params_path, const std::shared_ptr<BenchmarkConfig>& config,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor), _jcch_path(params_path) {
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor), _dbgen_path(dbgen_path), _data_path(data_path) {
       _load_params();
     }
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& params_path, const std::shared_ptr<BenchmarkConfig>& config,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& items)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items), _jcch_path(params_path) {
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items), _dbgen_path(dbgen_path), _data_path(data_path) {
       _load_params();
     }
 
@@ -27,9 +28,39 @@ std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 }
 
 void JCCHBenchmarkItemRunner::_load_params() {
-  const auto params_path = _jcch_path + "/queries/params";
+  const auto local_queries_path = _data_path + "/queries/";
+  const auto params_path = local_queries_path + "params";
+
+  if (!std::filesystem::exists(params_path)) {
+    Timer timer;
+
+    std::cout << "- Creating query parameters by calling external qgen" << std::flush;
+
+    const auto dbgen_queries_path = _dbgen_path + "/queries/";
+    Assert(std::filesystem::exists(dbgen_queries_path), std::string{"Query templates not found at "} + dbgen_queries_path);
+
+    const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
+    if (local_queries_dir_created) {
+      auto cmd = std::stringstream{};
+      cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
+      auto ret = system(cmd.str().c_str());
+      Assert(!ret, "Creating symlinks to query templates failed");
+    }
+
+    // Call qgen a couple of times and store the resulting query parameters in queries/params
+    // dbgen doesn't like `-r 0`, so we start at 1
+    for (auto prng_init = 1; prng_init < 10; ++prng_init) {
+      auto cmd = std::stringstream{};
+      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen -k -s " << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << prng_init << " -l params >/dev/null";
+      auto ret = system(cmd.str().c_str());
+      Assert(!ret, "Calling qgen failed");
+    }
+
+    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+  }
+
   auto file = std::ifstream(params_path);
-  Assert(file.is_open(), "Could not open JCC-H parameters at " + params_path);
+  Assert(file.is_open(), std::string{"Could not open JCC-H parameters at "} + params_path);
 
   std::string line;
   while (std::getline(file, line)) {

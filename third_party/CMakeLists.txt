@@ -368,3 +368,13 @@ target_compile_options(
   -Wno-parentheses-equality
 )
 endif()
+
+# Call Makefile of jcch-dbgen, copy dbgen and qgen into the current build folder, then clean up
+add_custom_command(OUTPUT jcch-dbgen/dbgen jcch-dbgen/qgen jcch-dbgen/dists.dss
+                   COMMAND make -j >/dev/null 2>/dev/null
+                   COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/{dbgen,qgen,dists.dss,queries} ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+                   COMMAND make clean >/dev/null 2>/dev/null
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
+)
+
+add_custom_target(jcchDbgen DEPENDS jcch-dbgen/dbgen jcch-dbgen/qgen)
