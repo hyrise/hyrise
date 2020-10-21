@@ -58,10 +58,6 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   std::shared_ptr<Table> _build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                              const TableType table_type = TableType::References) const;
 
-  // Some operators need an internal implementation class, mostly in cases where
-  // their execute method depends on a template parameter. An example for this is
-  // found in join_hash.hpp.
-  class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {};  // TODO remove this?
 };
 
 }  // namespace opossum

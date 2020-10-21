@@ -110,7 +110,7 @@ struct RowID {
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
+    return chunk_id < other.chunk_id || (chunk_id == other.chunk_id && chunk_offset < other.chunk_offset);
   }
 
   // Useful when comparing a row ID to NULL_ROW_ID
