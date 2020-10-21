@@ -370,12 +370,13 @@ target_compile_options(
 endif()
 
 # Call Makefile of jcch-dbgen, copy dbgen and qgen into the current build folder, then clean up
-add_custom_command(OUTPUT jcch-dbgen/dbgen jcch-dbgen/qgen jcch-dbgen/dists.dss
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/dists.dss
                    COMMAND make -j >/dev/null 2>/dev/null
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dists.dss ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
-                   COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/queries ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+                   COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
+                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
+                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dists.dss ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
+                   COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/queries ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
                    COMMAND make clean >/dev/null 2>/dev/null
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
 )

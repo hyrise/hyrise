@@ -20,7 +20,6 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   const auto tables_path = _path + "/tables/";
-
   if (!std::filesystem::exists(tables_path + "/customer.bin")) {
     Timer timer;
     std::cout << "- Creating table data by calling external dbgen" << std::flush;
@@ -44,8 +43,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
 
       // Remove the trailing separator from each line as the CSVReader does not like them
       {
+        // sed on Mac requires a space between -i and '', on Linux it doesn't like it...
+#ifdef __APPLE__
+        const auto sed_inplace = "-i ''";
+#else
+        const auto sed_inplace = "-i''";
+#endif
+
         auto cmd = std::stringstream{};
-        cmd << "sed -e 's/\\|$//' -i '' " << tables_path << table_name << ".csv";
+        cmd << "sed -Ee 's/\\|$//' " << sed_inplace << " " << tables_path << table_name << ".csv";
         auto ret = system(cmd.str().c_str());
         Assert(!ret, "Removing trailing separators using sed failed");
       }
