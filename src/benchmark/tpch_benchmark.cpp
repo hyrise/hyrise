@@ -119,9 +119,12 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
   if (jcch) {
-    auto jcch_dbgen_path = std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/jcch-dbgen";
-    Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"), std::string{"JCC-H dbgen not found at "} + jcch_dbgen_path.c_str());
-    Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"), std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
+    auto jcch_dbgen_path =
+        std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/jcch-dbgen";
+    Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"),
+           std::string{"JCC-H dbgen not found at "} + jcch_dbgen_path.c_str());
+    Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
+           std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
 
     std::filesystem::create_directory("jcch_data");
     auto jcch_data_path_str = std::ostringstream{};
@@ -133,14 +136,15 @@ int main(int argc, char* argv[]) {
     std::cout << "- Storing JCC-H tables and query information in " << jcch_data_path << std::endl;
 
     table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, config);
-    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_dbgen_path, jcch_data_path, config, use_prepared_statements, scale_factor, item_ids);
+    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_dbgen_path, jcch_data_path, config,
+                                                            use_prepared_statements, scale_factor, item_ids);
   } else {
     table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, config);
     item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
   }
 
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *config, std::move(item_runner), std::move(table_generator), context);
+  auto benchmark_runner =
+      std::make_shared<BenchmarkRunner>(*config, std::move(item_runner), std::move(table_generator), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (config->verify) {

@@ -9,18 +9,24 @@
 
 namespace opossum {
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path,
+                                                 const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor), _dbgen_path(dbgen_path), _data_path(data_path) {
-      _load_params();
-    }
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor),
+      _dbgen_path(dbgen_path),
+      _data_path(data_path) {
+  _load_params();
+}
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path,
+                                                 const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& items)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items), _dbgen_path(dbgen_path), _data_path(data_path) {
-      _load_params();
-    }
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items),
+      _dbgen_path(dbgen_path),
+      _data_path(data_path) {
+  _load_params();
+}
 
 std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22u, "item_id out of range");
@@ -37,7 +43,8 @@ void JCCHBenchmarkItemRunner::_load_params() {
     std::cout << "- Creating query parameters by calling external qgen" << std::flush;
 
     const auto dbgen_queries_path = _dbgen_path + "/queries/";
-    Assert(std::filesystem::exists(dbgen_queries_path), std::string{"Query templates not found at "} + dbgen_queries_path);
+    Assert(std::filesystem::exists(dbgen_queries_path),
+           std::string{"Query templates not found at "} + dbgen_queries_path);
 
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
     if (local_queries_dir_created) {
@@ -51,7 +58,8 @@ void JCCHBenchmarkItemRunner::_load_params() {
     // dbgen doesn't like `-r 0`, so we start at 1
     for (auto prng_init = 1; prng_init < 10; ++prng_init) {
       auto cmd = std::stringstream{};
-      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen -k -s " << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << prng_init << " -l params >/dev/null";
+      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen -k -s " << _scale_factor << " -b "
+          << _dbgen_path << "/dists.dss -r " << prng_init << " -l params >/dev/null";
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed");
     }
@@ -87,7 +95,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      const auto date = _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -std::atoi(raw_params_iter->at(0).c_str()));
+      const auto date =
+          _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -std::atoi(raw_params_iter->at(0).c_str()));
       parameters.emplace_back("'"s + date + "'");
       break;
     }

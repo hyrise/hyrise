@@ -7,14 +7,16 @@
 
 namespace opossum {
 
-JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor, uint32_t chunk_size)
+JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
+                                       uint32_t chunk_size)
     : JCCHTableGenerator(dbgen_path, data_path, scale_factor, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
-JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
+                                       const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config),
-    TPCHTableGenerator(scale_factor, benchmark_config),
-    FileBasedTableGenerator(benchmark_config, data_path),
-    _dbgen_path(dbgen_path) {}
+      TPCHTableGenerator(scale_factor, benchmark_config),
+      FileBasedTableGenerator(benchmark_config, data_path),
+      _dbgen_path(dbgen_path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   const auto tables_path = _path + "/tables/";
@@ -29,7 +31,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
       // Call dbgen
       auto cmd = std::stringstream{};
       // `2>` in a string seems to break Sublime Text's formatter
-      cmd << "cd " << tables_path << " && " << _dbgen_path << "/dbgen -f -k -s " << _scale_factor << " -b " << _dbgen_path << "/dists.dss >/dev/null 2" << ">/dev/null";
+      cmd << "cd " << tables_path << " && " << _dbgen_path << "/dbgen -f -k -s " << _scale_factor << " -b "
+          << _dbgen_path << "/dists.dss >/dev/null 2"
+          << ">/dev/null";
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling dbgen failed");
     }
@@ -61,7 +65,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
   auto generated_tables = FileBasedTableGenerator::generate();
 
   // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.
-  {
+  if (std::filesystem::exists(tables_path + "/customer.csv")) {
     auto cmd = std::stringstream{};
     cmd << "rm " << tables_path << "*.csv*";
     auto ret = system(cmd.str().c_str());

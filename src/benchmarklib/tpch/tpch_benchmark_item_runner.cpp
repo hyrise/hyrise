@@ -61,8 +61,8 @@ std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date
   date = date + boost::gregorian::months(months) + boost::gregorian::days(days);
 
   std::stringstream output;
-  output << static_cast<short>(date.year()) << "-" << std::setw(2) << std::setfill('0') << date.month().as_number() << "-" << std::setw(2)
-         << std::setfill('0') << static_cast<short>(date.day());
+  output << static_cast<short>(date.year()) << "-" << std::setw(2) << std::setfill('0') << date.month().as_number()
+         << "-" << std::setw(2) << std::setfill('0') << static_cast<short>(date.day());
   return output.str();
 }
 
