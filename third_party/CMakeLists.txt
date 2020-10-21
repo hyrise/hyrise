@@ -375,7 +375,7 @@ add_custom_command(OUTPUT jcch-dbgen/dbgen jcch-dbgen/qgen jcch-dbgen/dists.dss
                    COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
                    COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
                    COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dists.dss ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/queries ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+                   COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/queries ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
                    COMMAND make clean >/dev/null 2>/dev/null
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
 )
