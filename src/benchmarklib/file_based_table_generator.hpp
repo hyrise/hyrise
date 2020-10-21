@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class FileBasedTableGenerator : public AbstractTableGenerator {
+class FileBasedTableGenerator : virtual public AbstractTableGenerator {
  public:
   FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string& path);
 

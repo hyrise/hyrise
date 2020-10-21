@@ -37,6 +37,11 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
+    jcch/jcch_benchmark_item_runner.cpp
+    jcch/jcch_benchmark_item_runner.hpp
+    jcch/jcch_table_generator.cpp
+    jcch/jcch_table_generator.hpp
+
     tpcds/tpcds_table_generator.cpp
     tpcds/tpcds_table_generator.hpp
 

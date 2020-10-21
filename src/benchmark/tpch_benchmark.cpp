@@ -10,6 +10,8 @@
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
+#include "jcch/jcch_benchmark_item_runner.hpp"
+#include "jcch/jcch_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -31,20 +33,24 @@ using namespace opossum;  // NOLINT
  * logic.
  */
 
+// TODO Doc JCC-H
+
 int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H Benchmark");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("j,jcch", "Use pre-generated JCC-H data and queries instead of TPC-H. Expects path to jcch_data folder as created by generate_jcch.sh.", cxxopts::value<std::string>()); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
   bool use_prepared_statements;
+  std::string jcch_path;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -61,6 +67,10 @@ int main(int argc, char* argv[]) {
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
 
+  if (cli_parse_result.count("jcch")) {
+    jcch_path = cli_parse_result["jcch"].as<std::string>();
+  }
+
   std::vector<BenchmarkItemID> item_ids;
 
   // Build list of query ids to be benchmarked and display it
@@ -75,7 +85,7 @@ int main(int argc, char* argv[]) {
     std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
       const auto item_id =
           BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
-      DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
+      DebugAssert(item_id < 22, "There are only 22 queries");
       return item_id;
     });
   }
@@ -91,7 +101,7 @@ int main(int argc, char* argv[]) {
   Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
 
   if (config->verify) {
-    // Hack: We cannot verify TPC-H Q15, thus we remove it from the list of queries
+    // Hack: We cannot verify Q15, thus we remove it from the list of queries
     auto it = std::remove(item_ids.begin(), item_ids.end(), 15 - 1);
     if (it != item_ids.end()) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
@@ -102,16 +112,28 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::cout << "- TPCH scale factor is " << scale_factor << std::endl;
+  std::cout << "- " << (jcch_path.empty() ? "TPC-H" : "JCC-H") << " scale factor is " << scale_factor << std::endl;
   std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
+  auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
+  auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
+  if (jcch_path.empty()) {
+    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, config);
+    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
+  } else {
+    std::ostringstream jcch_full_path;
+    jcch_full_path << jcch_path << "/sf-" << std::noshowpoint << scale_factor;
+
+    table_generator = std::make_unique<JCCHTableGenerator>(jcch_full_path.str(), scale_factor, config);
+    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_full_path.str(), config, use_prepared_statements, scale_factor, item_ids);
+  }
+
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
+      *config, std::move(item_runner), std::move(table_generator), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (config->verify) {
