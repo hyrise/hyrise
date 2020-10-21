@@ -5,7 +5,12 @@
 
 namespace opossum {
 
-// TODO really diamond? Markov?
+// Generates the JCC-H data by calling JCC-H's dbgen binary. See jcch_benchmark.cpp for details.
+// This uses multiple inheritance from TPCHTableGenerator (for the sort order, indexes, and constraints) and from
+// FileBasedTableGenerator (for the csv loading part). One could argue if composition would be more appropriate
+// here. The relationship between FileBasedTableGenerator and JCCHTableGenerator does not really satisfy the Liskov
+// substitution principle. However, it makes reusing the TPC-H definitions much easier.
+
 class JCCHTableGenerator : virtual public AbstractTableGenerator,
                            private TPCHTableGenerator,
                            private FileBasedTableGenerator {

@@ -20,6 +20,8 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   const auto tables_path = _path + "/tables/";
+
+  // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator)
   if (!std::filesystem::exists(tables_path + "/customer.bin")) {
     Timer timer;
     std::cout << "- Creating table data by calling external dbgen" << std::flush;
@@ -27,9 +29,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     std::filesystem::create_directory(tables_path);
 
     {
-      // Call dbgen
+      // Call JCC-H's dbgen
       auto cmd = std::stringstream{};
-      // `2>` in a string seems to break Sublime Text's formatter
+      // `2>` in a string seems to break Sublime Text's formatter, so it's split into two strings
       cmd << "cd " << tables_path << " && " << _dbgen_path << "/dbgen -f -k -s " << _scale_factor << " -b "
           << _dbgen_path << "/dists.dss >/dev/null 2"
           << ">/dev/null";
@@ -56,7 +58,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
         Assert(!ret, "Removing trailing separators using sed failed");
       }
 
-      // fs::copy does not seem to work. Symlinks make the use of ifstream more complicated.
+      // std::filesystem::copy does not seem to work. We could use symlinks here, but those would make reading the file
+      // via ifstream more complicated.
       {
         auto cmd = std::stringstream{};
         cmd << "cp resources/benchmark/jcch/" << table_name << ".csv.json " << tables_path << table_name << ".csv.json";
@@ -68,6 +71,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
   }
 
+  // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided
   auto generated_tables = FileBasedTableGenerator::generate();
 
   // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.

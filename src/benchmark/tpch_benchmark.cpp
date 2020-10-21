@@ -31,9 +31,9 @@ using namespace opossum;  // NOLINT
  *
  * main() is mostly concerned with parsing the CLI options while BenchmarkRunner.run() performs the actual benchmark
  * logic.
+ *
+ * The same binary is used to run the JCC-H benchmark. For this, simply use the -j flag.
  */
-
-// TODO Doc JCC-H
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
@@ -118,7 +118,14 @@ int main(int argc, char* argv[]) {
 
   auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
+
   if (jcch) {
+    // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
+    // JCC-H implementation calls those generators externally. This is because we would get linking conflicts if we were
+    // to include both generators. Unfortunately, this approach is somewhat slower (30s to start SF1 with TPC-H, 1m18s
+    // with JCC-H).
+
+    // Try to find dbgen/qgen binaries
     auto jcch_dbgen_path =
         std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/jcch-dbgen";
     Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"),
@@ -126,6 +133,7 @@ int main(int argc, char* argv[]) {
     Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
            std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
 
+    // Create the jcch_data directory (if needed) and generate the jcch_data/sf-10.0 path
     std::filesystem::create_directory("jcch_data");
     auto jcch_data_path_str = std::ostringstream{};
     jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
@@ -135,6 +143,7 @@ int main(int argc, char* argv[]) {
     std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
     std::cout << "- Storing JCC-H tables and query information in " << jcch_data_path << std::endl;
 
+    // Create the table generator and item runner
     table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, config);
     item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_dbgen_path, jcch_data_path, config,
                                                             use_prepared_statements, scale_factor, item_ids);
