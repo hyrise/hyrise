@@ -19,7 +19,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 class OperatorsDifferenceTest : public BaseTest {
  protected:
-  virtual void SetUp() override {
+  void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
 
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));

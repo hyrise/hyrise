@@ -21,7 +21,7 @@
 namespace opossum {
 
 class ReferenceSegmentTest : public BaseTest {
-  virtual void SetUp() override {
+  void SetUp() override {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, true);
     column_definitions.emplace_back("b", DataType::Float, false);

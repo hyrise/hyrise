@@ -57,7 +57,6 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   std::shared_ptr<Table> _build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                              const TableType table_type = TableType::References) const;
-
 };
 
 }  // namespace opossum

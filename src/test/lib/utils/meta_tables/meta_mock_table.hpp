@@ -32,7 +32,8 @@ class MetaMockTable : public AbstractMetaTable {
   std::shared_ptr<Table> _on_generate() const final;
   void _on_insert(const std::vector<AllTypeVariant>& values) final;
   void _on_remove(const std::vector<AllTypeVariant>& values) final;
-  void _on_update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values) final;
+  void _on_update(const std::vector<AllTypeVariant>& selected_values,
+                  const std::vector<AllTypeVariant>& update_values) final;
 
   size_t _insert_calls = 0;
   size_t _remove_calls = 0;
