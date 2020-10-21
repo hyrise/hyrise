@@ -1,3 +1,6 @@
+// Backport for the fix of https://github.com/boostorg/bimap/issues/23
+// Remove this once Ubuntu finally has boost 1.74
+
 // Boost.Bimap
 //
 // Copyright (c) 2006-2007 Matias Capeletto
