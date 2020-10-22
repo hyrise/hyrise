@@ -43,8 +43,8 @@ class Topology final : public Noncopyable {
   /**
    * Use a NUMA topology.
    * The topology has a number of cores equal to either max_num_cores or the number of physically available cores,
-   * whichever one is lower. The cores are distributed among the available NUMA nodes in a way that a node is filled up
-   * to it's maximum core count first, bevor a new node is added.
+   * whichever one is lower. If max_num_cores is lower than the number of available physical cores, all cores from node 0
+   * are used before any cores from node 1 are used.
    *
    * Calls _init_numa_topology() internally.
    * Calls _init_fake_numa_topology() if on a non-NUMA system.

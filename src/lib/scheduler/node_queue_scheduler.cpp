@@ -120,22 +120,31 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only num_groups tasks can be executed in parallel.
-  // The optimal value of num_groups depends on the number of cores and the number of queries being executed
+  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
+  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.
   //
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. This ignores the preferred node of tasks. Again, this is far from perfect, but
-  // better than not grouping the tasks.
-
-  const auto num_groups = 10;
+  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
 
   auto round_robin_counter = 0;
+  auto common_node_id = std::optional<NodeID>{};
 
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
+  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) return;
-    const auto group_id = round_robin_counter % num_groups;
+
+    if (common_node_id) {
+      // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
+      // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
+      // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
+      // node ids.
+      Assert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
+    } else {
+      common_node_id = task->node_id();
+    }
+
+    const auto group_id = round_robin_counter % NUM_GROUPS;
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);

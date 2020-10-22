@@ -4,7 +4,7 @@ namespace opossum {
 
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   DebugAssert(([&]() {
-                for (auto& task : tasks) {
+                for (const auto& task : tasks) {
                   if (!task->is_scheduled()) {
                     return false;
                   }
@@ -15,7 +15,7 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
 
   // In case wait_for_tasks() is called from a Task being executed in a Worker, let the Worker handle the join()-ing,
   // otherwise join right here
-  auto worker = Worker::get_this_thread_worker();
+  const auto worker = Worker::get_this_thread_worker();
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
@@ -29,7 +29,7 @@ void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractT
 
 void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
-  for (auto& task : tasks) {
+  for (const auto& task : tasks) {
     DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
     task->schedule();
   }

@@ -35,10 +35,11 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void start();
   void join();
 
-  // Try to execute task immediately after this worker finishes the execution of the current task. Useful for making
-  // sure that a task's successor is executed without having to go through the queue again (at which point all data
-  // would have been removed from the caches). Adds task to the queue if called multiple times without having had the
-  // chance to execute the tasks in between.
+  // Try to execute task immediately after this worker finishes the execution of the current task. The goal is to
+  // execute the task while the caches are still fresh instead of having to wait for it to be scheduled again. A task
+  // can have multiple successors and all of them could become executable at the same time. In that case, the current
+  // worker can only execute one of them immediately. The others are placed into a high priority queue on the same node
+  // so that they are worked on as soon as possible by either this or another worker.
   void execute_next(const std::shared_ptr<AbstractTask>& task);
 
   uint64_t num_finished_tasks() const;
