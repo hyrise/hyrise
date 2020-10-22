@@ -291,7 +291,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(1));
       const auto end_date = _calculate_date(begin_date, 12);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
       parameters.emplace_back("'"s + end_date + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
