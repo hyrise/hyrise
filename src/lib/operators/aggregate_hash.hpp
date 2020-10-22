@@ -66,8 +66,14 @@ class AggregateResult {
                                         PolymorphicAllocator<ColumnDataType>>;
 
   // SecondaryAggregates and DistinctValues are unused in most cases. We store them in a separate variant that is
-  // initialized as needed. This saves us a lot of memory in this critical data structure.
+  // initialized as needed. This saves us a lot of memory in this critical data structure. Before using this variant
+  // the corresponding ensure_*_initialized method has to be called.
   using Details = std::variant<SecondaryAggregates<AggregateType>, DistinctValues>;
+
+  void ensure_distinct_values_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
+    if (_details) return;
+    _details = std::make_unique<Details>(DistinctValues{&buffer});
+  }
 
   void ensure_secondary_aggregates_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
     if (_details) return;
@@ -78,21 +84,6 @@ class AggregateResult {
     _details = std::make_unique<Details>(SecondaryAggregates<AggregateType>{});
   }
 
-  SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<SecondaryAggregates<AggregateType>>(*_details);
-  }
-
-  const SecondaryAggregates<AggregateType>& current_secondary_aggregates() const {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<SecondaryAggregates<AggregateType>>(*_details);
-  }
-
-  void ensure_distinct_values_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
-    if (_details) return;
-    _details = std::make_unique<Details>(DistinctValues{&buffer});
-  }
-
   DistinctValues& distinct_values() {
     DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
     return std::get<DistinctValues>(*_details);
@@ -101,6 +92,16 @@ class AggregateResult {
   const DistinctValues& distinct_values() const {
     DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
     return std::get<DistinctValues>(*_details);
+  }
+
+  SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<SecondaryAggregates<AggregateType>>(*_details);
+  }
+
+  const SecondaryAggregates<AggregateType>& current_secondary_aggregates() const {
+    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
+    return std::get<SecondaryAggregates<AggregateType>>(*_details);
   }
 
  protected:
@@ -127,11 +128,16 @@ using AggregateKeyEntry = uint64_t;
 // A dummy type used as AggregateKey if no GROUP BY columns are present
 struct EmptyAggregateKey {};
 
-// Used to store AggregateKeys if more than 2 GROUP BY columns are used
+// Used to store AggregateKeys if more than 2 GROUP BY columns are used. The size is a trade-off between the memory
+// consumption in the AggregateKeys vector (which becomes more expensive to read) and the cost of heap lookups.
+// It could also be, e.g., 5, which would be better for queries with 5 GROUP BY columns but worse for queries with 3 or
+// 4 GROUP BY columns.
 constexpr auto AGGREGATE_KEY_SMALL_VECTOR_SIZE = 4;
 using AggregateKeySmallVector = boost::container::small_vector<AggregateKeyEntry, AGGREGATE_KEY_SMALL_VECTOR_SIZE,
                                                                PolymorphicAllocator<AggregateKeyEntry>>;
 
+// Conceptually, this is a vector<AggregateKey> that, for each row of the input, holds the AggregateKey. For trivially
+// constructible AggregateKey types, we use an uninitialized_vector, which is cheaper to construct.
 template <typename AggregateKey>
 using AggregateKeys =
     std::conditional_t<std::is_same_v<AggregateKey, AggregateKeySmallVector>, pmr_vector<AggregateKey>,
