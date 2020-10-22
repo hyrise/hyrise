@@ -139,7 +139,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
       // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
       // node ids.
-      Assert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
+      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
     } else {
       common_node_id = task->node_id();
     }
