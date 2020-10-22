@@ -102,6 +102,15 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
               "execute_next must be called from the same thread that the worker works in");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
+    if (!successfully_enqueued) {
+      // The task was already enqueued. This can happen if
+      //   * two tasks ARE TO BE scheduled via AbstractScheduler::schedule where one task is the other one's successor
+      //   * the first one is scheduled and executed very quickly before the second one reaches the schedule method
+      //   * AbstractScheduler::schedule then looks at the second task and realizes that it is ready to be enqueued
+      //   * ... and both the scheduler and this method try to enqueue it.
+      // If successfully_enqueued is false, we lost, and the task is already in one of the task queues.
+      return;
+    }
     Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
     _next_task = task;
   } else {
