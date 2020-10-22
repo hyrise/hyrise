@@ -187,7 +187,7 @@ template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
+  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
 
@@ -291,7 +291,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                                          decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
-            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
               // the IDs used for short strings (see below).
               id_counter = 5'000'000'000;
@@ -317,7 +317,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   // ID generation was applied and we need to generate the ID using the value->ID map.
                   auto id = std::numeric_limits<AggregateKeyEntry>::max();
 
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");

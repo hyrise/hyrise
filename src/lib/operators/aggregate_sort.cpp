@@ -185,9 +185,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
             aggregate_function(new_value, current_primary_aggregate);
           }
           value_count++;
-          if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+          if constexpr (function == AggregateFunction::CountDistinct) {
             unique_values.insert(new_value);
-          } else if constexpr (function == AggregateFunction::Any) {  // NOLINT
+          } else if constexpr (function == AggregateFunction::Any) {
             // Gathering the group's first value for ANY() is sufficient
             return;
           }
@@ -247,7 +247,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     std::optional<AggregateType>& current_primary_aggregate,
     SecondaryAggregates<AggregateType>& current_secondary_aggregates, [[maybe_unused]] const uint64_t value_count,
     [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
-  if constexpr (function == AggregateFunction::Count) {  // NOLINT
+  if constexpr (function == AggregateFunction::Count) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
     const auto input_column_id = pqp_column.column_id;
 
@@ -259,7 +259,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = value_count_with_null;
     }
   }
-  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
+  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
@@ -279,7 +279,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
     }
   }
-  if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+  if constexpr (function == AggregateFunction::CountDistinct) {
     current_primary_aggregate = unique_value_count;
   }
 

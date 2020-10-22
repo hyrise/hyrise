@@ -101,7 +101,7 @@ TEST_F(CsvWriterTest, DictionarySegmentFixedSizeByteAligned) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{EncodingType::Dictionary});
   CsvWriter::write(*table, test_filename);
 
   EXPECT_TRUE(file_exists(test_filename));
@@ -129,7 +129,7 @@ TEST_F(CsvWriterTest, FixedStringDictionarySegmentFixedSizeByteAligned) {
   string_table->append({"ttt"});
   string_table->append({"zzz"});
 
-  ChunkEncoder::encode_chunks(string_table, {ChunkID{0}}, EncodingType::FixedStringDictionary);
+  ChunkEncoder::encode_chunks(string_table, {ChunkID{0}}, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   CsvWriter::write(*string_table, filename_string_table);
 
   EXPECT_TRUE(file_exists(filename_string_table));

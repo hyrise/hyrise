@@ -752,14 +752,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
               // Could be either skipped or NULL
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if (null_values[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
@@ -791,7 +791,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
@@ -799,7 +799,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;

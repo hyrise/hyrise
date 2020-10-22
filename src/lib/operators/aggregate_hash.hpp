@@ -10,12 +10,12 @@
 #include <utility>
 #include <vector>
 
+#include <tsl/robin_map.h>  // NOLINT
+#include <tsl/robin_set.h>  // NOLINT
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
-#include <tsl/robin_map.h>  // NOLINT
-#include <tsl/robin_set.h>  // NOLINT
 #include <uninitialized_vector.hpp>
 
 #include "abstract_aggregate_operator.hpp"

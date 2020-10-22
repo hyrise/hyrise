@@ -44,8 +44,9 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
       // Not all tests are parameterized - only those using compressed segments are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("resources/test_data/tbl/int_string_like.tbl", 5);
-      std::vector<ChunkEncodingSpec> spec = {{EncodingType::Unencoded, GetParam()},
-                                             {EncodingType::Unencoded, GetParam()}};
+      std::vector<ChunkEncodingSpec> spec = {
+          {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}},
+          {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}}};
       ChunkEncoder::encode_all_chunks(test_table_string_compressed, spec);
 
       _tw_string_compressed = std::make_shared<TableWrapper>(test_table_string_compressed);
