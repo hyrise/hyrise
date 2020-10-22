@@ -169,7 +169,7 @@ TEST_F(SchedulerTest, Grouping) {
   EXPECT_EQ(TASK_COUNT % num_groups, 0);
   auto expected_output = std::vector<size_t>{};
   for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / NUM_GROUPS; ++task_id) {
+    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
       expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
     }
   }
