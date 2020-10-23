@@ -3,7 +3,10 @@
 # Given a benchmark result json that was generated with --metrics, this script plots a heatmap of the different
 # segment's access counters.
 
+import copy
 import json
+import matplotlib as mpl
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
@@ -65,7 +68,10 @@ for snapshot_id in df["snapshot_id"].unique():
     ax.set_aspect("equal")
     ax.axis("off")
 
-    heatmap = plt.pcolor(piv, edgecolors="white", linewidth=2)
+    cmap = copy.copy(mpl.cm.get_cmap("inferno"))
+    cmap.set_bad('black',1.)
+
+    heatmap = plt.pcolor(piv, edgecolors="white", linewidth=2, norm=colors.LogNorm(vmin=1, vmax=np.nanmax(piv.to_numpy())), cmap=cmap)
     fig.tight_layout(pad=0)
 
     ax.axis("on")
@@ -81,4 +87,4 @@ for snapshot_id in df["snapshot_id"].unique():
     # Save and close
     filename = f"{snapshot_id:03}_{normalize_filename(moment)}.png"
     plt.savefig(f"{directory}/{filename}", bbox_inches="tight")
-    plt.clf()
+    plt.close('all')
