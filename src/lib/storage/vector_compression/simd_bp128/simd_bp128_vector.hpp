@@ -24,7 +24,7 @@ namespace opossum {
 class SimdBp128Vector : public CompressedVector<SimdBp128Vector> {
  public:
   explicit SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size);
-  ~SimdBp128Vector() = default;
+  ~SimdBp128Vector() override = default;
 
   const pmr_vector<uint128_t>& data() const;
 

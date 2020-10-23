@@ -557,6 +557,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_bimap_core_override.hpp
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp

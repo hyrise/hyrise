@@ -88,7 +88,7 @@ const std::string& JoinSortMerge::name() const {
 ** Start of implementation.
 **/
 template <typename T>
-class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
+class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
