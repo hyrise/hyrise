@@ -103,6 +103,14 @@ void BenchmarkRunner::run() {
     }
   }};
 
+  if (_config.metrics) {
+    // Create a table for the segment access counter log
+    SQLPipelineBuilder{
+        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        .create_pipeline()
+        .get_result_table();
+  }
+
   // Retrieve the items to be executed and prepare the result vector
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
@@ -231,6 +239,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     std::cout << "- Benchmarking " << name << std::endl;
 
+    _snapshot_segment_access_counters(name + " - start");
+
     auto& result = _results[item_id];
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
@@ -248,6 +258,8 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
+
+    _snapshot_segment_access_counters(name + " - end");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
@@ -428,6 +440,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
 
+  if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
+    report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
+  }
+
   stream << std::setw(2) << report << std::endl;
 }
 
@@ -538,6 +554,26 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   }
 
   return output;
+}
+
+void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
+  if (!_config.metrics) return;
+
+  auto moment_or_timestamp = moment;
+  if (moment_or_timestamp.empty()) {
+    const auto timestamp =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
+            .count();
+    moment_or_timestamp = std::to_string(timestamp);
+  }
+
+  ++_snapshot_id;
+
+  auto sql_builder = std::stringstream{};
+  sql_builder << "INSERT INTO benchmark_segments_log SELECT " << _snapshot_id << ", '" << moment_or_timestamp + "'"
+              << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
+
+  SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
 }  // namespace opossum
