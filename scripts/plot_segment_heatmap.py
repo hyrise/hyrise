@@ -11,6 +11,16 @@ import os
 import pandas as pd
 import sys
 
+def normalize_filename(s):
+    validsymbols = "-"
+    out = ""
+    for c in s:
+      if str.isalpha(c) or str.isdigit(c) or (c in validsymbols):
+        out += c
+      else:
+        out += "_"
+    return out
+
 if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
 
@@ -36,18 +46,18 @@ init_values = df.loc[df["snapshot_id"] == 0].index
 df.loc[init_values, ["all_counters_diff"]] = df.loc[init_values, "all_counters"]
 
 for snapshot_id in df["snapshot_id"].unique():
-    if snapshot_id != 4:
-        continue  # TODO remove
-
     df_snapshot = df[df["snapshot_id"] == snapshot_id].sort_values("table_and_column_name").reset_index()
+    moment = df_snapshot["moment"].iloc[0]
 
     piv = pd.pivot_table(df_snapshot, index="table_and_column_name", columns="chunk_id", values="all_counters_diff")
     piv = piv.reindex(index=piv.index[::-1])
 
     # Remove all columns that have not been touched at all
     piv = piv[(piv.T > 0).any()].dropna(axis=1, how="all")
+    if piv.empty:
+        print(f"No modifications to access counters seen at '{moment}' - skipping this snapshot")
+        continue
 
-    print("TODO: Warum kommt ps_suppcost bei Q2 nicht vor?")
     print("TODO: Werden AV accesses jetzt mitgezählt?")
 
     legend_width = 0.2
@@ -59,13 +69,16 @@ for snapshot_id in df["snapshot_id"].unique():
     fig.tight_layout(pad=0)
 
     ax.axis("on")
-    ax.set_title(df_snapshot["moment"].iloc[0])
+    ax.set_title(moment)
     ax.set_yticks(np.arange(piv.shape[0]) + 0.5, minor=False)
-    ax.set_yticklabels(sorted(piv.index))
+    ax.set_yticklabels(reversed(sorted(piv.index)))
 
     # Create a legend
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size=legend_width, pad=0.05)
     cbar = plt.colorbar(heatmap, cax=cax)
 
-    plt.savefig(directory + "/bla.png", bbox_inches="tight")
+    # Save and close
+    filename = f"{snapshot_id:03}_{normalize_filename(moment)}.png"
+    plt.savefig(f"{directory}/{filename}", bbox_inches="tight")
+    plt.clf()

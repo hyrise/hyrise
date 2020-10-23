@@ -239,8 +239,6 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     std::cout << "- Benchmarking " << name << std::endl;
 
-    _snapshot_segment_access_counters(name + " - start");
-
     auto& result = _results[item_id];
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
@@ -258,8 +256,6 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-
-    _snapshot_segment_access_counters(name + " - end");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
@@ -281,6 +277,11 @@ void BenchmarkRunner::_benchmark_ordered() {
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+    // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taking
+    // into account, too. In presence of the significant amount of data added by the snapshots to the JSON file and the
+    // unclear advantage of excluding those runs, we only take one snapshot here.
+    _snapshot_segment_access_counters(name);
   }
 }
 
