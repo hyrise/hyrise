@@ -43,7 +43,13 @@ df = pd.json_normalize(data["segments"])
 
 df = df.sort_values(by=["table_name", "column_id", "chunk_id", "snapshot_id"]).reset_index()
 
-df["all_counters"] = df["monotonic_accesses"] + df["point_accesses"] + df["random_accesses"] + df["sequential_accesses"] + df["dictionary_accesses"]
+df["all_counters"] = (
+    df["monotonic_accesses"]
+    + df["point_accesses"]
+    + df["random_accesses"]
+    + df["sequential_accesses"]
+    + df["dictionary_accesses"]
+)
 df["all_counters_diff"] = df["all_counters"] - df["all_counters"].shift(1)
 df["table_and_column_name"] = df["table_name"] + "." + df["column_name"]
 
@@ -69,9 +75,11 @@ for snapshot_id in df["snapshot_id"].unique():
     ax.axis("off")
 
     cmap = copy.copy(mpl.cm.get_cmap("inferno"))
-    cmap.set_bad('black',1.)
+    cmap.set_bad("black", 1.0)
 
-    heatmap = plt.pcolor(piv, edgecolors="white", linewidth=2, norm=colors.LogNorm(vmin=1, vmax=np.nanmax(piv.to_numpy())), cmap=cmap)
+    heatmap = plt.pcolor(
+        piv, edgecolors="white", linewidth=2, norm=colors.LogNorm(vmin=1, vmax=np.nanmax(piv.to_numpy())), cmap=cmap
+    )
     fig.tight_layout(pad=0)
 
     ax.axis("on")
@@ -87,4 +95,4 @@ for snapshot_id in df["snapshot_id"].unique():
     # Save and close
     filename = f"{snapshot_id:03}_{normalize_filename(moment)}.png"
     plt.savefig(f"{directory}/{filename}", bbox_inches="tight")
-    plt.close('all')
+    plt.close("all")
