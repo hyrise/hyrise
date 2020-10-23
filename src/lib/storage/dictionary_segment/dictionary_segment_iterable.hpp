@@ -24,6 +24,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
+    _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += _segment.size();
+
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
@@ -40,6 +42,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+    _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += position_filter->size();
+
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using ZsDecompressorType = std::decay_t<decltype(vector.create_decompressor())>;
       using DictionaryIteratorType = decltype(_dictionary->cbegin());

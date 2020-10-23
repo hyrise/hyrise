@@ -72,19 +72,17 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{
-      {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
-        AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
-       {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
-        AccessPattern::Random, AccessPattern::Random},
-       {AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing,
-        AccessPattern::Random, AccessPattern::Random},
-       {AccessPattern::SequentiallyDecreasing, AccessPattern::Random, AccessPattern::Random,
-        AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},
-       {AccessPattern::RandomlyDecreasing, AccessPattern::Random, AccessPattern::Random,
-        AccessPattern::RandomlyDecreasing, AccessPattern::RandomlyDecreasing},
-       {AccessPattern::Random, AccessPattern::Random, AccessPattern::Random, AccessPattern::Random,
-        AccessPattern::Random}}};
+  // clang-format off
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{
+    //                         Input:  Zero                                    One                                    Positive,                              NegativeOne                            Negative                             // NOLINT
+    /* FROM Point */                  {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,     AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},  // NOLINT
+    /* FROM SequentiallyIncreasing */ {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,     AccessPattern::Random,                 AccessPattern::Random},              // NOLINT
+    /* FROM RandomlyIncreasing */     {AccessPattern::RandomlyIncreasing,      AccessPattern::RandomlyIncreasing,     AccessPattern::RandomlyIncreasing,     AccessPattern::Random,                 AccessPattern::Random},              // NOLINT
+    /* FROM SequentiallyDecreasing */ {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},  // NOLINT
+    /* FROM RandomlyDecreasing */     {AccessPattern::RandomlyDecreasing,      AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::RandomlyDecreasing,     AccessPattern::RandomlyDecreasing},  // NOLINT
+    /* FROM Random */                 {AccessPattern::Random,                  AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::Random}               // NOLINT
+  }};
+  // clang-format on
 
   const auto max_items_to_compare = std::min(positions.size(), 100ul);
 
@@ -93,20 +91,32 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
     const int64_t diff =
         static_cast<int64_t>(positions[i].chunk_offset) - static_cast<int64_t>(positions[i - 1].chunk_offset);
 
-    auto input = Input::Negative;
-    if (diff == 0)
+    auto input = Input{};
+    if (diff == 0) {
       input = Input::Zero;
-    else if (diff == 1)
+    } else if (diff == 1) {
       input = Input::One;
-    else if (diff > 0)
+    } else if (diff > 0) {
       input = Input::Positive;
-    else if (diff == -1)
+    } else if (diff == -1) {
       input = Input::NegativeOne;
+    } else {
+      input = Input::Negative;
+    }
 
     access_pattern = TRANSITIONS[static_cast<size_t>(access_pattern)][static_cast<size_t>(input)];
   }
 
   return access_pattern;
 }
+
+bool SegmentAccessCounter::operator==(const SegmentAccessCounter& other) const {
+  for (auto counter_index = 0ul, size = _counters.size(); counter_index < size; ++counter_index) {
+    if (_counters[counter_index] != other._counters[counter_index]) return false;
+  }
+  return true;
+}
+
+bool SegmentAccessCounter::operator!=(const SegmentAccessCounter& other) const { return !(*this == other); }
 
 }  // namespace opossum

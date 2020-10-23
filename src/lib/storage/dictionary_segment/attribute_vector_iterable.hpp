@@ -11,8 +11,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
  public:
   using ValueType = ValueID;
 
-  explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
-      : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
+  explicit AttributeVectorIterable(const BaseDictionarySegment& segment, const ValueID null_value_id)
+      : _attribute_vector{*segment.attribute_vector()},
+        _null_value_id{null_value_id},
+        _access_counter(segment.access_counter) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -24,6 +26,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
           Iterator<ZsIteratorType>{_null_value_id, vector.cend(), static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
     });
+
+    _access_counter[SegmentAccessCounter::AccessType::Sequential] += _attribute_vector.size();
   }
 
   template <typename Functor, typename PosListType>
@@ -38,6 +42,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
+
+    _access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
   }
 
   size_t _on_size() const { return _attribute_vector.size(); }
@@ -45,6 +51,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
  private:
   const BaseCompressedVector& _attribute_vector;
   const ValueID _null_value_id;
+  SegmentAccessCounter& _access_counter;
 
  private:
   template <typename ZsIteratorType>
