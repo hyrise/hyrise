@@ -40,7 +40,7 @@ df = pd.json_normalize(data["segments"])
 
 df = df.sort_values(by=["table_name", "column_id", "chunk_id", "snapshot_id"]).reset_index()
 
-df["all_counters"] = df["monotonic_accesses"] + df["point_accesses"] + df["random_accesses"] + df["sequential_accesses"]
+df["all_counters"] = df["monotonic_accesses"] + df["point_accesses"] + df["random_accesses"] + df["sequential_accesses"] + df["dictionary_accesses"]
 df["all_counters_diff"] = df["all_counters"] - df["all_counters"].shift(1)
 df["table_and_column_name"] = df["table_name"] + "." + df["column_name"]
 
