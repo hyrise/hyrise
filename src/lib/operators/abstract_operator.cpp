@@ -38,8 +38,7 @@ void AbstractOperator::execute() {
     return;
   }
   if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – execute" << std::endl;
-  // TODO folgenden DebugAssert raus
-  //DebugAssert(!performance_data->executed, "Operator has already been executed");
+  DebugAssert(!performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
