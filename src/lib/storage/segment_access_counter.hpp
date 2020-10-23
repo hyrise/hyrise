@@ -41,6 +41,9 @@ class SegmentAccessCounter {
   SegmentAccessCounter(const SegmentAccessCounter& other);
   SegmentAccessCounter& operator=(const SegmentAccessCounter& other);
 
+  bool operator==(const SegmentAccessCounter& other) const;
+  bool operator!=(const SegmentAccessCounter& other) const;
+
   CounterType& operator[](const AccessType type);
   const CounterType& operator[](const AccessType type) const;
 

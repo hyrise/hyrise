@@ -11,15 +11,17 @@ import os
 import pandas as pd
 import sys
 
+
 def normalize_filename(s):
     validsymbols = "-"
     out = ""
     for c in s:
-      if str.isalpha(c) or str.isdigit(c) or (c in validsymbols):
-        out += c
-      else:
-        out += "_"
+        if str.isalpha(c) or str.isdigit(c) or (c in validsymbols):
+            out += c
+        else:
+            out += "_"
     return out
+
 
 if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
@@ -57,8 +59,6 @@ for snapshot_id in df["snapshot_id"].unique():
     if piv.empty:
         print(f"No modifications to access counters seen at '{moment}' - skipping this snapshot")
         continue
-
-    print("TODO: Werden AV accesses jetzt mitgezählt?")
 
     legend_width = 0.2
     fig, ax = plt.subplots(figsize=(0.25 * piv.shape[1] + legend_width, 0.25 * piv.shape[0]))
