@@ -25,7 +25,7 @@ namespace opossum {
 
 class ExpressionTest : public BaseTest {
  public:
-  void SetUp() {
+  void SetUp() override {
     table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
     table_int_float_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
     Hyrise::get().storage_manager.add_table("int_float", table_int_float);

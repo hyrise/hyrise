@@ -57,7 +57,7 @@ class MetaTableTest : public BaseTest {
   std::shared_ptr<Table> int_int_int_null;
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() {
+  void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
     int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
@@ -79,7 +79,7 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager._add(table);

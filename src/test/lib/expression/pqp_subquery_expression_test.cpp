@@ -21,7 +21,7 @@ namespace opossum {
 
 class PQPSubqueryExpressionTest : public BaseTest {
  public:
-  void SetUp() {
+  void SetUp() override {
     table_a = load_table("resources/test_data/tbl/int_float.tbl");
     Hyrise::get().storage_manager.add_table("int_float", table_a);
     a_a = PQPColumnExpression::from_table(*table_a, "a");

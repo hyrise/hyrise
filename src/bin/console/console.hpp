@@ -87,7 +87,7 @@ class Console : public Singleton<Console> {
    * Non-public constructor, since Console is a Singleton.
    */
   Console();
-  ~Console();
+  ~Console() override;
 
   friend class Singleton;
 
