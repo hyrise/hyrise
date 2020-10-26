@@ -71,7 +71,6 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
-    ${Boost_DATE_TIME_LIBRARY}
 )
 
 # Configure hyriseBenchmarkTPCC

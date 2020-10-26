@@ -87,6 +87,7 @@ target_link_libraries(
     PUBLIC
 
     hyrise
+    ${Boost_DATE_TIME_LIBRARY}
     tpch_dbgen
     tpcds_dbgen
 )
