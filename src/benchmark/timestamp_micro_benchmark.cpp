@@ -37,8 +37,7 @@ constexpr auto TBL_FILE = "../../data/timestamps.tbl";
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "timestamp";
 const auto CHUNK_SIZE = size_t{10'000'000};
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
 const auto CREATE_INDEX = true; 
 
 ///////////////////////////////
@@ -351,6 +350,7 @@ BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q7)(bench
     //Print::print(r);
   }
 }
+
 
 BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q8)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
@@ -970,8 +970,9 @@ BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q8)(ben
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Split
-///////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q1)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
@@ -1467,7 +1468,6 @@ BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q7)(benchm
 
   auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(2));
   
-
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
@@ -1478,6 +1478,38 @@ BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q7)(benchm
     const auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
     table_scan->execute();
 
+    //std::cout << *table_scan << std::endl;
+    //auto r = table_scan->get_output();
+    //Print::print(r);
+  }
+}
+
+BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q9)(benchmark::State& state) {
+  auto& storage_manager = Hyrise::get().storage_manager;
+  
+  const auto encoding = CHUNK_ENCODINGS[state.range(0)];
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
+  if (encoding.encoding_type != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, encoding_type);
+  
+  auto table = storage_manager.get_table(table_name);
+
+  const auto scan_column_id = table->column_id_by_name("DAY");
+
+  const std::vector<ColumnID> scan_column_ids = {scan_column_id};
+  std::vector<ChunkID> indexed_chunks;
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    indexed_chunks.emplace_back(chunk_id);
+  }
+  std::vector<AllTypeVariant> right_values = {2}; 
+  
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  for (auto _ : state) {
+    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::Equals, right_values);
+    index_scan->included_chunk_ids = indexed_chunks;
+    index_scan->execute();
     //std::cout << *table_scan << std::endl;
     //auto r = table_scan->get_output();
     //Print::print(r);
@@ -1514,51 +1546,85 @@ BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q8)(benchm
   }
 }
 
+BENCHMARK_DEFINE_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q10)(benchmark::State& state) {
+  auto& storage_manager = Hyrise::get().storage_manager;
+  
+  const auto encoding = CHUNK_ENCODINGS[state.range(0)];
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
+  if (encoding.encoding_type != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, encoding_type);
+  
+  auto table = storage_manager.get_table(table_name);
+
+  const auto scan_column_id = table->column_id_by_name("HOUR");
+
+  const std::vector<ColumnID> scan_column_ids = {scan_column_id};
+  std::vector<ChunkID> indexed_chunks;
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    indexed_chunks.emplace_back(chunk_id);
+  }
+  std::vector<AllTypeVariant> right_values = {6}; 
+  
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  for (auto _ : state) {
+    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::Equals, right_values);
+    index_scan->included_chunk_ids = indexed_chunks;
+    index_scan->execute();
+    //std::cout << *table_scan << std::endl;
+    //auto r = table_scan->get_output();
+    //Print::print(r);
+  }
+}
+
 static void CustomArguments(benchmark::internal::Benchmark* b) {
   for (size_t encoding_id = 0; encoding_id < CHUNK_ENCODINGS.size(); ++encoding_id) {
     b->Args({static_cast<long long>(encoding_id)});
   }
 }
 
-// // STRING Benchmarks 
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q1)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q2)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q3)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q4)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q5)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q6)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q7)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q8)->Apply(CustomArguments);
+// STRING Benchmarks 
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q1)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q2)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q3)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q4)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q5)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q6)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q7)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_String_Q8)->Apply(CustomArguments);
 
-// // UNIX Benchmarks
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q1)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q2)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q3)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q4)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q5)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q6)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q7)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q8)->Apply(CustomArguments);
+// UNIX Benchmarks
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q1)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q2)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q3)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q4)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q5)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q6)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q7)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Unix_Q8)->Apply(CustomArguments);
 
 
-// // Date Time Benchmarks
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q1)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q2)->Apply(CustomArguments);
+// Date Time Benchmarks
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q1)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q2)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q3)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q4)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q5)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q6)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q7)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q8)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q5)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q6)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q7)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_DateTime_Q8)->Apply(CustomArguments);
 
-// // Split Benchmarks
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q1)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q2)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q3)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q4)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q5)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q6)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q7)->Apply(CustomArguments);
-// BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q8)->Apply(CustomArguments);
+// Split Benchmarks
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q1)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q2)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q3)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q4)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q5)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q6)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q7)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q8)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q9)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(TimestampMicroBenchmarkFixture, BM_Timestamp_Split_Q10)->Apply(CustomArguments);
 
 }  // namespace opossum
