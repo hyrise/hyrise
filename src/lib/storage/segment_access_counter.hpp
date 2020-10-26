@@ -61,16 +61,16 @@ class SegmentAccessCounter {
   // There are six AccessPatterns:
   // 0 (point access), an empty sequence or a sequence accessing only a single point
   // 1 (sequentially increasing), difference between two neighboring elements is 0 or 1.
-  // 2 (randomly increasing)
+  // 2 (monotonically increasing)
   // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
-  // 4 (randomly decreasing)
+  // 4 (monotonically decreasing)
   // 5 (random access)
   enum class AccessPattern {
     Point,
     SequentiallyIncreasing,
-    RandomlyIncreasing,
+    MonotonicallyIncreasing,
     SequentiallyDecreasing,
-    RandomlyDecreasing,
+    MonotonicallyDecreasing,
     Random
   };
 

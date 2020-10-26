@@ -51,8 +51,8 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
     case SegmentAccessCounter::AccessPattern::SequentiallyIncreasing:
     case SegmentAccessCounter::AccessPattern::SequentiallyDecreasing:
       return AccessType::Sequential;
-    case SegmentAccessCounter::AccessPattern::RandomlyIncreasing:
-    case SegmentAccessCounter::AccessPattern::RandomlyDecreasing:
+    case SegmentAccessCounter::AccessPattern::MonotonicallyIncreasing:
+    case SegmentAccessCounter::AccessPattern::MonotonicallyDecreasing:
       return AccessType::Monotonic;
     case SegmentAccessCounter::AccessPattern::Random:
       return AccessType::Random;
@@ -74,13 +74,13 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
 
   // clang-format off
   constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{
-    //                         Input:  Zero                                    One                                    Positive,                              NegativeOne                            Negative                             // NOLINT
-    /* FROM Point */                  {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,     AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},  // NOLINT
-    /* FROM SequentiallyIncreasing */ {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,     AccessPattern::Random,                 AccessPattern::Random},              // NOLINT
-    /* FROM RandomlyIncreasing */     {AccessPattern::RandomlyIncreasing,      AccessPattern::RandomlyIncreasing,     AccessPattern::RandomlyIncreasing,     AccessPattern::Random,                 AccessPattern::Random},              // NOLINT
-    /* FROM SequentiallyDecreasing */ {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},  // NOLINT
-    /* FROM RandomlyDecreasing */     {AccessPattern::RandomlyDecreasing,      AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::RandomlyDecreasing,     AccessPattern::RandomlyDecreasing},  // NOLINT
-    /* FROM Random */                 {AccessPattern::Random,                  AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::Random,                 AccessPattern::Random}               // NOLINT
+    //                         Input:   Zero                                    One                                     Positive,                               NegativeOne                             Negative                                  // NOLINT
+    /* FROM Point */                   {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
+    /* FROM SequentiallyIncreasing */  {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
+    /* FROM MonotonicallyIncreasing */ {AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
+    /* FROM SequentiallyDecreasing */  {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
+    /* FROM MonotonicallyDecreasing */ {AccessPattern::MonotonicallyDecreasing, AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::MonotonicallyDecreasing, AccessPattern::MonotonicallyDecreasing},  // NOLINT
+    /* FROM Random */                  {AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random}                    // NOLINT
   }};
   // clang-format on
 

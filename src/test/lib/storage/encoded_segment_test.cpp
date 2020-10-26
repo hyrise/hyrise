@@ -369,7 +369,7 @@ TEST_P(EncodedSegmentTest, ScansIncrementCounters) {
     }
   };
 
-  // ValueSegment::append
+  // ValueSegment::append as called by load_table increases the access counters
   expected_access_counters[0][SegmentAccessCounter::AccessType::Point] += 4;
   expected_access_counters[1][SegmentAccessCounter::AccessType::Point] += 4;
   expected_access_counters[2][SegmentAccessCounter::AccessType::Point] += 4;
@@ -400,7 +400,7 @@ TEST_P(EncodedSegmentTest, ScansIncrementCounters) {
   // Expect the segment for column c to have been read sequentially
   expected_access_counters[2][SegmentAccessCounter::AccessType::Sequential] += 4;
   // For dictionary encoding, the dictionaries are accessed, too. The exact number of accesses depends on the
-  // implementation of the binary search.
+  // number of unique values and the implementation of the binary search.
   if (is_dictionary) {
     expected_access_counters[2][SegmentAccessCounter::AccessType::Dictionary] += 4;
   }

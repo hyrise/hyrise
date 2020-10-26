@@ -19,11 +19,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
-      using ZsIteratorType = decltype(vector.cbegin());
+      using CompressedVectorIterator = decltype(vector.cbegin());
 
-      auto begin = Iterator<ZsIteratorType>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
-      auto end =
-          Iterator<ZsIteratorType>{_null_value_id, vector.cend(), static_cast<ChunkOffset>(_attribute_vector.size())};
+      auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<CompressedVectorIterator>{_null_value_id, vector.cend(),
+                                                    static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
     });
 
@@ -33,12 +33,12 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
-      using ZsDecompressorType = std::decay_t<decltype(vector.create_decompressor())>;
+      using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
 
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
-      auto begin = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{
+      auto begin = PointAccessIterator<Decompressor, PosListIteratorType>{
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{
+      auto end = PointAccessIterator<Decompressor, PosListIteratorType>{
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
@@ -54,11 +54,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   SegmentAccessCounter& _access_counter;
 
  private:
-  template <typename ZsIteratorType>
-  class Iterator : public AbstractSegmentIterator<Iterator<ZsIteratorType>, SegmentPosition<ValueID>> {
+  template <typename CompressedVectorIterator>
+  class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
     using ValueType = ValueID;
-    explicit Iterator(const ValueID null_value_id, ZsIteratorType&& attribute_it, ChunkOffset chunk_offset)
+    explicit Iterator(const ValueID null_value_id, CompressedVectorIterator&& attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
    private:
@@ -92,19 +92,19 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
    private:
     const ValueID _null_value_id;
-    ZsIteratorType _attribute_it;
+    CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
   };
 
-  template <typename ZsDecompressorType, typename PosListIteratorType>
+  template <typename Decompressor, typename PosListIteratorType>
   class PointAccessIterator
-      : public AbstractPointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType>,
+      : public AbstractPointAccessSegmentIterator<PointAccessIterator<Decompressor, PosListIteratorType>,
                                                   SegmentPosition<ValueID>, PosListIteratorType> {
    public:
     using ValueType = ValueID;
-    PointAccessIterator(const ValueID null_value_id, ZsDecompressorType&& attribute_decompressor,
+    PointAccessIterator(const ValueID null_value_id, Decompressor&& attribute_decompressor,
                         const PosListIteratorType&& position_filter_begin, PosListIteratorType&& position_filter_it)
-        : AbstractPointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType>,
+        : AbstractPointAccessSegmentIterator<PointAccessIterator<Decompressor, PosListIteratorType>,
                                              SegmentPosition<ValueID>, PosListIteratorType>{std::move(
                                                                                                 position_filter_begin),
                                                                                             std::move(
@@ -126,7 +126,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
    private:
     const ValueID _null_value_id;
-    mutable ZsDecompressorType _attribute_decompressor;
+    mutable Decompressor _attribute_decompressor;
   };
 };
 

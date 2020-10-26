@@ -230,6 +230,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+  _snapshot_segment_access_counters("End of Benchmark");
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
@@ -278,8 +280,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
-    // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taking
-    // into account, too. In presence of the significant amount of data added by the snapshots to the JSON file and the
+    // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
+    // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
     // unclear advantage of excluding those runs, we only take one snapshot here.
     _snapshot_segment_access_counters(name);
   }

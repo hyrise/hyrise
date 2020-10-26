@@ -73,7 +73,7 @@ class BenchmarkRunner : public Noncopyable {
 
   // Writes the current meta_segments table into the benchmark_segments_log tables. The `moment` parameter can be used
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
-  void _snapshot_segment_access_counters(const std::string& moment);
+  void _snapshot_segment_access_counters(const std::string& moment = "");
 
   const BenchmarkConfig _config;
 
