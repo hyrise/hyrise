@@ -29,8 +29,9 @@ TEST_F(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
   auto uniform_distribution_0_1 = ColumnDataDistribution::make_uniform_config(0.0, 1.0);
 
-  auto table = table_generator->generate_table({{uniform_distribution_0_1, DataType::Double, EncodingType::Dictionary}},
-                                               row_count, chunk_size);
+  auto table = table_generator->generate_table(
+      {{uniform_distribution_0_1, DataType::Double, SegmentEncodingSpec{EncodingType::Dictionary}}}, row_count,
+      chunk_size);
   for (auto table_row_id = size_t{0}; table_row_id < 100; ++table_row_id) {
     const auto value = table->get_value<double>(ColumnID{0}, table_row_id);
     ASSERT_TRUE(value >= 0.0 && value <= 1.0);

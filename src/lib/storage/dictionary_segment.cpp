@@ -65,7 +65,7 @@ template <typename T>
 size_t DictionarySegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_dictionary, mode);
   }
   return common_elements_size + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type);

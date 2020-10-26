@@ -26,7 +26,6 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
 
  public:
   explicit FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
-  ~FixedSizeByteAlignedVector() = default;
 
   const pmr_vector<UnsignedIntType>& data() const { return _data; }
 

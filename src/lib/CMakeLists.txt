@@ -559,6 +559,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_bimap_core_override.hpp
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
@@ -646,7 +647,6 @@ set(
 set(
     LIBRARIES
     lz4
-    robin_map
     sqlparser
     uninitialized_vector
     zstd
@@ -656,6 +656,7 @@ set(
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
+    # Additional libraries added with target_link_libraries_system below
 )
 
 if (NOT APPLE)
@@ -721,6 +722,7 @@ if(NOT APPLE)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential

@@ -95,7 +95,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   const auto chunk_count = sorted_table->chunk_count();
 
   std::optional<AggregateType> current_primary_aggregate;
-  std::vector<AggregateType> current_secondary_aggregates{};
+  SecondaryAggregates<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
@@ -167,7 +167,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
-          current_secondary_aggregates = std::vector<AggregateType>{};
+          current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
           unique_values.clear();
           value_count = 0u;
           value_count_with_null = 0u;
@@ -179,11 +179,15 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
         // Update helper variables
         if (!position.is_null()) {
-          aggregate_function(ColumnType{new_value}, current_primary_aggregate, current_secondary_aggregates);
+          if constexpr (function == AggregateFunction::StandardDeviationSample) {
+            aggregate_function(ColumnType{new_value}, current_primary_aggregate, current_secondary_aggregates);
+          } else {
+            aggregate_function(ColumnType{new_value}, current_primary_aggregate);
+          }
           value_count++;
-          if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+          if constexpr (function == AggregateFunction::CountDistinct) {
             unique_values.insert(ColumnType{new_value});
-          } else if constexpr (function == AggregateFunction::Any) {  // NOLINT
+          } else if constexpr (function == AggregateFunction::Any) {
             // Gathering the group's first value for ANY() is sufficient
             return;
           }
@@ -240,10 +244,10 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, std::vector<AggregateType>& current_secondary_aggregates,
-    [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
-    [[maybe_unused]] const uint64_t unique_value_count) const {
-  if constexpr (function == AggregateFunction::Count) {  // NOLINT
+    std::optional<AggregateType>& current_primary_aggregate,
+    SecondaryAggregates<AggregateType>& current_secondary_aggregates, [[maybe_unused]] const uint64_t value_count,
+    [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
+  if constexpr (function == AggregateFunction::Count) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
     const auto input_column_id = pqp_column.column_id;
 
@@ -255,7 +259,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = value_count_with_null;
     }
   }
-  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
+  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
@@ -272,10 +276,10 @@ void AggregateSort::_set_and_write_aggregate_value(
 
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
-      current_secondary_aggregates = std::vector<AggregateType>{};
+      current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
     }
   }
-  if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+  if constexpr (function == AggregateFunction::CountDistinct) {
     current_primary_aggregate = unique_value_count;
   }
 

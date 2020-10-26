@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <magic_enum.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
@@ -32,8 +31,8 @@ using namespace opossum;  // NOLINT
 // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
 // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
 // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-template <bool CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, AggregateKey& key,
+template <typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(auto CacheResultIds, ResultIds& result_ids, Results& results, AggregateKey& key,
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
   if constexpr (std::is_same_v<std::decay_t<AggregateKey>, EmptyAggregateKey>) {
@@ -53,12 +52,12 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Expected AggregateKeyEntry to be unsigned 64-bit value");
     constexpr auto mask = AggregateKeyEntry{1} << 63;
 
-    if constexpr (CacheResultIds) {
+    if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
       if (first_key_entry & mask) {
         // std::cout << 's';
         const auto result_id = first_key_entry ^ mask;
 
-        results.resize(std::max(results.size(), result_id + 1));
+        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
         // results[result_id].row_id = row_id;
 
         return results[result_id];
@@ -69,7 +68,7 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     auto [it, inserted] = result_ids.emplace(key, result_id);
     if (!inserted) {
       result_id = it->second;
-      if constexpr(CacheResultIds) {
+      if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
         first_key_entry.get() = mask | result_id;
       }
       // std::cout << 'h';
@@ -82,7 +81,7 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     results[result_id].row_id = row_id;
 
     // std::cout << 'i';
-    if constexpr(CacheResultIds) {
+    if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
       first_key_entry.get() = mask | result_id;
     }
     return results[result_id];
@@ -165,8 +164,9 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 };
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                                       KeysPerChunk<AggregateKey>& keys_per_chunk) {
+__attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
+                                                            const AbstractSegment& abstract_segment,
+                                                            KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
@@ -179,34 +179,30 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
 
-  const auto process_position = [&]<bool CacheResultIds>(const auto& position) {
+  const auto process_position = [&](const auto CacheResultIds, const auto& position) {
     auto& result =
-        get_or_add_result<CacheResultIds>(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        get_or_add_result(CacheResultIds, result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
     */
     if (!position.is_null()) {
-      // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-auto optional = result.aggregate_count > 0 ? std::optional<AggregateType>{result.current_primary_aggregate} : std::optional<AggregateType>{};
-auto v = std::vector<AggregateType>{};
-      aggregator(ColumnDataType{position.value()}, optional, v);
-      if (optional) {
-        result.current_primary_aggregate = *optional;
+      if constexpr (function == AggregateFunction::CountDistinct) {
+        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
+        result.ensure_distinct_values_initialized(context.buffer);
+        result.distinct_values().emplace(position.value());
+      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+        result.ensure_secondary_aggregates_initialized(context.buffer);
+        aggregator(ColumnDataType{position.value()}, result.current_primary_aggregate, result.current_secondary_aggregates());
+      } else {
+        aggregator(ColumnDataType{position.value()}, result.current_primary_aggregate);
       }
-//      aggregator(ColumnDataType{position.value()}, result.current_primary_aggregate, result.current_secondary_aggregates);
 
-      // if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
-      //               function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-      //   // Increase the counter of non-NULL values only for aggregation functions that use it.
+      if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
+                    function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+        // Increase the counter of non-NULL values only for aggregation functions that use it.
         ++result.aggregate_count;
-      // }
-
-      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-        // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-//        result.distinct_values.insert(ColumnDataType{position.value()});
       }
     }
 
@@ -214,9 +210,9 @@ auto v = std::vector<AggregateType>{};
   };
 
   if (_contexts_per_column.size() > 1) {
-    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position.template operator()<true>(position);});
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position(std::true_type{}, position);});
   } else {
-    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position.template operator()<false>(position);});
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {process_position(std::false_type{}, position);});
   }
 }
 
@@ -226,65 +222,22 @@ auto v = std::vector<AggregateType>{};
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
-  Timer t;
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
-    // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-    // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
-    // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
-    // This is suitable here because the amount of memory needed is known from the start. In other places with frequent
-    // reallocations, this might make less sense.
-    // We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
-    // https://libcxx.llvm.org/ts1z_status.html
-    using AggregateKeysAllocator =
-        boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
-
+  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
 
-    {
-      // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
-      // This calculation assumes that we use the biggest type of AggregateKey - other data structures use less space, but
-      // that is fine
-      // TODO how much does this acutally save?
-      size_t needed_size_per_aggregate_key =
-          aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
-      size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                           chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
-                           input_table->row_count() * needed_size_per_aggregate_key;
-      needed_size =
-          static_cast<size_t>(static_cast<double>(needed_size) * 1.1);  // Give it a little bit more, just in case
+    // Create the actual data structure
+    keys_per_chunk.reserve(chunk_count);
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
 
-      auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);  // TODO geht der nicht out-of-scope?
-      auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
-      allocator.allocate(1);  // Make sure that the buffer is initialized
-      const auto start_next_buffer_size = temp_buffer.next_buffer_size();
-
-      // Create the actual data structure
-      keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-      keys_per_chunk.reserve(chunk_count);
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = input_table->get_chunk(chunk_id);
-        // if (!chunk) continue; // TODO this looks broken, as keys_per_chunk[chunk_id] will not match anymore
-
-        if constexpr (std::is_same_v<AggregateKey, boost::container::small_vector<AggregateKeyEntry, 4>>) {
-          keys_per_chunk.emplace_back(chunk->size());
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-            keys_per_chunk.back()[chunk_offset] = AggregateKey(_groupby_column_ids.size());
-          }
-        } else {
-          keys_per_chunk.emplace_back(chunk->size());
-        }
-      }
-
-      // Make sure that we did not have to allocate more memory than originally computed
-      if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-        // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we
-        // allocated enough space from the beginning on. It would be more intuitive to compare current_buffer(), but
-        // this seems to be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
-        PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
-                           " was not enough and a second buffer was needed");
+      if constexpr (std::is_same_v<AggregateKey, AggregateKeySmallVector>) {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
+      } else {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
       }
     }
 
@@ -312,13 +265,12 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
     //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
     //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
     //     require all strings in the given column to be that short.
-
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(_groupby_column_ids.size());
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                   this, &t]() {
+                                                   this]() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
@@ -360,7 +312,6 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               });
             }
           } else {
-            Timer t2;
             /*
             Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
@@ -372,19 +323,17 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-            auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
-                                             std::equal_to<>, decltype(allocator)>(allocator);
+            auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
+                                         decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
-            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
               // the IDs used for short strings (see below).
               id_counter = 5'000'000'000;
             }
 
-            // std::cout << "pre-chunk" << t2.lap_formatted() << std::endl;
-
-            for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
 
@@ -405,7 +354,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   // ID generation was applied and we need to generate the ID using the value->ID map.
                   auto id = std::numeric_limits<AggregateKeyEntry>::max();
 
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
@@ -476,11 +425,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
                 ++chunk_offset;
               });
-              // std::cout << "chunk" << t2.lap_formatted() << std::endl;
             }
           }
         });
-        // std::cout << "Column " << group_column_index << ": " << t.lap_formatted() << std::endl;
       }));
       jobs.back()->schedule();
     }
@@ -593,7 +540,7 @@ void AggregateHash::_aggregate() {
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result<false>(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        get_or_add_result(std::false_type{}, result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
       }
     } else {
@@ -625,7 +572,7 @@ void AggregateHash::_aggregate() {
           } else {
             // count occurrences for each group key
             for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-              auto& result = get_or_add_result<true>(result_ids, results, // TODO fix hard-coded <true>
+              auto& result = get_or_add_result(std::true_type{}, result_ids, results, // TODO fix hard-coded <true>
                                                get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                                RowID{chunk_id, chunk_offset});
               ++result.aggregate_count;
@@ -690,8 +637,8 @@ void AggregateHash::_aggregate() {
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
-  // The reason we only have specializations up to 2 is because every specialization increases the compile time.
-  // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
+  // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
+  // columns.
   switch (_groupby_column_ids.size()) {
     case 0:
       _aggregate<EmptyAggregateKey>();
@@ -701,12 +648,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<AggregateKeyEntry>();
       break;
     case 2:
-      // We need to explicitly list all array sizes that we want to support
       _aggregate<std::array<AggregateKeyEntry, 2>>();
       break;
     default:
-      PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<boost::container::small_vector<AggregateKeyEntry, 4>>();
+      _aggregate<AggregateKeySmallVector>();
       break;
   }
 
@@ -783,10 +728,10 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    null_values[output_offset] = result.aggregate_count == 0;
+    null_values[output_offset] = !result.current_primary_aggregate;
 
-    if (result.aggregate_count > 0) {
-      values[output_offset] = result.current_primary_aggregate;
+    if (result.current_primary_aggregate) {
+      values[output_offset] = *result.current_primary_aggregate;
     }
     ++output_offset;
   }
@@ -813,11 +758,11 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
     const AggregateResults<ColumnDataType, AggregateType>& results) {
   values.resize(results.size());
 
-//  size_t output_offset = 0;
-//  for (const auto& result : results) {
-//    values[output_offset] = result.distinct_values.size();
-//    ++output_offset;
-//  }
+  size_t output_offset = 0;
+  for (const auto& result : results) {
+    values[output_offset] = result.distinct_values().size();
+    ++output_offset;
+  }
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
@@ -830,10 +775,10 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 
   auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
-    null_values[output_offset] = result.aggregate_count == 0;
+    null_values[output_offset] = !result.current_primary_aggregate;
 
-    if (result.aggregate_count > 0) {
-      values[output_offset] = result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    if (result.current_primary_aggregate) {
+      values[output_offset] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++output_offset;
   }
@@ -859,8 +804,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     const auto count = static_cast<AggregateType>(result.aggregate_count);
 
-    if (count > 1) {
-      values[output_offset] = result.current_primary_aggregate;
+    if (result.current_primary_aggregate && count > 1) {
+      values[output_offset] = *result.current_primary_aggregate;
     } else {
       null_values[output_offset] = true;
     }
