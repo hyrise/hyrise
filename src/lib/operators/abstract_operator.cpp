@@ -25,8 +25,8 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
-  if (_left_input) _left_input->register_consumer(shared_from_this());
-  if (_right_input) _right_input->register_consumer(shared_from_this());
+  if (_left_input) _left_input->register_consumer(*this);
+  if (_right_input) _right_input->register_consumer(*this);
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
@@ -75,8 +75,8 @@ void AbstractOperator::execute() {
   performance_data->executed = true;
 
   // Tell input operators that we no longer need their output.
-  if(_left_input) _left_input->deregister_consumer(shared_from_this());
-  if(_right_input) _right_input->deregister_consumer(shared_from_this());
+  if(_left_input) _left_input->deregister_consumer(*this);
+  if(_right_input) _right_input->deregister_consumer(*this);
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -155,16 +155,15 @@ size_t AbstractOperator::consumer_count() const {
   return _consumer_count.load();
 }
 
-void AbstractOperator::register_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const {
+void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) const {
   _consumer_count++;
 }
 
-void AbstractOperator::deregister_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const {
+void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) const {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
   if (_consumer_count == 0) {
-    std::cout << "Last consumer of " << this->name() << " has deregistered (" << consumer_op->name() << ")" <<
-        std::endl;
+    std::cout << "Last consumer of " << this->name() << " has deregistered (" << consumer_op.name() << ")" << std::endl;
   }
 }
 

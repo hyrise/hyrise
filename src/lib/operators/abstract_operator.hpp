@@ -118,8 +118,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Consumer tracking
   size_t consumer_count() const;
-  void register_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const;
-  void deregister_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const;
+  void register_consumer(const AbstractOperator& consumer_op) const;
+  void deregister_consumer(const AbstractOperator& consumer_op) const;
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
