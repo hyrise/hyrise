@@ -52,7 +52,7 @@ typename Results::reference get_or_add_result(CacheResultIds x, ResultIds& resul
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Expected AggregateKeyEntry to be unsigned 64-bit value");
     constexpr auto mask = AggregateKeyEntry{1} << 63;
 
-    if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
+    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       if (first_key_entry & mask) {
         // std::cout << 's';
         const auto result_id = first_key_entry ^ mask;
@@ -68,7 +68,7 @@ typename Results::reference get_or_add_result(CacheResultIds x, ResultIds& resul
     auto [it, inserted] = result_ids.emplace(key, result_id);
     if (!inserted) {
       result_id = it->second;
-      if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
+      if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         first_key_entry.get() = mask | result_id;
       }
       // std::cout << 'h';
@@ -81,7 +81,7 @@ typename Results::reference get_or_add_result(CacheResultIds x, ResultIds& resul
     results[result_id].row_id = row_id;
 
     // std::cout << 'i';
-    if constexpr (std::is_same_v<decltype(CacheResultIds), std::true_type>) {
+    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       first_key_entry.get() = mask | result_id;
     }
     return results[result_id];
