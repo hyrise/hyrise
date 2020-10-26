@@ -31,8 +31,8 @@ using namespace opossum;  // NOLINT
 // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
 // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
 // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-template <typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(auto CacheResultIds, ResultIds& result_ids, Results& results, AggregateKey& key,
+template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(CacheResultIds x, ResultIds& result_ids, Results& results, AggregateKey& key,
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
   if constexpr (std::is_same_v<std::decay_t<AggregateKey>, EmptyAggregateKey>) {
