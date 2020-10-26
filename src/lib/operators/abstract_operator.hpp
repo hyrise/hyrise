@@ -116,6 +116,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> left_input_table() const;
   std::shared_ptr<const Table> right_input_table() const;
 
+  // Consumer tracking
+  size_t consumer_count() const;
+  void register_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const;
+  void deregister_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const;
+
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
@@ -123,6 +128,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
+
+  // We track consumers to determine when to flush the operator's results.
+  mutable std::atomic<u_short> _consumer_count = 0;
 
  protected:
   // abstract method to actually execute the operator

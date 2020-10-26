@@ -24,7 +24,10 @@ namespace opossum {
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
-    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {}
+    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
+  if (_left_input) _left_input->register_consumer(shared_from_this());
+  if (_right_input) _right_input->register_consumer(shared_from_this());
+}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
@@ -70,6 +73,10 @@ void AbstractOperator::execute() {
   }
   performance_data->walltime = performance_timer.lap();
   performance_data->executed = true;
+
+  // Tell input operators that we no longer need their output.
+  if(_left_input) _left_input->deregister_consumer(shared_from_this());
+  if(_right_input) _right_input->deregister_consumer(shared_from_this());
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -128,7 +135,10 @@ void AbstractOperator::execute() {
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
-void AbstractOperator::clear_output() { _output = nullptr; }
+void AbstractOperator::clear_output() {
+  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
+  _output = nullptr;
+}
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
@@ -140,6 +150,23 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
 std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
 
 std::shared_ptr<const Table> AbstractOperator::right_input_table() const { return _right_input->get_output(); }
+
+size_t AbstractOperator::consumer_count() const {
+  return _consumer_count.load();
+}
+
+void AbstractOperator::register_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const {
+  _consumer_count++;
+}
+
+void AbstractOperator::deregister_consumer(std::shared_ptr<const AbstractOperator> consumer_op) const {
+  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
+  _consumer_count--;
+  if (_consumer_count == 0) {
+    std::cout << "Last consumer of " << this->name() << " has deregistered (" << consumer_op->name() << ")" <<
+        std::endl;
+  }
+}
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 
