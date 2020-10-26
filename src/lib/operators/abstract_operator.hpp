@@ -131,6 +131,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // We track consumers to determine when to flush the operator's results.
   mutable std::atomic<u_short> _consumer_count = 0;
+  mutable std::atomic<u_short> _consumer_count_max = 0;
 
  protected:
   // abstract method to actually execute the operator

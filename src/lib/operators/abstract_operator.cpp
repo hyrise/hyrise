@@ -140,7 +140,11 @@ void AbstractOperator::clear_output() {
   _output = nullptr;
 }
 
-std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
+std::string AbstractOperator::description(DescriptionMode description_mode) const {
+  std::ostringstream stream;
+  stream << name() << " (C.count: " << _consumer_count_max.load() << ")";
+  return stream.str();
+}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
@@ -157,6 +161,7 @@ size_t AbstractOperator::consumer_count() const {
 
 void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) const {
   _consumer_count++;
+  _consumer_count_max++;
 }
 
 void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) const {
