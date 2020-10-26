@@ -139,7 +139,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
 
     // print the rows in the chunk
-    /*for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         // well yes, we use AbstractSegment::operator[] here, but since Print is not an operation that should
@@ -166,7 +166,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << "|";
       }
       _out << std::endl;
-    }*/
+    }
   }
 
   return left_input_table();
