@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 
-import json
-import os
-import sys
-
-from compareBenchmarkScriptTest import CompareBenchmarkScriptTest
-from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize, run_benchmark
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, initialize, run_benchmark
 
 
 def main():
