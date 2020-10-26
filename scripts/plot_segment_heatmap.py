@@ -69,6 +69,20 @@ for snapshot_id in df["snapshot_id"].unique():
         print(f"No modifications to access counters seen at '{moment}' - skipping this snapshot")
         continue
 
+    # Add per-column average
+    piv['Ø'] = piv.mean(numeric_only=True, axis=1)
+
+    # Add per-chunk average
+    per_chunk_accesses = {}
+    for table_and_column_name, row in piv.iterrows():
+        table = table_and_column_name.split('.')[0]
+        if not table in per_chunk_accesses:
+            per_chunk_accesses[table] = []
+        per_chunk_accesses[table].append(row)
+    for table, accesses in per_chunk_accesses.items():
+        piv.loc[f"{table} Ø"] = np.mean(accesses, axis=0).tolist()
+    piv = piv.sort_index()
+
     legend_width = 0.2
     fig, ax = plt.subplots(figsize=(0.25 * piv.shape[1] + legend_width, 0.25 * piv.shape[0]))
     ax.set_aspect("equal")
@@ -82,10 +96,23 @@ for snapshot_id in df["snapshot_id"].unique():
     )
     fig.tight_layout(pad=0)
 
+    # Add average marker to cells where needed
+    for y in range(piv.shape[0]):
+        for x in range(piv.shape[1]):
+            if ('Ø' in str(piv.columns[x]) or 'Ø' in str(piv.index[y])) and piv.iloc[y, x] > 1:
+                plt.text(x + 0.5, y + 0.5, 'Ø',
+                         horizontalalignment='center',
+                         verticalalignment='center',
+                         )
+        if 'Ø' in str(piv.index[y]):
+            ax.axhline(y = y, xmin = 0, xmax = piv.shape[1], color='lightgrey')
+
     ax.axis("on")
     ax.set_title(moment)
+    ax.set_xticks(np.arange(piv.shape[1]) + 0.5, minor=False)
+    ax.set_xticklabels(piv.columns.values.astype(str), rotation=270)
     ax.set_yticks(np.arange(piv.shape[0]) + 0.5, minor=False)
-    ax.set_yticklabels(reversed(sorted(piv.index)))
+    ax.set_yticklabels(piv.index.values.astype(str))
 
     # Create a legend
     divider = make_axes_locatable(ax)
