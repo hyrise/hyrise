@@ -64,9 +64,9 @@ class MetaTableTest : public BaseTest {
     int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
 
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
-                               {{EncodingType::RunLength},
-                                {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                                {EncodingType::Unencoded}});
+                               {SegmentEncodingSpec{EncodingType::RunLength},
+                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                SegmentEncodingSpec{EncodingType::Unencoded}});
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);

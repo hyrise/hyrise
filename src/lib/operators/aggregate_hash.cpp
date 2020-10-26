@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <magic_enum.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
@@ -134,8 +133,9 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 };
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                                       const KeysPerChunk<AggregateKey>& keys_per_chunk) {
+__attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
+                                                            const AbstractSegment& abstract_segment,
+                                                            const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
@@ -157,19 +157,21 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     * If the value is NULL, the current aggregate value does not change.
     */
     if (!position.is_null()) {
-      // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
+      if constexpr (function == AggregateFunction::CountDistinct) {
+        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
+        result.ensure_distinct_values_initialized(context.buffer);
+        result.distinct_values().emplace(position.value());
+      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+        result.ensure_secondary_aggregates_initialized(context.buffer);
+        aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
+      } else {
+        aggregator(position.value(), result.current_primary_aggregate);
+      }
 
       if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
                     function == AggregateFunction::StandardDeviationSample) {  // NOLINT
         // Increase the counter of non-NULL values only for aggregation functions that use it.
         ++result.aggregate_count;
-      }
-
-      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-        // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-        result.distinct_values.insert(position.value());
       }
     }
 
@@ -185,58 +187,21 @@ template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
-    // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-    // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
-    // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
-    // This is suitable here because the amount of memory needed is known from the start. In other places with frequent
-    // reallocations, this might make less sense.
-    // We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
-    // https://libcxx.llvm.org/ts1z_status.html
-    using AggregateKeysAllocator =
-        boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
-
+  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
 
-    {
-      // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
-      // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
-      // that is fine
-      size_t needed_size_per_aggregate_key =
-          aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
-      size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                           chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
-                           input_table->row_count() * needed_size_per_aggregate_key;
-      needed_size =
-          static_cast<size_t>(static_cast<double>(needed_size) * 1.1);  // Give it a little bit more, just in case
+    // Create the actual data structure
+    keys_per_chunk = KeysPerChunk<AggregateKey>{};
+    keys_per_chunk.reserve(chunk_count);
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
 
-      auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-      auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
-      allocator.allocate(1);  // Make sure that the buffer is initialized
-      const auto start_next_buffer_size = temp_buffer.next_buffer_size();
-
-      // Create the actual data structure
-      keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-      keys_per_chunk.reserve(chunk_count);
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = input_table->get_chunk(chunk_id);
-        if (!chunk) continue;
-
-        if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
-        } else {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
-        }
-      }
-
-      // Make sure that we did not have to allocate more memory than originally computed
-      if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-        // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we
-        // allocated enough space from the beginning on. It would be more intuitive to compare current_buffer(), but
-        // this seems to be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
-        PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
-                           " was not enough and a second buffer was needed");
+      if constexpr (std::is_same_v<AggregateKey, AggregateKeySmallVector>) {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
+      } else {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
       }
     }
 
@@ -264,7 +229,6 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
     //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
     //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
     //     require all strings in the given column to be that short.
-
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(_groupby_column_ids.size());
 
@@ -323,17 +287,17 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-            auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
-                                             std::equal_to<>, decltype(allocator)>(allocator);
+            auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
+                                         decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
-            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
               // the IDs used for short strings (see below).
               id_counter = 5'000'000'000;
             }
 
-            for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
 
@@ -353,7 +317,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   // ID generation was applied and we need to generate the ID using the value->ID map.
                   auto id = std::numeric_limits<AggregateKeyEntry>::max();
 
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
@@ -636,8 +600,8 @@ void AggregateHash::_aggregate() {
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
-  // The reason we only have specializations up to 2 is because every specialization increases the compile time.
-  // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
+  // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
+  // columns.
   switch (_groupby_column_ids.size()) {
     case 0:
       _aggregate<EmptyAggregateKey>();
@@ -647,12 +611,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<AggregateKeyEntry>();
       break;
     case 2:
-      // We need to explicitly list all array sizes that we want to support
       _aggregate<std::array<AggregateKeyEntry, 2>>();
       break;
     default:
-      PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<std::vector<AggregateKeyEntry>>();
+      _aggregate<AggregateKeySmallVector>();
       break;
   }
 
@@ -761,7 +723,7 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    values[output_offset] = result.distinct_values.size();
+    values[output_offset] = result.distinct_values().size();
     ++output_offset;
   }
 }

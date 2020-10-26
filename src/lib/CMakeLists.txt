@@ -645,7 +645,6 @@ set(
 set(
     LIBRARIES
     lz4
-    robin_map
     sqlparser
     uninitialized_vector
     zstd
@@ -655,6 +654,7 @@ set(
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
+    # Additional libraries added with target_link_libraries_system below
 )
 
 if (NOT APPLE)
@@ -720,6 +720,7 @@ if(NOT APPLE)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential

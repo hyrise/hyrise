@@ -94,12 +94,12 @@ bool compare_files(const std::string& original_file, const std::string& created_
 std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table);
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
-    {EncodingType::Unencoded},
-    {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FrameOfReference},
-    {EncodingType::LZ4},
-    {EncodingType::RunLength}};
+    SegmentEncodingSpec{EncodingType::Unencoded},
+    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
+    SegmentEncodingSpec{EncodingType::FrameOfReference},
+    SegmentEncodingSpec{EncodingType::LZ4},
+    SegmentEncodingSpec{EncodingType::RunLength}};
 }  // namespace opossum
