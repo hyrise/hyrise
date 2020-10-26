@@ -45,7 +45,11 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 */
 
 /*
-For each group in the output, one AggregateResult is created.
+
+
+For each group in the output, one AggregateResult is created per aggregate function. If no GROUP BY columns are used,
+one AggregateResult exists per aggregate function.
+
 This result contains:
 - the current (primary) aggregated value,
 - the number of rows that were used, which are used for AVG, COUNT, and STDDEV_SAMP,
