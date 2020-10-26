@@ -44,7 +44,7 @@ std::string GetTable::description(DescriptionMode description_mode) const {
 
   std::stringstream stream;
 
-  stream << name() << separator << "(" << table_name() << ")";
+  stream << AbstractOperator::description(description_mode) << separator << "(" << table_name() << ")";
 
   stream << separator << "pruned:" << separator;
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";

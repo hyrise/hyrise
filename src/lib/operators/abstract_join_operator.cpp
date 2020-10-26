@@ -59,7 +59,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
-  stream << name() << separator << "(" << _mode << " Join where "
+  stream << AbstractOperator::description(description_mode) << separator << "(" << _mode << " Join where "
          << column_name(true, _primary_predicate.column_ids.first) << " " << _primary_predicate.predicate_condition
          << " " << column_name(false, _primary_predicate.column_ids.second);
 
