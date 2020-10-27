@@ -392,10 +392,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
           }
         });
       }));
-      jobs.back()->schedule();
     }
 
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   return keys_per_chunk;
