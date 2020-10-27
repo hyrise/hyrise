@@ -27,10 +27,10 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_aggregate) {
-      if (aggregate_count == 0 || value_smaller(new_value, current_aggregate)) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+      if (aggregate_count == 0 || value_smaller(new_value, accumulator)) {
         // New minimum found
-        current_aggregate = new_value;
+        accumulator = new_value;
       }
     };
   }
@@ -40,10 +40,10 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_aggregate) {
-      if (aggregate_count == 0 || value_greater(new_value, current_aggregate)) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+      if (aggregate_count == 0 || value_greater(new_value, accumulator)) {
         // New maximum found
-        current_aggregate = new_value;
+        accumulator = new_value;
       }
     };
   }
@@ -53,12 +53,12 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_aggregate) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
       // add new value to sum
       if (aggregate_count == 0) {
-        current_aggregate = new_value;
+        accumulator = new_value;
       } else {
-        current_aggregate += static_cast<AggregateType>(new_value);
+        accumulator += static_cast<AggregateType>(new_value);
       }
     };
   }
@@ -81,8 +81,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count,
-              StandardDeviationSampleData& current_aggregate) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, StandardDeviationSampleData& accumulator) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
@@ -90,13 +89,13 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         // mean accumulates the mean of the entire dataset.
         // squared_distance_from_mean aggregates the squared distance from the mean.
         // count aggregates the number of samples seen so far.
-        // The sample standard deviation is stored as current_aggregate.
+        // The sample standard deviation is stored as accumulator.
 
         // get values
-        auto& count = current_aggregate[0];  // We could probably reuse aggregate_count here
-        auto& mean = current_aggregate[1];
-        auto& squared_distance_from_mean = current_aggregate[2];
-        auto& result = current_aggregate[3];
+        auto& count = accumulator[0];  // We could probably reuse aggregate_count here
+        auto& mean = accumulator[1];
+        auto& squared_distance_from_mean = accumulator[2];
+        auto& result = accumulator[3];
 
         // update values
         ++count;
@@ -121,7 +120,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& current_aggregate) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
 
@@ -129,7 +128,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& current_aggregate) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
 

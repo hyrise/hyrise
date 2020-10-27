@@ -366,7 +366,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
                     // Could not take the shortcut above, either because we don't have a string or because it is too
                     // long
-                    auto inserted = id_map.try_emplace(ColumnDataType{position.value()}, id_counter);
+                    auto inserted = id_map.try_emplace(position.value(), id_counter);
 
                     id = inserted.first->second;
 
@@ -427,6 +427,7 @@ void AggregateHash::_aggregate() {
     Insert a dummy context for the DISTINCT implementation.
     That way, _contexts_per_column will always have at least one context with results.
     This is important later on when we write the group keys into the table.
+    The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
     auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>();
     _contexts_per_column.push_back(context);
@@ -654,7 +655,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());  // TODO contains Groupby
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
