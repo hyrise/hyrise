@@ -29,7 +29,7 @@ using ValueDistributionMap =
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
-  segment_iterate<T>(segment, [&](const auto iterator_value) {
+  segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) return;
 
     if constexpr (std::is_same_v<T, pmr_string>) {

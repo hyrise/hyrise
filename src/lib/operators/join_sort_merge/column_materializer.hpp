@@ -150,7 +150,7 @@ class ColumnMaterializer {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
-    segment_iterate<T>(segment, [&](const auto position) {
+    segment_iterate<T>(segment, [&](const auto& position) {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
       if (position.is_null()) {
         if (_materialize_null) {

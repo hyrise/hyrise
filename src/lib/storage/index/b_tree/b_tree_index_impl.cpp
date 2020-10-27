@@ -68,7 +68,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const Abstract
   null_positions.reserve(values.size());
 
   // Materialize
-  segment_iterate<DataType>(*segment, [&](const auto position) {
+  segment_iterate<DataType>(*segment, [&](const auto& position) {
     if (position.is_null()) {
       null_positions.emplace_back(position.chunk_offset());
     } else {

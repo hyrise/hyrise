@@ -1399,7 +1399,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
       if (_table->column_is_nullable(column_id)) {
         nulls.resize(segment.size());
 
-        segment_iterate<ColumnDataType>(segment, [&](const auto position) {
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
           if (position.is_null()) {
             nulls[chunk_offset] = true;
           } else {
@@ -1408,7 +1408,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
           ++chunk_offset;
         });
       } else {
-        segment_iterate<ColumnDataType>(segment, [&](const auto position) {
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
           DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
           values[chunk_offset] = position.value();
           ++chunk_offset;
@@ -1586,7 +1586,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
-        segment_iterate<Result>(result_segment, [&](const auto position) {
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
           if (position.is_null()) {
             result_nulls[chunk_offset] = true;
           } else {
@@ -1602,7 +1602,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
-        segment_iterate<Result>(result_segment, [&](const auto position) {
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
           result_values[chunk_offset] = position.value();
           ++chunk_offset;
         });

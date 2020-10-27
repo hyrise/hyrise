@@ -148,7 +148,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto position) {
+  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
     auto& result =
         get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
@@ -249,7 +249,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto position) {
+              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 const auto int_to_uint = [](const int32_t value) {
                   // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
                   // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
@@ -303,7 +303,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto position) {
+              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0u;

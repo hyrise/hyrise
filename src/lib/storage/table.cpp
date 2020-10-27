@@ -298,7 +298,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
     if (!chunk) continue;
 
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-      segment_iterate(*chunk->get_segment(column_id), [&](const auto segment_position) {
+      segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
         if (!segment_position.is_null()) {
           rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
         }
