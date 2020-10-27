@@ -78,7 +78,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
  private:
   template <typename ZsDecompressorType, bool IsNullable>
-  class Iterator : public BaseSegmentIterator<Iterator<ZsDecompressorType, IsNullable>, SegmentPosition<T>> {
+  class Iterator : public AbstractSegmentIterator<Iterator<ZsDecompressorType, IsNullable>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
@@ -135,7 +135,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename ZsDecompressorType, typename PosListIteratorType, bool IsNullable>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType, IsNullable>,
+      : public AbstractPointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType, IsNullable>,
                                               SegmentPosition<T>, PosListIteratorType> {
    public:
     using ValueType = T;
