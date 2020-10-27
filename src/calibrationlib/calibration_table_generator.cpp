@@ -46,12 +46,16 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
 
       const std::string table_name = std::to_string(chunk_size) + "_" + std::to_string(row_count);
 
-      const auto calibration_table_wrapper = std::make_shared<const CalibrationTableWrapper>(
-          CalibrationTableWrapper(table, table_name, _column_data_distributions));
+      const auto calibration_table_wrapper =
+          std::make_shared<const CalibrationTableWrapper>(table, table_name, _column_data_distributions);
       table_wrappers.emplace_back(calibration_table_wrapper);
 
       if (_config->generate_sorted_tables) {
         table_wrappers.emplace_back(_generate_sorted_table(calibration_table_wrapper));
+      }
+
+      if (_config->generate_foreign_key_tables && chunk_size <= _foreign_key_threshold) {
+        table_wrappers.emplace_back(_generate_foreign_key_table(calibration_table_wrapper, table_generator));
       }
     }
   }
@@ -113,4 +117,30 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   return std::make_shared<const CalibrationTableWrapper>(
       CalibrationTableWrapper(all_sorted_table, sorted_table_name, column_data_distributions));
 }
+
+std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_foreign_key_table(
+    const std::shared_ptr<const CalibrationTableWrapper>& original_table,
+    const std::shared_ptr<const SyntheticTableGenerator>& table_generator) const {
+  const auto table_name = original_table->get_name() + "_unique";
+  const auto& table = original_table->get_table();
+  const auto table_size = table->row_count();
+  std::vector<ColumnDataDistribution> data_distributions;
+  std::vector<ColumnSpecification> column_specs;
+
+  for (auto column_id = ColumnID{0}; column_id <= table->column_count(); ++column_id) {
+    auto data_distribution = _column_data_distributions.at(column_id);
+    data_distribution.max_value = table_size;
+    data_distributions.emplace_back(data_distribution);
+
+    const auto& original_column_spec = _column_specs.at(column_id);
+    auto column_spec = ColumnSpecification(data_distribution, original_column_spec.data_type,
+                                           original_column_spec.segment_encoding_spec, original_column_spec.name);
+    column_specs.emplace_back(column_spec);
+  }
+
+  const auto new_table =
+      table_generator->generate_table(column_specs, table->row_count(), table->target_chunk_size(), table->uses_mvcc());
+  return std::make_shared<const CalibrationTableWrapper>(new_table, table_name, data_distributions);
+}
+
 }  // namespace opossum

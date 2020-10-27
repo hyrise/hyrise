@@ -1,7 +1,9 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "operators/pqp_utils.hpp"
 #include "scheduler/operator_task.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "types.hpp"
 
 #include "calibration_benchmark_runner.hpp"
@@ -28,9 +30,10 @@ int main() {
                                     10'000,  15'000,  20'000,    30'000,    40'000,    50'000,   60'175, 100'000,
                                     250'000, 500'000, 1'000'000, 2'500'000, 5'000'000, 6'000'000};
   const bool GENERATE_SORTED_TABLES = true;
+  const bool GENERATE_FOREIGN_KEY_TABLES = true;
 
   // test data generation settings
-  constexpr bool GENERATE_TEST_DATA = true;
+  constexpr bool GENERATE_TEST_DATA = false;
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
@@ -39,7 +42,7 @@ int main() {
   // Execute calibration
   auto table_config = std::make_shared<TableGeneratorConfig>(
       TableGeneratorConfig{TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS,
-                           GENERATE_SORTED_TABLES});
+                           GENERATE_SORTED_TABLES, GENERATE_FOREIGN_KEY_TABLES});
 
   std::cout << "Generating tables" << std::endl;
   auto table_generation_start = std::chrono::system_clock::now();
@@ -92,6 +95,12 @@ int main() {
 
     // Export PQP directly after execution
     feature_exporter.export_to_csv(pqp);
+
+    // clear outputs to free up space
+    visit_pqp(pqp, [&](const auto& node) {
+      node->clear_output();
+      return PQPVisitation::VisitInputs;
+    });
   }
 
   const auto training_duration =

@@ -170,6 +170,10 @@ void CalibrationLQPGenerator::_generate_joins(
                                      PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                      PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
                                      PredicateCondition::Like,        PredicateCondition::NotLike};
+  const auto left_table_size = left_table->row_count();
+  const auto right_table_size = right_table->row_count();
+
+  if (left_table_size > 1'000'000 && right_table_size > 1'000'000) return;
 
   for (auto column_id = ColumnID{0}; column_id < left_table->column_count(); ++column_id) {
     const auto left_column_type = left_table->column_data_type(column_id);
@@ -202,9 +206,12 @@ void CalibrationLQPGenerator::_generate_joins(
               if (_enable_reference_joins) {
                 const auto left_validate_node = ValidateNode::make(left_stored_table_node);
                 const auto right_validate_node = ValidateNode::make(right_stored_table_node);
-                const auto validated_join_node =
-                    JoinNode::make(join_mode, join_predicate, join_type, left_validate_node, right_validate_node);
-                _generated_lqps.push_back(validated_join_node);
+                _generated_lqps.push_back(
+                    JoinNode::make(join_mode, join_predicate, join_type, left_validate_node, right_validate_node));
+                _generated_lqps.push_back(
+                    JoinNode::make(join_mode, join_predicate, join_type, left_stored_table_node, right_validate_node));
+                _generated_lqps.push_back(
+                    JoinNode::make(join_mode, join_predicate, join_type, left_validate_node, right_stored_table_node));
               }
             }
           });
