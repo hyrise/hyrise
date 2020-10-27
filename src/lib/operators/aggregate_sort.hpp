@@ -80,6 +80,10 @@ class AggregateSort : public AbstractAggregateOperator {
   void create_aggregate_column_definitions(ColumnID column_index);
 
  protected:
+  template <AggregateFunction function, typename AggregateType>
+  using AggregateAccumulator = std::conditional_t<function == AggregateFunction::StandardDeviationSample,
+                                                  StandardDeviationSampleData, AggregateType>;
+
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -109,8 +113,7 @@ class AggregateSort : public AbstractAggregateOperator {
   void _set_and_write_aggregate_value(pmr_vector<AggregateType>& aggregate_results,
                                       pmr_vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
                                       [[maybe_unused]] const uint64_t aggregate_index,
-                                      std::optional<AggregateType>& current_primary_aggregate,
-                                      SecondaryAggregates<AggregateType>& current_secondary_aggregates,
+                                      AggregateAccumulator<function, AggregateType>& accumulator,
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
