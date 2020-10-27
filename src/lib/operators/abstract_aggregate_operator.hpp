@@ -56,7 +56,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
       // add new value to sum
       if (aggregate_count == 0) {
-        accumulator = new_value;
+        accumulator = static_cast<AggregateType>(new_value);
       } else {
         accumulator += static_cast<AggregateType>(new_value);
       }

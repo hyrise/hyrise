@@ -270,11 +270,15 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
 
   if constexpr (function == AggregateFunction::StandardDeviationSample) {
-    if (value_count >= 2) {
-      aggregate_results[aggregate_group_index] = accumulator[3];
+    if (!std::is_same_v<AggregateType, pmr_string>) {
+      if (value_count >= 2) {
+        aggregate_results[aggregate_group_index] = accumulator[3];
+      } else {
+        // STDDEV_SAMP requires at least two values
+        is_null = true;
+      }
     } else {
-      // STDDEV_SAMP requires at least two values
-      is_null = true;
+      Fail("StandardDeviationSample does not work for strings");
     }
   } else {
     aggregate_results[aggregate_group_index] = accumulator;
