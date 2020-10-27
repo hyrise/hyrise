@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tbb/concurrent_unordered_map.h>
+
 #include <iostream>
 #include <map>
 #include <memory>
@@ -21,7 +23,7 @@ class AbstractLQPNode;
 class StorageManager : public Noncopyable {
  public:
   /**
-   * @defgroup Manage Tables, not thread-safe
+   * @defgroup Manage Tables, this is only thread-safe for operations on tables with different names
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
@@ -29,11 +31,11 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
-  const std::map<std::string, std::shared_ptr<Table>>& tables() const;
+  std::unordered_map<std::string, std::shared_ptr<Table>> tables() const;
   /** @} */
 
   /**
-   * @defgroup Manage SQL VIEWs, not thread-safe
+   * @defgroup Manage SQL VIEWs, this is only thread-safe for operations on views with different names
    * @{
    */
   void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
@@ -41,18 +43,18 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const std::string& name) const;
   std::vector<std::string> view_names() const;
-  const std::map<std::string, std::shared_ptr<LQPView>>& views() const;
+  std::unordered_map<std::string, std::shared_ptr<LQPView>> views() const;
   /** @} */
 
   /**
-   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, not thread-safe
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe for operations on prepared plans with different names
    * @{
    */
   void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
   std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
   bool has_prepared_plan(const std::string& name) const;
   void drop_prepared_plan(const std::string& name);
-  const std::map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
+  std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> prepared_plans() const;
   /** @} */
 
   // For debugging purposes mostly, dump all tables as csv
@@ -62,14 +64,12 @@ class StorageManager : public Noncopyable {
   StorageManager() = default;
   friend class Hyrise;
 
-  // Tables can currently not be modified concurrently
-  std::map<std::string, std::shared_ptr<Table>> _tables;
+  // We preallocate maps to prevent costly re-allocation.
+  static constexpr size_t _INITIAL_MAP_SIZE = 100;
 
-  // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
-  std::map<std::string, std::shared_ptr<LQPView>> _views;
-  mutable std::unique_ptr<std::shared_mutex> _view_mutex = std::make_unique<std::shared_mutex>();
-
-  std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{_INITIAL_MAP_SIZE};
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

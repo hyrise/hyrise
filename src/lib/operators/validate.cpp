@@ -62,9 +62,9 @@ const std::string& Validate::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Validate>(copied_input_left);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Validate>(copied_left_input);
 }
 
 void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -77,7 +77,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
-  const auto in_table = input_table_left();
+  const auto in_table = left_input_table();
   const auto chunk_count = in_table->chunk_count();
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
@@ -145,14 +145,27 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
+  // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
+  // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues. This assumes that
+  // only one table is referenced over all chunks. If, in the future, this is not true anymore, entirely_visible_chunks
+  // either needs to be moved into the loop or turn into an `unordered_map<shared_ptr<Table>, vector<bool>>`.
+  auto entirely_visible_chunks = std::vector<bool>{};
+  auto entirely_visible_chunks_table = std::shared_ptr<const Table>{};  // used only for sanity check
+
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
+    const auto expected_number_of_valid_rows = chunk_in->size() - chunk_in->invalid_row_count();
+
     Segments output_segments;
     std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
-    auto referenced_table = std::shared_ptr<const Table>();
+
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
+
+    // Holds the table that contains the MVCC information. For data segments, this is the table that we operate on.
+    // If we are validating a reference segment, this is the table referenced by ref_segment_in.
+    auto referenced_table = std::shared_ptr<const Table>{};
 
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_segment_in) {
@@ -163,6 +176,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
+      if (!entirely_visible_chunks_table) {
+        entirely_visible_chunks_table = referenced_table;
+      } else {
+        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than once table");
+      }
+
       const auto& pos_list_in = ref_segment_in->pos_list();
       if (pos_list_in->references_single_chunk() && !pos_list_in->empty()) {
         // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
@@ -170,7 +189,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         auto mvcc_data = referenced_chunk->mvcc_data();
 
         if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
-          // We can reuse the old PosList since it is entirely visible.
+          // We can reuse the old PosList since it is entirely visible. Not using the entirely_visible_chunks cache for
+          // this shortcut to keep the code short.
           pos_list_out = pos_list_in;
         } else {
           RowIDPosList temp_pos_list;
@@ -183,9 +203,32 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));
         }
       } else {
-        // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+        // Slow path - we are looking at multiple referenced chunks and have to look at each row individually. We first
+        // build a list of entirely visible chunks. Rows with chunk ids from that list do not need to be tested
+        // individually. For chunk ids that are NOT in the list of entirely visible chunks, we need to actually look at
+        // their MVCC information.
         RowIDPosList temp_pos_list;
+        temp_pos_list.reserve(expected_number_of_valid_rows);
+
+        if (entirely_visible_chunks.empty()) {
+          // Check _is_entire_chunk_visible once for every chunk, even if we do not know if it is referenced or not.
+          // While this might introduce a small overhead in the case of many unreferenced chunks, it allows us to avoid
+          // a branch in the hot loop.
+          entirely_visible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
+          for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count();
+               ++referenced_table_chunk_id) {
+            const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
+            entirely_visible_chunks[referenced_table_chunk_id] =
+                _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
+          }
+        }
+
         for (auto row_id : *pos_list_in) {
+          if (entirely_visible_chunks[row_id.chunk_id]) {
+            temp_pos_list.emplace_back(row_id);
+            continue;
+          }
+
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->mvcc_data();
@@ -212,10 +255,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
       if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
+        // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.
         pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
       } else {
         const auto mvcc_data = chunk_in->mvcc_data();
         RowIDPosList temp_pos_list;
+        temp_pos_list.reserve(expected_number_of_valid_rows);
         temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
@@ -234,9 +279,18 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
     }
 
-    if (!pos_list_out->empty() > 0) {
+    if (!pos_list_out->empty()) {
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
+      // after the validate operator.
+      const auto chunk = std::make_shared<Chunk>(output_segments);
+      chunk->finalize();
+
+      const auto& sorted_by = chunk_in->individually_sorted_by();
+      if (!sorted_by.empty()) {
+        chunk->set_individually_sorted_by(sorted_by);
+      }
+      output_chunks.emplace_back(chunk);
     }
   }
 }

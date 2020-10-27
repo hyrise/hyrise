@@ -2,6 +2,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -14,10 +15,10 @@ namespace opossum {
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
-LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
+std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
-  return {shared_from_this(), column_id};
+  return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
 
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
@@ -43,8 +44,8 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   _pruned_column_ids = pruned_column_ids;
 
-  // Rebuilding this lazily the next time `column_expressions()` is called
-  _column_expressions.reset();
+  // Rebuilding this lazily the next time `output_expressions()` is called
+  _output_expressions.reset();
 }
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
@@ -60,14 +61,15 @@ std::string StoredTableNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::output_expressions() const {
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor
-  if (!_column_expressions) {
+  if (!_output_expressions) {
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
-    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
+    const auto num_unpruned_columns = table->column_count() - _pruned_column_ids.size();
+    _output_expressions = std::vector<std::shared_ptr<AbstractExpression>>(num_unpruned_columns);
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     auto output_column_id = ColumnID{0};
@@ -78,18 +80,47 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_express
         continue;
       }
 
-      (*_column_expressions)[output_column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
+      (*_output_expressions)[output_column_id] =
+          std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
       ++output_column_id;
     }
   }
 
-  return *_column_expressions;
+  return *_output_expressions;
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   return table->column_is_nullable(column_id);
+}
+
+std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+
+  // We create unique constraints from selected table key constraints
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_key_constraints = table->soft_key_constraints();
+
+  for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
+    // Discard key constraints that involve pruned column id(s).
+    const auto& key_constraint_column_ids = table_key_constraint.columns();
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&key_constraint_column_ids](const auto& pruned_column_id) {
+                      return key_constraint_column_ids.contains(pruned_column_id);
+                    })) {
+      continue;
+    }
+
+    // Search for expressions representing the key constraint's ColumnIDs
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of column expressions.");
+
+    // Create LQPUniqueConstraint
+    unique_constraints->emplace_back(column_expressions);
+  }
+
+  return unique_constraints;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {

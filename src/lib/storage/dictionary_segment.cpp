@@ -54,7 +54,7 @@ ChunkOffset DictionarySegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);
@@ -67,7 +67,7 @@ template <typename T>
 size_t DictionarySegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_dictionary, mode);
   }
   return common_elements_size + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type);

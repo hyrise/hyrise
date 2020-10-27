@@ -3,8 +3,8 @@
 #include <iterator>
 #include <type_traits>
 
-#include "boost/lexical_cast.hpp"
-#include "boost/variant/apply_visitor.hpp"
+#include <boost/lexical_cast.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -688,11 +688,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       // NOLINTNEXTLINE(bugprone-branch-clone)
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else if constexpr (std::is_same_v<Result, pmr_string>) {  // NOLINT
+      } else if constexpr (std::is_same_v<Result, pmr_string>) {
         // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
         values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
       } else {
-        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
+        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {
           // "String to Numeric" cast
           // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
@@ -913,7 +913,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
       // This was already evaluated before
       const auto table_iter = _uncorrelated_subquery_results->find(expression.pqp);
       DebugAssert(table_iter != _uncorrelated_subquery_results->cend(),
-                  "All uncorrelated PQPSubqueryExpression should be cached, if cache is present");
+                  "All uncorrelated PQPSubqueryExpression should be cached if cache is present");
       return {table_iter->second};
     } else {
       // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row

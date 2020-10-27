@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-class BaseSegment;
+class AbstractSegment;
 class ARTNode;
 class BaseDictionarySegment;
 
@@ -43,11 +43,9 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
+  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
-
-  virtual ~AdaptiveRadixTreeIndex() = default;
 
   /**
    *All keys in the ART have to be binary comparable in the sense that if the most significant differing bit between
@@ -83,7 +81,7 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
                                         size_t depth, Iterator& it);
 
-  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const final;
 
   size_t _memory_consumption() const final;
 

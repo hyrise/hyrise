@@ -11,8 +11,8 @@ then
 	exit 1
 fi
 
-start_commit=$1
-end_commit=$2
+start_commit=$(git rev-parse $1 | head -n 1)
+end_commit=$(git rev-parse $2 | head -n 1)
 benchmark=$3
 shift; shift; shift
 benchmark_arguments=$@
@@ -29,19 +29,34 @@ commit_list=$(git rev-list --ancestry-path ${start_commit}^..${end_commit})
 
 commit_list=$(echo $commit_list | awk '{for (i=NF; i>1; i--) printf("%s ",$i); printf("%s\n",$1)}')  ## revert list
 
+# Check whether to use ninja or make
+output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
+if [ ! -z "$output" ]
+then
+	build_system='ninja'
+else
+	build_system='make'
+fi
+
 for commit in $commit_list
 do
 	if [ -f auto_${commit}.json ]; then
-		continue
+		echo "auto_${commit}.json already exists, skipping"
+	else
+		echo =======================================================
+		git checkout $commit
+
+		cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
+		${build_system} $benchmark -j $((cores / 2)) > /dev/null
+
+		./$benchmark $benchmark_arguments -o auto_${commit}.json
 	fi
 
-	echo =======================================================
-	git checkout $commit
-
-	cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-	make $benchmark -j $((cores / 2)) > /dev/null
-
-	./$benchmark $benchmark_arguments -o auto_${commit}.json
+	output=$(grep ${commit} auto_${commit}.json || true)
+	if [ -z "$output" ]; then
+		echo "Commit Hash ${commit} not found in auto_${commit}.json. It looks like the build failed."
+		exit 1
+	fi
 done
 
 for commit in $commit_list

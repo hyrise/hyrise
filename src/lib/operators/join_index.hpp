@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/abstract_index.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -39,20 +39,23 @@ class JoinIndex : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
-  struct PerformanceData : public OperatorPerformanceData {
+  enum class OperatorSteps : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
+
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
-
-    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
+
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,

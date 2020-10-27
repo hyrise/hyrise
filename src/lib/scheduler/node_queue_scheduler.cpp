@@ -36,9 +36,9 @@ void NodeQueueScheduler::begin() {
 
     _queues.emplace_back(queue);
 
-    auto& topology_node = Hyrise::get().topology.nodes()[node_id];
+    const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
-    for (auto& topology_cpu : topology_node.cpus) {
+    for (const auto& topology_cpu : topology_node.cpus) {
       _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
     }
   }
@@ -68,8 +68,8 @@ void NodeQueueScheduler::finish() {
 
   // All queues SHOULD be empty by now
   if (HYRISE_DEBUG) {
-    for ([[maybe_unused]] auto& queue : _queues) {
-      DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
+    for (auto& queue : _queues) {
+      Assert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
     }
   }
 

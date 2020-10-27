@@ -17,6 +17,7 @@ We limit the use of abbreviations to very few cases. Unless an abbreviation is l
 | cid          | Commit-ID (used for MVCC)                                                |
 | dict_segment | Dictionary Segment                                                       |
 | expr         | *Expression*, but only ok if used for an *expression* as described below |
+| FD           | Functional Dependency, see abstract_lqp_node.hpp                         |
 | impl         | Implementation, mainly used for the [Pimpl] Pattern                      |
 | *_it         | Iterator (in variable names)                                             |
 | LQP          | *Logical Query Plan*                                                     |
@@ -39,7 +40,7 @@ This explains high-level terms that have a specific meaning within Hyrise and th
 | Abstract Syntax Tree (AST) | The old name of the *Logical Query Plan*. It was renamed when the LQP stopped being a tree and became a DAG. Shoot this old term on sight.                                 |
 | Column                     | A column within a table (e.g., customer.name)                                                                                                                              |
 | Chunk                      | Each table in Hyrise is horizontally partitioned into one or more [chunks](https://github.com/hyrise/hyrise/wiki/chunk-concept).                                           |
-| Segment Type               | Type of a class inheriting from BaseSegment (mostly used as template parameter name)                                                                                       |
+| Segment Type               | Type of a class inheriting from AbstractSegment (mostly used as template parameter name)                                                                                       |
 | Data Type                  | One of the currently five supported column data types (int, long, float, double, std::string)                                                                              |
 | Expression                 | Any type of SQL expression that is either logical or creates a new column (e.g., `col_a = 3`, `col_a + 4`).                                                                |
 | Iterable                   | A good way to iterate over different types of segments. See `segment_iterables.hpp` to start.                                                                              |

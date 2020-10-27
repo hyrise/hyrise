@@ -33,15 +33,15 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 
-  const auto task = std::make_shared<OperatorTask>(op);
+  auto task = std::make_shared<OperatorTask>(op);
   task_by_op.emplace(op, task);
 
-  if (auto left = op->mutable_input_left()) {
+  if (auto left = op->mutable_left_input()) {
     auto subtree_root = _add_tasks_from_operator(left, tasks, task_by_op);
     subtree_root->set_as_predecessor_of(task);
   }
 
-  if (auto right = op->mutable_input_right()) {
+  if (auto right = op->mutable_right_input()) {
     auto subtree_root = _add_tasks_from_operator(right, tasks, task_by_op);
     subtree_root->set_as_predecessor_of(task);
   }
@@ -62,8 +62,8 @@ void OperatorTask::_on_execute() {
         // the expected default case
         break;
 
-      case TransactionPhase::Aborted:
-      case TransactionPhase::RolledBack:
+      case TransactionPhase::Conflicted:
+      case TransactionPhase::RolledBackAfterConflict:
         // The transaction already failed. No need to execute this.
         if (auto read_write_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op)) {
           // Essentially a noop, because no modifications are recorded yet. Better be on the safe side though.
@@ -74,7 +74,10 @@ void OperatorTask::_on_execute() {
 
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute operators for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed");
+
+      case TransactionPhase::RolledBackByUser:
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
     }
   }
 
@@ -89,7 +92,7 @@ void OperatorTask::_on_execute() {
   if (rw_operator && rw_operator->execute_failed()) {
     Assert(context, "Read/Write operator cannot have been executed without a context.");
 
-    context->rollback();
+    context->rollback(RollbackReason::Conflict);
   }
 
   // Get rid of temporary tables that are not needed anymore

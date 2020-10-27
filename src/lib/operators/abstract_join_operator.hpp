@@ -29,16 +29,17 @@ struct JoinConfiguration {
  * Base class for predicated (i.e., non-cross) join operator implementations. Cross Joins are performed by the Product
  * operator.
  *
- * Find more information about joins in our Wiki: https://github.com/hyrise/hyrise/wiki/Operator-Join
+ * Find more information about joins in our Wiki: https://github.com/hyrise/hyrise/wiki/Hash-Join-Operator
  * We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
  */
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(
-      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-      const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates,
-      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
+  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+                       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                       const OperatorJoinPredicate& primary_predicate,
+                       const std::vector<OperatorJoinPredicate>& secondary_predicates,
+                       std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                           std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   JoinMode mode() const;
 
@@ -56,15 +57,6 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   std::shared_ptr<Table> _build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                              const TableType table_type = TableType::References) const;
-
-  // Some operators need an internal implementation class, mostly in cases where
-  // their execute method depends on a template parameter. An example for this is
-  // found in join_hash.hpp.
-  class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
-   public:
-    virtual ~AbstractJoinOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> _on_execute() = 0;
-  };
 };
 
 }  // namespace opossum

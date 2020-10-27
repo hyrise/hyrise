@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -23,8 +23,8 @@ class Delete : public AbstractReadWriteOperator {
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_commit_records(const CommitID commit_id) override;
   void _on_rollback_records() override;

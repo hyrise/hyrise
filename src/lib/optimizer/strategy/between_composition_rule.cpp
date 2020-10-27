@@ -166,12 +166,12 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
-  std::unordered_map<LQPColumnReference, std::vector<std::shared_ptr<ColumnBoundary>>> column_boundaries;
+  ExpressionUnorderedMap<std::vector<std::shared_ptr<ColumnBoundary>>> column_boundaries;
 
   auto id_counter = size_t{0};
 
   // Filter predicates with a boundary to the boundaries vector
-  for (auto& predicate : predicates) {
+  for (const auto& predicate : predicates) {
     // A logical expression can contain multiple binary predicate expressions
     std::vector<std::shared_ptr<BinaryPredicateExpression>> expressions;
     const auto predicate_node = std::static_pointer_cast<PredicateNode>(predicate);
@@ -192,18 +192,15 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
       if (boundary->type != ColumnBoundaryType::None) {
         if (boundary->boundary_is_column_expression) {
           const auto inverse_boundary = std::make_shared<ColumnBoundary>(_create_inverse_boundary(boundary));
-          if (column_boundaries.find(inverse_boundary->column_expression->column_reference) ==
-              column_boundaries.end()) {
-            column_boundaries[inverse_boundary->column_expression->column_reference] =
-                std::vector<std::shared_ptr<ColumnBoundary>>();
+          if (column_boundaries.find(inverse_boundary->column_expression) == column_boundaries.end()) {
+            column_boundaries[inverse_boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
           }
-          column_boundaries[inverse_boundary->column_expression->column_reference].push_back(inverse_boundary);
+          column_boundaries[inverse_boundary->column_expression].push_back(inverse_boundary);
         }
-        if (column_boundaries.find(boundary->column_expression->column_reference) == column_boundaries.end()) {
-          column_boundaries[boundary->column_expression->column_reference] =
-              std::vector<std::shared_ptr<ColumnBoundary>>();
+        if (column_boundaries.find(boundary->column_expression) == column_boundaries.end()) {
+          column_boundaries[boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
         }
-        column_boundaries[boundary->column_expression->column_reference].push_back(boundary);
+        column_boundaries[boundary->column_expression].push_back(boundary);
       } else {
         predicate_nodes.push_back(predicate);
       }
@@ -223,7 +220,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   // in arbitrary order. While these will be sorted by a different rule later, it can cause tests to fail.
   auto column_boundaries_sorted = std::vector<std::vector<std::shared_ptr<ColumnBoundary>>>{};
   column_boundaries_sorted.reserve(column_boundaries.size());
-  for (auto& [column_reference, boundaries] : column_boundaries) {
+  for (auto& [column_expression, boundaries] : column_boundaries) {
     column_boundaries_sorted.emplace_back(std::move(boundaries));
   }
   column_boundaries.clear();
@@ -231,7 +228,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
             [](const auto& left, const auto& right) { return left[0]->id < right[0]->id; });
 
   for (const auto& boundaries : column_boundaries_sorted) {
-    for (auto& boundary : boundaries) {
+    for (const auto& boundary : boundaries) {
       if (!boundary->boundary_is_column_expression) {
         const auto boundary_border_expression = std::static_pointer_cast<ValueExpression>(boundary->border_expression);
         switch (boundary->type) {
@@ -295,7 +292,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
     lower_bound_value_expression = nullptr;
     upper_bound_value_expression = nullptr;
 
-    // Here, we could also generate BETWEEN expressions for when the lower and upper bounds are column expressions.
+    // Here, we could also generate BETWEEN expressions for when the lower and upper bounds are LQPColumnExpressions.
     // As the table scan does not yet support that and will revert to the ExpressionEvaluator, we don't do this and
     // use two separate predicates instead.
   }
@@ -303,7 +300,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
   // later. Therefore we create a semantically equal predicate node.
   for (const auto& boundaries : column_boundaries_sorted) {
-    for (auto& boundary : boundaries) {
+    for (const auto& boundary : boundaries) {
       if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==
           consumed_boundary_ids.end()) {
         switch (boundary->type) {
@@ -368,7 +365,7 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       current_node = current_node->left_input();
     }
 
-    // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
+    // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input

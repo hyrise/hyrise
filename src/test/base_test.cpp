@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "cache/cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -120,7 +119,7 @@ std::shared_ptr<TableScan> create_between_table_scan(const std::shared_ptr<Abstr
 
 ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
                                                         const SegmentEncodingSpec& desired_segment_encoding) {
-  auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
+  auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
 
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
     if (encoding_supports_data_type(desired_segment_encoding.encoding_type, table.column_data_type(column_id))) {
@@ -144,7 +143,7 @@ void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncod
       const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
       ASSERT_NE(value_segment, nullptr);
     } else {
-      const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+      const auto encoded_segment = std::dynamic_pointer_cast<const AbstractEncodedSegment>(segment);
       ASSERT_NE(encoded_segment, nullptr);
       ASSERT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
       if (segment_spec.vector_compression_type && encoded_segment->compressed_vector_type()) {
@@ -194,6 +193,41 @@ bool compare_files(const std::string& original_file, const std::string& created_
     ++iterator_created;
   }
   return ((iterator_original == end) && (iterator_created == end));
+}
+
+std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table) {
+  Assert(table->type() == TableType::Data, "Input table already is a reference table");
+
+  auto pos_list = std::make_shared<RowIDPosList>();
+  pos_list->reserve(table->row_count());
+
+  for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+
+    const auto chunk_size = chunk->size();
+    for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk_size; ++chunk_offset) {
+      pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+    }
+  }
+
+  const auto column_count = table->column_count();
+  Segments segments;
+  segments.reserve(column_count);
+  TableColumnDefinitions column_definitions;
+
+  for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+    column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id),
+                                    table->column_is_nullable(column_id));
+
+    auto segment_out = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
+    segments.emplace_back(segment_out);
+  }
+
+  auto table_out = std::make_shared<Table>(column_definitions, TableType::References);
+
+  table_out->append_chunk(segments);
+
+  return table_out;
 }
 
 }  // namespace opossum

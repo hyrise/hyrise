@@ -33,12 +33,12 @@ const std::string& JoinVerification::name() const {
 std::shared_ptr<const Table> JoinVerification::_on_execute() {
   const auto output_table = _build_output_table({}, TableType::Data);
 
-  const auto left_tuples = input_table_left()->get_rows();
-  const auto right_tuples = input_table_right()->get_rows();
+  const auto left_tuples = left_input_table()->get_rows();
+  const auto right_tuples = right_input_table()->get_rows();
 
   // Tuples with NULLs used to fill up tuples in outer joins that do not find a match
-  const auto null_tuple_left = Tuple(input_table_left()->column_count(), NullValue{});
-  const auto null_tuple_right = Tuple(input_table_right()->column_count(), NullValue{});
+  const auto null_tuple_left = Tuple(left_input_table()->column_count(), NullValue{});
+  const auto null_tuple_right = Tuple(right_input_table()->column_count(), NullValue{});
 
   switch (_mode) {
     case JoinMode::Inner:
@@ -87,8 +87,8 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
 
     case JoinMode::FullOuter: {
       // Track which tuples from each side have matches
-      auto left_matches = std::vector<bool>(input_table_left()->row_count(), false);
-      auto right_matches = std::vector<bool>(input_table_right()->row_count(), false);
+      auto left_matches = std::vector<bool>(left_input_table()->row_count(), false);
+      auto right_matches = std::vector<bool>(right_input_table()->row_count(), false);
 
       for (size_t left_tuple_idx{0}; left_tuple_idx < left_tuples.size(); ++left_tuple_idx) {
         const auto& left_tuple = left_tuples[left_tuple_idx];
@@ -105,13 +105,13 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
       }
 
       // Add tuples without matches to output table
-      for (size_t left_tuple_idx{0}; left_tuple_idx < input_table_left()->row_count(); ++left_tuple_idx) {
+      for (size_t left_tuple_idx{0}; left_tuple_idx < left_input_table()->row_count(); ++left_tuple_idx) {
         if (!left_matches[left_tuple_idx]) {
           output_table->append(concatenate(left_tuples[left_tuple_idx], null_tuple_right));
         }
       }
 
-      for (size_t right_tuple_idx{0}; right_tuple_idx < input_table_right()->row_count(); ++right_tuple_idx) {
+      for (size_t right_tuple_idx{0}; right_tuple_idx < right_input_table()->row_count(); ++right_tuple_idx) {
         if (!right_matches[right_tuple_idx]) {
           output_table->append(concatenate(null_tuple_left, right_tuples[right_tuple_idx]));
         }
@@ -193,9 +193,9 @@ bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicat
 }
 
 std::shared_ptr<AbstractOperator> JoinVerification::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinVerification>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinVerification>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                             _secondary_predicates);
 }
 

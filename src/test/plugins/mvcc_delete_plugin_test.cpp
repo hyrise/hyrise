@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
-#include "../utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -35,7 +35,7 @@ class MvccDeletePluginTest : public BaseTest {
 
  protected:
   void _increment_all_values_by_one() {
-    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     // GetTable
     auto get_table = std::make_shared<GetTable>(_table_name);
     get_table->set_transaction_context(transaction_context);
@@ -57,7 +57,7 @@ class MvccDeletePluginTest : public BaseTest {
     transaction_context->commit();
   }
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id) {
-    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
   }
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
@@ -82,8 +82,8 @@ class MvccDeletePluginTest : public BaseTest {
 
 TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
   auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
-  pm.unload_plugin("MvccDeletePlugin");
+  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
+  pm.unload_plugin("hyriseMvccDeletePlugin");
 }
 
 /**
@@ -148,7 +148,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{2}), 3);
 
   // --- Check whether GetTable filters out logically deleted chunks
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
@@ -167,16 +167,16 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
   EXPECT_EQ(table->get_chunk(ChunkID{1})->invalid_row_count(), 3);
 
   // Force rollback of logical delete transaction
-  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   {
     const auto conflicting_sql = "DELETE FROM " + _table_name + " WHERE a < 4";
-    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline_statement();
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
   EXPECT_FALSE(_try_logical_delete(_table_name, ChunkID{1}, transaction_context));
-  EXPECT_EQ(transaction_context->phase(), TransactionPhase::RolledBack);
+  EXPECT_EQ(transaction_context->phase(), TransactionPhase::RolledBackAfterConflict);
 }
 
 /**

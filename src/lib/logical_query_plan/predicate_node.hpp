@@ -8,7 +8,6 @@
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -28,6 +27,9 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
+
+  // Forwards unique constraints from the left input node
+  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 

@@ -8,8 +8,8 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "base_encoded_segment.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "abstract_encoded_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
@@ -19,7 +19,7 @@ namespace opossum {
 class BaseCompressedVector;
 
 template <typename T>
-class LZ4Segment : public BaseEncodedSegment {
+class LZ4Segment : public AbstractEncodedSegment {
  public:
   /**
    * This is a container for an LZ4 compressed segment. It contains the compressed data in blocks, the necessary
@@ -73,7 +73,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   a single block, the passed dictionary will be empty since it is not needed for independent
    *                   decompression.
    * @param string_offsets These offsets are only needed if this segment is not a pmr_string segment.
-   *                       Otherwise, this is set to a std::nullopt (see the other constructor).
+   *                       Otherwise, this is set to nullptr (see the other constructor).
    *                       It contains the offsets for the compressed strings. The offset at position 0 is the
    *                       character index of the string at index 0. Its (exclusive) end is at the offset at position 1.
    *                       The last string ends at the end of the compressed data (since there is an offset after it
@@ -96,15 +96,15 @@ class LZ4Segment : public BaseEncodedSegment {
                       const size_t num_elements);
 
   const std::optional<pmr_vector<bool>>& null_values() const;
-  std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
+  std::unique_ptr<BaseVectorDecompressor> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
   const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
   size_t block_size() const;
   size_t last_block_size() const;
-  const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
+  const std::unique_ptr<const BaseCompressedVector>& string_offsets() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -153,14 +153,14 @@ class LZ4Segment : public BaseEncodedSegment {
   std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> cached_block_index,
                                   std::vector<char>& cached_block) const;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
 
@@ -173,7 +173,7 @@ class LZ4Segment : public BaseEncodedSegment {
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const std::optional<pmr_vector<bool>> _null_values;
   const pmr_vector<char> _dictionary;
-  const std::optional<std::unique_ptr<const BaseCompressedVector>> _string_offsets;
+  const std::unique_ptr<const BaseCompressedVector> _string_offsets;
   const size_t _block_size;
   const size_t _last_block_size;
   const size_t _compressed_size;

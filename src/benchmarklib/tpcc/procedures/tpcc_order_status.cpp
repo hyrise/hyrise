@@ -46,8 +46,9 @@ bool TPCCOrderStatus::_on_execute() {
     Assert(customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
-    auto customer_offset = static_cast<size_t>(
-        std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1)));
+    auto customer_offset =
+        static_cast<size_t>(std::min(std::ceil(static_cast<double>(customer_table->row_count()) / 2.0),
+                                     static_cast<double>(customer_table->row_count() - 1)));
     customer_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 

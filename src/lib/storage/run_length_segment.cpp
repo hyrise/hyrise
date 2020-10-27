@@ -13,7 +13,7 @@ template <typename T>
 RunLengthSegment<T>::RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
                                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
-    : BaseEncodedSegment(data_type_from_type<T>()),
+    : AbstractEncodedSegment(data_type_from_type<T>()),
       _values{values},
       _null_values{null_values},
       _end_positions{end_positions} {}
@@ -50,7 +50,7 @@ ChunkOffset RunLengthSegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_values = std::make_shared<pmr_vector<T>>(*_values, alloc);
   auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
@@ -69,7 +69,7 @@ size_t RunLengthSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalcu
       sizeof(*this) + _null_values->capacity() / CHAR_BIT +
       _end_positions->capacity() * sizeof(typename decltype(_end_positions)::element_type::value_type);
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_values, mode);
   }
   return common_elements_size + _values->capacity() * sizeof(typename decltype(_values)::element_type::value_type);

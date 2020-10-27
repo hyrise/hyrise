@@ -19,11 +19,11 @@ template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                           pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
                           const size_t compressed_size, const size_t num_elements)
-    : BaseEncodedSegment{data_type_from_type<T>()},
+    : AbstractEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
       _dictionary{std::move(dictionary)},
-      _string_offsets{std::nullopt},
+      _string_offsets{nullptr},
       _block_size{block_size},
       _last_block_size{last_block_size},
       _compressed_size{compressed_size},
@@ -34,7 +34,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
                           pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
                           const size_t block_size, const size_t last_block_size, const size_t compressed_size,
                           const size_t num_elements)
-    : BaseEncodedSegment{data_type_from_type<T>()},
+    : AbstractEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
       _dictionary{std::move(dictionary)},
@@ -71,11 +71,11 @@ const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
-  if (_string_offsets && *_string_offsets) {
-    return (*_string_offsets)->create_base_decompressor();
+std::unique_ptr<BaseVectorDecompressor> LZ4Segment<T>::string_offset_decompressor() const {
+  if (_string_offsets) {
+    return _string_offsets->create_base_decompressor();
   } else {
-    return std::nullopt;
+    return nullptr;
   }
 }
 
@@ -105,7 +105,7 @@ size_t LZ4Segment<T>::last_block_size() const {
 }
 
 template <typename T>
-const std::optional<std::unique_ptr<const BaseCompressedVector>>& LZ4Segment<T>::string_offsets() const {
+const std::unique_ptr<const BaseCompressedVector>& LZ4Segment<T>::string_offsets() const {
   return _string_offsets;
 }
 
@@ -153,7 +153,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    * indicated by the end of the data vector.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
   for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
     auto start_char_offset = offset_decompressor->get(offset_index);
@@ -176,7 +176,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -235,7 +235,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
                                                const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks.at(block_index);
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -304,7 +304,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * blocks need to be decompressed.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto start_offset = offset_decompressor->get(chunk_offset);
   size_t end_offset;
   if (chunk_offset + 1 == offset_decompressor->size()) {
@@ -419,7 +419,7 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
   for (const auto& block : _lz4_blocks) {
     new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});
@@ -432,7 +432,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
   if (_string_offsets) {
-    auto new_string_offsets = *_string_offsets ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_allocator(alloc) : nullptr;
     copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                            _last_block_size, _compressed_size, _num_elements);
@@ -466,8 +466,8 @@ size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
    * (i.e., no rows or only rows with empty strings).
    */
   auto offset_size = size_t{0};
-  if (_string_offsets && *_string_offsets) {
-    offset_size = (*_string_offsets)->data_size();
+  if (_string_offsets) {
+    offset_size = _string_offsets->data_size();
   }
   return sizeof(*this) + _compressed_size + null_value_vector_size + offset_size + _dictionary.size() +
          block_vector_size;
@@ -489,7 +489,7 @@ template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
   std::optional<CompressedVectorType> type;
   if (_string_offsets) {
-    resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) { type = vector.type(); });
+    return _string_offsets->type();
   }
   return type;
 }

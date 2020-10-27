@@ -7,9 +7,11 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/base_non_query_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "resolve_type.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
@@ -21,16 +23,16 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
-                                   std::unique_ptr<OperatorPerformanceData> performance_data)
-    : _type(type), _input_left(left), _input_right(right), _performance_data(std::move(performance_data)) {}
+                                   std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
+    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-  DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
-  DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(!_performance_data->executed, "Operator has already been executed");
+  DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
+  DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
+  DebugAssert(!performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -55,67 +57,70 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  _performance_data->walltime = performance_timer.lap();
-  _performance_data->executed = true;
   if (_output) {
-    _performance_data->has_output = true;
-    _performance_data->output_row_count = _output->row_count();
-    _performance_data->output_chunk_count = _output->chunk_count();
+    performance_data->has_output = true;
+    performance_data->output_row_count = _output->row_count();
+    performance_data->output_chunk_count = _output->chunk_count();
   }
+  performance_data->walltime = performance_timer.lap();
+  performance_data->executed = true;
 
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
+  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
-  // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
+    // Verify that LQP (if set) and PQP match.
     if (lqp_node) {
-      [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
+      const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
-        DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
-      } else if (std::dynamic_pointer_cast<const BaseNonQueryNode>(lqp_node) ||
+        Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
+      } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // BaseNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
-        // for better compatibility with the console and the server. We do not assert anything here.
+        // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
+        // 'OK' for better compatibility with the console and the server. We do not assert anything here.
         // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
         // need to be tested.
       } else {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
-        DebugAssert(_output->column_count() == lqp_expressions.size(),
-                    std::string{"Mismatching number of output columns for "} + name());
+        Assert(_output->column_count() == lqp_expressions.size(),
+               std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           if (_type != OperatorType::Alias) {
-            [[maybe_unused]] const auto lqp_type = lqp_expressions[column_id]->data_type();
-            [[maybe_unused]] const auto pqp_type = _output->column_data_type(column_id);
-            [[maybe_unused]] const auto pqp_name = _output->column_name(column_id);
-            DebugAssert(pqp_type == lqp_type,
-                        std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+            const auto lqp_type = lqp_expressions[column_id]->data_type();
+            const auto pqp_type = _output->column_data_type(column_id);
+            const auto pqp_name = _output->column_name(column_id);
+            Assert(pqp_type == lqp_type,
+                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
+        }
+      }
+    }
+
+    // Verify that nullability of columns and segments match for ValueSegments
+    // Only ValueSegments have an individual is_nullable attribute
+    if (_output && _output->type() == TableType::Data) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+          const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
+          resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
+            using ColumnDataType = typename decltype(data_type_t)::type;
+            using SegmentType = std::decay_t<decltype(segment)>;
+            if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+              // If segment is nullable, the column must be nullable as well
+              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
+                     "Nullable segment found in non-nullable column");
+            }
+          });
         }
       }
     }
   }
 }
 
-std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  DebugAssert(
-      [&]() {
-        // Check that operators do not return empty chunks
-        if (!_output) return true;
-        if (_output->chunk_count() <= ChunkID{1}) return true;
-        const auto chunk_count = _output->chunk_count();
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          const auto chunk = _output->get_chunk(chunk_id);
-          if (chunk && chunk->size() < 1) return false;
-        }
-        return true;
-      }(),
-      "Empty chunk returned from operator " + description());
-
-  return _output;
-}
+std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() { _output = nullptr; }
 
@@ -126,9 +131,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   return _deep_copy_impl(copied_ops);
 }
 
-std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
 
-std::shared_ptr<const Table> AbstractOperator::input_table_right() const { return _input_right->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::right_input_table() const { return _right_input->get_output(); }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 
@@ -147,28 +152,26 @@ void AbstractOperator::set_transaction_context_recursively(
     const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
-  if (_input_left) mutable_input_left()->set_transaction_context_recursively(transaction_context);
-  if (_input_right) mutable_input_right()->set_transaction_context_recursively(transaction_context);
+  if (_left_input) mutable_left_input()->set_transaction_context_recursively(transaction_context);
+  if (_right_input) mutable_right_input()->set_transaction_context_recursively(transaction_context);
 }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {
-  return std::const_pointer_cast<AbstractOperator>(_input_left);
+std::shared_ptr<AbstractOperator> AbstractOperator::mutable_left_input() const {
+  return std::const_pointer_cast<AbstractOperator>(_left_input);
 }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const {
-  return std::const_pointer_cast<AbstractOperator>(_input_right);
+std::shared_ptr<AbstractOperator> AbstractOperator::mutable_right_input() const {
+  return std::const_pointer_cast<AbstractOperator>(_right_input);
 }
 
-const OperatorPerformanceData& AbstractOperator::performance_data() const { return *_performance_data; }
+std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { return _left_input; }
 
-std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
-
-std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   _on_set_parameters(parameters);
-  if (input_left()) mutable_input_left()->set_parameters(parameters);
-  if (input_right()) mutable_input_right()->set_parameters(parameters);
+  if (left_input()) mutable_left_input()->set_parameters(parameters);
+  if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
@@ -180,12 +183,12 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
   const auto copied_ops_iter = copied_ops.find(this);
   if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
 
-  const auto copied_input_left =
-      input_left() ? input_left()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
-  const auto copied_input_right =
-      input_right() ? input_right()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_left_input =
+      left_input() ? left_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_right_input =
+      right_input() ? right_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  const auto copied_op = _on_deep_copy(copied_input_left, copied_input_right);
+  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input);
   if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
   copied_ops.emplace(this, copied_op);
@@ -196,8 +199,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
     std::vector<std::shared_ptr<const AbstractOperator>> children;
-    if (op->input_left()) children.emplace_back(op->input_left());
-    if (op->input_right()) children.emplace_back(op->input_right());
+    if (op->left_input()) children.emplace_back(op->left_input());
+    if (op->right_input()) children.emplace_back(op->right_input());
     return children;
   };
 
@@ -212,7 +215,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
-      fn_stream << abstract_operator.performance_data() << ")";
+      fn_stream << *abstract_operator.performance_data;
+      fn_stream << ")";
     }
   };
 

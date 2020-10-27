@@ -4,20 +4,18 @@
 #include <string>
 #include <vector>
 
-#include "abstract_lqp_node.hpp"
+#include "abstract_non_query_node.hpp"
 
 namespace opossum {
 
 /**
  * Node type to represent insertion of rows into a table.
  */
-class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractLQPNode {
+class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractNonQueryNode {
  public:
   explicit InsertNode(const std::string& init_table_name);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  bool is_column_nullable(const ColumnID column_id) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
 
   const std::string table_name;
 

@@ -68,7 +68,7 @@ class AbstractTableGenerator {
   using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
   virtual IndexesByTable _indexes_by_table() const;
 
-  // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
+  // Optionally, the benchmark may define tables (left side) that are sorted (aka. clustered) by one of their columns
   // (right side).
   using SortOrderByTable = std::map<std::string, std::string>;
   virtual SortOrderByTable _sort_order_by_table() const;
@@ -77,6 +77,8 @@ class AbstractTableGenerator {
   virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
+
+  static bool _all_chunks_sorted_by(const std::shared_ptr<Table>& table, const SortColumnDefinition& sort_column);
 };
 
 }  // namespace opossum

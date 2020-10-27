@@ -35,23 +35,36 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
-  if (ordered_by && ordered_by->first == _column_id) {
-    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
-  } else {
-    // Select optimized or generic scanning implementation based on segment type
-    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-    } else {
-      _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
+  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+
+  // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
+  // pre-filtered dictionary segments with string data. In this case, the optimized _scan_dictionary_segment() path if
+  // faster than the sorted search. Without this workaround, TPC-H Q6 would lose up to 30%. When the iterator issues of
+  // #1531 are resolved, the current workaround should be revisited.
+  const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
+  if (!chunk_sorted_by.empty() &&
+      !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
+    for (const auto& sorted_by : chunk_sorted_by) {
+      if (sorted_by.column == _column_id) {
+        _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++chunk_scans_sorted;
+        return;
+      }
     }
+  }
+
+  // Select optimized or generic scanning implementation based on segment type
+  if (dictionary_segment) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  } else {
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
   }
 }
 
 void ColumnBetweenTableScanImpl::_scan_generic_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
@@ -78,7 +91,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(left_value);
@@ -96,14 +109,34 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
   /**
-   * Early out: All entries (except NULLs) match
+   * Early out: All entries (possibly except NULLs) match
    */
   // NOLINTNEXTLINE - cpplint is drunk
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
-    });
+    if (_column_is_nullable) {
+      // We still have to check for NULLs
+      attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+        static const auto always_true = [](const auto&) { return true; };
+        _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
+      });
+    } else {
+      // No NULLs, all entries match.
+      const auto output_size = position_filter ? position_filter->size() : segment.size();
+      const auto output_start_offset = matches.size();
+      matches.resize(matches.size() + output_size);
+
+      // Make the compiler try harder to vectorize the trivial loop below.
+      // This empty block is used to convince clang-format to keep the pragma indented.
+      // NOLINTNEXTLINE
+      {}  // clang-format off
+      #pragma omp simd
+      // clang-format on
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
+        // `matches` might already contain entries if it is called multiple times by
+        // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
+        matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
+      }
+    }
 
     return;
   }
@@ -112,6 +145,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
    * Early out: No entries match
    */
   if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
+    ++chunk_scans_skipped;
     return;
   }
 
@@ -139,10 +173,10 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                      const OrderByMode order_by_mode) const {
+                                                      const SortMode sort_mode) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -153,7 +187,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
         const auto typed_left_value = boost::get<ColumnDataType>(left_value);
         const auto typed_right_value = boost::get<ColumnDataType>(right_value);
-        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,
                                                          predicate_condition, typed_left_value, typed_right_value);
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {

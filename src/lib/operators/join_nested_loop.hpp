@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -43,8 +43,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   std::shared_ptr<const Table> _on_execute() override;
@@ -55,8 +55,9 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time to a fourth.
 
   static void __attribute__((noinline))
-  _join_two_untyped_segments(const BaseSegment& base_segment_left, const BaseSegment& base_segment_right,
-                             const ChunkID chunk_id_left, const ChunkID chunk_id_right, JoinParams& params);
+  _join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
+                             const AbstractSegment& abstract_segment_right, const ChunkID chunk_id_left,
+                             const ChunkID chunk_id_right, JoinParams& params);
 
   static void _write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                   const std::shared_ptr<RowIDPosList>& pos_list);

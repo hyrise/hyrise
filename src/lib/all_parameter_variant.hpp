@@ -6,7 +6,6 @@
 
 #include "all_type_variant.hpp"
 #include "expression/correlated_parameter_expression.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -25,7 +24,7 @@ static constexpr auto parameter_types =
                      hana::make_pair("Parameter", hana::type_c<ParameterID>));  // NOLINT
 
 // This holds only the possible data types.
-static constexpr auto parameter_types_as_hana_sequence = hana::transform(parameter_types, hana::second);  // NOLINT
+static constexpr auto parameter_types_as_hana_sequence = hana::transform(parameter_types, hana::second);
 
 // Convert tuple to mpl vector
 using ParameterTypesAsMplVector =

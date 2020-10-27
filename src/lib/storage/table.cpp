@@ -41,22 +41,22 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
             use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
-#if HYRISE_DEBUG
-  const auto chunk_count = _chunks.size();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = get_chunk(chunk_id);
-    if (!chunk) continue;
+  if constexpr (HYRISE_DEBUG) {
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = get_chunk(chunk_id);
+      if (!chunk) continue;
 
-    DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
-                "Supply MvccData for Chunks iff Table uses MVCC");
-    DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
+      Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
+             "Empty chunk other than mutable chunk at the end was found");
+      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
+      Assert(chunk->column_count() == column_count(), "Invalid Chunk column count");
 
-    for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
-      DebugAssert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id),
-                  "Invalid Segment DataType");
+      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+        Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
+      }
     }
   }
-#endif
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
@@ -203,7 +203,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
-std::shared_ptr<Chunk> Table::last_chunk() {
+std::shared_ptr<Chunk> Table::last_chunk() const {
   DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
@@ -227,7 +227,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
-         "Supply MvccData to data Tables, if MVCC is enabled.");
+         "Supply MvccData to data Tables if MVCC is enabled.");
   AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
               "Input does not have the same number of columns.");
 
@@ -235,6 +235,16 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     for (const auto& segment : segments) {
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
       Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
+
+    // Check that existing chunks are not empty
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
+      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
     }
   }
 
@@ -311,38 +321,78 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
-  return _constraint_definitions;
-}
+const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 
-void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
-  for (const auto& column_id : column_ids) {
+void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
+  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns
+  for (const auto& column_id : table_key_constraint.columns()) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
-           "Column must be not nullable for primary key constraint");
+
+    // PRIMARY KEY requires non-nullable columns
+    if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
+      Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
+    }
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
-    if (is_primary_key == IsPrimaryKey::Yes) {
-      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                          [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
-                 _constraint_definitions.end(),
+
+    for (const auto& existing_constraint : _table_key_constraints) {
+      // Ensure that no other PRIMARY KEY is defined
+      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
              "Another primary key already exists for this table.");
+
+      // Ensure there is only one key constraint per column set.
+      Assert(table_key_constraint.columns() != existing_constraint.columns(),
+             "Another key constraint for the same column set has already been defined.");
     }
 
-    auto sorted_columns_ids = column_ids;
-    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
-
-    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                        [&new_constraint](const auto& existing_constraint) {
-                          return new_constraint.columns == existing_constraint.columns;
-                        }) == _constraint_definitions.end(),
-           "Another constraint on the same columns already exists.");
-
-    _constraint_definitions.push_back(new_constraint);
+    _table_key_constraints.push_back(table_key_constraint);
   }
+}
+
+const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
+
+void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
+  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    if (chunk_count > 1) {
+      for (const auto& column_id : value_clustered_by) {
+        resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
+          using ColumnDataType = typename decltype(column_data_type)::type;
+
+          auto value_to_chunk_map = std::unordered_map<ColumnDataType, ChunkID>{};
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = get_chunk(chunk_id);
+            const auto& segment = chunk->get_segment(column_id);
+            segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
+              Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
+
+              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
+              if (!inserted) {
+                Assert(iter->second == chunk_id,
+                       "Table cannot be set to value-clustered as same value "
+                       "is found in more than one chunk");
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+
+  _value_clustered_by = value_clustered_by;
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {

@@ -24,9 +24,9 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
 
   const std::vector<DataType> column_data_types = {NUM_COLUMNS, data_type};
 
-  std::vector<ColumnSpecification> column_specifications =
-      std::vector(NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE),
-                                                   data_type, {EncodingType::Unencoded}, std::nullopt, null_ratio));
+  std::vector<ColumnSpecification> column_specifications = std::vector(
+      NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE), data_type,
+                                       SegmentEncodingSpec{EncodingType::Unencoded}, std::nullopt, null_ratio));
 
   return table_generator->generate_table(column_specifications, row_count);
 }
@@ -47,10 +47,10 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
 
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   if (multi_column_sort) {
-    sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
-                                                          SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
+    sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},
+                                                          SortColumnDefinition{ColumnID{1}, SortMode::Descending}}};
   } else {
-    sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}};
+    sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}};
   }
 
   for (auto _ : state) {
@@ -59,12 +59,12 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
   }
 }
 
-static void BM_SortWithVaryingRowCount(benchmark::State& state) {
+static void BM_Sort(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_Sort(state, row_count);
 }
 
-static void BM_SortWithVaryingRowCountTwoColumns(benchmark::State& state) {
+static void BM_SortTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_Sort(state, row_count, DataType::Int, 0.0f, true);
 }
@@ -89,11 +89,11 @@ static void BM_SortWithStrings(benchmark::State& state) {
   BM_Sort(state, row_count, DataType::String);
 }
 
-BENCHMARK(BM_SortWithVaryingRowCount)->RangeMultiplier(7)->Range(10, 1'000'000);
-BENCHMARK(BM_SortWithVaryingRowCountTwoColumns)->RangeMultiplier(7)->Range(10, 1'000'000);
-BENCHMARK(BM_SortWithNullValues)->RangeMultiplier(7)->Range(10, 1'000'000);
-BENCHMARK(BM_SortWithReferenceSegments)->RangeMultiplier(7)->Range(10, 1'000'000);
-BENCHMARK(BM_SortWithReferenceSegmentsTwoColumns)->RangeMultiplier(7)->Range(10, 1'000'000);
-BENCHMARK(BM_SortWithStrings)->RangeMultiplier(7)->Range(10, 1'000'000);
+BENCHMARK(BM_Sort)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithNullValues)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithReferenceSegments)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithReferenceSegmentsTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithStrings)->RangeMultiplier(100)->Range(100, 1'000'000);
 
 }  // namespace opossum

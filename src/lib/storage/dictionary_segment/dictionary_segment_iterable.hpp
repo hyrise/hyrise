@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
@@ -144,9 +144,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     PointAccessIterator(const Dictionary* dictionary, const ValueID null_value_id,
                         ZsDecompressorType attribute_decompressor, PosListIteratorType position_filter_begin,
                         PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType, IsNullable>,
-                                         SegmentPosition<T>, PosListIteratorType>{std::move(position_filter_begin),
-                                                                                  std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<
+              PointAccessIterator<ZsDecompressorType, PosListIteratorType, IsNullable>, SegmentPosition<T>,
+              PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary{dictionary},
           _null_value_id(null_value_id),
           _attribute_decompressor{std::move(attribute_decompressor)} {}

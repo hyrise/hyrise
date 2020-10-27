@@ -10,7 +10,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "csv_meta.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -32,7 +32,7 @@ class BaseCsvConverter {
 
   // Returns the segment that contains the previously converted values.
   // After the call of finish, no other operation should be called.
-  virtual std::unique_ptr<BaseSegment> finish() = 0;
+  virtual std::unique_ptr<AbstractSegment> finish() = 0;
 
   /*
    * This is a helper function that removes surrounding quotes of the given csv field and all escape characters.
@@ -81,7 +81,7 @@ class CsvConverter : public BaseCsvConverter {
     _parsed_values[position] = _get_conversion_function()(value);
   }
 
-  std::unique_ptr<BaseSegment> finish() override {
+  std::unique_ptr<AbstractSegment> finish() override {
     if (_is_nullable) {
       return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
     } else {

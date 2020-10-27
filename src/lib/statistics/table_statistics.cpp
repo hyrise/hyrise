@@ -24,7 +24,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   auto threads = std::vector<std::thread>{};
 
   /**
-   * Parallely create statistics objects for the Table's columns
+   * Parallely create statistics objects for the Table's columns. Do not use JobTask as we want this to be parallel
+   * even if Hyrise is running without a scheduler.
    */
   for (auto thread_id = 0u;
        thread_id < std::min(static_cast<uint>(table.column_count()), std::thread::hardware_concurrency() + 1);
@@ -50,8 +51,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
             // property
             const auto null_value_ratio =
-                table.row_count() == 0 ? 0.0f
-                                       : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
+                table.row_count() == 0
+                    ? 0.0f
+                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
             output_column_statistics->set_statistics_object(
                 std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {

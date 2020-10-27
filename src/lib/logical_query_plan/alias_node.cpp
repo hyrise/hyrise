@@ -29,7 +29,11 @@ std::string AliasNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AliasNode::column_expressions() const { return node_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const { return node_expressions; }
+
+std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
+  return _forward_left_unique_constraints();
+}
 
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};

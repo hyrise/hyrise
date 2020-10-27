@@ -35,7 +35,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   SimdBp128Decompressor& operator=(const SimdBp128Decompressor& other);
   SimdBp128Decompressor& operator=(SimdBp128Decompressor&& other) noexcept;
 
-  ~SimdBp128Decompressor() = default;
+  ~SimdBp128Decompressor() override = default;
 
   uint32_t get(const size_t i) final {
     if (_is_index_within_cached_block(i)) {

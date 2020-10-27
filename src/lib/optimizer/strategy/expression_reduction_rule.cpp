@@ -209,11 +209,12 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   // Calculate lower and upper bound of the search pattern
   const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
-  const auto current_character_value = static_cast<int>(lower_bound.back());
+  const auto current_character_value = lower_bound.back();
 
   // Find next value according to ASCII-table
   constexpr int MAX_ASCII_VALUE = 127;
   if (current_character_value >= MAX_ASCII_VALUE) {
+    // current_character_value + 1 would overflow; use regexp-based LIKE for this edge case
     return;
   }
 
@@ -257,7 +258,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 
   // Take a copy of what the aggregate was originally supposed to do
-  const auto original_aggregate_expressions = aggregate_node->column_expressions();
+  const auto original_aggregate_expressions = aggregate_node->output_expressions();
 
   const auto& aggregate_input_node = aggregate_node->left_input();
   auto replacements = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{};
@@ -274,7 +275,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get()).argument();
       const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
-      if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+      if (column_expression && column_expression->original_column_id == INVALID_COLUMN_ID) {
         // COUNT(*) holds an INVALID_COLUMN_ID - that is acceptable if the argument a in AVG(a) is not nullable.
         // In that case, COUNT(*) == COUNT(a).
         return !avg_argument_is_nullable;
@@ -296,7 +297,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   if (replacements.empty()) return;
 
   // Back up the current column names
-  const auto& root_expressions = root_node->column_expressions();
+  const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
   for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
@@ -330,7 +331,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
   // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"
   if (!updated_an_alias) {
-    auto root_expressions_replaced = root_node->column_expressions();
+    auto root_expressions_replaced = root_node->output_expressions();
 
     for (auto& expression : root_expressions_replaced) {
       expression_deep_replace(expression, replacements);

@@ -108,15 +108,13 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping) {
-  const auto node = lqp_column_expression.column_reference.original_node();
+  const auto node = lqp_column_expression.original_node.lock();
+  Assert(node, "LQPColumnExpression is expired");
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
          "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
-  LQPColumnReference adapted_column_reference{node_mapping_iter->second,
-                                              lqp_column_expression.column_reference.original_column_id()};
-
-  return std::make_shared<LQPColumnExpression>(adapted_column_reference);
+  return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
 }
 
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
@@ -161,11 +159,12 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
     if (AggregateExpression::is_count_star(*sub_expression)) {
       // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
-      // column_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
+      // output_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
       // its original_node is part of lqp.
       const auto& aggregate_expression = static_cast<const AggregateExpression&>(*sub_expression);
       const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
-      const auto& original_node = lqp_column_expression.column_reference.original_node();
+      const auto& original_node = lqp_column_expression.original_node.lock();
+      Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
 
       // Now check if lqp contains that original_node
       evaluable = false;

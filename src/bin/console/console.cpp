@@ -30,6 +30,7 @@
 #include "operators/get_table.hpp"
 #include "operators/import.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
@@ -45,6 +46,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -137,6 +139,7 @@ Console::Console()
   // Register default commands to Console
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
+
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
@@ -146,14 +149,23 @@ Console::Console()
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
-  register_command("begin", std::bind(&Console::_begin_transaction, this, std::placeholders::_1));
-  register_command("rollback", std::bind(&Console::_rollback_transaction, this, std::placeholders::_1));
-  register_command("commit", std::bind(&Console::_commit_transaction, this, std::placeholders::_1));
   register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
   register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+}
+
+Console::~Console() {
+  if (_explicitly_created_transaction_context) {
+    _explicitly_created_transaction_context->rollback(RollbackReason::User);
+    out("A transaction was still open and has been rolled back.\n");
+  }
+
+  out("Bye.\n");
+
+  // Timestamp dump only to logfile
+  out("--- Session end --- " + current_timestamp() + "\n", false);
 }
 
 int Console::read() {
@@ -272,24 +284,22 @@ int Console::_eval_sql(const std::string& sql) {
     _sql_pipeline->get_result_tables();
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
+    out("Following statements have not been executed.\n");
+    if (!_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
     }
+
+    // Store the transaction context as potentially modified by the pipeline. It might be a new context if a transaction
+    // was started or nullptr if we are in auto-commit mode or the last transaction was finished.
+    _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
+
     return ReturnCode::Error;
   }
 
+  _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
+
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
-  if (pipeline_status == SQLPipelineStatus::RolledBack) {
-    _handle_rollback();
-    out("A transaction conflict has been detected:");
-    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
-    if (_explicitly_created_transaction_context) {
-      out("The transaction has been rolled back");
-    } else {
-      out("The statement was rolled back, but previous statements have been auto-committed");
-    }
-    return ReturnCode::Error;
-  }
+  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
   Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
   auto row_count = table ? table->row_count() : 0;
@@ -358,7 +368,21 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
-  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+  std::stringstream stream;
+  Print::print(table, flags, stream);
+
+  bool fits_on_one_page = true;
+  auto stream_backup = stream.str();
+  std::string line;
+  size_t line_count = 0;
+  while (std::getline(stream, line, '\n')) {
+    ++line_count;
+    if (line.length() > static_cast<uint64_t>(size_x) || line_count > static_cast<uint64_t>(size_y) - 2) {
+      fits_on_one_page = false;
+      break;
+    }
+  }
+  stream.str(stream_backup);
 
   static bool pagination_disabled = false;
   if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
@@ -367,12 +391,10 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
     pagination_disabled = true;
   }
 
-  // Paginate only if table has more rows that fit in the terminal
+  // Paginate only if table has more rows or printed columns that fit in the terminal
   if (fits_on_one_page || pagination_disabled) {
-    Print::print(table, flags, _out);
+    _out << stream.rdbuf();
   } else {
-    std::stringstream stream;
-    Print::print(table, flags, stream);
     _pagination_active = true;
     Pagination(stream).display();
     _pagination_active = false;
@@ -423,9 +445,6 @@ int Console::_help(const std::string&) {
   out("                                              SQL\n");
   out("                                                - Optional, a query to visualize. If not specified, the last\n");
   out("                                                  previously executed query is visualized.\n");
-  out("  begin                                   - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
-  out("  rollback                                - Roll back a manually created transaction\n");
-  out("  commit                                  - Commit a manually created transaction\n");
   out("  txinfo                                  - Print information on the current transaction\n");
   out("  pwd                                     - Print current working directory\n");
   out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
@@ -508,7 +527,7 @@ int Console::_generate_tpcds(const std::string& args) {
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
-  TpcdsTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  TPCDSTableGenerator{scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -565,10 +584,10 @@ int Console::_load_table(const std::string& args) {
     std::vector<ChunkID> immutable_chunks;
     for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
-        immutable_chunks.push_back(chunk_id);
+        immutable_chunks.emplace_back(chunk_id);
       }
     }
-    ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
+    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{encoding_type->second});
   }
 
   return ReturnCode::Ok;
@@ -586,18 +605,29 @@ int Console::_export_table(const std::string& args) {
   const std::string& tablename = arguments.at(0);
   const std::string& filepath = arguments.at(1);
 
-  auto& storage_manager = Hyrise::get().storage_manager;
-  if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager");
-    return ReturnCode::Error;
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  const auto& meta_table_manager = Hyrise::get().meta_table_manager;
+
+  std::shared_ptr<AbstractOperator> table_operator = nullptr;
+  if (MetaTableManager::is_meta_table_name(tablename)) {
+    if (!meta_table_manager.has_table(tablename)) {
+      out("Error: MetaTable does not exist in MetaTableManager\n");
+      return ReturnCode::Error;
+    }
+    table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
+  } else {
+    if (!storage_manager.has_table(tablename)) {
+      out("Error: Table does not exist in StorageManager\n");
+      return ReturnCode::Error;
+    }
+    table_operator = std::make_shared<GetTable>(tablename);
   }
 
+  table_operator->execute();
   out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
-  auto get_table = std::make_shared<GetTable>(tablename);
-  get_table->execute();
 
   try {
-    auto exporter = std::make_shared<Export>(get_table, filepath);
+    auto exporter = std::make_shared<Export>(table_operator, filepath);
     exporter->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
@@ -618,13 +648,14 @@ int Console::_print_table(const std::string& args) {
 
   const std::string& tablename = arguments.at(0);
 
-  auto get_table = std::make_shared<GetTable>(tablename);
-  try {
-    get_table->execute();
-  } catch (const std::exception& exception) {
-    out("Error: Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  if (!storage_manager.has_table(tablename)) {
+    out("Error: Table does not exist in StorageManager\n");
     return ReturnCode::Error;
   }
+
+  auto get_table = std::make_shared<GetTable>(tablename);
+  get_table->execute();
 
   out(get_table->get_output(), PrintFlags::Mvcc);
 
@@ -701,16 +732,13 @@ int Console::_visualize(const std::string& input) {
     case PlanType::UnoptLQP: {
       std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
-      try {
-        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
-                                                        : _sql_pipeline->get_unoptimized_logical_plans();
-        for (const auto& lqp : lqps) {
-          lqp_roots.push_back(lqp);
-        }
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        _handle_rollback();
-        return ReturnCode::Error;
+      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                      : _sql_pipeline->get_unoptimized_logical_plans();
+
+      lqp_roots.reserve(lqps.size());
+
+      for (const auto& lqp : lqps) {
+        lqp_roots.emplace_back(lqp);
       }
 
       LQPVisualizer visualizer;
@@ -718,18 +746,16 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      try {
-        if (!no_execute) {
-          _sql_pipeline->get_result_table();
-        }
+      if (!no_execute) {
+        _sql_pipeline->get_result_table();
 
-        PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        _handle_rollback();
-        return ReturnCode::Error;
+        // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
+        // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
+        _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
       }
+
+      PQPVisualizer visualizer;
+      visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
     } break;
 
     case PlanType::Joins: {
@@ -744,7 +770,7 @@ int Console::_visualize(const std::string& input) {
 
         for (const auto& sub_lqp : sub_lqps) {
           const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
-          for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+          for (const auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
             join_graphs.emplace_back(sub_lqp_join_graph);
           }
         }
@@ -850,51 +876,6 @@ void Console::handle_signal(int sig) {
       siglongjmp(jmp_env, 1);
     }
   }
-}
-
-int Console::_begin_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context) {
-    const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-    out("Error: There is already an active transaction (" + transaction_id + "). ");
-    out("Type `rollback` or `commit` before beginning a new transaction.\n");
-    return ReturnCode::Error;
-  }
-
-  _explicitly_created_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
-
-  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  out("New transaction (" + transaction_id + ") started.\n");
-  return ReturnCode::Ok;
-}
-
-int Console::_rollback_transaction(const std::string& input) {
-  if (!_explicitly_created_transaction_context) {
-    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
-    return ReturnCode::Error;
-  }
-
-  _explicitly_created_transaction_context->rollback();
-
-  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  out("Transaction (" + transaction_id + ") has been rolled back.\n");
-
-  _explicitly_created_transaction_context = nullptr;
-  return ReturnCode::Ok;
-}
-
-int Console::_commit_transaction(const std::string& input) {
-  if (!_explicitly_created_transaction_context) {
-    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
-    return ReturnCode::Error;
-  }
-
-  _explicitly_created_transaction_context->commit();
-
-  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  out("Transaction (" + transaction_id + ") has been committed.\n");
-
-  _explicitly_created_transaction_context = nullptr;
-  return ReturnCode::Ok;
 }
 
 int Console::_print_transaction_info(const std::string& input) {
@@ -1007,7 +988,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
   }
 
   while (it != commands.end()) {
-    auto& command = *it;
+    const auto& command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
@@ -1021,7 +1002,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
 char* Console::_command_generator_default(const char* text, int state) {
   auto commands = std::vector<std::string>();
   for (auto const& command : Console::get()._commands) {
-    commands.push_back(command.first);
+    commands.emplace_back(command.first);
   }
   return _command_generator(text, state, commands);
 }
@@ -1036,17 +1017,6 @@ char* Console::_command_generator_setting(const char* text, int state) {
 
 char* Console::_command_generator_setting_scheduler(const char* text, int state) {
   return _command_generator(text, state, {"on", "off"});
-}
-
-bool Console::_handle_rollback() {
-  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-  if (failed_pipeline && failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
-    out("The transaction has been rolled back.\n");
-    _explicitly_created_transaction_context = nullptr;
-    return true;
-  }
-
-  return false;
 }
 
 }  // namespace opossum
@@ -1120,9 +1090,4 @@ int main(int argc, char** argv) {
       console.set_prompt("!> ");
     }
   }
-
-  console.out("Bye.\n");
-
-  // Timestamp dump only to logfile
-  console.out("--- Session end --- " + current_timestamp() + "\n", false);
 }

@@ -23,13 +23,18 @@ struct GraphvizConfig {
 
 struct VizGraphInfo {
   std::string bg_color = "black";
+  std::string font_color = "white";
   std::string rankdir = "BT";
   std::string ratio = "compress";
+  std::string label = "For tooltips with advanced information, hover your mouse over vertices or edge labels.\n\n\n";
+  std::string label_location = "t";
+  std::string label_justification = "l";
 };
 
 struct VizVertexInfo {
   uintptr_t id;
   std::string label;
+  std::string tooltip;
   std::string color = "white";
   std::string font_color = "white";
   std::string shape = "rectangle";
@@ -38,12 +43,18 @@ struct VizVertexInfo {
 
 struct VizEdgeInfo {
   std::string label;
+  std::string label_tooltip;
   std::string color = "white";
   std::string font_color = "white";
   double pen_width = 1.0;
   std::string dir = "forward";
   std::string style = "solid";
   std::string arrowhead = "normal";
+};
+
+// Custom facet for creating a custom locale with thousands separator.
+struct SeparateThousandsFacet : std::numpunct<char> {
+  string_type do_grouping() const override { return "\3"; }  // groups of 3 digits
 };
 
 template <typename GraphBase>
@@ -69,8 +80,12 @@ class AbstractVisualizer {
         _default_edge(std::move(edge_info)) {
     // Add global Graph properties
     _add_graph_property("rankdir", _graph_info.rankdir);
+    _add_graph_property("fontcolor", _graph_info.font_color);
     _add_graph_property("bgcolor", _graph_info.bg_color);
     _add_graph_property("ratio", _graph_info.ratio);
+    _add_graph_property("label", _graph_info.label);
+    _add_graph_property("labelloc", _graph_info.label_location);
+    _add_graph_property("labeljust", _graph_info.label_justification);
 
     // Add vertex properties
     _add_property("node_id", &VizVertexInfo::id);
@@ -79,6 +94,7 @@ class AbstractVisualizer {
     _add_property("shape", &VizVertexInfo::shape);
     _add_property("fontcolor", &VizVertexInfo::font_color);
     _add_property("penwidth", &VizVertexInfo::pen_width);
+    _add_property("tooltip", &VizVertexInfo::tooltip);
 
     // Add edge properties
     _add_property("color", &VizEdgeInfo::color);
@@ -88,6 +104,7 @@ class AbstractVisualizer {
     _add_property("style", &VizEdgeInfo::style);
     _add_property("dir", &VizEdgeInfo::dir);
     _add_property("arrowhead", &VizEdgeInfo::arrowhead);
+    _add_property("labeltooltip", &VizEdgeInfo::label_tooltip);
   }
 
   virtual ~AbstractVisualizer() = default;

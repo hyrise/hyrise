@@ -41,12 +41,23 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
-# When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.
-# Hence, the `-Wno-dollar-in-identifier-extension` flag is required.
-add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -Wno-subobject-linkage)
+# Hotfix for boost bug (https://github.com/boostorg/asio/issues/312):
+add_compile_options(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options(-Weverything -Wshadow-all -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables -Wno-missing-prototypes -Wno-float-equal -Wno-return-std-move-in-c++11 -Wno-unreachable-code-break -Wno-undefined-func-template -Wno-unknown-warning-option -Wno-pass-failed -Wno-ctad-maybe-unsupported -Wno-header-hygiene)
+add_compile_options(-pthread -Wno-unknown-warning-option)
+
+# Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
+if (NOT "${HYRISE_RELAXED_BUILD}")
+    add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -Wno-subobject-linkage -Wno-deprecated-dynamic-exception-spec)
+
+    # -Wno-deprecated-dynamic-exception-spec is needed for jemalloc, at least for the older version that we are using
+
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options(-Weverything -Wshadow-all -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables -Wno-missing-prototypes -Wno-float-equal -Wno-return-std-move-in-c++11 -Wno-unreachable-code-break -Wno-undefined-func-template -Wno-unknown-warning-option -Wno-pass-failed -Wno-ctad-maybe-unsupported -Wno-header-hygiene -Wno-poison-system-directories -Wno-zero-as-null-pointer-constant)
+    endif()
+
+else()
+    message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
 endif()
 
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
@@ -54,6 +65,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
+    ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
@@ -67,8 +79,7 @@ include_directories(
     SYSTEM
     ${TBB_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
-    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
+    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
     ${PROJECT_SOURCE_DIR}/third_party/json
@@ -76,11 +87,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/zstd
     ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
 )
-
-if (${ENABLE_NUMA_SUPPORT})
-    include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
-    include_directories(SYSTEM ${PROJECT_BINARY_DIR}/third_party/pgasus/src)
-endif()
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)

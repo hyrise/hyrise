@@ -14,10 +14,14 @@ DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
 std::string DummyTableNode::description(const DescriptionMode mode) const { return "[DummyTable]"; }
 
-std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::column_expressions() const { return {}; }
+std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::output_expressions() const { return {}; }
 
 bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
   Fail("DummyTable does not output any columns");
+}
+
+std::shared_ptr<LQPUniqueConstraints> DummyTableNode::unique_constraints() const {
+  return std::make_shared<LQPUniqueConstraints>();
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

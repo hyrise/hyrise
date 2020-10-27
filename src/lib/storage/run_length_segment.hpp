@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "base_encoded_segment.hpp"
+#include "abstract_encoded_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -40,7 +40,7 @@ class BaseCompressedVector;
  *  end positions:   2 4 6 8
  */
 template <typename T>
-class RunLengthSegment : public BaseEncodedSegment {
+class RunLengthSegment : public AbstractEncodedSegment {
  public:
   explicit RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
                             const std::shared_ptr<const pmr_vector<bool>>& null_values,
@@ -51,7 +51,7 @@ class RunLengthSegment : public BaseEncodedSegment {
   std::shared_ptr<const pmr_vector<ChunkOffset>> end_positions() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -72,14 +72,14 @@ class RunLengthSegment : public BaseEncodedSegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
 

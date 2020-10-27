@@ -27,7 +27,7 @@ ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<c
 
 std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsColumn"; }
 
-std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
+std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_segment = chunk->get_segment(_left_column_id);
   const auto right_segment = chunk->get_segment(_right_column_id);
@@ -98,18 +98,23 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
    * SLOW PATH
    * ...in which the left and right segment iterables are erased into AnySegmentIterables<T>
    */
-  resolve_data_type(left_segment->data_type(), [&](const auto left_data_type_t) {
-    using LeftColumnDataType = typename decltype(left_data_type_t)::type;
+  resolve_data_type(left_segment->data_type(), [&](const auto left_data_type) {
+    using LeftColumnDataType = typename decltype(left_data_type)::type;
 
     auto left_iterable = create_any_segment_iterable<LeftColumnDataType>(*left_segment);
 
     resolve_data_type(right_segment->data_type(), [&](const auto right_data_type_t) {
       using RightColumnDataType = typename decltype(right_data_type_t)::type;
 
-      auto right_iterable = create_any_segment_iterable<RightColumnDataType>(*right_segment);
+      // C++ cannot compare strings and non-strings out of the box:
+      if constexpr (std::is_same_v<LeftColumnDataType, pmr_string> == std::is_same_v<RightColumnDataType, pmr_string>) {
+        auto right_iterable = create_any_segment_iterable<RightColumnDataType>(*right_segment);
 
-      PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
-      result = _typed_scan_chunk_with_iterables<EraseTypes::Always>(chunk_id, left_iterable, right_iterable);
+        PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
+        result = _typed_scan_chunk_with_iterables<EraseTypes::Always>(chunk_id, left_iterable, right_iterable);
+      } else {
+        Fail("Trying to compare strings and non-strings");
+      }
     });
   });
 
@@ -137,50 +142,40 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
-  const auto chunk = _in_table->get_chunk(chunk_id);
-
   auto matches_out = std::make_shared<RowIDPosList>();
 
-  using LeftType = typename LeftIterator::ValueType;
-  using RightType = typename RightIterator::ValueType;
+  bool condition_was_flipped = false;
+  auto maybe_flipped_condition = _predicate_condition;
+  if (maybe_flipped_condition == PredicateCondition::GreaterThan ||
+      maybe_flipped_condition == PredicateCondition::GreaterThanEquals) {
+    maybe_flipped_condition = flip_predicate_condition(maybe_flipped_condition);
+    condition_was_flipped = true;
+  }
 
-  // C++ cannot compare strings and non-strings out of the box:
-  if constexpr (std::is_same_v<LeftType, pmr_string> == std::is_same_v<RightType, pmr_string>) {
-    bool condition_was_flipped = false;
-    auto maybe_flipped_condition = _predicate_condition;
-    if (maybe_flipped_condition == PredicateCondition::GreaterThan ||
-        maybe_flipped_condition == PredicateCondition::GreaterThanEquals) {
-      maybe_flipped_condition = flip_predicate_condition(maybe_flipped_condition);
-      condition_was_flipped = true;
+  auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
+    if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
+      return comparator;
+    } else {
+      return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
+                                const AbstractSegmentPosition<std::decay_t<decltype(it2->value())>>&)>{comparator};
     }
+  };
 
-    auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
-      if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
-        return comparator;
-      } else {
-        return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
-                                  const AbstractSegmentPosition<std::decay_t<decltype(it2->value())>>&)>{comparator};
-      }
+  with_comparator_light(maybe_flipped_condition, [&](auto predicate_comparator) {
+    const auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+      return predicate_comparator(left.value(), right.value());
     };
 
-    with_comparator_light(maybe_flipped_condition, [&](auto predicate_comparator) {
-      const auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-        return predicate_comparator(left.value(), right.value());
-      };
-
-      if (condition_was_flipped) {
-        const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
-        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id,
-                                                          *matches_out, left_it);
-      } else {
-        const auto erased_comparator = conditionally_erase_comparator_type(comparator, left_it, right_it);
-        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, left_it, left_end, chunk_id, *matches_out,
-                                                          right_it);
-      }
-    });
-  } else {
-    Fail("Trying to compare strings and non-strings");
-  }
+    if (condition_was_flipped) {
+      const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
+      AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id, *matches_out,
+                                                        left_it);
+    } else {
+      const auto erased_comparator = conditionally_erase_comparator_type(comparator, left_it, right_it);
+      AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, left_it, left_end, chunk_id, *matches_out,
+                                                        right_it);
+    }
+  });
 
   return matches_out;
 }

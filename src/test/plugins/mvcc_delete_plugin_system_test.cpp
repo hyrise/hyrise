@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
@@ -19,7 +20,6 @@
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/plugin_test_utils.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -68,7 +68,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
     const auto gt = std::make_shared<GetTable>(_t_name_test);
     gt->set_transaction_context(transaction_context);
@@ -90,7 +90,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     if (update->execute_failed()) {
       // Collided with the plugin rewriting a chunk
-      transaction_context->rollback();
+      transaction_context->rollback(RollbackReason::Conflict);
     } else {
       transaction_context->commit();
       _counter++;
@@ -101,7 +101,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Checks the table configuration by summing up all integer values
    */
   void validate_table() {
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
     const auto gt = std::make_shared<GetTable>(_t_name_test);
     gt->set_transaction_context(transaction_context);
@@ -139,7 +139,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (1) Load the MvccDeletePlugin
   auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
 
   // (2) Validate start conditions
   validate_table();
@@ -147,7 +147,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (3) Create a blocker for the physical delete of chunk 2
   // The following context is older than all invalidations following with (4).
   // While it exists, no physical delete should be performed because the context might operate on old rows.
-  auto blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // (4) Prepare clean-up of chunk 2
   // (4.1) Create and run a thread that invalidates and reinserts rows of chunk 2 and 3
@@ -232,7 +232,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   }
 
   // (10) Create a blocker for the physical delete of chunk 3, similar to step (3)
-  blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   {
     const auto chunk3 = _table->get_chunk(ChunkID{2});
     EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id());  // otherwise our blocker won't work
@@ -315,5 +315,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   validate_table();
 
   // (17) Unload the plugin
-  Hyrise::get().plugin_manager.unload_plugin("MvccDeletePlugin");
+  Hyrise::get().plugin_manager.unload_plugin("hyriseMvccDeletePlugin");
 }

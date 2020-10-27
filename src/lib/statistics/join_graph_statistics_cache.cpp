@@ -29,7 +29,7 @@ JoinGraphStatisticsCache::JoinGraphStatisticsCache(VertexIndexMap&& vertex_indic
     : _vertex_indices(std::move(vertex_indices)), _predicate_indices(std::move(predicate_indices)) {}
 
 std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitmask(
-    const std::shared_ptr<AbstractLQPNode>& lqp) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   auto bitmask = std::optional<Bitmask>{_vertex_indices.size() + _predicate_indices.size()};
 
   visit_lqp(lqp, [&](const auto& node) {
@@ -41,7 +41,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       bitmask->set(vertex_iter->second);
       return LQPVisitation::DoNotVisitInputs;
 
-    } else if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
+    } else if (const auto join_node = std::dynamic_pointer_cast<const JoinNode>(node)) {
       if (join_node->join_mode == JoinMode::Inner) {
         for (const auto& join_predicate : join_node->join_predicates()) {
           const auto predicate_index_iter = _predicate_indices.find(join_predicate);
@@ -62,7 +62,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
         return LQPVisitation::DoNotVisitInputs;
       }
 
-    } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
+    } else if (const auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(node)) {
       const auto predicate_index_iter = _predicate_indices.find(predicate_node->predicate());
       if (predicate_index_iter == _predicate_indices.end()) {
         bitmask.reset();
@@ -122,7 +122,7 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
     output_column_statistics[column_id] = cached_column_statistics;
   }
 
-  const auto result_table_statistics =
+  auto result_table_statistics =
       std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
 
   return result_table_statistics;

@@ -128,17 +128,31 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
+  // Export sort column definitions
+  const auto& sorted_columns = chunk->individually_sorted_by();
+  export_value(ofstream, static_cast<uint32_t>(sorted_columns.size()));
+  for (const auto& [column, sort_mode] : sorted_columns) {
+    export_value(ofstream, column);
+    export_value(ofstream, sort_mode);
+  }
+
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    resolve_data_and_segment_type(
-        *chunk->get_segment(column_id),
-        [&](const auto data_type_t, const auto& resolved_segment) { _write_segment(resolved_segment, ofstream); });
+    resolve_data_and_segment_type(*chunk->get_segment(column_id),
+                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                    _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
+                                  });
   }
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Unencoded);
+
+  if (column_is_nullable) {
+    export_value(ofstream, value_segment.is_nullable());
+  }
 
   if (value_segment.is_nullable()) {
     export_values(ofstream, value_segment.null_values());
@@ -147,7 +161,8 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, std::ofs
   export_values(ofstream, value_segment.values());
 }
 
-void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
@@ -178,7 +193,8 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
   // Write attribute vector width
@@ -196,7 +212,7 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 
 template <typename T>
 void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                                  std::ofstream& ofstream) {
+                                  bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
   // Write attribute vector width
@@ -216,7 +232,8 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::RunLength);
 
   // Write size and values
@@ -232,7 +249,7 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
 
 template <>
 void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
-                                  std::ofstream& ofstream) {
+                                  bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   // Write attribute vector width
@@ -243,11 +260,12 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.block_minima().size()));
   export_values(ofstream, frame_of_reference_segment.block_minima());
 
-  // Write length of the NULL and offset value vectors (i.e., size of segment)
-  export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.null_values().size()));
-
-  // Write NULL values
-  export_values(ofstream, frame_of_reference_segment.null_values());
+  // Write flag if optional NULL value vector is written
+  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.null_values().has_value()));
+  if (frame_of_reference_segment.null_values()) {
+    // Write NULL values
+    export_values(ofstream, *frame_of_reference_segment.null_values());
+  }
 
   // Write offset values
   _export_compressed_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(),
@@ -255,7 +273,7 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
   // Write num elements (rows in segment)
@@ -264,17 +282,11 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   // Write number of blocks
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
 
-  if (lz4_segment.lz4_blocks().empty()) {
-    // No blocks at all: write just last block size = 0
-    export_value(ofstream, uint32_t{0});
-  } else {
-    // if more than one block, write decompressed block size
-    if (lz4_segment.lz4_blocks().size() > 1) {
-      export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
-    }
-    // Write last decompressed block size
-    export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
-  }
+  // Write block size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
+
+  // Write last block size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
 
   // Write compressed size for each LZ4 Block
   for (const auto& lz4_block : lz4_segment.lz4_blocks()) {
@@ -302,15 +314,15 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   // Write dictionary
   export_values(ofstream, lz4_segment.dictionary());
 
-  if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()) {
+  if (lz4_segment.string_offsets()) {
     // Write string_offset size
-    export_value(ofstream, static_cast<uint32_t>((*lz4_segment.string_offsets())->size()));
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.string_offsets()->size()));
     // Write string_offset data_size
     export_value(ofstream,
                  static_cast<uint32_t>(
-                     dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets().value()).data().size()));
+                     dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets()).data().size()));
     // Write string offsets
-    _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
+    _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *(lz4_segment.string_offsets()));
   } else {
     // Write string_offset size = 0
     export_value(ofstream, uint32_t{0});
@@ -318,9 +330,9 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 }
 
 template <typename T>
-uint32_t BinaryWriter::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
+uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment) {
   uint32_t vector_width = 0u;
-  resolve_encoded_segment_type<T>(base_encoded_segment, [&vector_width](auto& typed_segment) {
+  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_width](auto& typed_segment) {
     Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
     switch (*typed_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:

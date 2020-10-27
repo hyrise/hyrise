@@ -30,7 +30,7 @@ void AbstractReadWriteOperator::execute() {
     throw;
   }
 
-  if (_state == ReadWriteOperatorState::Failed) return;
+  if (_state == ReadWriteOperatorState::Conflicted) return;
 
   _state = ReadWriteOperatorState::Executed;
 }
@@ -43,7 +43,7 @@ void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
 }
 
 void AbstractReadWriteOperator::rollback_records() {
-  Assert(_state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::Executed,
+  Assert(_state == ReadWriteOperatorState::Conflicted || _state == ReadWriteOperatorState::Executed,
          "Operator needs to have state Failed or Executed in order to be rolled back.");
 
   _on_rollback_records();
@@ -52,7 +52,7 @@ void AbstractReadWriteOperator::rollback_records() {
 }
 
 bool AbstractReadWriteOperator::execute_failed() const {
-  return _state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::RolledBack;
+  return _state == ReadWriteOperatorState::Conflicted || _state == ReadWriteOperatorState::RolledBack;
 }
 
 ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _state; }
@@ -60,7 +60,7 @@ ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _state;
 void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");
 
-  _state = ReadWriteOperatorState::Failed;
+  _state = ReadWriteOperatorState::Conflicted;
 }
 
 std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& phase) {
@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& pha
     case ReadWriteOperatorState::Executed:
       stream << "Executed";
       break;
-    case ReadWriteOperatorState::Failed:
+    case ReadWriteOperatorState::Conflicted:
       stream << "Failed";
       break;
     case ReadWriteOperatorState::RolledBack:

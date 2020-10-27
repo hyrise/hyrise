@@ -51,16 +51,15 @@ class CompositeGroupKeyIndex : public AbstractIndex {
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
-  ~CompositeGroupKeyIndex() = default;
 
-  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
+  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const final;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const final;
 
   size_t _memory_consumption() const final;
 
