@@ -69,7 +69,7 @@ df.loc["Absolute"] = df.sum() / df.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
-df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
+#df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 
 # Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
 # row for that

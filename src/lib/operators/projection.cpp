@@ -1,3 +1,6 @@
+// TODO: Test baking in the accessor again
+// TODO: Test IN() optimization again
+
 #include "projection.hpp"
 
 #include <algorithm>

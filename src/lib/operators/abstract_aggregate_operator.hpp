@@ -31,8 +31,8 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
-      if (!current_primary_aggregate || value_smaller(new_value, *current_primary_aggregate)) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_primary_aggregate) {
+      if (aggregate_count == 0 || value_smaller(new_value, current_primary_aggregate)) {
         // New minimum found
         current_primary_aggregate = new_value;
       }
@@ -44,8 +44,8 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
-      if (!current_primary_aggregate || value_greater(new_value, *current_primary_aggregate)) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_primary_aggregate) {
+      if (aggregate_count == 0 || value_greater(new_value, current_primary_aggregate)) {
         // New maximum found
         current_primary_aggregate = new_value;
       }
@@ -57,12 +57,12 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_primary_aggregate) {
       // add new value to sum
-      if (current_primary_aggregate) {
-        *current_primary_aggregate += static_cast<AggregateType>(new_value);
-      } else {
+      if (aggregate_count == 0) {
         current_primary_aggregate = new_value;
+      } else {
+        current_primary_aggregate += static_cast<AggregateType>(new_value);
       }
     };
   }
@@ -85,7 +85,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_primary_aggregate,
               SecondaryAggregates<AggregateType>& current_secondary_aggregates) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
@@ -118,7 +118,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
           const auto variance = squared_distance_from_mean / (count - 1);
           current_primary_aggregate = std::sqrt(variance);
         } else {
-          current_primary_aggregate = std::nullopt;
+          // TODO no idea - reset aggregate_count?
         }
 
       } else {
@@ -132,7 +132,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& current_primary_aggregate) {};
   }
 };
 
@@ -140,7 +140,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& current_primary_aggregate) {};
   }
 };
 

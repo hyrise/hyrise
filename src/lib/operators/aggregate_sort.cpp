@@ -94,7 +94,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   const auto chunk_count = sorted_table->chunk_count();
 
-  std::optional<AggregateType> current_primary_aggregate;
+  AggregateType current_primary_aggregate;
   SecondaryAggregates<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
@@ -166,7 +166,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
               unique_values.size());
 
           // Reset helper variables
-          current_primary_aggregate = std::optional<AggregateType>();
+          current_primary_aggregate = AggregateType{};
           current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
           unique_values.clear();
           value_count = 0u;
@@ -180,9 +180,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         // Update helper variables
         if (!position.is_null()) {
           if constexpr (function == AggregateFunction::StandardDeviationSample) {
-            aggregate_function(ColumnType{new_value}, current_primary_aggregate, current_secondary_aggregates);
+            aggregate_function(ColumnType{new_value}, value_count, current_primary_aggregate, current_secondary_aggregates);
           } else {
-            aggregate_function(ColumnType{new_value}, current_primary_aggregate);
+            aggregate_function(ColumnType{new_value}, value_count, current_primary_aggregate);
           }
           value_count++;
           if constexpr (function == AggregateFunction::CountDistinct) {
@@ -244,7 +244,7 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate,
+    AggregateType& current_primary_aggregate,
     SecondaryAggregates<AggregateType>& current_secondary_aggregates, [[maybe_unused]] const uint64_t value_count,
     [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {
@@ -264,10 +264,10 @@ void AggregateSort::_set_and_write_aggregate_value(
 
     if (value_count == 0) {
       // there are no non-null values, the average itself must be null (otherwise division by 0)
-      current_primary_aggregate = std::optional<AggregateType>();
+      current_primary_aggregate = AggregateType();
     } else {
       // normal average calculation
-      current_primary_aggregate = *current_primary_aggregate / static_cast<AggregateType>(value_count);
+      current_primary_aggregate = current_primary_aggregate / static_cast<AggregateType>(value_count);
     }
   }
   if constexpr (function == AggregateFunction::StandardDeviationSample &&
@@ -275,7 +275,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     // this ignores the case of StandardDeviationSample on strings, but we check in _on_execute() this does not happen
 
     if (value_count <= 1) {
-      current_primary_aggregate = std::optional<AggregateType>();
+      current_primary_aggregate = AggregateType();
       current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
     }
   }
@@ -284,10 +284,12 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
 
   // store whether the value is a null value
-  aggregate_null_values[aggregate_group_index] = !current_primary_aggregate;
-  if (current_primary_aggregate) {
+  if (value_count > 0) {
     // only store non-null values
-    aggregate_results[aggregate_group_index] = *current_primary_aggregate;
+    aggregate_results[aggregate_group_index] = current_primary_aggregate;
+    aggregate_null_values[aggregate_group_index] = false;
+  } else {
+    aggregate_null_values[aggregate_group_index] = true;
   }
 }
 

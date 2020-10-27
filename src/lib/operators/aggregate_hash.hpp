@@ -62,9 +62,9 @@ Optionally, the result may also contain:
 template <typename ColumnDataType, typename AggregateType>
 class AggregateResult {
  public:
-  std::optional<AggregateType> current_primary_aggregate;
+  AggregateType current_primary_aggregate;
   size_t aggregate_count = 0;
-  RowID row_id;
+  RowID row_id = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;
@@ -110,6 +110,7 @@ class AggregateResult {
 
  protected:
   std::unique_ptr<Details> _details;
+  // TODO AggregateType = std::unique_ptr<Details>?
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
@@ -212,6 +213,9 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
+
+  mutable AggregateKeyEntry _min{0};
+  mutable AggregateKeyEntry _max{0};
 };
 
 }  // namespace opossum
