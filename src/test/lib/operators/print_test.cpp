@@ -42,10 +42,9 @@ class PrintWrapper : public Print {
   std::shared_ptr<const Table> tab;
 
  public:
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out,
-                        PrintFlags flags = PrintFlags::None)
-      : Print(in, out, flags), tab(in->get_output()) {}
+  PrintWrapper(const std::shared_ptr<AbstractOperator> in, const PrintFlags flags = PrintFlags::None,
+               std::ostream& out = std::cout)
+      : Print(in, flags, out), tab(in->get_output()) {}
 
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return _column_string_widths(min, max, tab);
@@ -63,7 +62,7 @@ class PrintWrapper : public Print {
 };
 
 TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
-  auto pr = std::make_shared<Print>(_gt, output);
+  auto pr = std::make_shared<Print>(_gt, PrintFlags::None, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -89,7 +88,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   auto gt = std::make_shared<GetTable>(_table_name);
   gt->execute();
 
-  auto pr = std::make_shared<Print>(gt, output);
+  auto pr = std::make_shared<Print>(gt, PrintFlags::None, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -145,7 +144,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
-  auto pr = std::make_shared<opossum::Print>(_gt, output);
+  auto pr = std::make_shared<opossum::Print>(_gt, PrintFlags::None, output);
 
   EXPECT_EQ(pr->name(), "Print");
 }
@@ -185,7 +184,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 
-  auto printer = std::make_shared<Print>(wrap, output);
+  auto printer = std::make_shared<Print>(wrap, PrintFlags::None, output);
   printer->execute();
 
   auto output_string = output.str();
@@ -193,7 +192,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
 }
 
 TEST_F(OperatorsPrintTest, MVCCFlag) {
-  auto print_wrap = PrintWrapper(_gt, output, PrintFlags::Mvcc);
+  auto print_wrap = PrintWrapper(_gt, PrintFlags::Mvcc, output);
   print_wrap.execute();
 
   auto expected_output =
@@ -309,13 +308,33 @@ TEST_F(OperatorsPrintTest, SegmentType) {
   EXPECT_EQ(output.str(), expected_output);
 }
 
+TEST_F(OperatorsPrintTest, SQL) {
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
+  Hyrise::get().storage_manager.add_table("t", table);
+
+  Print::print("SELECT * FROM t WHERE a <= 1234", PrintFlags::None, output);
+
+  auto expected_output =
+      "=== Columns\n"
+      "|       a|       b|\n"
+      "|     int|   float|\n"
+      "|not null|not null|\n"
+      "=== Chunk 0 ===\n"
+      "|<ReferS>|<ReferS>|\n"
+      "|     123|   456.7|\n"
+      "=== Chunk 1 ===\n"
+      "|<ReferS>|<ReferS>|\n"
+      "|    1234|   457.7|\n";
+  EXPECT_EQ(output.str(), expected_output);
+}
+
 TEST_F(OperatorsPrintTest, EmptyTable) {
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 
   std::ostringstream output;
-  auto wrapper = PrintWrapper(wrap, output);
+  auto wrapper = PrintWrapper(wrap, PrintFlags::None, output);
   wrapper.execute();
 
   auto expected_output =
