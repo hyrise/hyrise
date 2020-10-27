@@ -366,9 +366,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         output_bloom_filter |= local_output_bloom_filter;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return radix_container;
 }
@@ -443,10 +442,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
-      jobs.back()->schedule();
     }
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, shrink_to_fit is called above.
   if (radix_bits == 0) hash_tables[0]->shrink_to_fit();
@@ -536,9 +534,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         ++output_idx;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -551,9 +548,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
               null_values_as_char[output_partition_idx][element_idx];
         }
       }));
-      jobs.back()->schedule();
     }
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   return output;
@@ -707,10 +703,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
       pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -818,10 +813,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
       pos_lists[partition_idx] = std::move(pos_list_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;

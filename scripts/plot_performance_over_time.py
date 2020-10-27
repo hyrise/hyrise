@@ -42,6 +42,11 @@ with open(sys.argv[1]) as json_file:
 # Check if JSON was created with --metrics
 has_system_metrics = "system_utilization" in data_json
 
+if has_system_metrics:
+    print(
+        "Note that the reported memory consumption is also affected by the (relatively high) amount needed to store "
+        + "that data. For TPC-H SF 1, this is around 30 MB."
+    )
 # Build a flat list containing a {name, begin, duration} entry for every benchmark item run
 run_durations_list = []
 for benchmark_json in data_json["benchmarks"]:
