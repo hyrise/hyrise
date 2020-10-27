@@ -85,8 +85,9 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& current_primary_aggregate,
-              SecondaryAggregates<AggregateType>& current_secondary_aggregates) {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, SecondaryAggregates<AggregateType>& current_primary_aggregate) {
+      // TODO rename secondary to complex?
+
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
@@ -95,17 +96,17 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         // squared_distance_from_mean aggregates the squared distance from the mean.
         // count aggregates the number of samples seen so far.
         // The sample standard deviation is stored as current_primary_aggregate.
-        if (current_secondary_aggregates.empty()) {
-          current_secondary_aggregates.resize(3);
-          // current_secondary_aggregates[0]:   storage for count
-          // current_secondary_aggregates[1]:   storage for mean
-          // current_secondary_aggregates[2]:   storage for squared_distance_from_mean
+        if (current_primary_aggregate.empty()) {
+          current_primary_aggregate.resize(3);
+          // current_primary_aggregate[0]:   storage for count
+          // current_primary_aggregate[1]:   storage for mean
+          // current_primary_aggregate[2]:   storage for squared_distance_from_mean
         }
 
         // get values
-        auto& count = current_secondary_aggregates[0];
-        auto& mean = current_secondary_aggregates[1];
-        auto& squared_distance_from_mean = current_secondary_aggregates[2];
+        auto& count = current_primary_aggregate[0];
+        auto& mean = current_primary_aggregate[1];
+        auto& squared_distance_from_mean = current_primary_aggregate[2];
 
         // update values
         ++count;
@@ -115,8 +116,9 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         squared_distance_from_mean += delta * delta2;
 
         if (count > 1) {
-          const auto variance = squared_distance_from_mean / (count - 1);
-          current_primary_aggregate = std::sqrt(variance);
+          // TODO
+          // const auto variance = squared_distance_from_mean / (count - 1);
+          // current_primary_aggregate = std::sqrt(variance);
         } else {
           // TODO no idea - reset aggregate_count?
         }

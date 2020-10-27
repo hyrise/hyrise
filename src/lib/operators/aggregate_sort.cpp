@@ -180,7 +180,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         // Update helper variables
         if (!position.is_null()) {
           if constexpr (function == AggregateFunction::StandardDeviationSample) {
-            aggregate_function(ColumnType{new_value}, value_count, current_primary_aggregate, current_secondary_aggregates);
+            aggregate_function(ColumnType{new_value}, value_count, current_secondary_aggregates);
           } else {
             aggregate_function(ColumnType{new_value}, value_count, current_primary_aggregate);
           }

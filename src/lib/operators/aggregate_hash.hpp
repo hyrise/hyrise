@@ -21,6 +21,7 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+#include "aggregate/aggregate_traits.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
@@ -59,63 +60,31 @@ Optionally, the result may also contain:
 - a set of DISTINCT values OR
 - secondary aggregates, which are currently only used by STDDEV_SAMP
 */
-template <typename ColumnDataType, typename AggregateType>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 class AggregateResult {
  public:
-  AggregateType current_primary_aggregate;
-  size_t aggregate_count = 0;
-  RowID row_id = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
+  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;
 
-  // SecondaryAggregates and DistinctValues are unused in most cases. We store them in a separate variant that is
-  // initialized as needed. This saves us a lot of memory in this critical data structure. Before using this variant
-  // the corresponding ensure_*_initialized method has to be called.
-  using Details = std::variant<SecondaryAggregates<AggregateType>, DistinctValues>;
+  using PrimaryAggregateType =
+    std::conditional_t<
+      aggregate_function == AggregateFunction::StandardDeviationSample,
+      SecondaryAggregates<AggregateType>,
+      std::conditional_t<
+        aggregate_function == AggregateFunction::CountDistinct,
+        DistinctValues,
+        AggregateType>>;
 
-  void ensure_distinct_values_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
-    if (_details) return;
-    _details = std::make_unique<Details>(DistinctValues{&buffer});
-  }
-
-  void ensure_secondary_aggregates_initialized(boost::container::pmr::monotonic_buffer_resource& buffer) {
-    if (_details) return;
-
-    // For some reason, we can't pass &buffer into SecondaryAggregates. Boost does something weird with the allocator.
-    // As SecondaryAggregates does not allocate memory right now anyway (but might once we support additional aggregate
-    // functions), we just use the default allocator for now.
-    _details = std::make_unique<Details>(SecondaryAggregates<AggregateType>{});
-  }
-
-  DistinctValues& distinct_values() {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<DistinctValues>(*_details);
-  }
-
-  const DistinctValues& distinct_values() const {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<DistinctValues>(*_details);
-  }
-
-  SecondaryAggregates<AggregateType>& current_secondary_aggregates() {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<SecondaryAggregates<AggregateType>>(*_details);
-  }
-
-  const SecondaryAggregates<AggregateType>& current_secondary_aggregates() const {
-    DebugAssert(_details, "AggregateResult::_details has not been properly initialized for this aggregation function");
-    return std::get<SecondaryAggregates<AggregateType>>(*_details);
-  }
-
- protected:
-  std::unique_ptr<Details> _details;
-  // TODO AggregateType = std::unique_ptr<Details>?
+  PrimaryAggregateType current_primary_aggregate;
+  size_t aggregate_count = 0;
+  RowID row_id = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
-template <typename ColumnDataType, typename AggregateType>
-using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, AggregateType>>;
+template <typename ColumnDataType, AggregateFunction aggregate_function>
+using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, aggregate_function>>;
 using AggregateResultId = size_t;
 
 // The AggregateResultIdMap maps AggregateKeys to their index in the list of aggregate results.

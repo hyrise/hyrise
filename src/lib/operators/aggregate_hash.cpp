@@ -135,19 +135,19 @@ void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
 AggregateKey, the AggregateContext is the "full" version.
 */
-template <typename ColumnDataType, typename AggregateType>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 struct AggregateResultContext : SegmentVisitorContext {
-  using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, AggregateType>>;
+  using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, aggregate_function>>;
 
   AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {
   }
 
   boost::container::pmr::monotonic_buffer_resource buffer;
-  AggregateResults<ColumnDataType, AggregateType> results;
+  AggregateResults<ColumnDataType, aggregate_function> results;
 };
 
-template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
-struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
+template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
+struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
   AggregateContext() {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
@@ -168,7 +168,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 
-  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType, AggregateKey>>(
+  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, function, AggregateKey>>(
       _contexts_per_column[column_index]);
 
   auto& result_ids = *context.result_ids;
@@ -187,11 +187,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
     if (!position.is_null()) {
       if constexpr (function == AggregateFunction::CountDistinct) {
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
-        result.ensure_distinct_values_initialized(context.buffer);
-        result.distinct_values().emplace(position.value());
-      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        result.ensure_secondary_aggregates_initialized(context.buffer);
-        aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.current_primary_aggregate, result.current_secondary_aggregates());
+        result.current_primary_aggregate.emplace(position.value());
       } else {
         aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.current_primary_aggregate);
       }
@@ -489,10 +485,8 @@ void AggregateHash::_aggregate() {
     Insert a dummy context for the DISTINCT implementation.
     That way, _contexts_per_column will always have at least one context with results.
     This is important later on when we write the group keys into the table.
-
-    We choose int8_t for column type and aggregate type because it's small.
     */
-    auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
+    auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>();
     _contexts_per_column.push_back(context);
   }
 
@@ -510,7 +504,7 @@ void AggregateHash::_aggregate() {
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
-      auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
+      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>();
       _contexts_per_column[aggregate_idx] = context;
       continue;
     }
@@ -551,7 +545,7 @@ void AggregateHash::_aggregate() {
        */
 
       auto context =
-          std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(
+          std::static_pointer_cast<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(
               _contexts_per_column[0]);
 
       auto& result_ids = *context->result_ids;
@@ -578,7 +572,7 @@ void AggregateHash::_aggregate() {
 
         if (input_column_id == INVALID_COLUMN_ID) {
           Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
-          auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
+          auto context = std::static_pointer_cast<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>(
               _contexts_per_column[aggregate_idx]);
 
           auto& result_ids = *context->result_ids;
@@ -686,7 +680,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
    * Otherwise, it is called by the first call to _write_aggregate_output.
    **/
   if (!_has_aggregate_functions) {
-    auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
+    auto context = std::static_pointer_cast<AggregateResultContext<int32_t, AggregateFunction::Min>>(
         _contexts_per_column[0]);
     auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
@@ -743,7 +737,7 @@ std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Ma
                      func == AggregateFunction::Any,
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+                       const AggregateResults<ColumnDataType, func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
 
@@ -764,7 +758,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, func>& results) {
   values.reserve(results.size());
 
   for (const auto& result : results) {
@@ -778,13 +772,13 @@ std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, func>& results) {
   values.reserve(results.size());
 
   for (const auto& result : results) {
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
-    values.emplace_back(result.distinct_values().size());
+    values.emplace_back(result.current_primary_aggregate.size());
   }
 }
 
@@ -792,7 +786,7 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
 
@@ -813,7 +807,7 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, func>& results) {
   Fail("Invalid aggregate");
 }
 
@@ -821,30 +815,31 @@ std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<Aggrega
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
-  values.reserve(results.size());
-  null_values.reserve(results.size());
+                       const AggregateResults<ColumnDataType, func>& results) {
+  // TODO
+  // values.reserve(results.size());
+  // null_values.reserve(results.size());
 
-  for (const auto& result : results) {
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+  // for (const auto& result : results) {
+  //   if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
-    const auto count = static_cast<AggregateType>(result.aggregate_count);
+  //   const auto count = static_cast<AggregateType>(result.aggregate_count);
 
-    if (count > 1) {
-      values.emplace_back(result.current_primary_aggregate);
-      null_values.emplace_back(false);
-    } else {
-      values.emplace_back();
-      null_values.emplace_back(true);
-    }
-  }
+  //   if (count > 1) {
+  //     values.emplace_back(result.current_primary_aggregate);
+  //     null_values.emplace_back(false);
+  //   } else {
+  //     values.emplace_back();
+  //     null_values.emplace_back(true);
+  //   }
+  // }
 }
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+                       const AggregateResults<ColumnDataType, func>& results) {
   Fail("Invalid aggregate");
 }
 
@@ -978,7 +973,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, decltype(aggregate_type)>>(
+  auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, function>>(
       _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
@@ -1038,7 +1033,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
     switch (function) {
       case AggregateFunction::Min: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType,
+            ColumnDataType, AggregateFunction::Min,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1046,7 +1041,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::Max: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType,
+            ColumnDataType, AggregateFunction::Max,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1054,7 +1049,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::Sum: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType,
+            ColumnDataType, AggregateFunction::Sum,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1062,7 +1057,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::Avg: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType,
+            ColumnDataType, AggregateFunction::Avg,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1070,7 +1065,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::Count: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType,
+            ColumnDataType, AggregateFunction::Count,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1078,7 +1073,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::CountDistinct: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
+            ColumnDataType, AggregateFunction::CountDistinct,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1087,7 +1082,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case AggregateFunction::StandardDeviationSample: {
         auto my_context = std::make_shared<AggregateContext<
             ColumnDataType,
-            typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
+            AggregateFunction::StandardDeviationSample,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
@@ -1095,7 +1090,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       }
       case AggregateFunction::Any: {
         auto my_context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType,
+            ColumnDataType, AggregateFunction::Any,
             AggregateKey>>();
         if (_max) my_context->results.resize(_max - _min + 1); // TODO für an anderen Stellen erstellte contexts auch
         context = my_context;
