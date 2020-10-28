@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/container/small_vector.hpp>
-
 #include "expression/aggregate_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -86,10 +84,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
         // For a new value, compute the new count, new mean and the new squared_distance_from_mean.
-        // mean accumulates the mean of the entire dataset.
-        // squared_distance_from_mean aggregates the squared distance from the mean.
-        // count aggregates the number of samples seen so far.
-        // The sample standard deviation is stored as accumulator.
 
         // get values
         auto& count = accumulator[0];  // We could probably reuse aggregate_count here

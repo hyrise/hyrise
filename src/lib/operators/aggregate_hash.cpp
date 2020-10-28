@@ -487,7 +487,7 @@ void AggregateHash::_aggregate() {
        * Obviously this implementation is also used for plain GroupBy's.
        */
 
-      auto context = std::static_pointer_cast<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(
+      auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, AggregateFunction::Min, AggregateKey>>(
           _contexts_per_column[0]);
 
       auto& result_ids = *context->result_ids;
@@ -623,7 +623,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
    **/
   if (!_has_aggregate_functions) {
     auto context =
-        std::static_pointer_cast<AggregateResultContext<int32_t, AggregateFunction::Min>>(_contexts_per_column[0]);
+        std::static_pointer_cast<AggregateResultContext<DistinctColumnType, AggregateFunction::Min>>(_contexts_per_column[0]);
     auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
