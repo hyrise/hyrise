@@ -106,8 +106,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
       // In some cases, we still need to do the date calculations that Hyrise does not support yet
-      const auto date =
-          _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -std::atoi(raw_params_iter->at(0).c_str()));
+      const auto date = _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -std::stoi(raw_params_iter->at(0)));
       parameters.emplace_back("'"s + date + "'");
       break;
     }

@@ -33,7 +33,7 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   void _prepare_queries() const;
 
   // Adds (or subtracts) specified number of months and days
-  std::string _calculate_date(boost::gregorian::date date, int months, int days = 0);
+  static std::string _calculate_date(boost::gregorian::date date, int months, int days = 0);
 
   // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
   std::string _build_query(const BenchmarkItemID item_id);

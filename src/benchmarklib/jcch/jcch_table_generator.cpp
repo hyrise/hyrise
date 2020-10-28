@@ -48,9 +48,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
       {
         // sed on Mac requires a space between -i and '', on Linux it doesn't like it...
 #ifdef __APPLE__
-        const auto sed_inplace = "-i ''";
+        const auto* const sed_inplace = "-i ''";
 #else
-        const auto sed_inplace = "-i''";
+        const auto* const sed_inplace = "-i''";
 #endif
 
         auto cmd = std::stringstream{};
