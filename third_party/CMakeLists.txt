@@ -358,16 +358,24 @@ target_compile_options(
 )
 endif()
 
-# Call Makefile of jcch-dbgen, copy dbgen and qgen into the current build folder, then clean up
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/dists.dss
-                   COMMAND make -j >/dev/null 2>/dev/null
-                   COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dbgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/qgen ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
-                   COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/dists.dss ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
-                   COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/queries ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen/
-                   COMMAND make clean >/dev/null 2>/dev/null
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
+include(ExternalProject)
+externalproject_add(
+    jcchDbgen
+
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+    CONFIGURE_COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/ ..
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
+    STEP_TARGETS build
 )
 
-add_custom_target(jcchDbgen DEPENDS jcch-dbgen/dbgen jcch-dbgen/qgen)
+file(GLOB_RECURSE JCCH_DBGEN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/*)
+externalproject_add_step(
+  jcchDbgen
+  check_for_changes
+  # Make sure that we rebuild jcch-dbgen when a file changes
+  DEPENDERS configure
+  DEPENDS "${JCCH_DBGEN_FILES}"
+  COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
+)
