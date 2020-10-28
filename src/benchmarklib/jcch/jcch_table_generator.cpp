@@ -27,6 +27,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     std::cout << "- Creating table data by calling external dbgen" << std::flush;
 
     std::filesystem::create_directory(tables_path);
+    Assert(std::filesystem::exists(tables_path), "Creating JCC-H tables folder failed");
 
     {
       // Call JCC-H's dbgen

@@ -50,6 +50,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
 
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
+    Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed");
     if (local_queries_dir_created) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
@@ -128,29 +129,30 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 4 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date = _calculate_date(begin_date, 3);
+      const auto end_date_str = _calculate_date(begin_date, 3);
 
+      // Cannot use begin_date here, as we would have to convert it into a string first.
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       break;
     }
 
     case 5 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(1));
-      const auto end_date = _calculate_date(begin_date, 12);
+      const auto end_date_str = _calculate_date(begin_date, 12);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       break;
     }
 
     case 6 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date = _calculate_date(begin_date, 12);
+      const auto end_date_str = _calculate_date(begin_date, 12);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(2));
@@ -177,6 +179,12 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 9 - 1: {
+      static auto warned_performance = false;
+      if (!warned_performance) {
+        std::cerr << "\nWarning: JCC-H Query 9 needs optimization. Consider skipping it using -q\n\n";
+        warned_performance = true;
+      }
+
       parameters.emplace_back("'%"s + raw_params_iter->at(0) + "%'");
       break;
     }
@@ -196,12 +204,12 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 12 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(2));
-      const auto end_date = _calculate_date(begin_date, 12);
+      const auto end_date_str = _calculate_date(begin_date, 12);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       break;
     }
 
@@ -212,10 +220,10 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 14 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date = _calculate_date(begin_date, 1);
+      const auto end_date_str = _calculate_date(begin_date, 1);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       break;
     }
 
@@ -223,7 +231,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       auto query_15 = std::string{tpch_queries.at(15)};
 
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date = _calculate_date(begin_date, 3);
+      const auto end_date_str = _calculate_date(begin_date, 3);
 
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
       // By manually replacing the `?` from tpch_queries.cpp, we can keep all queries in a readable form there.
@@ -234,7 +242,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
                    std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),
                   "TPC-H 15 string has been modified");
       query_15.replace(BEGIN_DATE_OFFSET, 10, raw_params_iter->at(0));
-      query_15.replace(END_DATE_OFFSET, 10, end_date);
+      query_15.replace(END_DATE_OFFSET, 10, end_date_str);
 
       const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
       boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
@@ -289,11 +297,11 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 20 - 1: {
       const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(1));
-      const auto end_date = _calculate_date(begin_date, 12);
+      const auto end_date_str = _calculate_date(begin_date, 12);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + end_date_str + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
       break;
     }

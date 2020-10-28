@@ -133,11 +133,11 @@ int main(int argc, char* argv[]) {
     Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
            std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
 
-    // Create the jcch_data directory (if needed) and generate the jcch_data/sf-10.0 path
-    std::filesystem::create_directory("jcch_data");
+    // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
     auto jcch_data_path_str = std::ostringstream{};
     jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
-    std::filesystem::create_directory(jcch_data_path_str.str());
+    std::filesystem::create_directories(jcch_data_path_str.str());
+    // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
     auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
 
     std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
