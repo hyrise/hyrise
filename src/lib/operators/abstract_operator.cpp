@@ -179,8 +179,7 @@ void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) 
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
   if (_consumer_count == 0) {
-    std::cout << "Last consumer " << consumer_op.name() << " clears " << this->name() << std::endl;
-    clear_output();
+    std::cout << "Last consumer " << consumer_op.name() << " deregistered from " << this->name() << std::endl;
   }
 }
 
