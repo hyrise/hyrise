@@ -34,15 +34,7 @@ AbstractOperator::~AbstractOperator() {
   bool left_has_executed = !_left_input || _left_input->performance_data->executed;
   bool right_has_executed = !_right_input || _right_input->performance_data->executed;
   Assert(performance_data->executed || !left_has_executed || !right_has_executed,
-         "Operator did not execute "
-         "unexpectedly");
-  //  if (!performance_data->executed) {
-  // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
-  // we should take care of it here.
-  // ToDo Error: "Pure Virtual Function Called!"
-  //    if (_left_input) mutable_left_input()->deregister_consumer(*this);
-  //    if (_right_input) mutable_right_input()->deregister_consumer(*this);
-  //  }
+         "Operator did not execute which is unexpected.");
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
@@ -156,7 +148,6 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const { return _outp
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  std::cout << name() << "::clear_output() was called." << std::endl;
   _output = nullptr;
 }
 
@@ -187,7 +178,9 @@ void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) 
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
   if (_consumer_count == 0) {
-    std::cout << "Last consumer " << consumer_op.name() << " deregistered from " << this->name() << std::endl;
+    if (HYRISE_DEBUG) {
+      std::cout << "Call " << this->name() << "::clear_output() by last consumer: " << consumer_op.name() << std::endl;
+    }
     clear_output();
   }
 }
