@@ -9,8 +9,8 @@
 
 #include "scheduler/job_task.hpp"
 #include "scheduler/worker.hpp"
-#include "utils/tracing/probes.hpp"
 #include "utils/timer.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)

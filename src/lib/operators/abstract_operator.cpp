@@ -33,15 +33,16 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 AbstractOperator::~AbstractOperator() {
   bool left_has_executed = !_left_input || _left_input->performance_data->executed;
   bool right_has_executed = !_right_input || _right_input->performance_data->executed;
-  Assert(performance_data->executed || !left_has_executed || !right_has_executed), "Operator did not execute "
-"unexpectedly");
-//  if (!performance_data->executed) {
-    // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
-    // we should take care of it here.
-    // ToDo Error: "Pure Virtual Function Called!"
-//    if (_left_input) mutable_left_input()->deregister_consumer(*this);
-//    if (_right_input) mutable_right_input()->deregister_consumer(*this);
-//  }
+  Assert(performance_data->executed || !left_has_executed || !right_has_executed,
+         "Operator did not execute "
+         "unexpectedly");
+  //  if (!performance_data->executed) {
+  // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
+  // we should take care of it here.
+  // ToDo Error: "Pure Virtual Function Called!"
+  //    if (_left_input) mutable_left_input()->deregister_consumer(*this);
+  //    if (_right_input) mutable_right_input()->deregister_consumer(*this);
+  //  }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
@@ -93,8 +94,8 @@ void AbstractOperator::execute() {
   performance_data->executed = true;
 
   // Tell input operators that we no longer need their output.
-  if(_left_input) mutable_left_input()->deregister_consumer(*this);
-  if(_right_input) mutable_right_input()->deregister_consumer(*this);
+  if (_left_input) mutable_left_input()->deregister_consumer(*this);
+  if (_right_input) mutable_right_input()->deregister_consumer(*this);
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -162,7 +163,7 @@ void AbstractOperator::clear_output() {
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << name();
-//  stream << " (C.count: " << _consumer_count_max.load() << ")";
+  //  stream << " (C.count: " << _consumer_count_max.load() << ")";
   return stream.str();
 }
 
@@ -175,9 +176,7 @@ std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return
 
 std::shared_ptr<const Table> AbstractOperator::right_input_table() const { return _right_input->get_output(); }
 
-size_t AbstractOperator::consumer_count() const {
-  return _consumer_count.load();
-}
+size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
 void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
   _consumer_count++;
@@ -227,7 +226,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  if(parameters.empty()) return;
+  if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
   if (right_input()) mutable_right_input()->set_parameters(parameters);

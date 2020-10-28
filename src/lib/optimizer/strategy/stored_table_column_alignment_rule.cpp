@@ -77,7 +77,8 @@ void apply_to(const ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes) {
         DebugAssert(std::is_sorted(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend()),
                     "Expected sorted vector of ColumnIDs");
         DebugAssert(std::is_sorted(stored_table_node->pruned_column_ids().cbegin(),
-                                   stored_table_node->pruned_column_ids().cend()),"Expected sorted vector of ColumnIDs");
+                                   stored_table_node->pruned_column_ids().cend()),
+                    "Expected sorted vector of ColumnIDs");
         std::set_intersection(aligned_pruned_column_ids->cbegin(), aligned_pruned_column_ids->cend(),
                               stored_table_node->pruned_column_ids().cbegin(),
                               stored_table_node->pruned_column_ids().cend(),
@@ -102,10 +103,10 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
   ::apply_to(grouped_stored_table_nodes);
 }
 
-void StoredTableColumnAlignmentRule::apply_to_optimized(const std::vector<std::shared_ptr<AbstractLQPNode>>&
-                                                            lqp_nodes) {
+void StoredTableColumnAlignmentRule::apply_to_optimized(
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_nodes) {
   auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
-  for(const auto& lqp_node : lqp_nodes) {
+  for (const auto& lqp_node : lqp_nodes) {
     ::collect_stored_table_nodes(grouped_stored_table_nodes, lqp_node);
   }
   ::apply_to(grouped_stored_table_nodes);
