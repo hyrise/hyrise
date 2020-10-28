@@ -25,8 +25,18 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
+  // Tell input operators that we want to consume their output
   if (_left_input) mutable_left_input()->register_consumer(*this);
   if (_right_input) mutable_right_input()->register_consumer(*this);
+}
+
+AbstractOperator::~AbstractOperator() {
+  if (!performance_data->executed) {
+    // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
+    // we should take care of it here.
+    if (_left_input) mutable_left_input()->deregister_consumer(*this);
+    if (_right_input) mutable_right_input()->deregister_consumer(*this);
+  }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }

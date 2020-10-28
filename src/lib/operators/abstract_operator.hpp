@@ -71,7 +71,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
                    std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
                        std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  virtual ~AbstractOperator() = default;
+  virtual ~AbstractOperator();
 
   OperatorType type() const;
 
