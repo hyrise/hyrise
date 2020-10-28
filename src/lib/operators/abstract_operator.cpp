@@ -34,8 +34,9 @@ AbstractOperator::~AbstractOperator() {
   if (!performance_data->executed) {
     // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
     // we should take care of it here.
-    if (_left_input) mutable_left_input()->deregister_consumer(*this);
-    if (_right_input) mutable_right_input()->deregister_consumer(*this);
+    // ToDo Error: "Pure Virtual Function Called!"
+//    if (_left_input) mutable_left_input()->deregister_consumer(*this);
+//    if (_right_input) mutable_right_input()->deregister_consumer(*this);
   }
 }
 
@@ -153,7 +154,8 @@ void AbstractOperator::clear_output() {
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
-  stream << name() << " (C.count: " << _consumer_count_max.load() << ")";
+  stream << name();
+//  stream << " (C.count: " << _consumer_count_max.load() << ")";
   return stream.str();
 }
 
