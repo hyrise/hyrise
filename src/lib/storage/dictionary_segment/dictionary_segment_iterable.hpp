@@ -116,10 +116,11 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     SegmentPosition<T> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
-      const auto is_null = (value_id == _null_value_id);
 
       if constexpr (IsNullable) {
-        if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};  
+        if (value_id == _null_value_id) {
+          return SegmentPosition<T>{T{}, true, _chunk_offset};
+        }
       }
 
       if constexpr (std::is_same_v<Dictionary, FixedStringVector>) {
