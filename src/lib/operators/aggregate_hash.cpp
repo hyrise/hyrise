@@ -839,8 +839,6 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
               input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id));
         }
 
-        // using ReceiveType = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const std::optional<ColumnDataType>&, const std::optional<ColumnDataType>>;
-        // const ReceiveType optional_value = accessor->access(row_id.chunk_offset);
         const auto& optional_value = accessor->access(row_id.chunk_offset);
         DebugAssert(optional_value || column_is_nullable, "Only nullable columns should contain optional values");
         if (!optional_value) {
