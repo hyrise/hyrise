@@ -587,7 +587,7 @@ int Console::_load_table(const std::string& args) {
         immutable_chunks.emplace_back(chunk_id);
       }
     }
-    ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
+    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{encoding_type->second});
   }
 
   return ReturnCode::Ok;

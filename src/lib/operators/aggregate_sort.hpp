@@ -110,7 +110,7 @@ class AggregateSort : public AbstractAggregateOperator {
                                       pmr_vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
                                       [[maybe_unused]] const uint64_t aggregate_index,
                                       std::optional<AggregateType>& current_primary_aggregate,
-                                      std::vector<AggregateType>& current_secondary_aggregates,
+                                      SecondaryAggregates<AggregateType>& current_secondary_aggregates,
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;

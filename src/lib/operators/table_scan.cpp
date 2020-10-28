@@ -192,10 +192,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     });
 
     jobs.push_back(job_task);
-    job_task->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;

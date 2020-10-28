@@ -51,7 +51,8 @@ class ChunkEncoderTest : public BaseTest {
 
 TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::RunLength},
+                        SegmentEncodingSpec{EncodingType::Dictionary}};
 
   const auto column_data_types = _table->column_data_types();
   const auto column_count = _table->column_count();
@@ -72,7 +73,8 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
 
 TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+                        SegmentEncodingSpec{EncodingType::Dictionary}};
 
   const auto column_data_types = _table->column_data_types();
   const auto chunk = _table->get_chunk(ChunkID{0u});
@@ -87,19 +89,22 @@ TEST_F(ChunkEncoderTest, UnencodeEncodedSegments) {
   const auto chunk = _table->get_chunk(ChunkID{0u});
 
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::LZ4}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::RunLength},
+                        SegmentEncodingSpec{EncodingType::LZ4}};
   ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
   assert_chunk_encoding(chunk, chunk_encoding_spec);
 
   const auto chunk_unencoding_spec =
-      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Unencoded},
+                        SegmentEncodingSpec{EncodingType::Unencoded}};
   ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_unencoding_spec);
   assert_chunk_encoding(chunk, chunk_unencoding_spec);
 }
 
 TEST_F(ChunkEncoderTest, ThrowOnEncodingAMutableChunk) {
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+                        SegmentEncodingSpec{EncodingType::Dictionary}};
   const auto types = _table->column_data_types();
 
   // Appending a row should add a fourth, mutable chunk.
@@ -120,7 +125,8 @@ TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
   EXPECT_EQ(_table->row_count(), table_scan->get_output()->row_count());
 
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::Dictionary}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Dictionary},
+                        SegmentEncodingSpec{EncodingType::Dictionary}};
   auto chunk = std::const_pointer_cast<Chunk>(table_scan->get_output()->get_chunk(ChunkID{0u}));
   const auto column_data_types = _table->column_data_types();
   EXPECT_THROW(ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec), std::logic_error);
@@ -128,9 +134,12 @@ TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
 
 TEST_F(ChunkEncoderTest, EncodeWholeTable) {
   const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
-      {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
-      {{EncodingType::RunLength}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
-      {{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}}};
+      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+       SegmentEncodingSpec{EncodingType::Dictionary}},
+      {SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::RunLength},
+       SegmentEncodingSpec{EncodingType::Dictionary}},
+      {SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::RunLength},
+       SegmentEncodingSpec{EncodingType::Dictionary}}};
 
   _table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(_table, chunk_encoding_specs);
@@ -159,8 +168,12 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   const auto chunk_ids = std::vector<ChunkID>{ChunkID{0u}, ChunkID{2u}};
 
   const auto chunk_encoding_specs = std::map<ChunkID, ChunkEncodingSpec>{
-      {ChunkID{0u}, {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Unencoded}}},
-      {ChunkID{2u}, {{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::RunLength}}}};
+      {ChunkID{0u},
+       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+        SegmentEncodingSpec{EncodingType::Unencoded}}},
+      {ChunkID{2u},
+       {SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Dictionary},
+        SegmentEncodingSpec{EncodingType::RunLength}}}};
 
   _table->get_chunk(static_cast<ChunkID>(ChunkID{2u}))->finalize();
   ChunkEncoder::encode_chunks(_table, chunk_ids, chunk_encoding_specs);
@@ -172,7 +185,8 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   }
 
   const auto unencoded_chunk_spec =
-      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Unencoded},
+                        SegmentEncodingSpec{EncodingType::Unencoded}};
 
   assert_chunk_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
@@ -198,17 +212,16 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
 
 TEST_F(ChunkEncoderTest, ReencodingTable) {
   // Encoding specifications which will be applied one after another to the chunk.
-  const auto chunk_encoding_specs =
-      std::vector<ChunkEncodingSpec>{{{EncodingType::Unencoded},
-                                      {EncodingType::RunLength},
-                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-                                     {{EncodingType::Unencoded},
-                                      {EncodingType::RunLength},
-                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-                                     {{EncodingType::Dictionary},
-                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                                      {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
-                                     {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
+  const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
+      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+      {SegmentEncodingSpec{EncodingType::Dictionary},
+       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
+      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Unencoded},
+       SegmentEncodingSpec{EncodingType::Unencoded}}};
   const auto column_data_types = _table->column_data_types();
 
   _table->last_chunk()->finalize();

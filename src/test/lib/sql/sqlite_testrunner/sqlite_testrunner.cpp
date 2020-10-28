@@ -69,7 +69,7 @@ void SQLiteTestRunner::SetUp() {
     for (auto const& [table_name, table_cache_entry] : unencoded_table_cache) {
       auto table = load_table(table_cache_entry.filename, CHUNK_SIZE);
 
-      auto chunk_encoding_spec = create_compatible_chunk_encoding_spec(*table, encoding_type);
+      auto chunk_encoding_spec = create_compatible_chunk_encoding_spec(*table, SegmentEncodingSpec{encoding_type});
       ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 
       encoded_table_cache.emplace(table_name,

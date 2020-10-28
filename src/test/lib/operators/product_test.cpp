@@ -17,7 +17,7 @@ class OperatorsProductTest : public BaseTest {
  public:
   std::shared_ptr<opossum::TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c;
 
-  virtual void SetUp() {
+  void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", 5));
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/float.tbl", 2));
     _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", 2));

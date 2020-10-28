@@ -54,7 +54,14 @@ void Worker::operator()() {
 }
 
 void Worker::_work() {
-  auto task = _queue->pull();
+  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
+  auto task = std::shared_ptr<AbstractTask>{};
+  if (_next_task) {
+    task = std::move(_next_task);
+    _next_task = nullptr;
+  } else {
+    task = _queue->pull();
+  }
 
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
@@ -90,6 +97,27 @@ void Worker::_work() {
   _num_finished_tasks++;
 }
 
+void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
+  DebugAssert(&*get_this_thread_worker() == this,
+              "execute_next must be called from the same thread that the worker works in");
+  if (!_next_task) {
+    const auto successfully_enqueued = task->try_mark_as_enqueued();
+    if (!successfully_enqueued) {
+      // The task was already enqueued. This can happen if
+      //   * two tasks ARE TO BE scheduled via AbstractScheduler::schedule where one task is the other one's successor
+      //   * the first one is scheduled and executed very quickly before the second one reaches the schedule method
+      //   * AbstractScheduler::schedule then looks at the second task and realizes that it is ready to be enqueued
+      //   * ... and both the scheduler and this method try to enqueue it.
+      // If successfully_enqueued is false, we lost, and the task is already in one of the task queues.
+      return;
+    }
+    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
+    _next_task = task;
+  } else {
+    _queue->push(task, static_cast<uint32_t>(SchedulePriority::High));
+  }
+}
+
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
 void Worker::join() {
@@ -98,6 +126,22 @@ void Worker::join() {
 }
 
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
+
+void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+  auto tasks_completed = [&tasks]() {
+    // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
+    for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
+      if (!(*it)->is_done()) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  while (!tasks_completed()) {
+    _work();
+  }
+}
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT

@@ -178,7 +178,7 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
 
     // Range filters are only available for arithmetic (non-string) types.
-    if constexpr (std::is_arithmetic_v<ColumnDataType>) {  // NOLINT
+    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (segment_statistics.range_filter) {
         if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;

@@ -21,7 +21,7 @@ namespace opossum {
 
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
-  void SetUp() {
+  void SetUp() override {
     Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");

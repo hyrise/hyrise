@@ -69,7 +69,7 @@ size_t RunLengthSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalcu
       sizeof(*this) + _null_values->capacity() / CHAR_BIT +
       _end_positions->capacity() * sizeof(typename decltype(_end_positions)::element_type::value_type);
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_values, mode);
   }
   return common_elements_size + _values->capacity() * sizeof(typename decltype(_values)::element_type::value_type);

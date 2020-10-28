@@ -114,16 +114,14 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
   // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-
-  // Run the PredicateSplitUpRule after the ColumnPruningRule, as it may create UNION ALLs which are not handled in the
-  // column pruning rule yet.
-  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 

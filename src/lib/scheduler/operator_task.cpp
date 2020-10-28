@@ -20,17 +20,17 @@ std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
 }
 
-std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
+std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op) {
-  std::vector<std::shared_ptr<OperatorTask>> tasks;
-  std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
+  std::vector<std::shared_ptr<AbstractTask>> tasks;
+  std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>> task_by_op;
   _add_tasks_from_operator(op, tasks, task_by_op);
   return tasks;
 }
 
-std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
-    const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
-    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op) {
+std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
+    const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
+    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 
