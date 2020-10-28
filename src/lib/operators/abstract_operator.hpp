@@ -129,10 +129,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
-  // We track consumers to determine when to flush the operator's results.
-  std::atomic<u_short> _consumer_count = 0;
-  std::atomic<u_short> _consumer_count_max = 0;
-
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -169,6 +165,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
+
+  // We track the number of consuming operators to determine when to flush results.
+  std::atomic<u_short> _consumer_count = 0;
+  std::atomic<u_short> _consumer_count_max = 0; // for debugging only
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

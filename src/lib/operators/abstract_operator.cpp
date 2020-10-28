@@ -31,33 +31,40 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 }
 
 AbstractOperator::~AbstractOperator() {
-  if (!performance_data->executed) {
+  bool left_has_executed = !_left_input || _left_input->performance_data->executed;
+  bool right_has_executed = !_right_input || _right_input->performance_data->executed;
+  Assert(performance_data->executed || !left_has_executed || !right_has_executed), "Operator did not execute "
+"unexpectedly");
+//  if (!performance_data->executed) {
     // Normally, we deregister from input operators after finishing execution. However, if that did not happen,
     // we should take care of it here.
     // ToDo Error: "Pure Virtual Function Called!"
 //    if (_left_input) mutable_left_input()->deregister_consumer(*this);
 //    if (_right_input) mutable_right_input()->deregister_consumer(*this);
-  }
+//  }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-  DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
-  DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
-  // TODO Print:
   if (_output && performance_data->executed) {
-    if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – results available" << std::endl;
+    if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – Reuse output" << std::endl;
     return;
   }
-  if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – execute" << std::endl;
-//  DebugAssert(!performance_data->executed, "Operator has already been executed");
+  if constexpr (HYRISE_DEBUG) {
+    Assert(!_left_input || _left_input->performance_data->executed, "Left input has not yet been executed");
+    Assert(!_right_input || _right_input->performance_data->executed, "Right input has not yet been executed");
+    Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
+    Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
+
+    std::cout << this->name() << " – " << this << " – Execute" << std::endl;
+    Assert(!performance_data->executed, "Operator has already been executed");
+  }
 
   Timer performance_timer;
 
   auto transaction_context = this->transaction_context();
-
   if (transaction_context) {
     /**
      * Do not execute Operators if transaction has been aborted.
