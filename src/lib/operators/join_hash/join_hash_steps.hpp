@@ -365,9 +365,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         output_bloom_filter |= local_output_bloom_filter;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return radix_container;
 }
@@ -442,10 +441,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
-      jobs.back()->schedule();
     }
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, shrink_to_fit is called above.
   if (radix_bits == 0) hash_tables[0]->shrink_to_fit();
@@ -535,9 +533,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         ++output_idx;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -550,9 +547,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
               null_values_as_char[output_partition_idx][element_idx];
         }
       }));
-      jobs.back()->schedule();
     }
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   return output;
@@ -706,10 +702,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
       pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -752,14 +747,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
               // Could be either skipped or NULL
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if (null_values[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
@@ -791,7 +786,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
@@ -799,7 +794,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;
@@ -817,10 +812,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
       pos_lists[partition_idx] = std::move(pos_list_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;

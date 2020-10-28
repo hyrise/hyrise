@@ -79,6 +79,7 @@ add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
+add_subdirectory(robin-map)
 
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
@@ -182,18 +183,6 @@ target_compile_options(zstd PRIVATE -fPIC)
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
-
-add_library(robin_map INTERFACE)
-target_include_directories(robin_map SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl)
-target_sources(
-  robin_map
-  INTERFACE
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_growth_policy.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_hash.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_map.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/robin-map/include/tsl/robin_set.h
-)
 
 if(NOT APPLE)
   # Only configure jemalloc for non-Apple builds, as we cannot properly replace the allocator on Mac using static linking:

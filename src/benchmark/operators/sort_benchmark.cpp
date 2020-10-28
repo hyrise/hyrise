@@ -24,9 +24,9 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
 
   const std::vector<DataType> column_data_types = {NUM_COLUMNS, data_type};
 
-  std::vector<ColumnSpecification> column_specifications =
-      std::vector(NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE),
-                                                   data_type, {EncodingType::Unencoded}, std::nullopt, null_ratio));
+  std::vector<ColumnSpecification> column_specifications = std::vector(
+      NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE), data_type,
+                                       SegmentEncodingSpec{EncodingType::Unencoded}, std::nullopt, null_ratio));
 
   return table_generator->generate_table(column_specifications, row_count);
 }

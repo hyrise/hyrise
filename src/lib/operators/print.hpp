@@ -21,15 +21,18 @@ enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBounda
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out = std::cout,
-                 PrintFlags flags = PrintFlags::None);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags = PrintFlags::None,
+                 std::ostream& out = std::cout);
 
   const std::string& name() const override;
 
-  static void print(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None,
+  static void print(const std::shared_ptr<const Table>& table, const PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);
-  static void print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags flags = PrintFlags::None,
+  static void print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);
+
+  // Convenience method to print the result of an SQL query
+  static void print(const std::string& sql, const PrintFlags flags = PrintFlags::None, std::ostream& out = std::cout);
 
  protected:
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max,
@@ -42,9 +45,8 @@ class Print : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  // stream to print the result
-  std::ostream& _out;
   PrintFlags _flags;
+  std::ostream& _out;
 
   static constexpr uint16_t _min_cell_width = 8;
   static constexpr uint16_t _max_cell_width = 20;
