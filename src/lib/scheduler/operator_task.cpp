@@ -95,18 +95,6 @@ void OperatorTask::_on_execute() {
     context->rollback(RollbackReason::Conflict);
   }
 
-  // Get rid of temporary tables that are not needed anymore
-  // Because `clear_output` is only called by the successive OperatorTasks, we can be sure that no one cleans up the
-  // root (i.e., the final result)
-  for (const auto& weak_predecessor : predecessors()) {
-    const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
-    DebugAssert(predecessor, "Predecessor of OperatorTask is not an OperatorTask itself");
-
-    // If someone else still holds a shared_ptr to the table (e.g., a ReferenceSegment pointing to a materialized
-    // temporary table), it will not yet get deleted
-    if (predecessor->get_operator()->consumer_count() == 0) predecessor->get_operator()->clear_output();
-  }
-
   if constexpr (HYRISE_DEBUG) {
     const auto walltime = performance_timer.lap();
     std::cout << _op->name() << _op

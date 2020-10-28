@@ -189,6 +189,7 @@ void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) 
   _consumer_count--;
   if (_consumer_count == 0) {
     std::cout << "Last consumer " << consumer_op.name() << " deregistered from " << this->name() << std::endl;
+    clear_output();
   }
 }
 
