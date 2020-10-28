@@ -82,7 +82,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   std::vector<std::shared_ptr<Chunk>> output_chunks;
   output_chunks.reserve(chunk_count);
   std::mutex output_mutex;
@@ -126,7 +126,6 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
           _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                            output_mutex);
         }));
-        jobs.back()->schedule();
 
         // Prepare next job
         job_start_chunk_id = job_end_chunk_id + 1;
@@ -136,7 +135,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     job_end_chunk_id++;
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

@@ -106,6 +106,12 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   void wait_for_all_tasks() override;
 
+  // Number of groups for _group_tasks
+  static constexpr auto NUM_GROUPS = 10;
+
+ protected:
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
+
  private:
   std::atomic<TaskID> _task_counter{TaskID{0}};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
