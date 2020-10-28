@@ -152,7 +152,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
    */
   template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    if (!position_filter) {
+    if (!position_filter || dynamic_cast<const EntireChunkPosList*>(&*position_filter)) {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");

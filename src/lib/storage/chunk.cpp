@@ -224,7 +224,7 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 }
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
-  Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
+  Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
   // Currently, we assume that set_individually_sorted_by is called only once at most.
   // As such, there should be no existing sorting and the new sorting should contain at least one column.
   // Feel free to remove this assertion if necessary.

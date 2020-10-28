@@ -71,6 +71,10 @@ class BenchmarkRunner : public Noncopyable {
   // Converts the result of a SQL query into a JSON object
   static nlohmann::json _sql_to_json(const std::string& sql);
 
+  // Writes the current meta_segments table into the benchmark_segments_log tables. The `moment` parameter can be used
+  // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
+  void _snapshot_segment_access_counters(const std::string& moment = "");
+
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
@@ -97,6 +101,8 @@ class BenchmarkRunner : public Noncopyable {
   std::atomic_uint _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
+
+  int _snapshot_id{0};
 };
 
 }  // namespace opossum

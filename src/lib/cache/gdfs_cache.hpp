@@ -37,7 +37,7 @@ class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
   explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY)
       : AbstractCache<Key, Value, Hash, KeyEqual>(capacity), _inflation(0.0) {}
 
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     if (this->_capacity == 0) return;
     auto it = _map.find(key);
@@ -68,7 +68,7 @@ class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
     _map[key] = handle;
   }
 
-  std::optional<Value> try_get(const Key& query) {
+  std::optional<Value> try_get(const Key& query) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(query);
     if (it == _map.end()) return std::nullopt;
@@ -81,23 +81,23 @@ class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
     return entry.value;
   }
 
-  bool has(const Key& key) const {
+  bool has(const Key& key) const final {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     return _map.contains(key);
   }
 
-  size_t size() const {
+  size_t size() const final {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     return _map.size();
   }
 
-  void clear() {
+  void clear() final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     _map.clear();
     _queue.clear();
   }
 
-  void resize(size_t capacity) {
+  void resize(size_t capacity) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     while (_queue.size() > capacity) {
       _evict();
@@ -105,7 +105,7 @@ class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
     this->_capacity = capacity;
   }
 
-  std::unordered_map<Key, SnapshotEntry> snapshot() const {
+  std::unordered_map<Key, SnapshotEntry> snapshot() const final {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     std::unordered_map<Key, SnapshotEntry> map_copy(_map.size());
     for (const auto& [key, entry] : _map) {
@@ -135,7 +135,7 @@ class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;
 
-  void _evict() {
+  void _evict() final {
     auto top = _queue.top();
 
     _inflation = top.priority;
