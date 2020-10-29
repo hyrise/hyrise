@@ -31,10 +31,12 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 }
 
 AbstractOperator::~AbstractOperator() {
-  bool left_has_executed = !_left_input || _left_input->performance_data->executed;
-  bool right_has_executed = !_right_input || _right_input->performance_data->executed;
-  Assert(performance_data->executed || !(left_has_executed && right_has_executed),
-         "Operator did not execute which is unexpected.");
+  if constexpr (HYRISE_DEBUG) {
+    bool left_has_executed = !_left_input || _left_input->performance_data->executed;
+    bool right_has_executed = !_right_input || _right_input->performance_data->executed;
+    Assert(performance_data->executed || !(left_has_executed && right_has_executed),  // fails at the end of TPC-H Q11
+           "Operator did not execute which is unexpected.");
+  }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
