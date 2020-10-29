@@ -77,8 +77,12 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
   NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
+  // Convenience constructor to allow the same instantiation of NonNullSegmentPositions and SegmentPositions
+  NonNullSegmentPosition(const T& value, const bool, const ChunkOffset& chunk_offset)
+      : _value{value}, _chunk_offset{chunk_offset} {}
+
   const T& value() const override { return _value; }
-  bool is_null() const override { return false; }
+  constexpr bool is_null() const override { return false; }
   ChunkOffset chunk_offset() const override { return _chunk_offset; }
 
  private:

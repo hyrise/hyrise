@@ -20,8 +20,7 @@ template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                             const bool segment_contains_null_values = false);
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
@@ -83,15 +82,12 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ValueID null_value_id() const final;
 
-  bool is_nullable() const final;
-
   /**@}*/
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
-  const bool _contains_null_values;
 };
 
 }  // namespace opossum

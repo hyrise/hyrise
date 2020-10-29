@@ -67,7 +67,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     auto uncompressed_attribute_vector = pmr_vector<uint32_t>{null_values.size(), allocator};
     auto values_iter = dense_values.cbegin();
-    auto segment_contains_null_values = false;
+    auto segment_contains_no_null_values = true;
     const auto null_values_size = null_values.size();
     for (auto current_position = size_t{0}; current_position < null_values_size; ++current_position) {
       if (!null_values[current_position]) {
@@ -76,7 +76,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
         ++values_iter;
       } else {
         uncompressed_attribute_vector[current_position] = null_value_id;
-        segment_contains_null_values = true;
+        segment_contains_no_null_values = false;
       }
     }
 
@@ -93,10 +93,14 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length, allocator);
-      return std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary, compressed_attribute_vector, segment_contains_null_values);
+      auto encoded_segment = std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary, compressed_attribute_vector);
+      encoded_segment->set_contains_no_null_values(segment_contains_no_null_values);
+      return encoded_segment;
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
-      return std::make_shared<DictionarySegment<T>>(dictionary, compressed_attribute_vector, segment_contains_null_values);
+      auto encoded_segment = std::make_shared<DictionarySegment<T>>(dictionary, compressed_attribute_vector);
+      encoded_segment->set_contains_no_null_values(segment_contains_no_null_values);
+      return encoded_segment;
     }
   }
 

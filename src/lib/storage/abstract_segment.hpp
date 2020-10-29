@@ -34,9 +34,14 @@ class AbstractSegment : private Noncopyable {
   // such as strings who memory usage is implementation defined
   virtual size_t memory_usage(const MemoryUsageCalculationMode mode) const = 0;
 
+  // returns true if segment does not contain any null values 
+  bool contains_no_null_values() const;
+  void set_contains_no_null_values(const bool contains_no_null_values);
+
   mutable SegmentAccessCounter access_counter;
 
  private:
   const DataType _data_type;
+  bool _contains_no_null_values = false;
 };
 }  // namespace opossum

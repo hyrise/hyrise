@@ -13,13 +13,11 @@ namespace opossum {
 
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                        const bool segment_contains_null_values)
+                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
-      _decompressor{_attribute_vector->create_base_decompressor()},
-      _contains_null_values{segment_contains_null_values} {
+      _decompressor{_attribute_vector->create_base_decompressor()} {
   // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
@@ -124,11 +122,6 @@ std::shared_ptr<const BaseCompressedVector> DictionarySegment<T>::attribute_vect
 template <typename T>
 ValueID DictionarySegment<T>::null_value_id() const {
   return ValueID{static_cast<ValueID::base_type>(_dictionary->size())};
-}
-
-template <typename T>
-bool DictionarySegment<T>::is_nullable() const {
-  return _contains_null_values;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionarySegment);

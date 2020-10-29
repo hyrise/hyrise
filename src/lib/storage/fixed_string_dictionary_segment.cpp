@@ -14,13 +14,11 @@ namespace opossum {
 template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
-    const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-    const bool segment_contains_null_values)
+    const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
-      _decompressor{_attribute_vector->create_base_decompressor()},
-      _contains_null_values{segment_contains_null_values} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -125,11 +123,6 @@ std::shared_ptr<const BaseCompressedVector> FixedStringDictionarySegment<T>::att
 template <typename T>
 ValueID FixedStringDictionarySegment<T>::null_value_id() const {
   return ValueID{static_cast<ValueID::base_type>(_dictionary->size())};
-}
-
-template <typename T>
-bool FixedStringDictionarySegment<T>::is_nullable() const {
-  return _contains_null_values;
 }
 
 template class FixedStringDictionarySegment<pmr_string>;
