@@ -148,34 +148,47 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
-    auto& result =
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                          RowID{chunk_id, chunk_offset});
+  
+  // segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+  segment_with_iterators<ColumnDataType>(abstract_segment, [&](auto it, const auto end) {
+    using SegmentPositionType = typename decltype(it)::value_type;
 
-    /**
-    * If the value is NULL, the current aggregate value does not change.
-    */
-    if (!position.is_null()) {
-      if constexpr (function == AggregateFunction::CountDistinct) {
-        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
-        result.ensure_distinct_values_initialized(context.buffer);
-        result.distinct_values().emplace(position.value());
-      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        result.ensure_secondary_aggregates_initialized(context.buffer);
-        aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
-      } else {
-        aggregator(position.value(), result.current_primary_aggregate);
+    // That's the type of the type ... what is the correct name here?
+    using SegmentPositionType2 = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const SegmentPositionType&, const SegmentPositionType>;
+
+    while (it != end) {
+      // const SegmentPositionType& position = *it;
+      const SegmentPositionType2 position = *it;
+
+      auto& result =
+          get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                            RowID{chunk_id, chunk_offset});
+
+      /**
+      * If the value is NULL, the current aggregate value does not change.
+      */
+      if (!position.is_null()) {
+        if constexpr (function == AggregateFunction::CountDistinct) {
+          // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
+          result.ensure_distinct_values_initialized(context.buffer);
+          result.distinct_values().emplace(position.value());
+        } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+          result.ensure_secondary_aggregates_initialized(context.buffer);
+          aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
+        } else {
+          aggregator(position.value(), result.current_primary_aggregate);
+        }
+
+        if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
+                      function == AggregateFunction::StandardDeviationSample) {  // NOLINT
+          // Increase the counter of non-NULL values only for aggregation functions that use it.
+          ++result.aggregate_count;
+        }
       }
 
-      if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
-                    function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        // Increase the counter of non-NULL values only for aggregation functions that use it.
-        ++result.aggregate_count;
-      }
+      ++chunk_offset;
+      ++it;
     }
-
-    ++chunk_offset;
   });
 }
 
@@ -249,30 +262,43 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-                const auto int_to_uint = [](const int32_t value) {
-                  // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
-                  // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
-                  // negative itself) to get a positive number.
-                  const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
-                  DebugAssert(shifted_value >= 0, "Type conversion failed");
-                  return static_cast<uint64_t>(shifted_value);
-                };
+              // using ReceiveType = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const SegmentPosition<ColumnDataType>&, const SegmentPosition<ColumnDataType>>;
+              // segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+              segment_with_iterators<ColumnDataType>(*abstract_segment, [&](auto it, const auto end) {
+                using SegmentPositionType = typename decltype(it)::value_type;
 
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0;
+                // That's the type of the type ... what is the correct name here?
+                using SegmentPositionType2 = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const SegmentPositionType&, const SegmentPositionType>;
+
+                while (it != end) {
+                  // const SegmentPositionType& position = *it;
+                  const SegmentPositionType2 position = *it;
+
+                  const auto int_to_uint = [](const int32_t value) {
+                    // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                    // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                    // negative itself) to get a positive number.
+                    const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                    DebugAssert(shifted_value >= 0, "Type conversion failed");
+                    return static_cast<uint64_t>(shifted_value);
+                  };
+
+                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                    if (position.is_null()) {
+                      keys_per_chunk[chunk_id][chunk_offset] = 0;
+                    } else {
+                      keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
+                    }
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
+                    if (position.is_null()) {
+                      keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
+                    } else {
+                      keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
+                    }
                   }
-                } else {
-                  if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
-                  }
+                  ++chunk_offset;
+                  ++it;
                 }
-                ++chunk_offset;
               });
             }
           } else {
@@ -303,90 +329,101 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-                if (position.is_null()) {
-                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0u;
+              segment_with_iterators<ColumnDataType>(*abstract_segment, [&](auto it, const auto end) {
+                using SegmentPositionType = typename decltype(it)::value_type;
+
+                // That's the type of the type ... what is the correct name here?
+                using SegmentPositionType2 = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const SegmentPositionType&, const SegmentPositionType>;
+
+                while (it != end) {
+                  // const SegmentPositionType& position = *it;
+                  const SegmentPositionType2 position = *it;
+
+                  if (position.is_null()) {
+                    if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                      keys_per_chunk[chunk_id][chunk_offset] = 0u;
+                    } else {
+                      keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+                    }
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
-                  }
-                } else {
-                  // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
-                  // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
-                  // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
-                  // ID generation was applied and we need to generate the ID using the value->ID map.
-                  auto id = std::numeric_limits<AggregateKeyEntry>::max();
+                    // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
+                    // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
+                    // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
+                    // ID generation was applied and we need to generate the ID using the value->ID map.
+                    auto id = std::numeric_limits<AggregateKeyEntry>::max();
 
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-                    const auto& string = position.value();
-                    if (string.size() < 5) {
-                      static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
+                    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+                      const auto& string = position.value();
+                      if (string.size() < 5) {
+                        static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
 
-                      const auto char_to_uint = [](const char in, const uint bits) {
-                        // chars may be signed or unsigned. For the calculation as described below, we need signed
-                        // chars.
-                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
-                      };
+                        const auto char_to_uint = [](const char in, const uint bits) {
+                          // chars may be signed or unsigned. For the calculation as described below, we need signed
+                          // chars.
+                          return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
+                        };
 
-                      switch (string.size()) {
-                          // Optimization for short strings (see above):
-                          //
-                          // NULL:              0
-                          // str.length() == 0: 1
-                          // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
-                          // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
-                          // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
-                          // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
-                          // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
-                          //
-                          // This could be extended to longer strings if the size of the input table (and thus the
-                          // maximum number of distinct strings) is taken into account. For now, let's not make it even
-                          // more complicated.
+                        switch (string.size()) {
+                            // Optimization for short strings (see above):
+                            //
+                            // NULL:              0
+                            // str.length() == 0: 1
+                            // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
+                            // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
+                            // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
+                            // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
+                            // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
+                            //
+                            // This could be extended to longer strings if the size of the input table (and thus the
+                            // maximum number of distinct strings) is taken into account. For now, let's not make it even
+                            // more complicated.
 
-                        case 0: {
-                          id = uint64_t{1};
-                        } break;
+                          case 0: {
+                            id = uint64_t{1};
+                          } break;
 
-                        case 1: {
-                          id = uint64_t{2} + char_to_uint(string[0], 0);
-                        } break;
+                          case 1: {
+                            id = uint64_t{2} + char_to_uint(string[0], 0);
+                          } break;
 
-                        case 2: {
-                          id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
-                        } break;
+                          case 2: {
+                            id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          } break;
 
-                        case 3: {
-                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
-                               char_to_uint(string[0], 0);
-                        } break;
+                          case 3: {
+                            id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
+                                 char_to_uint(string[0], 0);
+                          } break;
 
-                        case 4: {
-                          id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
-                               char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
-                        } break;
+                          case 4: {
+                            id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
+                                 char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          } break;
+                        }
                       }
+                    }
+
+                    if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
+                      // Could not take the shortcut above, either because we don't have a string or because it is too
+                      // long
+                      auto inserted = id_map.try_emplace(position.value(), id_counter);
+
+                      id = inserted.first->second;
+
+                      // if the id_map didn't have the value as a key and a new element was inserted
+                      if (inserted.second) ++id_counter;
+                    }
+
+                    if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                      keys_per_chunk[chunk_id][chunk_offset] = id;
+                    } else {
+                      keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
                     }
                   }
 
-                  if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
-                    // Could not take the shortcut above, either because we don't have a string or because it is too
-                    // long
-                    auto inserted = id_map.try_emplace(position.value(), id_counter);
-
-                    id = inserted.first->second;
-
-                    // if the id_map didn't have the value as a key and a new element was inserted
-                    if (inserted.second) ++id_counter;
-                  }
-
-                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = id;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
-                  }
+                  ++chunk_offset;
+                  ++it;
                 }
-
-                ++chunk_offset;
               });
             }
           }
