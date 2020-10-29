@@ -53,7 +53,7 @@ void AbstractOperator::execute() {
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    Assert(!performance_data->executed, "Operator has already been executed"); // fails for TPC-DS Q9
+    Assert(!performance_data->executed, "Operator has already been executed"); // TPC-DS Q9 Error 1
   }
 
   Timer performance_timer;
@@ -178,7 +178,7 @@ void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
 }
 
 void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) {
-  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
+  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid."); // TPC-DS Q9 Error 2
   _consumer_count--;
   std::cout << this->name() << "_" << this << " -- " << consumer_op.name() << "_" << &consumer_op
             << " has deregistered -> " << _consumer_count.load() << " consumers" << std::endl;
