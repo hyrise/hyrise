@@ -5,6 +5,9 @@
 
 #include "constant_mappings.hpp"
 #include "import_export/csv/csv_writer.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 
@@ -33,19 +36,23 @@ void TableFeatureExporter::_export_table_data(std::shared_ptr<const CalibrationT
 }
 
 void TableFeatureExporter::_export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
-  auto const table = table_wrapper->get_table();
+  const auto& table = table_wrapper->get_table();
   int column_count = table->column_count();
   const auto column_names = table->column_names();
 
   for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto table_name = pmr_string{table_wrapper->get_name()};
     const auto column_name = pmr_string{table->column_name(column_id)};
-    const auto column_data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    const auto column_data_type = table->column_data_type(column_id);
+    const auto column_data_type_string = pmr_string{data_type_to_string.left.at(column_data_type)};
     bool sorted_ascending = true;
     bool sorted_descending = true;
     auto table_sorted = pmr_string{"No"};
+    int64_t distinct_value_count = -1;
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      if (!(sorted_ascending || sorted_descending)) break;
+
       const auto chunk = table->get_chunk(chunk_id);
       const auto& sort_definitions = chunk->individually_sorted_by();
       if (sort_definitions.empty()) {
@@ -70,7 +77,18 @@ void TableFeatureExporter::_export_column_data(std::shared_ptr<const Calibration
     if (sorted_ascending) table_sorted = pmr_string{"Ascending"};
     if (sorted_descending) table_sorted = pmr_string{"Descending"};
 
-    _tables.at(TableFeatureExportType::COLUMN)->append({table_name, column_name, column_data_type, table_sorted});
+    const auto table_statistics = table->table_statistics();
+    resolve_data_type(column_data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
+      const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+          table_statistics->column_statistics[column_id]);
+      const auto histogram = column_statistics->histogram;
+      if (histogram) distinct_value_count = static_cast<int64_t>(histogram->total_distinct_count());
+    });
+
+    _tables.at(TableFeatureExportType::COLUMN)
+        ->append({table_name, column_name, column_data_type_string, table_sorted, distinct_value_count});
   }
 }
 

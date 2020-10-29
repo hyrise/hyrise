@@ -93,6 +93,8 @@ class OperatorFeatureExporter {
                                                      {"INPUT_COLUMNS_RIGHT", DataType::Int, false},
                                                      {"ESTIMATED_INPUT_ROWS_LEFT", DataType::Float, false},
                                                      {"ESTIMATED_INPUT_ROWS_RIGHT", DataType::Float, false},
+                                                     {"ESTIMATED_LEFT_DISTINCT_VALUES", DataType::Long, false},
+                                                     {"ESTIMATED_RIGHT_DISTINCT_VALUES", DataType::Long, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"OUTPUT_COLUMNS", DataType::Int, false},
                                                      {"ESTIMATED_CARDINALITY", DataType::Float, false},
@@ -115,7 +117,7 @@ class OperatorFeatureExporter {
   const std::string _output_path;
   const std::string _join_output_path;
   const std::string _join_stages_output_path;
-  std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator = std::make_shared<CardinalityEstimator>();
+  std::shared_ptr<CardinalityEstimator> _cardinality_estimator = std::make_shared<CardinalityEstimator>();
 
   int32_t _current_join_id{0};
   mutable std::mutex _mutex;

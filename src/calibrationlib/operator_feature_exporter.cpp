@@ -13,6 +13,9 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/pqp_utils.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -25,7 +28,7 @@ OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) {
   std::lock_guard<std::mutex> lock(_mutex);
-  _cardinality_estimator = _cardinality_estimator->new_instance();
+  _cardinality_estimator = std::make_shared<CardinalityEstimator>();
   visit_pqp(op, [&](const auto& node) {
     Assert(op->performance_data->has_output, "Expected operator to have been executed.");
     _export_operator(node);
@@ -135,6 +138,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   pmr_string right_column_name{};
   pmr_string left_column_type{};
   pmr_string right_column_type{};
+  int64_t left_distinct_values = -1;
+  int64_t right_distinct_values = -1;
 
   const auto node = op->lqp_node;
   const auto join_node = static_pointer_cast<const JoinNode>(node);
@@ -172,6 +177,24 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_column_type = right_table_column_information.column_type;
   }
 
+  const auto column_ids = operator_predicate.column_ids;
+  const auto left_input_statistics = _cardinality_estimator->estimate_statistics(node->left_input());
+  const auto right_input_statistics = _cardinality_estimator->estimate_statistics(node->right_input());
+  const auto left_data_type = left_input_statistics->column_data_type(column_ids.first);
+
+  resolve_data_type(left_data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    const auto left_column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+        left_input_statistics->column_statistics[column_ids.first]);
+    const auto right_column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+        right_input_statistics->column_statistics[column_ids.second]);
+    const auto left_histogram = left_column_statistics->histogram;
+    const auto right_histogram = right_column_statistics->histogram;
+    if (left_histogram) left_distinct_values = static_cast<int64_t>(left_histogram->total_distinct_count());
+    if (right_histogram) right_distinct_values = static_cast<int64_t>(right_histogram->total_distinct_count());
+  });
+
   const auto mode = op->mode();
   const auto operator_flipped_inputs = static_cast<int32_t>(
       op->type() == OperatorType::JoinHash &&
@@ -188,6 +211,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                 operator_info.right_input_columns,
                                                 operator_info.estimated_left_input_rows,
                                                 operator_info.estimated_right_input_rows,
+                                                left_distinct_values,
+                                                right_distinct_values,
                                                 operator_info.output_rows,
                                                 operator_info.output_columns,
                                                 operator_info.estimated_cardinality,
@@ -206,17 +231,18 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   if (operator_predicate.is_flipped()) {
     output_row[7] = operator_info.estimated_right_input_rows;
     output_row[8] = operator_info.estimated_left_input_rows;
-    output_row[13] = right_table_name;
-    output_row[14] = right_column_name;
-    output_row[15] = right_column_type;
-    output_row[16] = left_table_name;
-    output_row[17] = left_column_name;
-    output_row[18] = left_column_type;
+    output_row[9] = right_distinct_values;
+    output_row[10] = left_distinct_values;
+    output_row[15] = right_table_name;
+    output_row[16] = right_column_name;
+    output_row[17] = right_column_type;
+    output_row[18] = left_table_name;
+    output_row[19] = left_column_name;
+    output_row[20] = left_column_type;
   }
 
   _join_output_table->append(output_row);
   ++_current_join_id;
-  //}
 }
 
 void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetTable>& op) {

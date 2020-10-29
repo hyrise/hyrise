@@ -33,7 +33,7 @@ int main() {
   const bool GENERATE_FOREIGN_KEY_TABLES = true;
 
   // test data generation settings
-  constexpr bool GENERATE_TEST_DATA = false;
+  constexpr bool GENERATE_TEST_DATA = true;
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
@@ -118,7 +118,6 @@ int main() {
   }
 
   table_exporter.flush();
-
   const auto export_duration =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - export_start).count();
   std::cout << "- Exported training data in " << export_duration << " s" << std::endl;
