@@ -18,13 +18,10 @@ CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGenera
         for (const auto& column_data_distribution : config->column_data_distributions) {
           std::stringstream column_name_stringstream;
           column_name_stringstream << data_type << "_" << encoding_type << "_" << column_count;
-
           auto column_name = column_name_stringstream.str();
-
           _column_data_distributions.emplace_back(column_data_distribution);
           _column_specs.emplace_back(
               ColumnSpecification(column_data_distribution, data_type, encoding_type, column_name));
-
           column_count++;
         }
       }  // if encoding is supported
@@ -35,10 +32,20 @@ CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGenera
 }
 
 std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::generate() const {
-  auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
-  table_wrappers.reserve(_config->chunk_sizes.size() * _config->row_counts.size());
+  auto min_table_count = _config->chunk_sizes.size() * _config->row_counts.size();
+  if (_config->generate_sorted_tables) {
+    min_table_count += min_table_count * _column_data_distributions.size() / _config->column_data_distributions.size();
+  }
 
-  auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>(min_table_count);
+  const auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  int max_distinct_values{0};
+  std::for_each(_column_data_distributions.begin(), _column_data_distributions.end(),
+                [&max_distinct_values](auto& column_distribution) {
+                  const auto value_range =
+                      static_cast<int>(column_distribution.max_value - column_distribution.min_value);
+                  if (value_range > max_distinct_values) max_distinct_values = value_range;
+                });
 
   for (const auto chunk_size : _config->chunk_sizes) {
     for (const auto row_count : _config->row_counts) {
@@ -54,7 +61,8 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
         table_wrappers.emplace_back(_generate_sorted_table(calibration_table_wrapper));
       }
 
-      if (_config->generate_foreign_key_tables && chunk_size <= _foreign_key_threshold) {
+      if (_config->generate_foreign_key_tables && row_count <= _config->foreign_key_threshold &&
+          row_count > max_distinct_values) {
         table_wrappers.emplace_back(_generate_foreign_key_table(calibration_table_wrapper, table_generator));
       }
     }
@@ -127,7 +135,7 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   std::vector<ColumnDataDistribution> data_distributions;
   std::vector<ColumnSpecification> column_specs;
 
-  for (auto column_id = ColumnID{0}; column_id <= table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     auto data_distribution = _column_data_distributions.at(column_id);
     data_distribution.max_value = table_size;
     data_distributions.emplace_back(data_distribution);

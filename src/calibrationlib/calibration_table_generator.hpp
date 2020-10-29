@@ -19,6 +19,7 @@ struct TableGeneratorConfig {
   std::set<int> row_counts;
   bool generate_sorted_tables;
   bool generate_foreign_key_tables;
+  int foreign_key_threshold;
 };
 
 class CalibrationTableGenerator {
@@ -35,7 +36,6 @@ class CalibrationTableGenerator {
   std::shared_ptr<TableGeneratorConfig> _config;
   std::vector<ColumnDataDistribution> _column_data_distributions;
   std::vector<ColumnSpecification> _column_specs;
-  size_t _foreign_key_threshold{3000};
 };
 
 }  // namespace opossum

@@ -31,6 +31,7 @@ int main() {
                                     250'000, 500'000, 1'000'000, 2'500'000, 5'000'000, 6'000'000};
   const bool GENERATE_SORTED_TABLES = true;
   const bool GENERATE_FOREIGN_KEY_TABLES = true;
+  const int MAX_FOREIGN_KEY_TABLE_SIZE = 3000;
 
   // test data generation settings
   constexpr bool GENERATE_TEST_DATA = true;
@@ -42,7 +43,7 @@ int main() {
   // Execute calibration
   auto table_config = std::make_shared<TableGeneratorConfig>(
       TableGeneratorConfig{TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS,
-                           GENERATE_SORTED_TABLES, GENERATE_FOREIGN_KEY_TABLES});
+                           GENERATE_SORTED_TABLES, GENERATE_FOREIGN_KEY_TABLES, MAX_FOREIGN_KEY_TABLE_SIZE});
 
   std::cout << "Generating tables" << std::endl;
   auto table_generation_start = std::chrono::system_clock::now();
