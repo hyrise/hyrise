@@ -79,9 +79,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void execute();
 
   // returns the result of the operator
-  // When using OperatorTasks, they automatically clear this once all successors are done. This reduces the number of
-  // temporary tables.
-  std::shared_ptr<const Table> get_output() const;
+  const std::shared_ptr<const Table> get_output() const;
 
   // clears the output of this operator to free up space
   void clear_output();

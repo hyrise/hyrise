@@ -946,7 +946,7 @@ ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
       if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
         // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
         auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
-        uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, std::move(result));
+        uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, result);
         return ExpressionVisitation::DoNotVisitArguments;
       }
 

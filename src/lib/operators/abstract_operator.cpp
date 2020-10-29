@@ -51,7 +51,6 @@ void AbstractOperator::execute() {
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-//    std::cout << this->name() << " – " << this << " – Execute" << std::endl;
     Assert(!performance_data->executed, "Operator has already been executed");
   }
 
@@ -144,7 +143,7 @@ void AbstractOperator::execute() {
   }
 }
 
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+const std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
