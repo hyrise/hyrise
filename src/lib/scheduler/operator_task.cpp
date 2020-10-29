@@ -95,11 +95,6 @@ void OperatorTask::_on_execute() {
     context->rollback(RollbackReason::Conflict);
   }
 
-  if constexpr (HYRISE_DEBUG) {
-    const auto walltime = performance_timer.lap();
-    std::cout << _op->name() << _op
-              << "\n time: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime))
-              << std::endl;
-  }
 }
+
 }  // namespace opossum

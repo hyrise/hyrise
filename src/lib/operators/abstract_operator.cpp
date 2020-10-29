@@ -33,7 +33,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 AbstractOperator::~AbstractOperator() {
   bool left_has_executed = !_left_input || _left_input->performance_data->executed;
   bool right_has_executed = !_right_input || _right_input->performance_data->executed;
-  Assert(performance_data->executed || !left_has_executed || !right_has_executed,
+  Assert(performance_data->executed || !(left_has_executed && right_has_executed),
          "Operator did not execute which is unexpected.");
 }
 
@@ -42,7 +42,7 @@ OperatorType AbstractOperator::type() const { return _type; }
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   if (_output && performance_data->executed) {
-    if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – Reuse output" << std::endl;
+//    if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – Reuse output" << std::endl;
     return;
   }
   if constexpr (HYRISE_DEBUG) {
@@ -51,7 +51,7 @@ void AbstractOperator::execute() {
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    std::cout << this->name() << " – " << this << " – Execute" << std::endl;
+//    std::cout << this->name() << " – " << this << " – Execute" << std::endl;
     Assert(!performance_data->executed, "Operator has already been executed");
   }
 
@@ -154,7 +154,7 @@ void AbstractOperator::clear_output() {
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << name();
-  //  stream << " (C.count: " << _consumer_count_max.load() << ")";
+  stream << " (C.count: " << _consumer_count_max.load() << ")";
   return stream.str();
 }
 
@@ -172,14 +172,18 @@ size_t AbstractOperator::consumer_count() const { return _consumer_count.load();
 void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
   _consumer_count++;
   _consumer_count_max++;
+  std::cout << this->name() << "_" << this << " -- " << &consumer_op
+            << " has registered -> " << _consumer_count.load() << " consumers" << std::endl;
 }
 
 void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
+  std::cout << this->name() << "_" << this << " -- " << consumer_op.name() << "_" << &consumer_op
+            << " has deregistered -> " << _consumer_count.load() << " consumers" << std::endl;
   if (_consumer_count == 0) {
     if (HYRISE_DEBUG) {
-      std::cout << "Call " << this->name() << "::clear_output() by last consumer: " << consumer_op.name() << std::endl;
+      std::cout << " -> clear_output" << std::endl;
     }
     clear_output();
   }
