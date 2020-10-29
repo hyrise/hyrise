@@ -53,7 +53,7 @@ void AbstractOperator::execute() {
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    Assert(!performance_data->executed, "Operator has already been executed");
+    Assert(!performance_data->executed, "Operator has already been executed"); // fails for TPC-DS Q9
   }
 
   Timer performance_timer;
