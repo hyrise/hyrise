@@ -4,6 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <tbb/concurrent_unordered_map.h>
 
 #include "all_type_variant.hpp"
 #include "expression_precedence.hpp"
@@ -163,7 +164,7 @@ using ExpressionUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
 template <typename Value>
-using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const AbstractExpression>, Value,
+using ConstExpressionUnorderedMap = tbb::concurrent_unordered_map<std::shared_ptr<const AbstractExpression>, Value,
                                                        ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
 using ExpressionUnorderedSet =

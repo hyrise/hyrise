@@ -12,6 +12,9 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -105,40 +108,50 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
+  std::mutex output_mutex;
+  std::mutex column_is_nullable_mutex;
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(input_table.chunk_count());
   const auto chunk_count = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    auto output_segments = Segments{expressions.size()};
+    auto job_task = std::make_shared<JobTask>([this, chunk_id, input_chunk, uncorrelated_subquery_results, &input_table, &output_segments_by_chunk, &output_mutex, &column_is_nullable_mutex, &column_is_nullable] () {
+        
+        auto output_segments = Segments{expressions.size()};
+        ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
-    // The ExpressionEvaluator is created once per chunk so that evaluated sub-expressions can be reused across columns.
-    ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
-
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
-      const auto& expression = expressions[column_id];
-
-      if (expression->type == ExpressionType::PQPColumn) {
-        // Forward input column if possible
-        const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
-        output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-        column_is_nullable[column_id] =
-            column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
-        forwarding_cost += timer.lap();
-      } else {
-        // Newly generated column - the expression needs to be evaluated
-        auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-        column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
-
+        for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+          const auto& expression = expressions[column_id]; 
+          auto my_column_is_nullable{0};
+          if (expression->type == ExpressionType::PQPColumn) {
+            // Forward input column if possible
+            const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
+            output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
+            my_column_is_nullable = column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
+            //forwarding_cost += timer.lap();
+          } else {
+            // Newly generated column - the expression needs to be evaluated
+            auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
+            my_column_is_nullable = column_is_nullable[column_id] || output_segment->is_nullable();
+            output_segments[column_id] = std::move(output_segment);
+            //expression_evaluator_cost += timer.lap();
+          }
+          std::lock_guard<std::mutex> lock(column_is_nullable_mutex);
+          column_is_nullable[column_id] = my_column_is_nullable;
+        }
         // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
         // ValueSegments. We deal with this later.
-        output_segments[column_id] = std::move(output_segment);
-        expression_evaluator_cost += timer.lap();
+        std::lock_guard<std::mutex> lock(output_mutex);
+        output_segments_by_chunk[chunk_id] = std::move(output_segments);  
       }
-    }
-
-    output_segments_by_chunk[chunk_id] = std::move(output_segments);
+    );
+    jobs.push_back(job_task);
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
 
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
