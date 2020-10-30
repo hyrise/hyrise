@@ -159,7 +159,6 @@ const std::shared_ptr<AbstractLQPNode> SQLPipelineStatement::split_logical_plan(
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan) {
-    
     // LQPVisualizer visualizer;
     // visualizer.visualize({_optimized_logical_plan}, "./member_optimized_plan.png");
 
@@ -197,15 +196,18 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // and concurrent translations might conflict
         auto temp_optimized_logical_plan = plan->instantiate(unoptimized_extracted_values)->deep_copy();
         const auto done_cache_check_read = std::chrono::high_resolution_clock::now();
-        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
+        _metrics->cache_duration =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
 
         const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
-        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
+        _optimized_logical_plan =
+            _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
         const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
         _metrics->query_plan_cache_hit = true;
         _metrics->optimizer_rule_durations = *optimizer_rule_durations;
-        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
+        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            done_post_cache_optimizer - start_post_cache_optimizer);
 
         // LQPVisualizer visualizer;
         // visualizer.visualize({_optimized_logical_plan}, "./cached_optimized_plan.png");
@@ -264,17 +266,17 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
   auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
-  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
+  _optimized_logical_plan =
+      _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
   const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
-   _metrics->optimization_duration =
+  _metrics->optimization_duration =
       std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize) +
       std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // LQPVisualizer visualizer;
   // visualizer.visualize({_optimized_logical_plan}, "./optimized_plan.png");
-
 
   //std::cout << *_optimized_logical_plan << std::endl;
 
