@@ -315,7 +315,7 @@ void BM_SegmentPositionReference(benchmark::State& state, std::string column_nam
     TPCHTableGenerator(SCALE_FACTOR, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
   }
 
-  if (segment_encoding_spec != SegmentEncodingSpec{EncodingType::Dictionary}) {
+  if (segment_encoding_spec.encoding_type != EncodingType::Dictionary) {
     std::cout << "Encoding using " << segment_encoding_spec << "." << std::endl;
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("lineitem"),
                                     SegmentEncodingSpec{EncodingType::Unencoded});
