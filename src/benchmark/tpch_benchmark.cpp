@@ -43,7 +43,9 @@ int main(int argc, char* argv[]) {
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
     ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("j,jcch", "Use JCC-H data generator instead of TPC-H", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
+               "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
@@ -51,6 +53,7 @@ int main(int argc, char* argv[]) {
   float scale_factor;
   bool use_prepared_statements;
   bool jcch;
+  auto jcch_skewed = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -66,7 +69,17 @@ int main(int argc, char* argv[]) {
   config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
-  jcch = cli_parse_result["jcch"].as<bool>();
+  jcch = cli_parse_result.count("jcch");
+  if (jcch) {
+    const auto jcch_mode = cli_parse_result["jcch"].as<std::string>();
+    if (jcch_mode == "skewed") {
+      jcch_skewed = true;
+    } else if (jcch_mode == "normal") {  // NOLINT
+      jcch_skewed = false;
+    } else {
+      Fail("Invalid jcch mode, use skewed or normal");
+    }
+  }
 
   std::vector<BenchmarkItemID> item_ids;
 
@@ -124,6 +137,9 @@ int main(int argc, char* argv[]) {
     // JCC-H implementation calls those generators externally. This is because we would get linking conflicts if we were
     // to include both generators. Unfortunately, this approach is somewhat slower (30s to start SF1 with TPC-H, 1m18s
     // with JCC-H).
+    //
+    // JCC-H has both a skewed and a "normal" (i.e., unskewed) mode. The unskewed mode is not the same as TPC-H. You can
+    // find details in the JCC-H paper: https://ir.cwi.nl/pub/27429
 
     // Try to find dbgen/qgen binaries
     auto jcch_dbgen_path =
@@ -145,7 +161,7 @@ int main(int argc, char* argv[]) {
 
     // Create the table generator and item runner
     table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, config);
-    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_dbgen_path, jcch_data_path, config,
+    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_skewed, jcch_dbgen_path, jcch_data_path, config,
                                                             use_prepared_statements, scale_factor, item_ids);
   } else {
     table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, config);

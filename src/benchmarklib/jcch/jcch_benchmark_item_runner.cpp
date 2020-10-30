@@ -9,20 +9,24 @@
 
 namespace opossum {
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
+                                                 const std::string& data_path,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor)
     : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor),
+      _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {
   _load_params();
 }
 
-JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, const std::string& data_path,
+JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
+                                                 const std::string& data_path,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& items)
     : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items),
+      _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {
   _load_params();
@@ -30,12 +34,13 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const std::string& dbgen_path, 
 
 std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22u, "item_id out of range");
-  return std::string("JCC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
+  return std::string("JCC-H ") + (_skewed ? "(skewed) " : "(normal) ") + (item_id + 1 < 10 ? "0" : "") +
+         std::to_string(item_id + 1);
 }
 
 void JCCHBenchmarkItemRunner::_load_params() {
   const auto local_queries_path = _data_path + "/queries/";
-  const auto params_path = local_queries_path + "params";
+  const auto params_path = local_queries_path + "params-" + (_skewed ? "skewed" : "normal");
 
   // Check if the query parameters have already been generated
   if (!std::filesystem::exists(params_path)) {
@@ -62,8 +67,9 @@ void JCCHBenchmarkItemRunner::_load_params() {
     // dbgen doesn't like `-r 0`, so we start at 1.
     for (auto seed = 1; seed <= (_config->max_runs > 0 ? _config->max_runs : 100'000); ++seed) {
       auto cmd = std::stringstream{};
-      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen -k -s " << _scale_factor << " -b "
-          << _dbgen_path << "/dists.dss -r " << seed << " -l params >/dev/null";
+      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen " << (_skewed ? "-k" : "") << " -s "
+          << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
+          << " >/dev/null";
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed");
     }
