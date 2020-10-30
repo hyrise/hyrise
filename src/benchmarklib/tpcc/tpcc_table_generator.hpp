@@ -55,6 +55,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   const time_t _current_date = std::time(nullptr);
 
  protected:
+  IndexesByTable _indexes_by_table() const override;
+  SortOrderByTable _sort_order_by_table() const override;
+
   template <typename T>
   std::vector<std::optional<T>> _generate_inner_order_line_column(
       std::vector<size_t> indices, OrderLineCounts order_line_counts,

@@ -4,6 +4,7 @@
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
+#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
@@ -74,6 +75,15 @@ int main(int argc, char* argv[]) {
   BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCCTableGenerator>(num_warehouses, config),
                   context)
       .run();
+
+  const auto cache_snapshot = Hyrise::get().default_pqp_cache->snapshot();
+  for (const auto& [query_string, snapshot_entry] : cache_snapshot) {
+    const auto& physical_query_plan = snapshot_entry.value;
+    const auto& frequency = snapshot_entry.frequency;
+
+    std::cout << "#####\n       " << *frequency << " exeuctions\n#####" << std::endl;
+    std::cout << *physical_query_plan << std::endl;
+  }
 
   if (consistency_checks || config->verify) {
     std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;

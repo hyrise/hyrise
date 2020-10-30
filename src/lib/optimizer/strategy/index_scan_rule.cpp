@@ -22,7 +22,7 @@ namespace opossum {
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
 // This value is kind of arbitrarily chosen, but the following paper suggests something similar:
 // Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
-constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
+constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.05f;
 
 // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
 // The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
@@ -55,6 +55,9 @@ void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_statistics,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
+  std::stringstream ss;
+  ss << *predicate_node << std::endl;
+  const auto sss = ss.str();
   if (!_is_single_segment_index(index_statistics)) return false;
 
   if (index_statistics.type != SegmentIndexType::GroupKey) return false;
@@ -77,6 +80,10 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;
+
+  if (sss.find("OL_") != std::string::npos) {
+    std::cout << "3 with selectivity of " << selectivity << std::endl << sss << std::endl;
+  }
 
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }

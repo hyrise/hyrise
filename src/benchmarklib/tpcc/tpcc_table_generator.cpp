@@ -533,6 +533,24 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
                                                               {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
 }
 
+AbstractTableGenerator::IndexesByTable TPCCTableGenerator::_indexes_by_table() const {
+  return {
+      {"WAREHOUSE", {{"W_ID"}}},
+      {"DISTRICT", {{"D_W_ID"}, {"D_ID"}}},
+      {"CUSTOMER", {{"C_W_ID"}, {"C_D_ID"}, {"C_ID"}}},
+      {"HISTORY", {{"H_C_W_ID"}, {"H_C_D_ID"}, {"H_C_ID"}}},
+      {"NEW_ORDER", {{"NO_W_ID"}, {"NO_D_ID"}, {"NO_O_ID"}}},
+      {"ORDER", {{"O_W_ID"}, {"O_D_ID"}, {"O_C_ID"}}},
+      {"ORDER_LINE", {{"OL_W_ID"}, {"OL_D_ID"}, {"OL_O_ID"}, {"OL_NUMBER"}}},
+      {"ITEM", {{"I_ID"}}},
+      {"STOCK", {{"S_W_ID"}, {"S_I_ID"}}},
+  };
+}
+
+AbstractTableGenerator::SortOrderByTable TPCCTableGenerator::_sort_order_by_table() const {
+  return {};
+}
+
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
 
 }  // namespace opossum

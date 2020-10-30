@@ -93,6 +93,22 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
+  if (const char* tpcc = std::getenv("TPCC_OPT")) {
+    optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+    optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
+    optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+    optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+    optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+    optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+    return optimizer;
+  }
+
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
