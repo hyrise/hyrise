@@ -18,9 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-BetweenCompositionRule::BetweenCompositionRule(){
-  cacheable = false;
-}
+BetweenCompositionRule::BetweenCompositionRule() { cacheable = false; }
 
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode

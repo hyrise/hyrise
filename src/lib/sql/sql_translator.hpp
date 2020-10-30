@@ -11,10 +11,10 @@
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "parameter_id_allocator.hpp"
-#include "value_expression_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
 #include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp"
+#include "value_expression_id_allocator.hpp"
 
 namespace opossum {
 
