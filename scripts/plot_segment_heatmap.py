@@ -44,31 +44,40 @@ df = pd.json_normalize(data["segments"])
 
 df = df.sort_values(by=["table_name", "column_id", "chunk_id", "snapshot_id"]).reset_index()
 
-df["all_counters"] = (
-    df["monotonic_accesses"]
-    + df["point_accesses"]
-    + df["random_accesses"]
-    + df["sequential_accesses"]
-    + df["dictionary_accesses"]
-)
-df["all_counters_diff"] = df["all_counters"] - df["all_counters"].shift(1)
+counters = ["monotonic_accesses", "point_accesses", "random_accesses", "sequential_accesses", "dictionary_accesses"]
+
+df["all_accesses"] = 0
+for counter in counters:
+    df["all_accesses"] += df[counter]
+
+# TODO this breaks if a segment is added later on
+df["all_accesses_diff"] = df["all_accesses"] - df["all_accesses"].shift(1)
 df["table_and_column_name"] = df["table_name"] + "." + df["column_name"]
 
 init_values = df.loc[df["snapshot_id"] == 0].index
-df.loc[init_values, ["all_counters_diff"]] = df.loc[init_values, "all_counters"]
+df.loc[init_values, ["all_accesses_diff"]] = df.loc[init_values, "all_accesses"]
 
-for snapshot_id in df["snapshot_id"].unique():
-    df_snapshot = df[df["snapshot_id"] == snapshot_id].sort_values("table_and_column_name").reset_index()
-    moment = df_snapshot["moment"].iloc[0]
 
-    piv = pd.pivot_table(df_snapshot, index="table_and_column_name", columns="chunk_id", values="all_counters_diff")
+def plot(snapshot_id):
+    if snapshot_id is not None:
+        df_snapshot = df[df["snapshot_id"] == snapshot_id]
+        moment = df_snapshot["moment"].iloc[0]
+    else:
+        df_snapshot = df[df["snapshot_id"] > 0]
+        moment = "All accesses (without benchmark initialization)"
+
+    df_snapshot = df_snapshot.sort_values("table_and_column_name").reset_index()
+
+    # For snapshot_id == None, this sums all values
+    piv = pd.pivot_table(df_snapshot, index="table_and_column_name", columns="chunk_id", values="all_accesses_diff")
     piv = piv.reindex(index=piv.index[::-1])
 
     # Remove all columns that have not been touched at all
-    piv = piv[(piv.T > 0).any()].dropna(axis=1, how="all")
-    if piv.empty:
-        print(f"No modifications to access counters seen at '{moment}' - skipping this snapshot")
-        continue
+    if snapshot_id is not None:
+        piv = piv[(piv.T > 0).any()].dropna(axis=1, how="all")
+        if piv.empty:
+            print(f"No modifications to access counters seen at '{moment}' - skipping this snapshot")
+            return
 
     # Add per-column average
     piv['Ø'] = piv.mean(numeric_only=True, axis=1)
@@ -124,6 +133,15 @@ for snapshot_id in df["snapshot_id"].unique():
     cbar = plt.colorbar(heatmap, cax=cax)
 
     # Save and close
-    filename = f"{snapshot_id:03}_{normalize_filename(moment)}.png"
+    if snapshot_id is not None:
+        filename = f"{snapshot_id:03}_{normalize_filename(moment)}.png"
+    else:
+        filename = "total_without_init.png"
+
     plt.savefig(f"{directory}/{filename}", bbox_inches="tight")
     plt.close("all")
+
+
+for snapshot_id in df["snapshot_id"].unique():
+    plot(snapshot_id)
+plot(None)
