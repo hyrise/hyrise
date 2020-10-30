@@ -42,6 +42,9 @@ if not "segments" in data:
 
 df = pd.json_normalize(data["segments"])
 
+# Use this to filter by table name(s)
+# df = df[df["table_name"].isin(['lineitem', 'orders'])]
+
 df = df.sort_values(by=["table_name", "column_id", "chunk_id", "snapshot_id"]).reset_index()
 
 counters = ["monotonic_accesses", "point_accesses", "random_accesses", "sequential_accesses", "dictionary_accesses"]
