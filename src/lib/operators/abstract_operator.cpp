@@ -43,10 +43,7 @@ OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-  if (_output && performance_data->executed) {
-//    if constexpr (HYRISE_DEBUG) std::cout << this->name() << " – " << this << " – Reuse output" << std::endl;
-    return;
-  }
+  if (_output && performance_data->executed) return;
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->performance_data->executed, "Left input has not yet been executed");
     Assert(!_right_input || _right_input->performance_data->executed, "Right input has not yet been executed");
@@ -173,21 +170,12 @@ size_t AbstractOperator::consumer_count() const { return _consumer_count.load();
 void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
   _consumer_count++;
   _consumer_count_max++;
-  std::cout << this->name() << "_" << this << " -- " << &consumer_op
-            << " has registered -> " << _consumer_count.load() << " consumers" << std::endl;
 }
 
 void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid."); // TPC-DS Q9 Error 2
   _consumer_count--;
-  std::cout << this->name() << "_" << this << " -- " << consumer_op.name() << "_" << &consumer_op
-            << " has deregistered -> " << _consumer_count.load() << " consumers" << std::endl;
-  if (_consumer_count == 0) {
-    if (HYRISE_DEBUG) {
-      std::cout << " -> clear_output" << std::endl;
-    }
-    clear_output();
-  }
+  if (_consumer_count == 0) clear_output();
 }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
