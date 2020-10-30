@@ -164,6 +164,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
             const auto ref_segment_out =
                 std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
+            ref_segment_out->set_contains_no_null_values(chunk_in->get_segment(column_id)->contains_no_null_values());
             out_segments.push_back(ref_segment_out);
           }
         }
@@ -178,6 +179,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
         for (auto column_id = ColumnID{0u}; column_id < in_table->column_count(); ++column_id) {
           const auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, output_pos_list);
+          ref_segment_out->set_contains_no_null_values(chunk_in->get_segment(column_id)->contains_no_null_values());
           out_segments.push_back(ref_segment_out);
         }
       }

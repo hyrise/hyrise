@@ -924,8 +924,10 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
 
         auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
             input_table->get_chunk(ChunkID{0})->get_segment(column_id));
-        output_segments.push_back(std::make_shared<ReferenceSegment>(
-            reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second));
+        auto output_reference_segment = std::make_shared<ReferenceSegment>(
+            reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second);
+        output_reference_segment->set_contains_no_null_values(reference_segment->contains_no_null_values());
+        output_segments.push_back(std::move(output_reference_segment));
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
@@ -960,7 +962,10 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         pos_list->guarantee_single_chunk();
       }
 
-      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+      auto output_reference_segment = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
+      // TODO: check join type
+      output_reference_segment->set_contains_no_null_values(true);
+      output_segments.push_back(output_reference_segment);
     }
   }
 }

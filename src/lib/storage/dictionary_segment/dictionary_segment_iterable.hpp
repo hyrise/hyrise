@@ -30,6 +30,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using CompressedVectorIterator = decltype(attribute_vector.cbegin());
       
       if (_segment.contains_no_null_values()) {
+        // std::cout << " Dopt-seq ";
         auto begin = Iterator<CompressedVectorIterator, false>(&_dictionary, _null_value_id,
                                                   attribute_vector.cbegin(), ChunkOffset{0u});
         auto end = Iterator<CompressedVectorIterator, false>(&_dictionary, _null_value_id,
@@ -37,6 +38,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
                                                 static_cast<ChunkOffset>(_segment.size()));
         functor(begin, end);
       } else {
+        // std::cout << " Dnon-opt-seq ";
         auto begin = Iterator<CompressedVectorIterator, true>(&_dictionary, _null_value_id,
                                                   attribute_vector.cbegin(), ChunkOffset{0u});
         auto end = Iterator<CompressedVectorIterator, true>(&_dictionary, _null_value_id,
@@ -58,6 +60,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using PosListIteratorType = decltype(position_filter->cbegin());
 
       if (_segment.contains_no_null_values()) {
+        // std::cout << " Dopt-point ";
         auto begin = PointAccessIterator<Decompressor, PosListIteratorType, false>(
             &_dictionary, _null_value_id, attribute_vector.create_decompressor(), position_filter->cbegin(),
             position_filter->cbegin());
@@ -66,6 +69,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
             position_filter->cend());
         functor(begin, end);
       } else {
+        // std::cout << " Dnon-opt-point ";
         auto begin = PointAccessIterator<Decompressor, PosListIteratorType, true>(
             &_dictionary, _null_value_id, attribute_vector.create_decompressor(), position_filter->cbegin(),
             position_filter->cbegin());

@@ -129,6 +129,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         // Newly generated column - the expression needs to be evaluated
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
+        output_segment->set_contains_no_null_values(!column_is_nullable[column_id]);
 
         // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
         // ValueSegments. We deal with this later.
@@ -197,6 +198,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
         output_segments_by_chunk[chunk_id][column_id] = std::make_shared<ReferenceSegment>(
             projection_result_table, projection_result_column_id, entire_chunk_pos_list);
+        output_segments_by_chunk[chunk_id][column_id]->set_contains_no_null_values(output_segments_by_chunk[chunk_id][column_id]->contains_no_null_values() || !column_is_nullable[column_id]);
       }
     }
 

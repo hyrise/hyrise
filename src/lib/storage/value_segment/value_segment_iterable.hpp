@@ -19,34 +19,37 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
-    if (_segment.is_nullable()) {
-      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
-      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
-      functor(begin, end);
-    } else {
+    if (!_segment.is_nullable() || _segment.contains_no_null_values()) {
+      // std::cout << " Uopt-seq ";
       auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
       auto end = NonNullIterator{_segment.values().cbegin(), _segment.values().cend()};
       functor(begin, end);
-    }
+    } else {
+      // std::cout << " Unon-opt-seq ";
+      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
+      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
+      functor(begin, end);
+    } 
   }
 
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
-
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-    if (_segment.is_nullable()) {
-      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                            position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                          position_filter->cbegin(), position_filter->cend()};
-      functor(begin, end);
-    } else {
+    if (!_segment.is_nullable() || _segment.contains_no_null_values()) {
+      // std::cout << " Uopt-point ";
       auto begin = NonNullPointAccessIterator<PosListIteratorType>{
           _segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
       auto end = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), position_filter->cbegin(),
                                                                  position_filter->cend()};
+      functor(begin, end);
+    } else {
+      // std::cout << " Unon-opt-point ";
+      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                            position_filter->cbegin(), position_filter->cbegin()};
+      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                          position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     }
   }
