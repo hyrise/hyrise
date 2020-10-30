@@ -25,6 +25,11 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   auto pipeline = pipeline_builder.create_pipeline();
 
+  // To get a print
+  if (_visualize_prefix) {
+    _visualize(pipeline);
+  }
+
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
 
   if (pipeline_status == SQLPipelineStatus::Failure) {
@@ -40,9 +45,9 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
     _verify_with_sqlite(pipeline);
   }
 
-  if (_visualize_prefix) {
-    _visualize(pipeline);
-  }
+//  if (_visualize_prefix) {
+//    _visualize(pipeline);
+//  }
 
   return {pipeline_status, result_table};
 }

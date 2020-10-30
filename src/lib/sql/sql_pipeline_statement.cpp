@@ -45,12 +45,12 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
-  Assert(!_transaction_context, "SQLPipelineStatement already has a transaction context");
-  Assert(!transaction_context || !transaction_context->is_auto_commit(),
-         "Auto-commit transaction contexts should be created by the SQLPipelineStatement itself");
-  Assert(_use_mvcc == UseMvcc::Yes || !transaction_context,
-         "Can only set transaction context for MVCC-enabled statements");
-  _transaction_context = transaction_context;
+//  Assert(!_transaction_context, "SQLPipelineStatement already has a transaction context");
+//  Assert(!transaction_context || !transaction_context->is_auto_commit(),
+//         "Auto-commit transaction contexts should be created by the SQLPipelineStatement itself");
+//  Assert(_use_mvcc == UseMvcc::Yes || !transaction_context,
+//         "Can only set transaction context for MVCC-enabled statements");
+//  _transaction_context = transaction_context;
 }
 
 const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
