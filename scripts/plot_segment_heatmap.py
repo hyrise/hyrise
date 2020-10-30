@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import sys
 
+mpl.rcParams.update({'font.size': 16})
 
 def normalize_filename(s):
     validsymbols = "-"
@@ -103,6 +104,7 @@ for snapshot_id in df["snapshot_id"].unique():
                 plt.text(x + 0.5, y + 0.5, 'Ø',
                          horizontalalignment='center',
                          verticalalignment='center',
+                         color='darkgrey'
                          )
         if 'Ø' in str(piv.index[y]):
             ax.axhline(y = y, xmin = 0, xmax = piv.shape[1], color='lightgrey')
@@ -111,8 +113,10 @@ for snapshot_id in df["snapshot_id"].unique():
     ax.set_title(moment)
     ax.set_xticks(np.arange(piv.shape[1]) + 0.5, minor=False)
     ax.set_xticklabels(piv.columns.values.astype(str), rotation=270)
+    ax.set_xlabel("Chunk ID")
     ax.set_yticks(np.arange(piv.shape[0]) + 0.5, minor=False)
     ax.set_yticklabels(piv.index.values.astype(str))
+    ax.set_ylabel("Table and colum name")
 
     # Create a legend
     divider = make_axes_locatable(ax)
