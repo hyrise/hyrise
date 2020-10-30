@@ -217,8 +217,8 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     return predicate;
   }
 
-//  auto new_predicate = predicate->deep_copy();
-  for (auto& argument : predicate->arguments) {
+  auto predicate_with_subquery_results = predicate;
+  for (auto& argument : predicate_with_subquery_results->arguments) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
     if (!subquery || subquery->is_correlated()) continue;
 
@@ -231,10 +231,10 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    argument = std::make_shared<ValueExpression>(subquery_result);
+    argument = std::make_shared<ValueExpression>(std::move(subquery_result));
   }
 
-  return predicate;
+  return predicate_with_subquery_results;
 }
 
 std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
