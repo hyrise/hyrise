@@ -19,7 +19,7 @@ def main():
     arguments["--indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
-    arguments["--jcch"] = "true"
+    arguments["--jcch"] = "skewed"
     arguments["--verify"] = "true"
     arguments["--dont_cache_binary_tables"] = "true"
 
@@ -37,6 +37,7 @@ def main():
     benchmark.expect_exact("JCC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: no")
     benchmark.expect_exact("Using JCC-H dbgen from")
+    benchmark.expect_exact("JCC-H query parameters are skewed")
     benchmark.expect_exact("calling external qgen")
     benchmark.expect_exact("Multi-threaded Topology:")
 

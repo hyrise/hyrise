@@ -157,7 +157,8 @@ int main(int argc, char* argv[]) {
     auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
 
     std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
-    std::cout << "- Storing JCC-H tables and query information in " << jcch_data_path << std::endl;
+    std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << std::endl;
+    std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << std::endl;
 
     // Create the table generator and item runner
     table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, config);
