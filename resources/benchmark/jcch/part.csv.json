@@ -1,0 +1,59 @@
+{
+    "columns": [
+        {
+            "name": "p_partkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "p_name",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "p_mfgr",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "p_brand",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "p_type",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "p_size",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "p_container",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "p_retailsize",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "p_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}
