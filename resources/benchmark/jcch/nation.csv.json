@@ -1,0 +1,34 @@
+{
+    "columns": [
+        {
+            "name": "n_nationkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "n_name",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "n_regionkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "n_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

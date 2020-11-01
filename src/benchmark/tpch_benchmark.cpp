@@ -10,6 +10,8 @@
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
+#include "jcch/jcch_benchmark_item_runner.hpp"
+#include "jcch/jcch_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -29,22 +31,29 @@ using namespace opossum;  // NOLINT
  *
  * main() is mostly concerned with parsing the CLI options while BenchmarkRunner.run() performs the actual benchmark
  * logic.
+ *
+ * The same binary is used to run the JCC-H benchmark. For this, simply use the -j flag.
  */
 
 int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H Benchmark");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
+               "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
   bool use_prepared_statements;
+  bool jcch;
+  auto jcch_skewed = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -60,6 +69,17 @@ int main(int argc, char* argv[]) {
   config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
+  jcch = cli_parse_result.count("jcch");
+  if (jcch) {
+    const auto jcch_mode = cli_parse_result["jcch"].as<std::string>();
+    if (jcch_mode == "skewed") {
+      jcch_skewed = true;
+    } else if (jcch_mode == "normal") {  // NOLINT
+      jcch_skewed = false;
+    } else {
+      Fail("Invalid jcch mode, use skewed or normal");
+    }
+  }
 
   std::vector<BenchmarkItemID> item_ids;
 
@@ -75,7 +95,7 @@ int main(int argc, char* argv[]) {
     std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
       const auto item_id =
           BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
-      DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
+      DebugAssert(item_id < 22, "There are only 22 queries");
       return item_id;
     });
   }
@@ -91,7 +111,7 @@ int main(int argc, char* argv[]) {
   Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
 
   if (config->verify) {
-    // Hack: We cannot verify TPC-H Q15, thus we remove it from the list of queries
+    // Hack: We cannot verify Q15, thus we remove it from the list of queries
     auto it = std::remove(item_ids.begin(), item_ids.end(), 15 - 1);
     if (it != item_ids.end()) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
@@ -102,16 +122,55 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::cout << "- TPCH scale factor is " << scale_factor << std::endl;
+  std::cout << "- " << (jcch ? "JCC-H" : "TPC-H") << " scale factor is " << scale_factor << std::endl;
   std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
+  auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
+  auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
+
+  if (jcch) {
+    // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
+    // JCC-H implementation calls those generators externally. This is because we would get linking conflicts if we were
+    // to include both generators. Unfortunately, this approach is somewhat slower (30s to start SF1 with TPC-H, 1m18s
+    // with JCC-H).
+    //
+    // JCC-H has both a skewed and a "normal" (i.e., unskewed) mode. The unskewed mode is not the same as TPC-H. You can
+    // find details in the JCC-H paper: https://ir.cwi.nl/pub/27429
+
+    // Try to find dbgen/qgen binaries
+    auto jcch_dbgen_path =
+        std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/jcch-dbgen";
+    Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"),
+           std::string{"JCC-H dbgen not found at "} + jcch_dbgen_path.c_str());
+    Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
+           std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
+
+    // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
+    auto jcch_data_path_str = std::ostringstream{};
+    jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
+    std::filesystem::create_directories(jcch_data_path_str.str());
+    // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
+    auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
+
+    std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
+    std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << std::endl;
+    std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << std::endl;
+
+    // Create the table generator and item runner
+    table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, config);
+    item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_skewed, jcch_dbgen_path, jcch_data_path, config,
+                                                            use_prepared_statements, scale_factor, item_ids);
+  } else {
+    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, config);
+    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
+  }
+
+  auto benchmark_runner =
+      std::make_shared<BenchmarkRunner>(*config, std::move(item_runner), std::move(table_generator), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (config->verify) {
