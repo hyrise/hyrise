@@ -78,7 +78,7 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
       : _value{value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const override { return _value; }
-  bool is_null() const override { return false; }
+  constexpr bool is_null() const override { return false; }
   ChunkOffset chunk_offset() const override { return _chunk_offset; }
 
  private:

@@ -42,10 +42,6 @@ class ValueSegment : public BaseValueSegment {
     return _values[chunk_offset];
   }
 
-  void set_not_nullable() {
-    _null_values = std::nullopt;
-  }
-
   // Add a value to the end of the segment. Not thread-safe. May fail if ValueSegment was not initially created with
   // sufficient capacity.
   void append(const AllTypeVariant& val) final;
