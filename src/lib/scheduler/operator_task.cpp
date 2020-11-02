@@ -91,13 +91,7 @@ void OperatorTask::_on_execute() {
 
   DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
 
-  Timer timer;
-
   _op->execute();
-
-  const auto walltime = performance_timer.lap();
-  std::cout << "Executed " << _op->name() << " _ " << _op << " _  time: "
-            << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << std::endl;
 
   /**
    * Check whether the operator is a ReadWrite operator, and if it is, whether it failed.
