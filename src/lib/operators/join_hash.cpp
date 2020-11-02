@@ -611,21 +611,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // Swap back the inputs, so that the order of the output columns is not changed.
       switch (_output_column_order) {
         case OutputColumnOrder::BuildFirstProbeSecond:
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
+          write_output_segments(output_segments, _build_input_table, _mode, build_side_pos_lists_by_segment,
                                 build_side_pos_list);
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
+          write_output_segments(output_segments, _probe_input_table, _mode, probe_side_pos_lists_by_segment,
                                 probe_side_pos_list);
           break;
 
         case OutputColumnOrder::ProbeFirstBuildSecond:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
+          write_output_segments(output_segments, _probe_input_table, _mode, probe_side_pos_lists_by_segment,
                                 probe_side_pos_list);
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
+          write_output_segments(output_segments, _build_input_table, _mode, build_side_pos_lists_by_segment,
                                 build_side_pos_list);
           break;
 
         case OutputColumnOrder::ProbeOnly:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
+          write_output_segments(output_segments, _probe_input_table, _mode, probe_side_pos_lists_by_segment,
                                 probe_side_pos_list);
           break;
       }
