@@ -106,10 +106,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
 
   auto forwarding_cost = std::chrono::nanoseconds{};
-  auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
-  std::mutex output_mutex;
-  std::mutex column_is_nullable_mutex;
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_table.chunk_count());
   const auto chunk_count = input_table.chunk_count();
@@ -117,40 +114,41 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    auto perform_projection = [this, chunk_id, input_chunk, uncorrelated_subquery_results, &input_table, &output_segments_by_chunk, &output_mutex, &column_is_nullable_mutex, &column_is_nullable] () {
-        auto output_segments = Segments{expressions.size()};
+    auto output_segments = Segments{expressions.size()};
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      const auto& expression = expressions[column_id]; 
+      if (expression->type == ExpressionType::PQPColumn) {
+        // Forward input column if possible
+        const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
+        output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
+        column_is_nullable[column_id] = column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
+        forwarding_cost += timer.lap();
+      }
+    }
+    output_segments_by_chunk[chunk_id] = std::move(output_segments);
+
+    auto perform_projection_evaluation = [this, chunk_id, uncorrelated_subquery_results, &output_segments_by_chunk, &column_is_nullable] () {
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
         for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
           const auto& expression = expressions[column_id]; 
-          auto my_column_is_nullable{0};
-          if (expression->type == ExpressionType::PQPColumn) {
-            // Forward input column if possible
-            const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
-            output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-            my_column_is_nullable = column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
-            //forwarding_cost += timer.lap();
-          } else {
+          if (expression->type != ExpressionType::PQPColumn) {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-            my_column_is_nullable = column_is_nullable[column_id] || output_segment->is_nullable();
-            output_segments[column_id] = std::move(output_segment);
-            //expression_evaluator_cost += timer.lap();
+            column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
+            output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
           }
-          std::lock_guard<std::mutex> lock(column_is_nullable_mutex);
-          column_is_nullable[column_id] = my_column_is_nullable;
         }
         // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
         // ValueSegments. We deal with this later.
-        std::lock_guard<std::mutex> lock(output_mutex);
-        output_segments_by_chunk[chunk_id] = std::move(output_segments);  
     };
-    auto job_task = std::make_shared<JobTask>(perform_projection);
+    auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
     jobs.push_back(job_task);
   }
 
+  auto expression_evaluator_cost = std::chrono::nanoseconds{};
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
+  expression_evaluator_cost += timer.lap();
 
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
