@@ -393,11 +393,25 @@ void BM_SegmentPosition(benchmark::State& state, std::string column_name, const 
   const auto lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_table_wrapper->execute();
 
-
   const auto chunk_count = lineitem_table->chunk_count();
 
   resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
     using ColumnDataType = typename decltype(data_type)::type;
+
+    // Replace value segments with non-nulled value segments (that might no longer be required if we do not store
+    // null vectors for segments without any NULLs)
+    if (non_null_iteration && segment_encoding_spec.encoding_type == EncodingType::Unencoded) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = lineitem_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+
+        const auto& value_segment = static_cast<ValueSegment<ColumnDataType>&>(*segment);
+        const auto new_value_segment = std::make_shared<ValueSegment<ColumnDataType>>(pmr_vector<ColumnDataType>(value_segment.values()));
+        assert(!new_value_segment->is_nullable());
+
+        chunk->replace_segment(column_id, new_value_segment);
+      }
+    }
 
     for (auto _ : state) {
       auto sum = size_t{0};
@@ -406,21 +420,10 @@ void BM_SegmentPosition(benchmark::State& state, std::string column_name, const 
         const auto& chunk = lineitem_table->get_chunk(chunk_id);
         const auto& segment = chunk->get_segment(column_id);
  
-        if (non_null_iteration) {
-          const auto& value_segment = static_cast<ValueSegment<ColumnDataType>&>(*segment);
-                auto new_value_segment = std::make_shared<ValueSegment<ColumnDataType>>(pmr_vector<ColumnDataType>(value_segment.values()));
-          assert(!new_value_segment->is_nullable());
-          if (use_reference_iteration) {
-            benchmark_segment<ColumnDataType, true>(new_value_segment, sum);
-          } else {
-            benchmark_segment<ColumnDataType, true>(new_value_segment, sum);
-          }
+        if (use_reference_iteration) {
+          benchmark_segment<ColumnDataType, true>(segment, sum);
         } else {
-          if (use_reference_iteration) {
-            benchmark_segment<ColumnDataType, true>(segment, sum);
-          } else {
-            benchmark_segment<ColumnDataType, true>(segment, sum);
-          }
+          benchmark_segment<ColumnDataType, false>(segment, sum);
         }
       }
 
