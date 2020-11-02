@@ -76,9 +76,9 @@ class AggregateResult {
       aggregate_function == AggregateFunction::StandardDeviationSample, StandardDeviationSampleData,
       std::conditional_t<aggregate_function == AggregateFunction::CountDistinct, DistinctValues, AggregateType>>;
 
-  AccumulatorType accumulator;
+  AccumulatorType accumulator{};
   size_t aggregate_count = 0;
-  RowID row_id;
+  RowID row_id{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.

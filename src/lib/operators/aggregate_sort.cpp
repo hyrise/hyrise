@@ -94,7 +94,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   const auto chunk_count = sorted_table->chunk_count();
 
-  AggregateAccumulator<function, AggregateType> accumulator;
+  AggregateAccumulator<function, AggregateType> accumulator{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
