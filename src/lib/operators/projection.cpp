@@ -104,7 +104,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // newly generated columns. In the upcoming loop, we do not yet deal with the projection_result_table indirection
   // described above.
   auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
-
+  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(input_table.chunk_count(), std::vector<bool>(expressions.size(), false));
   auto forwarding_cost = std::chrono::nanoseconds{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -121,13 +121,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         // Forward input column if possible
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-        column_is_nullable[column_id] = column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
+        column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
         forwarding_cost += timer.lap();
       }
     }
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
-    auto perform_projection_evaluation = [this, chunk_id, uncorrelated_subquery_results, &output_segments_by_chunk, &column_is_nullable] () {
+    auto perform_projection_evaluation = [this, chunk_id, uncorrelated_subquery_results, &output_segments_by_chunk, &column_is_nullable_by_chunk] () {
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
         for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
@@ -135,7 +135,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
           if (expression->type != ExpressionType::PQPColumn) {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-            column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
+            column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || output_segment->is_nullable();
             output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
           }
         }
@@ -149,6 +149,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      column_is_nullable[column_id] = column_is_nullable[column_id] || column_is_nullable_by_chunk[chunk_id][column_id];
+    }
+  }
 
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
