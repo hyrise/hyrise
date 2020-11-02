@@ -85,7 +85,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     bool equal(const NonNullIterator& other) const { return _chunk_offset == other._chunk_offset; }
 
-    std::ptrdiff_t distance_to(const NonNullIterator& other) const { return other._chunk_offset - _chunk_offset; }
+    std::ptrdiff_t distance_to(const NonNullIterator& other) const {
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+    }
 
     NonNullSegmentPosition<T> dereference() const { return NonNullSegmentPosition<T>{(*_values)[_chunk_offset], _chunk_offset}; }
 
@@ -124,7 +126,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
-    std::ptrdiff_t distance_to(const Iterator& other) const { return other._chunk_offset - _chunk_offset; }
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+    }
 
     SegmentPosition<T> dereference() const { return SegmentPosition<T>{(*_values)[_chunk_offset], (*_null_values)[_chunk_offset], _chunk_offset}; }
 

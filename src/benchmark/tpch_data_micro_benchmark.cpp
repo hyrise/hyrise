@@ -581,44 +581,44 @@ BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_Default__Reference, s
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_Default__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_NonNull__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_NonNull__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_Default, std::string("l_shipdate"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_NonNull, std::string("l_shipdate"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_Default, std::string("l_shipdate"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_NonNull, std::string("l_shipdate"), true);
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_Default__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_Default__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_NonNull__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_NonNull__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_Default, std::string("l_returnflag"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_NonNull, std::string("l_returnflag"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_Default, std::string("l_returnflag"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_NonNull, std::string("l_returnflag"), true);
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_Default__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_Default__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_NonNull__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_NonNull__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_Default, std::string("l_extendedprice"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_NonNull, std::string("l_extendedprice"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_Default, std::string("l_extendedprice"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_NonNull, std::string("l_extendedprice"), true);
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_Default__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_Default__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_NonNull__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_NonNull__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_Default, std::string("l_discount"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_NonNull, std::string("l_discount"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_Default, std::string("l_discount"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_NonNull, std::string("l_discount"), true);
 
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_Default__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_Default__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_NonNull__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_NonNull__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_Default, std::string("l_linenumber"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_NonNull, std::string("l_linenumber"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_Default, std::string("l_linenumber"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_NonNull, std::string("l_linenumber"), true);
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_Default__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_Default__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_NonNull__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_NonNull__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_Default, std::string("l_orderkey"), true);
-BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_NonNull, std::string("l_orderkey"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_Default, std::string("l_orderkey"), false);
+BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_NonNull, std::string("l_orderkey"), true);
 
 
 BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_lz4__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
