@@ -164,7 +164,7 @@ using ExpressionUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
 template <typename Value>
-using ConstExpressionUnorderedMap = tbb::concurrent_unordered_map<std::shared_ptr<const AbstractExpression>, Value,
+using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const AbstractExpression>, Value,
                                                        ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
 using ExpressionUnorderedSet =

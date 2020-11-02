@@ -110,7 +110,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   std::mutex output_mutex;
   std::mutex column_is_nullable_mutex;
-
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_table.chunk_count());
   const auto chunk_count = input_table.chunk_count();
