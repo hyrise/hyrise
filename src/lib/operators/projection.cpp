@@ -106,15 +106,20 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
   auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(input_table.chunk_count(), std::vector<bool>(expressions.size(), false));
   auto forwarding_cost = std::chrono::nanoseconds{};
-
+  auto expression_evaluator_cost = std::chrono::nanoseconds{};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+
   jobs.reserve(input_table.chunk_count());
+
   const auto chunk_count = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
+    auto execute_in_parallel{ChunkOffset{500} < input_chunk->size()};
     auto output_segments = Segments{expressions.size()};
+
+    timer.lap();
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id]; 
       if (expression->type == ExpressionType::PQPColumn) {
@@ -136,17 +141,23 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
             column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || output_segment->is_nullable();
+            // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
+            // ValueSegments. We deal with this later.
             output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
           }
         }
-        // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
-        // ValueSegments. We deal with this later.
     };
-    auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
-    jobs.push_back(job_task);
+    if (execute_in_parallel) {
+          auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
+          jobs.push_back(job_task);
+    } else {
+      timer.lap();
+      perform_projection_evaluation();
+      expression_evaluator_cost += timer.lap();
+    }
   }
 
-  auto expression_evaluator_cost = std::chrono::nanoseconds{};
+  timer.lap();
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
 
