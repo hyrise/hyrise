@@ -196,9 +196,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto projection_result_column_id =
             ColumnID{static_cast<ColumnID::base_type>(projection_result_segments.size() - 1)};
 
+        const auto did_not_contain_null_values = output_segments_by_chunk[chunk_id][column_id]->contains_no_null_values();
         output_segments_by_chunk[chunk_id][column_id] = std::make_shared<ReferenceSegment>(
             projection_result_table, projection_result_column_id, entire_chunk_pos_list);
-        output_segments_by_chunk[chunk_id][column_id]->set_contains_no_null_values(output_segments_by_chunk[chunk_id][column_id]->contains_no_null_values() || !column_is_nullable[column_id]);
+        output_segments_by_chunk[chunk_id][column_id]->set_contains_no_null_values(did_not_contain_null_values);
       }
     }
 

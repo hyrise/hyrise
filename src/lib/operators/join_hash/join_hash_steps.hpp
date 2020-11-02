@@ -872,7 +872,7 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
  * @param pos_list contains the positions of rows to use from the input table
  */
 inline void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                                  const PosListsByChunk& input_pos_list_ptrs_sptrs_by_segments,
+                                  const JoinMode mode, const PosListsByChunk& input_pos_list_ptrs_sptrs_by_segments,
                                   std::shared_ptr<RowIDPosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
@@ -963,8 +963,9 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
       }
 
       auto output_reference_segment = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
-      // TODO: check join type
-      output_reference_segment->set_contains_no_null_values(true);
+      if (mode == JoinMode::Inner || mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
+        output_reference_segment->set_contains_no_null_values(true);
+      }
       output_segments.push_back(output_reference_segment);
     }
   }
