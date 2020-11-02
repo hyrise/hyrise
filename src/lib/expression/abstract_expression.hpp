@@ -4,7 +4,6 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <tbb/concurrent_unordered_map.h>
 
 #include "all_type_variant.hpp"
 #include "expression_precedence.hpp"
