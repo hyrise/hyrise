@@ -307,8 +307,54 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
 }
 
 
+void BM_SegmentPositionValidation(benchmark::State& state, const bool) {
+  constexpr auto SCALE_FACTOR = 1.0f;
+  const std::string column_name = "l_shipdate";
+  auto benchmark_config = BenchmarkConfig::get_default_config();
+
+  if (!Hyrise::get().storage_manager.has_table("lineitem")) {
+    std::cout << "Generating TPC-H data set with scale factor " << SCALE_FACTOR << std::endl;
+    TPCHTableGenerator(SCALE_FACTOR, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
+  }
+
+  const auto lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
+  const auto column_id = lineitem_table->column_id_by_name(column_name);
+
+  const auto lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_table_wrapper->execute();
+
+  const auto chunk_count = lineitem_table->chunk_count();
+
+  resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
+    using ColumnDataType = typename decltype(data_type)::type;
+
+    for (auto _ : state) {
+      auto sum = size_t{0};
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = lineitem_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+ 
+        segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+          while (it != end) {
+            const auto& position = *it;
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+              if (!position.is_null()) {
+                benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value()[0]));
+              }
+            }
+            ++it;
+          }
+        });
+      }
+
+      assert(sum > 0);
+    }
+  });
+}
+
 template <typename ColumnDataType,  bool useReference>
-inline void benchmark_segment(const std::shared_ptr<AbstractSegment>& segment, size_t& sum) {
+void benchmark_segment(const std::shared_ptr<AbstractSegment>& segment, size_t& sum) {
   segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
     using SegmentPositionType = typename decltype(it)::value_type;
     using SegmentPositionType2 = typename std::conditional_t<useReference, const SegmentPositionType&, const SegmentPositionType>;
@@ -317,9 +363,9 @@ inline void benchmark_segment(const std::shared_ptr<AbstractSegment>& segment, s
       const SegmentPositionType2 position = *it;
       if (!position.is_null()) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          sum += static_cast<int64_t>(position.value()[0]);
+          benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value()[0]));
         } else {
-          sum += static_cast<int64_t>(position.value() + 1) % 5;
+          benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value() + 1) % 5);
         }
       }
     ++it;
@@ -327,7 +373,8 @@ inline void benchmark_segment(const std::shared_ptr<AbstractSegment>& segment, s
   });
 }
 
-void BM_SegmentPositionReference(benchmark::State& state, std::string column_name, const SegmentEncodingSpec segment_encoding_spec, const bool mark_as_non_nullable = false) {
+void BM_SegmentPosition(benchmark::State& state, std::string column_name, const SegmentEncodingSpec segment_encoding_spec,
+                        const bool non_null_iteration, const bool use_reference_iteration) {
   constexpr auto SCALE_FACTOR = 1.0f;
   auto benchmark_config = BenchmarkConfig::get_default_config();
 
@@ -358,49 +405,22 @@ void BM_SegmentPositionReference(benchmark::State& state, std::string column_nam
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& chunk = lineitem_table->get_chunk(chunk_id);
         const auto& segment = chunk->get_segment(column_id);
-  
-        if (mark_as_non_nullable) {
+ 
+        if (non_null_iteration) {
           const auto& value_segment = static_cast<ValueSegment<ColumnDataType>&>(*segment);
                 auto new_value_segment = std::make_shared<ValueSegment<ColumnDataType>>(pmr_vector<ColumnDataType>(value_segment.values()));
           assert(!new_value_segment->is_nullable());
-          benchmark_segment<ColumnDataType, true>(new_value_segment, sum);
+          if (use_reference_iteration) {
+            benchmark_segment<ColumnDataType, true>(new_value_segment, sum);
+          } else {
+            benchmark_segment<ColumnDataType, true>(new_value_segment, sum);
+          }
         } else {
-          benchmark_segment<ColumnDataType, true>(segment, sum);
-        }
-
-      }
-
-      assert(sum > 0);
-    }
-  });
-}
-
-void BM_SegmentPositionPosition(benchmark::State& state, std::string column_name, const SegmentEncodingSpec segment_encoding_spec, const bool mark_as_non_nullable = false) {
-  const auto lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
-  const auto lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
-  lineitem_table_wrapper->execute();
-
-  const auto column_id = lineitem_table->column_id_by_name(column_name);
-
-  const auto chunk_count = lineitem_table->chunk_count();
-
-  resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
-    using ColumnDataType = typename decltype(data_type)::type;
-
-    for (auto _ : state) {
-      auto sum = size_t{0};
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& chunk = lineitem_table->get_chunk(chunk_id);
-        const auto& segment = chunk->get_segment(column_id);
-
-        if (mark_as_non_nullable) {
-          const auto& value_segment = static_cast<ValueSegment<ColumnDataType>&>(*segment);
-          auto new_value_segment = std::make_shared<ValueSegment<ColumnDataType>>(pmr_vector<ColumnDataType>(value_segment.values()));
-          assert(!new_value_segment->is_nullable());
-          benchmark_segment<ColumnDataType, false>(new_value_segment, sum);
-        } else {
-          benchmark_segment<ColumnDataType, false>(segment, sum);
+          if (use_reference_iteration) {
+            benchmark_segment<ColumnDataType, true>(segment, sum);
+          } else {
+            benchmark_segment<ColumnDataType, true>(segment, sum);
+          }
         }
       }
 
@@ -410,30 +430,30 @@ void BM_SegmentPositionPosition(benchmark::State& state, std::string column_name
 }
 
 
-template <typename ColumnDataType, bool nullable>
-inline void benchmark_std_vector(const std::vector<ColumnDataType>& chunk_vector,
+template <typename ColumnDataType, bool non_null_iteration>
+void benchmark_std_vector(const std::vector<ColumnDataType>& chunk_vector,
                                  const std::vector<bool>& chunk_null_vector, size_t& sum) {
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_vector.size(); ++chunk_offset) {
-    if constexpr (nullable) {
-      if (!chunk_null_vector[chunk_offset]) {
-        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]);
-        } else {
-          sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5;
-        }
-      }
-    } else {
+    if constexpr (non_null_iteration) {
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]));
       } else {
         benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5);
+      }
+    } else {
+      if (!chunk_null_vector[chunk_offset]) {
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]));
+        } else {
+          benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5);
+        }
       }
     }
   }
 }
 
 
-void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_name, const bool nullable) {
+void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_name, const bool non_null_iteration) {
   const auto lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
   const auto lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_table_wrapper->execute();
@@ -474,7 +494,7 @@ void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_na
         const auto& chunk_vector = vectors[chunk_id];
         const auto& chunk_null_vector = null_vectors[chunk_id];
 
-        if (nullable) {
+        if (non_null_iteration) {
           benchmark_std_vector<ColumnDataType, true>(chunk_vector, chunk_null_vector, sum);
         } else {
           benchmark_std_vector<ColumnDataType, false>(chunk_vector, chunk_null_vector, sum);
@@ -482,7 +502,6 @@ void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_na
       }
 
       assert(sum > 0);
-      // std::cout << sum << " " ;
     }
   });
 }
@@ -516,9 +535,9 @@ void BM_SegmentPositionNone(benchmark::State& state, std::string column_name, co
           const auto position = typed_segment.get_typed_value(chunk_offset);
           if (position) {
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              sum += static_cast<int64_t>((*position)[0]);
+              benchmark::DoNotOptimize(sum += static_cast<int64_t>((*position)[0]));
             } else {
-              sum += static_cast<int64_t>(*position + 1) % 5;
+              benchmark::DoNotOptimize(sum += static_cast<int64_t>(*position + 1) % 5);
             }
           }
         }
@@ -529,99 +548,100 @@ void BM_SegmentPositionNone(benchmark::State& state, std::string column_name, co
   });
 }
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_shipdate_dict, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_shipdate_dict, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_dict__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_dict__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_shipdate_dict, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Dictionary});
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_returnflag_dict, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_returnflag_dict, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_dict__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_dict__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_returnflag_dict, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Dictionary});
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_extendedprice_dict, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_extendedprice_dict, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_dict__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_dict__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_extendedprice_dict, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Dictionary});
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_discount_dict, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_discount_dict, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_dict__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_dict__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_discount_dict, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Dictionary});
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_linenumber_dict, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_linenumber_dict, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_dict__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_dict__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_linenumber_dict, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Dictionary});
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_orderkey_dict, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Dictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_orderkey_dict, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Dictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_dict__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Dictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_dict__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Dictionary}, false, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNone, l_orderkey_dict, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Dictionary});
 
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_shipdate_unencoded_Default, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_shipdate_unencoded_Default, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_shipdate_unencoded_NonNull, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_shipdate_unencoded_NonNull, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPositionValidation, l_shipdate_unencoded____Validation, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_Default__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_Default__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_NonNull__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_unencoded_NonNull__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_Default, std::string("l_shipdate"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_shipdate_unencoded_NonNull, std::string("l_shipdate"), false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_returnflag_unencoded_Default, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_returnflag_unencoded_Default, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_returnflag_unencoded_NonNull, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_returnflag_unencoded_NonNull, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_Default__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_Default__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_NonNull__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_unencoded_NonNull__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_Default, std::string("l_returnflag"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_returnflag_unencoded_NonNull, std::string("l_returnflag"), false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_extendedprice_unencoded_Default, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_extendedprice_unencoded_Default, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_extendedprice_unencoded_NonNull, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_extendedprice_unencoded_NonNull, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_Default__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_Default__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_NonNull__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_unencoded_NonNull__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_Default, std::string("l_extendedprice"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_extendedprice_unencoded_NonNull, std::string("l_extendedprice"), false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_discount_unencoded_Default, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_discount_unencoded_Default, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_discount_unencoded_NonNull, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_discount_unencoded_NonNull, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_Default__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_Default__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_NonNull__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_unencoded_NonNull__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_Default, std::string("l_discount"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_discount_unencoded_NonNull, std::string("l_discount"), false);
 
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_linenumber_unencoded_Default, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_linenumber_unencoded_Default, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_linenumber_unencoded_NonNull, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_linenumber_unencoded_NonNull, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_Default__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_Default__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_NonNull__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_unencoded_NonNull__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_Default, std::string("l_linenumber"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_linenumber_unencoded_NonNull, std::string("l_linenumber"), false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_orderkey_unencoded_Default, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_orderkey_unencoded_Default, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false);
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_orderkey_unencoded_NonNull, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_orderkey_unencoded_NonNull, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_Default__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_Default__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, false, false);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_NonNull__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_unencoded_NonNull__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::Unencoded}, true, false);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_Default, std::string("l_orderkey"), true);
 BENCHMARK_CAPTURE(BM_SegmentPositionNoneManual, l_orderkey_unencoded_NonNull, std::string("l_orderkey"), false);
 
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_shipdate_lz4, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_shipdate_lz4, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_lz4__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_lz4__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_returnflag_lz4, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_returnflag_lz4, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_lz4__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_lz4__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_extendedprice_lz4, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_extendedprice_lz4, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_lz4__Reference, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_extendedprice_lz4__Value, std::string("l_extendedprice"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_discount_lz4, std::string("l_discount"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_discount_lz4, std::string("l_discount"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_lz4__Reference, std::string("l_discount"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_discount_lz4__Value, std::string("l_discount"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_linenumber_lz4, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_linenumber_lz4, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_lz4__Reference, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_linenumber_lz4__Value, std::string("l_linenumber"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_orderkey_lz4, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::LZ4});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_orderkey_lz4, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::LZ4});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_lz4__Reference, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::LZ4}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_orderkey_lz4__Value, std::string("l_orderkey"), SegmentEncodingSpec{EncodingType::LZ4}, false, false);
 
 
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_shipdate_fs, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_shipdate_fs, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::FixedStringDictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_fs__Reference, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::FixedStringDictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_shipdate_fs__Value, std::string("l_shipdate"), SegmentEncodingSpec{EncodingType::FixedStringDictionary}, false, false);
 
-BENCHMARK_CAPTURE(BM_SegmentPositionReference, l_returnflag_fs, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-BENCHMARK_CAPTURE(BM_SegmentPositionPosition, l_returnflag_fs, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::FixedStringDictionary});
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_fs__Reference, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::FixedStringDictionary}, false, true);
+BENCHMARK_CAPTURE(BM_SegmentPosition, l_returnflag_fs__Value, std::string("l_returnflag"), SegmentEncodingSpec{EncodingType::FixedStringDictionary}, false, false);
 
 }  // namespace opossum
