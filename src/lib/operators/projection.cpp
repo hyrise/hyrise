@@ -117,8 +117,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    auto job_task = std::make_shared<JobTask>([this, chunk_id, input_chunk, uncorrelated_subquery_results, &input_table, &output_segments_by_chunk, &output_mutex, &column_is_nullable_mutex, &column_is_nullable] () {
-        
+    auto perform_projection = [this, chunk_id, input_chunk, uncorrelated_subquery_results, &input_table, &output_segments_by_chunk, &output_mutex, &column_is_nullable_mutex, &column_is_nullable] () {
         auto output_segments = Segments{expressions.size()};
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
@@ -145,10 +144,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         // ValueSegments. We deal with this later.
         std::lock_guard<std::mutex> lock(output_mutex);
         output_segments_by_chunk[chunk_id] = std::move(output_segments);  
-      }
-    );
+    };
+    auto job_task = std::make_shared<JobTask>(perform_projection);
     jobs.push_back(job_task);
   }
+
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
 
