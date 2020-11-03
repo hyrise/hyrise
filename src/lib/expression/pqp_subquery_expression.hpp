@@ -27,13 +27,8 @@ class PQPSubqueryExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
 
-  /**
-   *
-   * @param copied_ops
-   * @return
-   */
-  std::shared_ptr<AbstractExpression> deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops);
+  std::shared_ptr<AbstractExpression> deep_copy_with_subplan_memoization_support(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

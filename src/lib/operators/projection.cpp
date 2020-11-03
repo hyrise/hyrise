@@ -37,7 +37,7 @@ std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   // We have to use copied_ops to maintain sub-plan memoization for subquery expressions.
   return std::make_shared<Projection>(copied_left_input,
-                                      expressions_deep_copy_with_memoization(expressions, copied_ops));
+                                      expressions_deep_copy_with_subplan_memoization_support(expressions, copied_ops));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

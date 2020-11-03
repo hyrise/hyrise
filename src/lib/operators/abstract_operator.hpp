@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operator_performance_data.hpp"
 #include "types.hpp"
 

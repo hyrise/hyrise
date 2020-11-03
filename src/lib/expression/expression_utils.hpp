@@ -50,7 +50,7 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
  * @param copied_ops
  * @return
  */
-std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_memoization(
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_subplan_memoization_support(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops);
 

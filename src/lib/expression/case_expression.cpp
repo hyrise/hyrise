@@ -34,6 +34,13 @@ std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
   return std::make_shared<CaseExpression>(when()->deep_copy(), then()->deep_copy(), otherwise()->deep_copy());
 }
 
+std::shared_ptr<AbstractExpression> CaseExpression::deep_copy_with_subplan_memoization_support(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<CaseExpression>(when()->deep_copy_with_subplan_memoization_support(copied_ops),
+                                          then()->deep_copy_with_subplan_memoization_support(copied_ops),
+                                          otherwise()->deep_copy_with_subplan_memoization_support(copied_ops));
+}
+
 bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const CaseExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");

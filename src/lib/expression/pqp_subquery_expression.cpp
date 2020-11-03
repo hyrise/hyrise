@@ -29,16 +29,8 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
   }
 }
 
-DataType PQPSubqueryExpression::data_type() const {
-  Assert(_data_type_info,
-         "Can't determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
-  return _data_type_info->data_type;
-}
-
-bool PQPSubqueryExpression::is_correlated() const { return !parameters.empty(); }
-
-std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
+std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy_with_subplan_memoization_support(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   auto copied_ops_iter = copied_ops.find(pqp.get());
 
   // Reuse operator/PQP, if available (sub-plan memoization)
@@ -57,6 +49,14 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy(
 
   return copied_pqp_subquery_expression;
 }
+
+DataType PQPSubqueryExpression::data_type() const {
+  Assert(_data_type_info,
+         "Can't determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
+  return _data_type_info->data_type;
+}
+
+bool PQPSubqueryExpression::is_correlated() const { return !parameters.empty(); }
 
 std::string PQPSubqueryExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;

@@ -55,24 +55,18 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
-    Assert(!std::dynamic_pointer_cast<PQPSubqueryExpression>(expression), "Did not expect PQPSubqueryExpression type.");
     copied_expressions.emplace_back(expression->deep_copy());
   }
   return copied_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_memoization(
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_subplan_memoization_support(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
-    auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression);
-    if(pqp_subquery_expression) {
-      copied_expressions.emplace_back(pqp_subquery_expression->deep_copy(copied_ops));
-    } else {
-      copied_expressions.emplace_back(expression->deep_copy());
-    }
+    copied_expressions.emplace_back(expression->deep_copy_with_subplan_memoization_support(copied_ops));
   }
   return copied_expressions;
 }
