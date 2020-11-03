@@ -363,9 +363,9 @@ void benchmark_segment(const std::shared_ptr<AbstractSegment>& segment, size_t& 
       const SegmentPositionType2 position = *it;
       if (!position.is_null()) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value()[0]));
+          sum += static_cast<int64_t>(position.value()[0]);
         } else {
-          benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value() + 1) % 5);
+          sum += static_cast<int64_t>(position.value() + 1) % 5;
         }
       }
     ++it;
@@ -439,20 +439,21 @@ void benchmark_std_vector(const std::vector<ColumnDataType>& chunk_vector,
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_vector.size(); ++chunk_offset) {
     if constexpr (non_null_iteration) {
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]));
+        sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]);
       } else {
-        benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5);
+        sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5;
       }
     } else {
       if (!chunk_null_vector[chunk_offset]) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]));
+          sum += static_cast<int64_t>(chunk_vector[chunk_offset][0]);
         } else {
-          benchmark::DoNotOptimize(sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5);
+          sum += static_cast<int64_t>(chunk_vector[chunk_offset] + 1) % 5;
         }
       }
     }
   }
+  assert(sum > 0);
 }
 
 
