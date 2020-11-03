@@ -88,8 +88,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
 
+  const auto expression_size = expressions.size();
+
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator
-  auto column_is_nullable = std::vector<bool>(expressions.size(), false);
+  auto column_is_nullable = std::vector<bool>(expression_size, false);
 
   // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
   const auto uncorrelated_subquery_results =
@@ -119,7 +121,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // to a vector with information if a column is nullable for every column.
   auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(
     input_table.chunk_count(),
-    std::vector<bool>(expressions.size(), false));
+    std::vector<bool>(expression_size, false));
 
   // All projections that operate on chunks of sufficient size and newly generated columns will be executed after the
   // loop by the job scheduler to parallelize the evaluation operation.
@@ -130,10 +132,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // The upper bound of the chunk size which defines if it will be executed in parallel or not
     // still needs to be re-evaluated over time to find the value which gives the best performance.
     const auto execute_in_parallel = bool{ChunkOffset{500} < input_chunk->size()};
-    auto output_segments = Segments{expressions.size()};
+    auto output_segments = Segments{expression_size};
 
     timer.lap();
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
       if (expression->type == ExpressionType::PQPColumn) {
@@ -155,12 +157,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       this,
       chunk_id,
       uncorrelated_subquery_results,
+      expression_size,
       &output_segments_by_chunk,
       &column_is_nullable_by_chunk
       ] () {
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
-        for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
           const auto& expression = expressions[column_id];
           if (expression->type != ExpressionType::PQPColumn) {
             // Newly generated column - the expression needs to be evaluated
@@ -193,7 +196,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Merge column is nullable information from chunks.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
       column_is_nullable[column_id] = column_is_nullable[column_id] || column_is_nullable_by_chunk[chunk_id][column_id];
     }
   }
@@ -206,7 +209,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // ReferenceSegments point to.
   TableColumnDefinitions output_column_definitions;
   TableColumnDefinitions projection_result_column_definitions;
-  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
     const auto definition = TableColumnDefinition{expressions[column_id]->as_column_name(),
                                                   expressions[column_id]->data_type(), column_is_nullable[column_id]};
     output_column_definitions.emplace_back(definition);
@@ -229,7 +232,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // Create a mapping from input columns to output columns for future use. This is necessary as the order may have been
   // changed. The mapping only contains input column IDs that are forwarded to the output without modfications.
   auto input_column_to_output_column = std::unordered_map<ColumnID, ColumnID>{};
-  for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
+  for (auto expression_id = ColumnID{0}; expression_id < expression_size; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       const auto& original_id = pqp_column_expression->column_id;
@@ -245,7 +248,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     auto projection_result_segments = Segments{};
     const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_chunk->size());
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
       // Turn newly generated ValueSegments into ReferenceSegments, if needed
       if (expressions[column_id]->type != ExpressionType::PQPColumn && output_table_type == TableType::References) {
         projection_result_segments.emplace_back(output_segments_by_chunk[chunk_id][column_id]);
