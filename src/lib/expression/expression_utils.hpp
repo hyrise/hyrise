@@ -8,6 +8,7 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/abstract_operator.hpp"
 
 namespace opossum {
 
@@ -42,6 +43,16 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+/**
+ * TODO
+ * @param expressions
+ * @param copied_ops
+ * @return
+ */
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_memoization(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops);
 
 /**
  * Recurse through the expression and replace them according to @param mapping, where applicable
