@@ -325,11 +325,12 @@ void BM_SegmentPositionValidation(benchmark::State& state, const bool) {
 
   const auto chunk_count = lineitem_table->chunk_count();
 
-  for (auto _ : state) {
-    auto sum = size_t{0};
+  auto sum = size_t{0};
+  resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
+    using ColumnDataType = typename decltype(data_type)::type;
 
-    resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
-      using ColumnDataType = typename decltype(data_type)::type;
+    for (auto _ : state) {
+      sum = 0;
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& chunk = lineitem_table->get_chunk(chunk_id);
@@ -337,21 +338,20 @@ void BM_SegmentPositionValidation(benchmark::State& state, const bool) {
  
         segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
           while (it != end) {
-            const auto& position = *it;
+            const auto position = *it;
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               if (!position.is_null()) {
-                benchmark::DoNotOptimize(sum += static_cast<int64_t>(position.value()[0]));
+                sum += static_cast<int64_t>(position.value()[0]);
               }
             }
             ++it;
           }
         });
       }
-
       assert(sum > 0);
-      sum = 0;
-    });
-  }
+    }
+  });
+  //std::cout << "Resulting sum is " << sum << std::endl;
 }
 
 template <typename ColumnDataType,  bool useReference>
@@ -395,6 +395,7 @@ void BM_SegmentPosition(benchmark::State& state, std::string column_name, const 
   lineitem_table_wrapper->execute();
 
   const auto chunk_count = lineitem_table->chunk_count();
+  auto sum = size_t{0};
 
   resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
     using ColumnDataType = typename decltype(data_type)::type;
@@ -415,7 +416,7 @@ void BM_SegmentPosition(benchmark::State& state, std::string column_name, const 
     }
 
     for (auto _ : state) {
-      auto sum = size_t{0};
+      sum = 0;
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& chunk = lineitem_table->get_chunk(chunk_id);
@@ -431,6 +432,7 @@ void BM_SegmentPosition(benchmark::State& state, std::string column_name, const 
       assert(sum > 0);
     }
   });
+  //std::cout << "Resulting sum is " << sum << std::endl;
 }
 
 
@@ -466,6 +468,7 @@ void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_na
   const auto column_id = lineitem_table->column_id_by_name(column_name);
 
   const auto chunk_count = lineitem_table->chunk_count();
+  auto sum = size_t{0};
 
   resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
     using ColumnDataType = typename decltype(data_type)::type;
@@ -493,7 +496,7 @@ void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_na
 
     const auto quasi_chunk_count = vectors.size();
     for (auto _ : state) {
-      auto sum = size_t{0};
+      sum = 0;
 
       for (auto chunk_id = ChunkID{0}; chunk_id < quasi_chunk_count; ++chunk_id) {
         const auto& chunk_vector = vectors[chunk_id];
@@ -509,6 +512,7 @@ void BM_SegmentPositionNoneManual(benchmark::State& state, std::string column_na
       assert(sum > 0);
     }
   });
+  //std::cout << "Resulting sum is " << sum << std::endl;
 }
 
 /**
