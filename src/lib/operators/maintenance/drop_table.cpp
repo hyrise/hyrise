@@ -27,7 +27,8 @@ std::shared_ptr<const Table> DropTable::_on_execute() {
 
 std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<DropTable>(table_name, if_exists);
 }
 

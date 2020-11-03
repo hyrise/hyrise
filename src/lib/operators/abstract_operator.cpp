@@ -232,7 +232,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
   const auto copied_right_input =
       right_input() ? right_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input);
+  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
   if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
   copied_ops.emplace(this, copied_op);

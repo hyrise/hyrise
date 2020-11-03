@@ -38,7 +38,7 @@ DataType PQPSubqueryExpression::data_type() const {
 bool PQPSubqueryExpression::is_correlated() const { return !parameters.empty(); }
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops) {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
   auto copied_ops_iter = copied_ops.find(pqp.get());
 
   // Reuse operator/PQP, if available (sub-plan memoization)

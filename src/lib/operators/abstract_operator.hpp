@@ -150,7 +150,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const = 0;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
 
   const OperatorType _type;
 

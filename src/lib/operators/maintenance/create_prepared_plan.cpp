@@ -38,7 +38,8 @@ void CreatePreparedPlan::_on_set_parameters(const std::unordered_map<ParameterID
 
 std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<CreatePreparedPlan>(_prepared_plan_name, _prepared_plan->deep_copy());
 }
 
