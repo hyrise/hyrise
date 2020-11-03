@@ -29,7 +29,7 @@ using namespace opossum;  // NOLINT
 
 // Import
 
-constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/timestamps_split.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
 constexpr auto CHUNK_SIZE = size_t{10'000'000};
