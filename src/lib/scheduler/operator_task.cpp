@@ -31,7 +31,6 @@ std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operato
 std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
     std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
-
   // Early out: Maybe there are already results from previous tasks, so we do not have to re-run the operator.
   if (op->performance_data->executed) return nullptr;
 
@@ -103,7 +102,6 @@ void OperatorTask::_on_execute() {
 
     context->rollback(RollbackReason::Conflict);
   }
-
 }
 
 }  // namespace opossum

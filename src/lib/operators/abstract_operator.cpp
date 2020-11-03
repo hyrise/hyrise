@@ -34,7 +34,7 @@ AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
     bool left_has_executed = !_left_input || _left_input->performance_data->executed;
     bool right_has_executed = !_right_input || _right_input->performance_data->executed;
-    Assert(performance_data->executed || !(left_has_executed && right_has_executed),  // fails at the end of TPC-H Q11
+    Assert(performance_data->executed || !(left_has_executed && right_has_executed),
            "Operator did not execute which is unexpected.");
   }
 }
@@ -50,7 +50,7 @@ void AbstractOperator::execute() {
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    Assert(!performance_data->executed, "Operator has already been executed"); // TPC-DS Q9 Error 1
+    Assert(!performance_data->executed, "Operator has already been executed");
   }
 
   Timer performance_timer;
@@ -173,7 +173,7 @@ void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
 }
 
 void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) {
-  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid."); // TPC-DS Q9 Error 2
+  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
   if (_consumer_count == 0) clear_output();
 }
