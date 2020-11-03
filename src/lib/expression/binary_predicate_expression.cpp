@@ -34,6 +34,13 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const
                                                      right_operand()->deep_copy());
 }
 
+std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy_with_subplan_memoization_support(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<BinaryPredicateExpression>(
+      predicate_condition, left_operand()->deep_copy_with_subplan_memoization_support(copied_ops),
+      right_operand()->deep_copy_with_subplan_memoization_support(copied_ops));
+}
+
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 

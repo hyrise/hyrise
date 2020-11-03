@@ -43,7 +43,7 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy_with_subpla
     }
   }
 
-  // Create a deep copy
+  // Create regular deep copy
   auto copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(deep_copy());
   copied_ops.emplace(pqp.get(), copied_pqp_subquery_expression->pqp);
 
