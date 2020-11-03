@@ -104,34 +104,48 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // newly generated columns. In the upcoming loop, we do not yet deal with the projection_result_table indirection
   // described above.
   auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
-  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(input_table.chunk_count(), std::vector<bool>(expressions.size(), false));
+
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
+  // Create a vector that will hold all jobs that are getting executed in parallel.
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_table.chunk_count());
 
+  // In the following loop, we perform all projections that only forward an input column sequential.
+  // All projections that operate on chunks of sufficient size and newly generated columns will be executed after the
+  // loop by the job scheduler to parallelize the evaluation operation.
   const auto chunk_count = input_table.chunk_count();
+
+  // Create a two-dimensional vector that saves the information if a column is nullable for every chunk.
+  // This will prevent simultaneously access between the projections that are executed in parallel.  
+  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(input_table.chunk_count(), std::vector<bool>(expressions.size(), false));
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
+    // The upper bound of the chunk size which defines if it will be executed in parallel or not
+    // still needs to be re-evaluated over time to find the value which gives the best performance.
     auto execute_in_parallel{ChunkOffset{500} < input_chunk->size()};
     auto output_segments = Segments{expressions.size()};
 
-    timer.lap();
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id]; 
       if (expression->type == ExpressionType::PQPColumn) {
         // Forward input column if possible
+        timer.lap();
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
         column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
         forwarding_cost += timer.lap();
       }
     }
+
+    // Output segments are associated with their chunk. At the moment the segments are only ReferenceSegments.
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
+    // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, uncorrelated_subquery_results, &output_segments_by_chunk, &column_is_nullable_by_chunk] () {
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
@@ -141,12 +155,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
             column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || output_segment->is_nullable();
-            // Storing the result in output_segments means that the vector may contain both ReferenceSegments and
+            // Storing the result in output_segments_by_chunk means that the vector for the separate chunks may contain both ReferenceSegments and
             // ValueSegments. We deal with this later.
             output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
           }
         }
     };
+    // It is checked if the job should be executed in parallel. If so it will be pushed to the task vector
+    // if not it will be executed right away.
     if (execute_in_parallel) {
           auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
           jobs.push_back(job_task);
@@ -156,11 +172,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       expression_evaluator_cost += timer.lap();
     }
   }
-
+  // Instruct the scheduler to execute the jobs.
   timer.lap();
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
 
+  // Merge column is nullable information from chunks.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       column_is_nullable[column_id] = column_is_nullable[column_id] || column_is_nullable_by_chunk[chunk_id][column_id];
