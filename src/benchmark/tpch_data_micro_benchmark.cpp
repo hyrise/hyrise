@@ -325,11 +325,11 @@ void BM_SegmentPositionValidation(benchmark::State& state, const bool) {
 
   const auto chunk_count = lineitem_table->chunk_count();
 
-  resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
-    using ColumnDataType = typename decltype(data_type)::type;
+  for (auto _ : state) {
+    auto sum = size_t{0};
 
-    for (auto _ : state) {
-      auto sum = size_t{0};
+    resolve_data_type(lineitem_table->column_data_type(column_id), [&](const auto data_type) {
+      using ColumnDataType = typename decltype(data_type)::type;
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& chunk = lineitem_table->get_chunk(chunk_id);
@@ -349,8 +349,9 @@ void BM_SegmentPositionValidation(benchmark::State& state, const bool) {
       }
 
       assert(sum > 0);
-    }
-  });
+      sum = 0;
+    });
+  }
 }
 
 template <typename ColumnDataType,  bool useReference>
