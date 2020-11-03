@@ -118,8 +118,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto chunk_count = input_table.chunk_count();
 
   // Create a two-dimensional vector that saves the information if a column is nullable for every chunk.
-  // This will prevent simultaneously access between the projections that are executed in parallel.  
-  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(input_table.chunk_count(), std::vector<bool>(expressions.size(), false));
+  // This will prevent simultaneously access between the projections that are executed in parallel.
+  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(
+    input_table.chunk_count(),
+    std::vector<bool>(expressions.size(), false));
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
@@ -131,13 +133,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     auto output_segments = Segments{expressions.size()};
 
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
-      const auto& expression = expressions[column_id]; 
+      const auto& expression = expressions[column_id];
       if (expression->type == ExpressionType::PQPColumn) {
         // Forward input column if possible
         timer.lap();
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-        column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
+        column_is_nullable_by_chunk[chunk_id][column_id] =
+          column_is_nullable_by_chunk[chunk_id][column_id] ||
+          input_table.column_is_nullable(pqp_column_expression.column_id);
         forwarding_cost += timer.lap();
       }
     }
@@ -146,16 +150,25 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // Defines the job that performs the evaluation if the columns are newly generated.
-    auto perform_projection_evaluation = [this, chunk_id, uncorrelated_subquery_results, &output_segments_by_chunk, &column_is_nullable_by_chunk] () {
+    auto perform_projection_evaluation = [
+      this,
+      chunk_id,
+      uncorrelated_subquery_results,
+      &output_segments_by_chunk,
+      &column_is_nullable_by_chunk
+      ] () {
         ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
         for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
-          const auto& expression = expressions[column_id]; 
+          const auto& expression = expressions[column_id];
           if (expression->type != ExpressionType::PQPColumn) {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-            column_is_nullable_by_chunk[chunk_id][column_id] = column_is_nullable_by_chunk[chunk_id][column_id] || output_segment->is_nullable();
-            // Storing the result in output_segments_by_chunk means that the vector for the separate chunks may contain both ReferenceSegments and
+            column_is_nullable_by_chunk[chunk_id][column_id] =
+              column_is_nullable_by_chunk[chunk_id][column_id] ||
+              output_segment->is_nullable();
+            // Storing the result in output_segments_by_chunk means that the vector
+            // for the separate chunks may contain both ReferenceSegments and
             // ValueSegments. We deal with this later.
             output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
           }
