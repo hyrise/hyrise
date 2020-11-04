@@ -156,9 +156,22 @@ std::string AbstractOperator::description(DescriptionMode description_mode) cons
   return stream.str();
 }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  return _deep_copy_impl(copied_ops);
+std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const auto copied_ops_iter = copied_ops.find(this);
+    if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
+
+    const auto copied_left_input =
+        left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+    const auto copied_right_input =
+        right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+
+    auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+    if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
+
+    copied_ops.emplace(this, copied_op);
+
+    return copied_op;
 }
 
 std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
@@ -221,24 +234,6 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
-
-std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  const auto copied_ops_iter = copied_ops.find(this);
-  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
-
-  const auto copied_left_input =
-      left_input() ? left_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
-  const auto copied_right_input =
-      right_input() ? right_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
-
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
-  if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
-
-  copied_ops.emplace(this, copied_op);
-
-  return copied_op;
-}
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {

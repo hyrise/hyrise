@@ -20,26 +20,14 @@ PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOpera
                                              const Parameters& init_parameters)
     : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(init_pqp), parameters(init_parameters) {}
 
-std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
-  if (_data_type_info) {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), _data_type_info->data_type,
+std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    if (_data_type_info) {
+    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), _data_type_info->data_type,
                                                    _data_type_info->nullable, parameters);
   } else {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), parameters);
+    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), parameters);
   }
-}
-
-std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy_with_subplan_memoization_support(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-
-  // We want sub-plan memoization. Therefore, we need to provide copied_ops to the deep copy impl.
-  auto copied_pqp = pqp->_deep_copy_impl(copied_ops);  // Make friend with AbstractOperator?
-
-  if (_data_type_info) {
-    return std::make_shared<PQPSubqueryExpression>(copied_pqp, _data_type_info->data_type,
-                                                   _data_type_info->nullable, parameters);
-  }
-  return std::make_shared<PQPSubqueryExpression>(copied_pqp, parameters);
 }
 
 DataType PQPSubqueryExpression::data_type() const {

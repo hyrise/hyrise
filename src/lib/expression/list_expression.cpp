@@ -16,8 +16,9 @@ DataType ListExpression::data_type() const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const { return arguments; }
 
-std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
-  return std::make_shared<ListExpression>(expressions_deep_copy(arguments));
+std::shared_ptr<AbstractExpression> ListExpression::deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<ListExpression>(expressions_deep_copy(arguments, copied_ops));
 }
 
 std::string ListExpression::description(const DescriptionMode mode) const {

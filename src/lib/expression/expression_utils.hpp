@@ -40,19 +40,12 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions
+ * // TODO comment on arg
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
-
-/**
- * TODO
- * @param expressions
- * @param copied_ops
- * @return
- */
-std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy_with_subplan_memoization_support(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops);
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops
+    = *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>());
 
 /**
  * Recurse through the expression and replace them according to @param mapping, where applicable

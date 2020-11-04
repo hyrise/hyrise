@@ -63,13 +63,11 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    */
   virtual bool requires_computation() const;
 
-  virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
-
-  /**
-   * TODO Make pure virtual?
-   */
-  virtual std::shared_ptr<AbstractExpression> deep_copy_with_subplan_memoization_support(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
+  // ToDo: Comment arg
+  virtual std::shared_ptr<AbstractExpression> deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops
+      = *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>())
+      const = 0;
 
   /**
    * @return the expression's column name or, optionally, a more detailed description of the expression
