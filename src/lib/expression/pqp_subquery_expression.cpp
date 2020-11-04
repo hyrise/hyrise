@@ -31,23 +31,15 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy_with_subplan_memoization_support(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  auto copied_ops_iter = copied_ops.find(pqp.get());
 
-  // Reuse operator/PQP, if available (sub-plan memoization)
-  if (copied_ops_iter != copied_ops.end()) {
-    if (_data_type_info) {
-      return std::make_shared<PQPSubqueryExpression>(copied_ops_iter->second, _data_type_info->data_type,
-                                                     _data_type_info->nullable, parameters);
-    } else {
-      return std::make_shared<PQPSubqueryExpression>(copied_ops_iter->second, parameters);
-    }
+  // We want sub-plan memoization. Therefore, we need to provide copied_ops to the deep copy impl.
+  auto copied_pqp = pqp->_deep_copy_impl(copied_ops);  // Make friend with AbstractOperator?
+
+  if (_data_type_info) {
+    return std::make_shared<PQPSubqueryExpression>(copied_pqp, _data_type_info->data_type,
+                                                   _data_type_info->nullable, parameters);
   }
-
-  // Create regular deep copy
-  auto copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(deep_copy());
-  copied_ops.emplace(pqp.get(), copied_pqp_subquery_expression->pqp);
-
-  return copied_pqp_subquery_expression;
+  return std::make_shared<PQPSubqueryExpression>(copied_pqp, parameters);
 }
 
 DataType PQPSubqueryExpression::data_type() const {

@@ -128,6 +128,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
+  // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
+  std::shared_ptr<AbstractOperator> _deep_copy_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -145,9 +149,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // override this if the Operator uses Expressions and set the transaction context in the SubqueryExpressions
   virtual void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context);
 
-  // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
-  std::shared_ptr<AbstractOperator> _deep_copy_impl(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
+//  // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
+//  std::shared_ptr<AbstractOperator> _deep_copy_impl(
+//      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
   virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
