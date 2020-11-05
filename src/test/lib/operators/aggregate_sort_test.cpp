@@ -95,6 +95,15 @@ class AggregateSortTest : public BaseTest {
                                       SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
     _table_wrapper_multi_columns->execute();
+
+    // Prevent auto-clearing of both operators' output
+    _table_wrapper_1->register_consumer();
+    _table_wrapper_multi_columns->register_consumer();
+  }
+
+  void TearDown() override {
+    _table_wrapper_1->deregister_consumer();
+    _table_wrapper_multi_columns->deregister_consumer();
   }
 
  protected:
