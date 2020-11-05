@@ -26,14 +26,14 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
   // Tell input operators that we want to consume their output
-  if (_left_input) mutable_left_input()->register_consumer(*this);
-  if (_right_input) mutable_right_input()->register_consumer(*this);
+  if (_left_input) mutable_left_input()->register_consumer();
+  if (_right_input) mutable_right_input()->register_consumer();
 }
 
 AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
-    bool left_has_executed = !_left_input || _left_input->performance_data->executed;
-    bool right_has_executed = !_right_input || _right_input->performance_data->executed;
+    bool left_has_executed = !_left_input ? false : _left_input->performance_data->executed;
+    bool right_has_executed = !_right_input ? false : _right_input->performance_data->executed;
     Assert(performance_data->executed || !(left_has_executed && right_has_executed),
            "Operator did not execute which is unexpected.");
   }
@@ -84,8 +84,8 @@ void AbstractOperator::execute() {
   performance_data->executed = true;
 
   // Tell input operators that we no longer need their output.
-  if (_left_input) mutable_left_input()->deregister_consumer(*this);
-  if (_right_input) mutable_right_input()->deregister_consumer(*this);
+  if (_left_input) mutable_left_input()->deregister_consumer();
+  if (_right_input) mutable_right_input()->deregister_consumer();
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -180,12 +180,12 @@ std::shared_ptr<const Table> AbstractOperator::right_input_table() const { retur
 
 size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
-void AbstractOperator::register_consumer(const AbstractOperator& consumer_op) {
+void AbstractOperator::register_consumer() {
   _consumer_count++;
   _consumer_count_max++;
 }
 
-void AbstractOperator::deregister_consumer(const AbstractOperator& consumer_op) {
+void AbstractOperator::deregister_consumer() {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
   if (_consumer_count == 0) clear_output();
