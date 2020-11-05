@@ -5,6 +5,7 @@ else()
 endif()
 
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
+add_definitions(-DHYRISE_TEST=1)
 
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
