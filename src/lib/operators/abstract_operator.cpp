@@ -152,7 +152,6 @@ void AbstractOperator::clear_output() {
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << name();
-  stream << " (C.count: " << _consumer_count_max.load() << ")";
   return stream.str();
 }
 
