@@ -28,6 +28,9 @@ namespace opossum {
 void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                            const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name) {
+  // Prevent auto-clearing of in's output
+  in->register_consumer();
+
   // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name);
 
@@ -61,6 +64,8 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
+
+  in->deregister_consumer();
 }
 
 /**
