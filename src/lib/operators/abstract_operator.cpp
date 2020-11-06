@@ -30,15 +30,6 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
   if (_right_input) mutable_right_input()->register_consumer();
 }
 
-AbstractOperator::~AbstractOperator() {
-  if constexpr (HYRISE_DEBUG) {
-    bool left_has_executed = !_left_input ? false : _left_input->performance_data->executed;
-    bool right_has_executed = !_right_input ? false : _right_input->performance_data->executed;
-    Assert(performance_data->executed || !(left_has_executed && right_has_executed),
-           "Operator did not execute which is unexpected.");
-  }
-}
-
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
