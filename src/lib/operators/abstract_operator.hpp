@@ -72,7 +72,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
                    std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
                        std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  virtual ~AbstractOperator() = default;
+  virtual ~AbstractOperator();
 
   OperatorType type() const;
 
@@ -169,6 +169,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // We track the number of consuming operators to determine when to flush results.
   std::atomic<u_short> _consumer_count = 0;
   std::atomic<u_short> _consumer_count_max = 0;  // for debugging only
+
+  // Tracks whether execute() has been called at least once.
+  bool _requested_for_execution = false;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

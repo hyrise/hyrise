@@ -30,9 +30,19 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
   if (_right_input) mutable_right_input()->register_consumer();
 }
 
+AbstractOperator::~AbstractOperator() {
+  if constexpr (HYRISE_DEBUG) {
+    bool left_has_executed = !_left_input ? false : _left_input->performance_data->executed;
+    bool right_has_executed = !_right_input ? false : _right_input->performance_data->executed;
+    Assert(_requested_for_execution || !(left_has_executed && right_has_executed),
+           "Operator has never been triggered for execution.");
+  }
+}
+
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
+  _requested_for_execution = true;
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   if (_output && performance_data->executed) return;
   if constexpr (HYRISE_DEBUG) {

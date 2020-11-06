@@ -14,8 +14,6 @@ class AbstractReadOnlyOperator : public AbstractOperator {
  public:
   using AbstractOperator::AbstractOperator;
 
-  ~AbstractReadOnlyOperator() override;
-
  protected:
   // This override exists so that all AbstractReadOnlyOperators can ignore the transaction context
   // Apart from Validate and GetTable, none of the read-only operators needs the transaction context.
