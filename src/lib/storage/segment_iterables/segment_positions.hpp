@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO Look into @Bouncner's micro benchmarks
+
 #include <cstddef>
 
 #include <boost/blank.hpp>
