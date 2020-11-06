@@ -31,7 +31,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 }
 
 AbstractOperator::~AbstractOperator() {
-  if constexpr (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG && !HYRISE_TEST) {
     bool left_has_executed = !_left_input ? false : _left_input->performance_data->executed;
     bool right_has_executed = !_right_input ? false : _right_input->performance_data->executed;
     Assert(_requested_for_execution || !(left_has_executed && right_has_executed),
