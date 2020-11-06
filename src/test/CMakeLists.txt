@@ -98,7 +98,6 @@ set(
     lib/operators/maintenance/create_view_test.cpp
     lib/operators/maintenance/drop_table_test.cpp
     lib/operators/maintenance/drop_view_test.cpp
-    lib/operators/operator_clear_output_test.cpp
     lib/operators/operator_deep_copy_test.cpp
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
