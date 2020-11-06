@@ -12,8 +12,8 @@
 
 namespace opossum {
 
-void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  visit_lqp(root, [&](const auto& node) {
+void JoinPredicateOrderingRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.
     if (node->type != LQPNodeType::Join || node->node_expressions.size() <= 1) {
       return LQPVisitation::VisitInputs;

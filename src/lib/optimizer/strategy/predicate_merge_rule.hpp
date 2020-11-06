@@ -20,10 +20,9 @@ namespace opossum {
  */
 class PredicateMergeRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
-
   size_t minimum_union_count{4};
-
+ protected:
+  void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
  private:
   void _merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const;
   void _merge_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;

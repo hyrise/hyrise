@@ -97,13 +97,13 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
-void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void InExpressionRewriteRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us
     return;
   }
 
-  visit_lqp(node, [&](const auto& sub_node) {
+  visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type != LQPNodeType::Predicate) {
       // This rule only rewrites IN if it is part of a predicate (not, e.g., `SELECT a IN (1, 2) AS foo`)
       return LQPVisitation::VisitInputs;

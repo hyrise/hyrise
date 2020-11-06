@@ -20,8 +20,8 @@ namespace opossum {
  * for why we have that duplication.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
- public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
+ protected:
+  void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

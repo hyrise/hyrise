@@ -34,8 +34,6 @@ class AbstractLQPNode;
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
-
   /**
    * Use the law of boolean distributivity to reduce an expression
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
@@ -60,6 +58,9 @@ class ExpressionReductionRule : public AbstractRule {
   static void remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
                                          const std::shared_ptr<AbstractLQPNode>& aggregate_node,
                                          const std::shared_ptr<AbstractLQPNode>& root_node);
+
+ protected:
+  void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

@@ -58,7 +58,7 @@ void collect_stored_table_nodes(ColumnPruningAgnosticMultiSet& grouped_stored_ta
   });
 }
 
-void apply_to(const ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes) {
+void align_pruned_column_ids(const ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes) {
   /**
    * For each group of StoredTableNodes,
    * (1) iterate over the nodes and calculate the set intersection of pruned column ids and
@@ -96,20 +96,32 @@ void apply_to(const ColumnPruningAgnosticMultiSet& grouped_stored_table_nodes) {
 
 namespace opossum {
 
-void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  // Stores all StoredTableNodes grouped by key (same table name and pruned chunks).
-  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
-  ::collect_stored_table_nodes(grouped_stored_table_nodes, root);
-  ::apply_to(grouped_stored_table_nodes);
+/**
+ * This rule optimizes root and subquery LQPs all at once to be more effective. Therefore, we have to override the
+ * default implementation of AbstractRule::apply, which optimizes root and subquery LQPs individually, one-by-one.
+ */
+void StoredTableColumnAlignmentRule::apply(const std::shared_ptr<AbstractLQPNode>& root_node) const {
+  _apply_to(root_node);
 }
 
-void StoredTableColumnAlignmentRule::apply_to_optimized(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_nodes) {
-  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
-  for (const auto& lqp_node : lqp_nodes) {
-    ::collect_stored_table_nodes(grouped_stored_table_nodes, lqp_node);
+void StoredTableColumnAlignmentRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  // (1) Collect all distinct LQPs:   a) Root node
+  //                                  b) Subquery LQPs
+  auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{lqp_root};
+  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, lqp_root);
+  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+    lqps.emplace_back(lqp);
   }
-  ::apply_to(grouped_stored_table_nodes);
+
+  // (2) Collect all StoredTableNodes and group them by their key (same table name and same set of pruned chunks).
+  auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
+  for (const auto& lqp_node : lqps) {
+    collect_stored_table_nodes(grouped_stored_table_nodes, lqp_node);
+  }
+
+  // (3) Align grouped StoredTableNodes
+  align_pruned_column_ids(grouped_stored_table_nodes);
 }
 
 }  // namespace opossum

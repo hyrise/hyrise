@@ -45,11 +45,11 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 
 namespace opossum {
 
-void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+void PredicateReorderingRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
-  Assert(root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
 
-  visit_lqp(root, [&](const auto& node) {
+  visit_lqp(lqp_root, [&](const auto& node) {
     if (is_predicate_style_node(node)) {
       std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
