@@ -36,7 +36,7 @@ constexpr auto TBL_FILE = "../../data/timestamps.tbl";
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "timestamp";
-const auto CHUNK_SIZE = size_t{10'000'000};
+const auto CHUNK_SIZE = size_t{1'000'000};
 const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
 const auto CREATE_INDEX = true; 
 
