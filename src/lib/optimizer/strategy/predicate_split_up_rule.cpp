@@ -51,8 +51,8 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
     return false;
   }
 
-  const auto first_value_expression = static_cast<const ValueExpression&>(*first_binary_predicate->right_operand());
-  const auto second_value_expression = static_cast<const ValueExpression&>(*second_binary_predicate->right_operand());
+  const auto& first_value_expression = static_cast<const ValueExpression&>(*first_binary_predicate->right_operand());
+  const auto& second_value_expression = static_cast<const ValueExpression&>(*second_binary_predicate->right_operand());
 
   auto first_less_than_second = false;
   boost::apply_visitor(
