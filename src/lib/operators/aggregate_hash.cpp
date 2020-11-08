@@ -132,15 +132,16 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
   std::unique_ptr<AggregateResultIdMap<AggregateKey>> result_ids;
 };
 
-template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
                                                             const AbstractSegment& abstract_segment,
                                                             const KeysPerChunk<AggregateKey>& keys_per_chunk) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
+  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
 
-  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
+  auto aggregator =
+      AggregateFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
 
-  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, function, AggregateKey>>(
+  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
       _contexts_per_column[column_index]);
 
   auto& result_ids = *context.result_ids;
@@ -157,7 +158,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
     * If the value is NULL, the current aggregate value does not change.
     */
     if (!position.is_null()) {
-      if constexpr (function == AggregateFunction::CountDistinct) {
+      if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
         result.accumulator.emplace(position.value());
       } else {
@@ -469,22 +470,13 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In Opossum we handle the SQL keyword DISTINCT by grouping without aggregation.
+       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
+       * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
-       * For a query like "SELECT DISTINCT * FROM A;"
-       * we would assume that all columns from A are part of 'groupby_columns',
-       * respectively any columns that were specified in the projection.
-       * The optimizer is responsible to take care of passing in the correct columns.
-       *
-       * How does this operation work?
-       * Distinct rows are retrieved by grouping by vectors of values. Similar as for the usual aggregation
-       * these vectors are used as keys in the 'column_results' map.
-       *
-       * At this point we've got all the different keys from the chunks and accumulate them in 'column_results'.
-       * In order to reuse the aggregation implementation, we add a dummy AggregateResult.
-       * One could optimize here in the future.
-       *
-       * Obviously this implementation is also used for plain GroupBy's.
+       * As the grouping happens as part of the aggregation but no aggregate function exists , we use
+       * `AggregateFunction::Min` as a fake aggregate function whose result will be discarded. From here on, the steps
+       * are the same as they are for a regular grouped aggregate.
        */
 
       auto context =
@@ -674,12 +666,12 @@ The following template functions write the aggregated values for the different a
 They are separate and templated to avoid compiler errors for invalid type/function combinations.
 */
 // MIN, MAX, SUM, ANY write the current aggregated value
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
-                     func == AggregateFunction::Any,
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Min || aggregate_func == AggregateFunction::Max ||
+                     aggregate_func == AggregateFunction::Sum || aggregate_func == AggregateFunction::Any,
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, func>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
   null_values.resize(results.size());
 
@@ -696,10 +688,10 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 // COUNT writes the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, func>& results) {
+    const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
 
   size_t output_offset = 0;
@@ -710,10 +702,10 @@ std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
 }
 
 // COUNT(DISTINCT) writes the number of distinct values
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, func>& results) {
+    const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
 
   size_t output_offset = 0;
@@ -724,10 +716,10 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, func>& results) {
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
   null_values.resize(results.size());
 
@@ -743,26 +735,28 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 }
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, func>& results) {
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   Fail("Invalid aggregate");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>,
+                 void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, func>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
   null_values.resize(results.size());
 
   auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
-    if (result.aggregate_count >= 2) {
+    if (result.aggregate_count > 1) {
       values[output_offset] = result.accumulator[3];
     } else {
+      // STDDEV_SAMP is undefined if only a single value has been seen
       null_values[output_offset] = true;
     }
     ++output_offset;
@@ -770,10 +764,11 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>, void>
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
+                 void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, func>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   Fail("Invalid aggregate");
 }
 
@@ -858,8 +853,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
 template <typename ColumnDataType>
 void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                                            AggregateFunction function) {
-  switch (function) {
+                                            AggregateFunction aggregate_function) {
+  switch (aggregate_function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);
       break;
@@ -887,11 +882,11 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
   }
 }
 
-template <typename ColumnDataType, AggregateFunction function>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnDataType, function>::AggregateType aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnDataType, function>::AGGREGATE_DATA_TYPE;
+  typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
+  auto aggregate_data_type = AggregateTraits<ColumnDataType, aggregate_function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
@@ -903,8 +898,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  auto context =
-      std::static_pointer_cast<AggregateResultContext<ColumnDataType, function>>(_contexts_per_column[aggregate_index]);
+  auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
+      _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
 
@@ -925,10 +920,11 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   auto values = pmr_vector<decltype(aggregate_type)>{};
   auto null_values = pmr_vector<bool>{};
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL =
+      (aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct);
 
   if (!results.empty()) {
-    write_aggregate_values<ColumnDataType, decltype(aggregate_type), function>(values, null_values, results);
+    write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
   } else if (_groupby_column_ids.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
     values.push_back(decltype(aggregate_type){});
@@ -954,11 +950,11 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
 
 template <typename AggregateKey>
 std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
-    const DataType data_type, const AggregateFunction function) const {
+    const DataType data_type, const AggregateFunction aggregate_function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    switch (function) {
+    switch (aggregate_function) {
       case AggregateFunction::Min:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>();
         break;

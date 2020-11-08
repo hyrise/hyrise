@@ -13,7 +13,7 @@ The AggregateFunctionBuilder is used to create the lambda function that will be 
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
-template <typename ColumnDataType, typename AggregateType, AggregateFunction function>
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_function>
 class AggregateFunctionBuilder {
  public:
   void get_aggregate_function() { Fail("Invalid aggregate function"); }
@@ -26,6 +26,9 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+      // We need to check if we have already seen a value before (`aggregate_count > 0`) - otherwise, `accumulator`
+      // holds an invalid value. While we might initialize `accumulator` with the smallest possible numerical value,
+      // this approach does not work for `max` on strings. To keep the code simple, we check `aggregate_count` here.
       if (aggregate_count == 0 || value_smaller(new_value, accumulator)) {
         // New minimum found
         accumulator = new_value;
@@ -52,12 +55,9 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
-      // add new value to sum
-      if (aggregate_count == 0) {
-        accumulator = static_cast<AggregateType>(new_value);
-      } else {
-        accumulator += static_cast<AggregateType>(new_value);
-      }
+      // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
+      // and the accumulator is initialized with 0.
+      accumulator += static_cast<AggregateType>(new_value);
     };
   }
 };
@@ -66,11 +66,9 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg> {
  public:
   auto get_aggregate_function() {
-    /*
-     * We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding precision.
-     * To get the average, the aggregate operator needs to count the number of elements contributing to this sum,
-     * and divide the final sum by that number.
-     */
+    // We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding
+    // precision. To get the average, the aggregate operator needs to count the number of elements contributing to this
+    // sum, and divide the final sum by that number.
     return AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
   }
 };
@@ -99,6 +97,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         squared_distance_from_mean += delta * delta2;
 
         if (count > 1) {
+          // The SQL standard defines VAR_SAMP (which is the basis of STDDEV_SAMP) as NULL if the number of values is 1.
           const auto variance = squared_distance_from_mean / (count - 1);
           result = std::sqrt(variance);
         }

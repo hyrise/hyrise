@@ -69,11 +69,11 @@ class AggregateResult {
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;
 
-  // For StandardDeviationSample, use StandardDeviationSampleData as the accumulator,
-  // for CountDistinct, use DistinctValues,
-  // otherwise use AggregateType
+  // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
+      // For StandardDeviationSample, use StandardDeviationSampleData as the accumulator,
       aggregate_function == AggregateFunction::StandardDeviationSample, StandardDeviationSampleData,
+      // for CountDistinct, use DistinctValues, otherwise use AggregateType
       std::conditional_t<aggregate_function == AggregateFunction::CountDistinct, DistinctValues, AggregateType>>;
 
   AccumulatorType accumulator{};
@@ -136,7 +136,7 @@ class AggregateHash : public AbstractAggregateOperator {
   const std::string& name() const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnDataType, AggregateFunction function>
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
   void write_aggregate_output(ColumnID aggregate_index);
 
   enum class OperatorSteps : uint8_t {
@@ -166,17 +166,17 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                               AggregateFunction function);
+                               AggregateFunction aggregate_function);
 
   void _write_groupby_output(RowIDPosList& pos_list);
 
-  template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                   const AggregateFunction function) const;
+                                                                   const AggregateFunction aggregate_function) const;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
