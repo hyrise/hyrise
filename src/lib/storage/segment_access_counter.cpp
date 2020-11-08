@@ -105,6 +105,11 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
     }
 
     access_pattern = TRANSITIONS[static_cast<size_t>(access_pattern)][static_cast<size_t>(input)];
+
+    if (access_pattern == AccessPattern::Random) {
+      // There is no way that leads back from the Random state, so we can stop here
+      break;
+    }
   }
 
   return access_pattern;
