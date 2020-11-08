@@ -34,7 +34,7 @@ constexpr auto TBL_FILE = "../../data/timestamps.tbl";
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "timestamp";
-const auto CHUNK_SIZE = size_t{10'000'000};
+const auto CHUNK_SIZE = size_t{1'000'000};
 const auto SCAN_COLUMNS = std::vector{"YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND"};
 // Frame of References supports only int columns
 // Dictionary Encoding should always have the id 0
