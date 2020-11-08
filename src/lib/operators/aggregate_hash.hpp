@@ -1,3 +1,5 @@
+// TODO write high-level description
+
 #pragma once
 
 #include <functional>
