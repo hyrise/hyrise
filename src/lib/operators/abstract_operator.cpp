@@ -146,7 +146,6 @@ void AbstractOperator::execute() {
 }
 
 const std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  DebugAssert(_output, "No output data available.");
   return _output;
 }
 
