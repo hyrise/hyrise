@@ -973,16 +973,16 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     parameters.emplace(parameter_id, value);
   }
 
-  // TODO(moritz) deep_copy() shouldn't be necessary for every row if we could re-execute PQPs...
   auto row_pqp = expression.pqp;
   if (expression.is_correlated()) {
     row_pqp = expression.pqp->deep_copy();
     row_pqp->set_parameters(parameters);
   }
 
-  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-
+  if (!row_pqp->performance_data->executed) {
+    const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  }
   return row_pqp->get_output();
 }
 
