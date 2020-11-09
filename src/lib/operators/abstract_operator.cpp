@@ -46,14 +46,21 @@ OperatorType AbstractOperator::type() const { return _type; }
 void AbstractOperator::execute() {
   _requested_for_execution = true;
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-  if (_output && performance_data->executed) return;
+
+  /**
+   * If an operator has already executed, we return without re-execution in the following two cases:
+   *    a) _output is set                           ->  Reuse results
+   *    b) _output got cleared && zero consumers    ->  Operator results are no more relevant. Probably, a subquery
+   *                                                    has already executed the operator and all of its successors.
+   */
+  if (performance_data->executed && (_output || _consumer_count == 0)) return;
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->performance_data->executed, "Left input has not yet been executed");
     Assert(!_right_input || _right_input->performance_data->executed, "Right input has not yet been executed");
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    Assert(!performance_data->executed, "Operator has already been executed");
+    Assert(!performance_data->executed, "Unexpected re-execution of an operator.");
   }
 
   Timer performance_timer;
