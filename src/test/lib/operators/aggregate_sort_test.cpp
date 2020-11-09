@@ -28,6 +28,9 @@ namespace opossum {
 void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                            const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name) {
+  // Prevent auto-clearing of in's output
+  in->register_consumer();
+
   // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name);
 
@@ -61,6 +64,8 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
+
+  in->deregister_consumer();
 }
 
 /**
@@ -90,6 +95,15 @@ class AggregateSortTest : public BaseTest {
                                       SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
     _table_wrapper_multi_columns->execute();
+
+    // Prevent auto-clearing of both operators' output
+    _table_wrapper_1->register_consumer();
+    _table_wrapper_multi_columns->register_consumer();
+  }
+
+  void TearDown() override {
+    _table_wrapper_1->deregister_consumer();
+    _table_wrapper_multi_columns->deregister_consumer();
   }
 
  protected:

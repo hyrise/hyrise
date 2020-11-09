@@ -188,14 +188,7 @@ void AbstractOperator::register_consumer() {
 void AbstractOperator::deregister_consumer() {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
-/**
- * Many tests reuse operator results in e.g. for-loops, which conflicts with the following auto-clearing of
- * operator results. Instead of registering/deregistering fake consumers in multiple test units, we simply disable
- * auto-clearing of operators for all tests.
- */
-#ifndef HYRISE_TEST
-    if (_consumer_count == 0) clear_output();
-#endif
+  if (_consumer_count == 0) clear_output();
 }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
