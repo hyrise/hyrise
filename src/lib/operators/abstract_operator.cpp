@@ -32,11 +32,11 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 
 AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
-    bool left_has_executed = !_left_input ? true : _left_input->performance_data->executed;
-    bool right_has_executed = !_right_input ? true : _right_input->performance_data->executed;
+    bool left_has_executed = _left_input ? _left_input->performance_data->executed : false;
+    bool right_has_executed = _right_input ? _right_input->performance_data->executed : false;
 
-    if (!_requested_for_execution && left_has_executed && right_has_executed) {
-      std::cout << "Operator has never been triggered for execution." << std::endl;
+    if ((left_has_executed || right_has_executed) && !_requested_for_execution) {
+      std::cout << "Operator did not execute, but at least one input operator has." << std::endl;
     }
   }
 }
