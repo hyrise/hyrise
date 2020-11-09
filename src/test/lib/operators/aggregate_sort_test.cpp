@@ -159,6 +159,7 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
         std::make_shared<Sort>(this->_table_wrapper_multi_columns,
                                std::vector<SortColumnDefinition>{SortColumnDefinition{sorted_by_column_id}});
     sort->execute();
+    sort->register_consumer();
     // Group and aggregate by every column combination.
     for (auto group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
       for (auto aggregate_by_column_id = ColumnID{0}; aggregate_by_column_id < column_count; ++aggregate_by_column_id) {
@@ -176,6 +177,7 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
         EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), unsorted_aggregate->get_output());
       }
     }
+    sort->deregister_consumer();
   }
 }
 
