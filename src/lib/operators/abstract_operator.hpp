@@ -124,6 +124,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void register_consumer();
   void deregister_consumer();
 
+  // Disables the auto-clearing of operator results due to consumer count changes.
+  // We introduced this function for some tests that reuse operator results in e.g. for-loops over and over again.
+  void never_clear_output();
+
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
@@ -172,6 +176,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Tracks whether execute() has been called at least once.
   bool _requested_for_execution = false;
+
+  // Determines whether operator results are cleared automatically based on consumer count tracking.
+  bool _clear_output = true;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

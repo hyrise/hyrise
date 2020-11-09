@@ -146,15 +146,13 @@ void AbstractOperator::execute() {
 }
 
 const std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  if (_consumer_count == 0) {
-    std::cout << "get_output() – 0 consumers" << std::endl;
-  }
+  DebugAssert(_output, "No output data available.");
   return _output;
 }
 
 void AbstractOperator::clear_output() {
-//  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-//  _output = nullptr;
+  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
+  if (_clear_output) _output = nullptr;
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
@@ -193,9 +191,13 @@ void AbstractOperator::register_consumer() {
 }
 
 void AbstractOperator::deregister_consumer() {
-  Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
+  DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
-  // if (_consumer_count == 0) clear_output();
+   if (_consumer_count == 0) clear_output();
+}
+
+void AbstractOperator::never_clear_output() {
+  _clear_output = false;
 }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }

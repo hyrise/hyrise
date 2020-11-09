@@ -29,7 +29,7 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                            const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name) {
   // Prevent auto-clearing of in's output
-  in->register_consumer();
+  in->never_clear_output();
 
   // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name);
@@ -64,8 +64,6 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
-
-  in->deregister_consumer();
 }
 
 /**
@@ -97,13 +95,8 @@ class AggregateSortTest : public BaseTest {
     _table_wrapper_multi_columns->execute();
 
     // Prevent auto-clearing of both operators' output
-    _table_wrapper_1->register_consumer();
-    _table_wrapper_multi_columns->register_consumer();
-  }
-
-  void TearDown() override {
-    _table_wrapper_1->deregister_consumer();
-    _table_wrapper_multi_columns->deregister_consumer();
+    _table_wrapper_1->never_clear_output();
+    _table_wrapper_multi_columns->never_clear_output();
   }
 
  protected:
@@ -158,8 +151,8 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
     const auto sort =
         std::make_shared<Sort>(this->_table_wrapper_multi_columns,
                                std::vector<SortColumnDefinition>{SortColumnDefinition{sorted_by_column_id}});
+    sort->never_clear_output();
     sort->execute();
-    sort->register_consumer();
     // Group and aggregate by every column combination.
     for (auto group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
       for (auto aggregate_by_column_id = ColumnID{0}; aggregate_by_column_id < column_count; ++aggregate_by_column_id) {
@@ -177,7 +170,6 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
         EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), unsorted_aggregate->get_output());
       }
     }
-    sort->deregister_consumer();
   }
 }
 
