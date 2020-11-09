@@ -24,6 +24,7 @@ class OperatorPerformanceDataTest : public BaseTest {
   static void SetUpTestCase() {
     _table = load_table("resources/test_data/tbl/int_int.tbl", 2);
     _table_wrapper = std::make_shared<TableWrapper>(_table);
+    _table_wrapper->never_clear_output();
     _table_wrapper->execute();
   }
 
@@ -149,6 +150,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
   auto table = load_table("resources/test_data/tbl/int_int.tbl", 2);
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   {

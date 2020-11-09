@@ -30,8 +30,10 @@ class OperatorsProjectionTest : public BaseTest {
  public:
   void SetUp() override {
     table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_a->never_clear_output();
     table_wrapper_a->execute();
     table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_b->never_clear_output();
     table_wrapper_b->execute();
 
     a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
@@ -117,6 +119,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
 
 TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
@@ -139,6 +142,7 @@ TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
 
 TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();

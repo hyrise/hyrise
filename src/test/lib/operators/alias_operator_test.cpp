@@ -11,12 +11,14 @@ class AliasOperatorTest : public BaseTest {
  public:
   void SetUp() override {
     table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    table_wrapper->never_clear_output();
     table_wrapper->execute();
 
     column_ids = std::vector<ColumnID>({ColumnID{2}, ColumnID{0}, ColumnID{1}});
     aliases = std::vector<std::string>({"z", "x", "y"});
 
     alias_operator = std::make_shared<AliasOperator>(table_wrapper, column_ids, aliases);
+    alias_operator->never_clear_output();
   }
 
   std::shared_ptr<AliasOperator> alias_operator;

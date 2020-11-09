@@ -46,8 +46,10 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ChunkEncoder::encode_chunks(int_int_5, {ChunkID{0}, ChunkID{1}}, SegmentEncodingSpec{_encoding_type});
 
     _int_int_compressed = std::make_shared<TableWrapper>(std::move(int_int_7));
+    _int_int_compressed->never_clear_output();
     _int_int_compressed->execute();
     _int_int_partly_compressed = std::make_shared<TableWrapper>(std::move(int_int_5));
+    _int_int_partly_compressed->never_clear_output();
     _int_int_partly_compressed->execute();
   }
 
@@ -78,6 +80,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     }
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->never_clear_output();
     table_wrapper->execute();
 
     return table_wrapper;
@@ -1055,6 +1058,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   }
 
   auto data_table_wrapper = std::make_shared<TableWrapper>(data_table);
+  data_table_wrapper->never_clear_output();
   data_table_wrapper->execute();
 
   const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");

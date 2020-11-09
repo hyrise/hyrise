@@ -158,9 +158,11 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  gt_post_delete->never_clear_output();
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
+  validate->never_clear_output();
   validate->set_transaction_context(tx_context_verification);
 
   validate->execute();
@@ -307,6 +309,7 @@ TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   get_table->execute();
 
   const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
+  table_scan->never_clear_output();
   table_scan->execute();
 
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

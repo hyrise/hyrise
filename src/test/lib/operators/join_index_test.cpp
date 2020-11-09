@@ -40,7 +40,20 @@ class OperatorsJoinIndexTest : public BaseTest {
     _table_wrapper_i_no_index =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_2.tbl", 20));
 
-    // // execute all TableWrapper operators in advance
+    // Disable auto-clearing of operators' output
+    _table_wrapper_a->never_clear_output();
+    _table_wrapper_b->never_clear_output();
+    _table_wrapper_c->never_clear_output();
+    _table_wrapper_d->never_clear_output();
+    _table_wrapper_e->never_clear_output();
+    _table_wrapper_f->never_clear_output();
+    _table_wrapper_g->never_clear_output();
+    _table_wrapper_h->never_clear_output();
+    _table_wrapper_h_no_index->never_clear_output();
+    _table_wrapper_i->never_clear_output();
+    _table_wrapper_i_no_index->never_clear_output();
+
+    // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
     _table_wrapper_c->execute();
@@ -74,12 +87,15 @@ class OperatorsJoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
-                               const std::shared_ptr<const AbstractOperator>& right,
+  static void test_join_output(const std::shared_ptr<AbstractOperator>& left,
+                               const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
                                const IndexSide index_side = IndexSide::Right,
                                const bool single_chunk_reference_guarantee = true) {
+    left->never_clear_output();
+    right->never_clear_output();
+
     const auto join_verification = std::make_shared<JoinVerification>(left, right, mode, primary_predicate);
 
     join_verification->execute();
