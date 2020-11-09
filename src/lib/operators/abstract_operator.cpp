@@ -31,11 +31,13 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 }
 
 AbstractOperator::~AbstractOperator() {
-  if constexpr (HYRISE_DEBUG) { // && !HYRISE_TEST) {
-    bool left_has_executed = !_left_input ? false : _left_input->performance_data->executed;
-    bool right_has_executed = !_right_input ? false : _right_input->performance_data->executed;
-    Assert(_requested_for_execution || !(left_has_executed && right_has_executed),
-           "Operator has never been triggered for execution.");
+  if constexpr (HYRISE_DEBUG) {
+    bool left_has_executed = !_left_input ? true : _left_input->performance_data->executed;
+    bool right_has_executed = !_right_input ? true : _right_input->performance_data->executed;
+
+    if (!_requested_for_execution && left_has_executed && right_has_executed) {
+      std::cout << "Operator has never been triggered for execution." << std::endl;
+    }
   }
 }
 
@@ -143,11 +145,16 @@ void AbstractOperator::execute() {
   }
 }
 
-const std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+const std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  if (_consumer_count == 0) {
+    std::cout << "get_output() – 0 consumers" << std::endl;
+  }
+  return _output;
+}
 
 void AbstractOperator::clear_output() {
-  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  _output = nullptr;
+//  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
+//  _output = nullptr;
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
@@ -188,7 +195,7 @@ void AbstractOperator::register_consumer() {
 void AbstractOperator::deregister_consumer() {
   Assert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
-  if (_consumer_count == 0) clear_output();
+  // if (_consumer_count == 0) clear_output();
 }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
