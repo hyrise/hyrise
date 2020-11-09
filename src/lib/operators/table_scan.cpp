@@ -43,7 +43,14 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
-      _predicate(predicate) {}
+      _predicate(predicate) {
+
+  // Register as a consumer for subqueries
+  for (auto& argument : _predicate->arguments) {
+    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
+    if(subquery) subquery->pqp->register_consumer();
+  }
+}
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
@@ -201,6 +208,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
   scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
 
+  // Tell subquery PQPs that we no longer need them
+  for (auto& argument : _predicate->arguments) {
+    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
+    if (subquery) subquery->pqp->deregister_consumer();
+  }
+
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
@@ -232,6 +245,8 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
+    // Deregister, because we already have the result and no longer need the subquery.
+    subquery->pqp->deregister_consumer();
     argument = std::make_shared<ValueExpression>(std::move(subquery_result));
   }
 
