@@ -16,9 +16,10 @@ We support a number of benchmarks out of the box. This makes it easy to generate
 
 | Benchmark  | Notes                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| TPC-C      | In development, no proper optimization done yet                                                                          |
 | TPC-DS     | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
 | TPC-H      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
+| JCC-H      | Call the hyriseBenchmarkTPCH binary with the -j flag.                                                                    | 
+| TPC-C      | In development, no proper optimization done yet                                                                          |
 | Join Order |                                                                                                                          |
 
 # Getting started

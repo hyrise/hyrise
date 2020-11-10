@@ -62,15 +62,16 @@ class BinaryParser {
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count,
-                                                          DataType data_type, bool is_nullable);
+                                                          DataType data_type, bool column_is_nullable);
 
   template <typename ColumnDataType>
   // Reads the column type from the given file and chooses a segment import function from it.
-  static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                          bool column_is_nullable);
 
   template <typename T>
   static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,
-                                                                bool is_nullable);
+                                                                bool column_is_nullable);
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 

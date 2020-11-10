@@ -85,7 +85,7 @@ class GroupKeyIndex : public AbstractIndex {
    */
   Iterator _get_positions_iterator_at(ValueID value_id) const;
 
-  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
 
   size_t _memory_consumption() const final;
 

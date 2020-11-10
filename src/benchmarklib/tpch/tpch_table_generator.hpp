@@ -27,7 +27,7 @@ extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
  *
  * NOT thread safe because the underlying tpch-dbgen is not (since it has global data and malloc races).
  */
-class TPCHTableGenerator final : public AbstractTableGenerator {
+class TPCHTableGenerator : virtual public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
   explicit TPCHTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
@@ -42,7 +42,6 @@ class TPCHTableGenerator final : public AbstractTableGenerator {
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
- private:
   float _scale_factor;
 };
 }  // namespace opossum

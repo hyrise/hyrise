@@ -1,0 +1,39 @@
+{
+    "columns": [
+        {
+            "name": "ps_partkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ps_suppkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ps_availqty",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ps_supplycost",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "ps_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

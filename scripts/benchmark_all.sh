@@ -70,11 +70,19 @@ do
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
   # Run the benchmarks
-  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root 
+  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
     ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+
+    if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+      echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
+      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+
+      echo "Running $benchmark for $commit... (single-threaded, SF 10)"
+      ( ${build_folder}/$benchmark -s 10 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.log"
+    fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
     ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
@@ -131,7 +139,12 @@ cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs
 # Print information for each benchmark
 for benchmark in $benchmarks
 do
-  for config in st mt
+  configs="st mt"
+  if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+    configs="st st_s01 st_s10 mt"
+  fi
+
+  for config in $configs
   do
     output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json" --github 2>/dev/null)
     echo ""
@@ -139,6 +152,8 @@ do
     echo -n "**${benchmark} - "
     case "${config}" in
       "st") echo -n "single-threaded" ;;
+      "st_s01") echo -n "single-threaded, SF 0.01" ;;
+      "st_s10") echo -n "single-threaded, SF 10" ;;
       "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
     esac
     echo "**"

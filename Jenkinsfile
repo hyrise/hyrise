@@ -1,7 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
-tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
+tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
   node {
@@ -143,10 +143,12 @@ try {
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
               sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+              sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
               sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+              sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
@@ -315,7 +317,7 @@ try {
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
-          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {

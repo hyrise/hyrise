@@ -48,18 +48,18 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       const auto chunk = _in_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+      jobs.push_back(_create_job(chunk_id, output_mutex));
     }
   } else {
     jobs.reserve(included_chunk_ids.size());
     for (auto chunk_id : included_chunk_ids) {
       if (_in_table->get_chunk(chunk_id)) {
-        jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+        jobs.push_back(_create_job(chunk_id, output_mutex));
       }
     }
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return _out_table;
 }
@@ -73,7 +73,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
+std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
@@ -93,7 +93,6 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
   });
 
-  job_task->schedule();
   return job_task;
 }
 

@@ -79,6 +79,7 @@ add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
+add_subdirectory(robin-map)
 
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
@@ -356,3 +357,25 @@ target_compile_options(
   -Wno-parentheses-equality
 )
 endif()
+
+include(ExternalProject)
+externalproject_add(
+    jcchDbgen
+
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
+    CONFIGURE_COMMAND bash -c "cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/* ."
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
+    STEP_TARGETS build
+)
+
+file(GLOB_RECURSE JCCH_DBGEN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/*)
+externalproject_add_step(
+  jcchDbgen
+  check_for_changes
+  # Make sure that we rebuild jcch-dbgen when a file changes
+  DEPENDERS configure
+  DEPENDS "${JCCH_DBGEN_FILES}"
+  COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
+)
