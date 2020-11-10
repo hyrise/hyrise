@@ -43,7 +43,7 @@ def main():
     benchmark.expect_exact("No warmup runs are performed")
     benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Benchmarking Queries: [ 1, 13, 19 ]")
-    benchmark.expect_exact("TPCH scale factor is 0.01")
+    benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: yes")
     benchmark.expect_exact("Creating index on customer [ c_custkey ]")
     benchmark.expect_exact("Preparing queries")
@@ -139,7 +139,7 @@ def main():
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 10 seconds")
     benchmark.expect_exact("Benchmarking Queries: [ 2, 4, 6 ]")
-    benchmark.expect_exact("TPCH scale factor is 0.01")
+    benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: no")
     benchmark.expect_exact("Multi-threaded Topology:")
 

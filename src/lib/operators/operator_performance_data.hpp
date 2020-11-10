@@ -42,7 +42,7 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
  */
 template <typename Steps>
 struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
-  void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
     if (!executed) {
       stream << "Not executed.";
       return;

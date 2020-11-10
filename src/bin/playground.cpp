@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
       result_file_names.push_back(*config->output_file_path);
 
       auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path + query_file, std::unordered_set<std::string>{});
-      auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
+      auto table_generator = std::make_unique<TPCDSTableGenerator>(scale_factor, config);
       auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
                                                               opossum::BenchmarkRunner::create_context(*config));
       Hyrise::get().benchmark_runner = benchmark_runner;
@@ -220,7 +220,7 @@ int main(int argc, char* argv[]) {
       config->max_runs = 2;
       config->enable_visualization = true;
       auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
-      auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
+      auto table_generator = std::make_unique<TPCDSTableGenerator>(scale_factor, config);
       auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
                                                               opossum::BenchmarkRunner::create_context(*config));
       Hyrise::get().benchmark_runner = benchmark_runner;

@@ -95,7 +95,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   const auto chunk_count = sorted_table->chunk_count();
 
   std::optional<AggregateType> current_primary_aggregate;
-  std::vector<AggregateType> current_secondary_aggregates{};
+  SecondaryAggregates<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
@@ -167,7 +167,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
-          current_secondary_aggregates = std::vector<AggregateType>{};
+          current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
           unique_values.clear();
           value_count = 0u;
           value_count_with_null = 0u;
@@ -179,11 +179,15 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
         // Update helper variables
         if (!position.is_null()) {
-          aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregates);
+          if constexpr (function == AggregateFunction::StandardDeviationSample) {
+            aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregates);
+          } else {
+            aggregate_function(new_value, current_primary_aggregate);
+          }
           value_count++;
-          if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+          if constexpr (function == AggregateFunction::CountDistinct) {
             unique_values.insert(new_value);
-          } else if constexpr (function == AggregateFunction::Any) {  // NOLINT
+          } else if constexpr (function == AggregateFunction::Any) {
             // Gathering the group's first value for ANY() is sufficient
             return;
           }
@@ -199,8 +203,13 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       current_secondary_aggregates, value_count, value_count_with_null, unique_values.size());
 
   // Store the aggregate values in a value segment
-  _output_segments[aggregate_index + _groupby_column_ids.size()] =
-      std::make_shared<ValueSegment<AggregateType>>(std::move(aggregate_results), std::move(aggregate_null_values));
+  if (_output_column_definitions.at(aggregate_index + _groupby_column_ids.size()).nullable) {
+    _output_segments[aggregate_index + _groupby_column_ids.size()] =
+        std::make_shared<ValueSegment<AggregateType>>(std::move(aggregate_results), std::move(aggregate_null_values));
+  } else {
+    _output_segments[aggregate_index + _groupby_column_ids.size()] =
+        std::make_shared<ValueSegment<AggregateType>>(std::move(aggregate_results));
+  }
 }
 
 /**
@@ -235,10 +244,10 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, std::vector<AggregateType>& current_secondary_aggregates,
-    [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
-    [[maybe_unused]] const uint64_t unique_value_count) const {
-  if constexpr (function == AggregateFunction::Count) {  // NOLINT
+    std::optional<AggregateType>& current_primary_aggregate,
+    SecondaryAggregates<AggregateType>& current_secondary_aggregates, [[maybe_unused]] const uint64_t value_count,
+    [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
+  if constexpr (function == AggregateFunction::Count) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
     const auto input_column_id = pqp_column.column_id;
 
@@ -250,7 +259,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = value_count_with_null;
     }
   }
-  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
+  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
@@ -267,10 +276,10 @@ void AggregateSort::_set_and_write_aggregate_value(
 
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
-      current_secondary_aggregates = std::vector<AggregateType>{};
+      current_secondary_aggregates = SecondaryAggregates<AggregateType>{};
     }
   }
-  if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+  if constexpr (function == AggregateFunction::CountDistinct) {
     current_primary_aggregate = unique_value_count;
   }
 
@@ -553,14 +562,14 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    *     output the column value at the start of the group (it is per definition the same in the whole group)
    * Write outputted values into the result table
    */
-  size_t groupby_index = 0;
-  for (const auto& column_id : _groupby_column_ids) {
+  const auto write_groupby_column = [&](const ColumnID input_column_id, const ColumnID output_column_id) {
+    const auto column_is_nullable = _output_column_definitions.at(output_column_id).nullable;
     auto group_boundary_iter = group_boundaries.cbegin();
-    auto data_type = input_table->column_data_type(column_id);
+    auto data_type = input_table->column_data_type(input_column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
-      auto null_values = pmr_vector<bool>(group_boundaries.size() + 1);
+      auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
       for (size_t value_index = 0; value_index < values.size(); value_index++) {
         RowID group_start;
@@ -573,7 +582,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         }
 
         const auto chunk = sorted_table->get_chunk(group_start.chunk_id);
-        const auto& segment = chunk->get_segment(column_id);
+        const auto& segment = chunk->get_segment(input_column_id);
 
         /*
          * We are aware that operator[] and AllTypeVariant are known to be inefficient.
@@ -584,18 +593,28 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
          */
         const auto& value = (*segment)[group_start.chunk_offset];
 
-        null_values[value_index] = variant_is_null(value);
-        if (!null_values[value_index]) {
-          // Only store non-null values
+        DebugAssert(!variant_is_null(value) || column_is_nullable, "Null values found in non-nullable column");
+        if (variant_is_null(value)) {
+          null_values[value_index] = true;
+        } else {
           values[value_index] = boost::get<ColumnDataType>(value);
         }
       }
 
       // Write group by segments
-      _output_segments[groupby_index] =
-          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      if (column_is_nullable) {
+        _output_segments[output_column_id] =
+            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      } else {
+        _output_segments[output_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      }
     });
-    groupby_index++;
+  };
+
+  auto groupby_output_column_id = ColumnID{0};
+  for (const auto& input_column_id : _groupby_column_ids) {
+    write_groupby_column(input_column_id, groupby_output_column_id);
+    ++groupby_output_column_id;
   }
 
   // Call _aggregate_values for each aggregate
@@ -672,9 +691,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           break;
         }
         case AggregateFunction::Any: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Any>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+          write_groupby_column(input_column_id, ColumnID{static_cast<ColumnID::base_type>(aggregate_index +
+                                                                                          _groupby_column_ids.size())});
           break;
         }
       }
@@ -765,7 +783,11 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+  const auto nullable = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct &&
+                         function != AggregateFunction::Any) ||
+                        (function == AggregateFunction::Any && left_input_table()->column_is_nullable(input_column_id));
+  const auto column_name = aggregate->aggregate_function == AggregateFunction::Any ? pqp_column.as_column_name()
+                                                                                   : aggregate->as_column_name();
+  _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
 }  // namespace opossum

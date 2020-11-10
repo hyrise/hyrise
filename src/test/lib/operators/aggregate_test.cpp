@@ -233,25 +233,6 @@ TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
   EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
 }
 
-// For debug builds, we DebugAssert that all values are the same within a group.
-TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, equals_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
-  filtered->execute();
-
-  // Column 3 stores different values for the tuples of the remaining group.
-  const auto table = this->_table_wrapper_2_2->get_output();
-  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
-      any_(pqp_column_(ColumnID{3}, table->column_data_type(ColumnID{3}), table->column_is_nullable(ColumnID{3}),
-                       table->column_name(ColumnID{3})))};
-
-  auto aggregate =
-      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
-  EXPECT_THROW(aggregate->execute(), std::logic_error);
-}
-
 // Use ANY() on a column with NULL values.
 TYPED_TEST(OperatorsAggregateTest, AnyAndNulls) {
   test_output<TypeParam>(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},

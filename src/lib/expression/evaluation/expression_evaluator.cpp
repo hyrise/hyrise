@@ -3,8 +3,8 @@
 #include <iterator>
 #include <type_traits>
 
-#include "boost/lexical_cast.hpp"
-#include "boost/variant/apply_visitor.hpp"
+#include <boost/lexical_cast.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -688,11 +688,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       // NOLINTNEXTLINE(bugprone-branch-clone)
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else if constexpr (std::is_same_v<Result, pmr_string>) {  // NOLINT
+      } else if constexpr (std::is_same_v<Result, pmr_string>) {
         // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
         values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
       } else {
-        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
+        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {
           // "String to Numeric" cast
           // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the

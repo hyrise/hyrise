@@ -75,13 +75,13 @@ std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance
   return std::make_shared<CardinalityEstimator>();
 }
 
-Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   const auto estimated_statistics = estimate_statistics(lqp);
   return estimated_statistics->row_count;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
-    const std::shared_ptr<AbstractLQPNode>& lqp) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   /**
    * 1. Try a cache lookup for requested LQP.
    *
@@ -122,39 +122,39 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
-      const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(lqp);
+      const auto aggregate_node = std::dynamic_pointer_cast<const AggregateNode>(lqp);
       output_table_statistics = estimate_aggregate_node(*aggregate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Alias: {
-      const auto alias_node = std::dynamic_pointer_cast<AliasNode>(lqp);
+      const auto alias_node = std::dynamic_pointer_cast<const AliasNode>(lqp);
       output_table_statistics = estimate_alias_node(*alias_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Join: {
-      const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
+      const auto join_node = std::dynamic_pointer_cast<const JoinNode>(lqp);
       output_table_statistics =
           estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Limit: {
-      const auto limit_node = std::dynamic_pointer_cast<LimitNode>(lqp);
+      const auto limit_node = std::dynamic_pointer_cast<const LimitNode>(lqp);
       output_table_statistics = estimate_limit_node(*limit_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Mock: {
-      const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp);
+      const auto mock_node = std::dynamic_pointer_cast<const MockNode>(lqp);
       Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
       output_table_statistics = prune_column_statistics(mock_node->table_statistics(), mock_node->pruned_column_ids());
     } break;
 
     case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
+      const auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(lqp);
       output_table_statistics = estimate_predicate_node(*predicate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Projection: {
-      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp);
+      const auto projection_node = std::dynamic_pointer_cast<const ProjectionNode>(lqp);
       output_table_statistics = estimate_projection_node(*projection_node, left_input_table_statistics);
     } break;
 
@@ -163,13 +163,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     } break;
 
     case LQPNodeType::StaticTable: {
-      const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(lqp);
+      const auto static_table_node = std::dynamic_pointer_cast<const StaticTableNode>(lqp);
       output_table_statistics = static_table_node->table->table_statistics();
       Assert(output_table_statistics, "This StaticTableNode has no statistics");
     } break;
 
     case LQPNodeType::StoredTable: {
-      const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
+      const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp);
 
       const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
@@ -188,12 +188,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     } break;
 
     case LQPNodeType::Validate: {
-      const auto validate_node = std::dynamic_pointer_cast<ValidateNode>(lqp);
+      const auto validate_node = std::dynamic_pointer_cast<const ValidateNode>(lqp);
       output_table_statistics = estimate_validate_node(*validate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
+      const auto union_node = std::dynamic_pointer_cast<const UnionNode>(lqp);
       output_table_statistics =
           estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;

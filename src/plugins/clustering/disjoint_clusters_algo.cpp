@@ -225,7 +225,7 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_sort_and_encode_chunk
     auto sorted_chunk = _sort_chunk(chunk, sort_column_id, _table->column_definitions());
     Assert(sorted_chunk->mvcc_data(), "no mvcc");
     sorted_chunk->finalize();
-    ChunkEncoder::encode_chunk(sorted_chunk, _table->column_data_types(), EncodingType::Dictionary);
+    ChunkEncoder::encode_chunk(sorted_chunk, _table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
     sorted_chunks.push_back(sorted_chunk);
     Assert(sorted_chunk->mvcc_data(), "no mvcc");
   }      
@@ -660,7 +660,7 @@ void DisjointClustersAlgo::_perform_clustering() {
     for (const auto chunk_id : new_chunk_ids) {
       const auto &chunk = _table->get_chunk(chunk_id);
       Assert(chunk, "chunk must not be deleted");
-      ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), EncodingType::Dictionary);
+      ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
       _clustered_chunks.insert(chunk_id);
     }
     const auto encode_duration = per_step_timer.lap();

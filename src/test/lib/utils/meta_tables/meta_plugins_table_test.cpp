@@ -13,7 +13,7 @@ class MetaPluginsTest : public BaseTest {
   std::shared_ptr<AbstractSetting> mock_setting;
   std::shared_ptr<AbstractMetaTable> meta_plugins_table;
 
-  void SetUp() {
+  void SetUp() override {
     Hyrise::reset();
     meta_plugins_table = std::make_shared<MetaPluginsTable>();
     const auto column_definitions = meta_plugins_table->column_definitions();
@@ -24,7 +24,7 @@ class MetaPluginsTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();

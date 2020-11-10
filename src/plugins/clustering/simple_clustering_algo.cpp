@@ -174,7 +174,7 @@ void SimpleClusteringAlgo::_perform_clustering() {
         const auto chunk = mutable_sorted_table->get_chunk(chunk_id);
         if (chunk->is_mutable()) chunk->finalize();
       }
-      ChunkEncoder::encode_all_chunks(mutable_sorted_table, EncodingType::Dictionary);
+      ChunkEncoder::encode_all_chunks(mutable_sorted_table, SegmentEncodingSpec{EncodingType::Dictionary});
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
       // add table

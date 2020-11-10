@@ -298,7 +298,7 @@ for (placeholder, final) in [
             unit_column = header_strings[column_id + 1]
             previous_length = len(title_column) + len(unit_column) + 1
             new_title = f" {final} ".ljust(previous_length, " ")
-            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2:])
+            lines[1] = "|".join(header_strings[:column_id] + [new_title] + header_strings[column_id + 2 :])
 
 
 # Swap second line of header with automatically added separator. Terminaltables does not support multi-line headers. So
@@ -337,12 +337,19 @@ if github_format:
     green_control_sequence = colored("", "green")[0:5]
     red_control_sequence = colored("", "red")[0:5]
 
-    table_string_reformatted = "```diff\n"
-    table_string_reformatted += create_context_overview(old_data, new_data, github_format) + "\n"
+    table_string_reformatted = (
+        "<details>\n"
+        + "<summary>Configuration Overview - click to expand</summary>\n\n"
+        + "```diff\n"
+        + create_context_overview(old_data, new_data, github_format)
+        + "```\n"
+        + "</details>\n\n"
+        + "```diff\n"
+    )
     for line in table_string.splitlines():
-        if (green_control_sequence + "+" in line) or ('| Sum ' in line and green_control_sequence in line):
+        if (green_control_sequence + "+" in line) or ("| Sum " in line and green_control_sequence in line):
             table_string_reformatted += "+"
-        elif (red_control_sequence + "-" in line) or ('| Sum ' in line and red_control_sequence in line):
+        elif (red_control_sequence + "-" in line) or ("| Sum " in line and red_control_sequence in line):
             table_string_reformatted += "-"
         else:
             table_string_reformatted += " "

@@ -107,6 +107,14 @@ void BenchmarkRunner::run() {
     }
   }};
 
+  if (_config.metrics) {
+    // Create a table for the segment access counter log
+    SQLPipelineBuilder{
+        "CREATE TABLE IF NOT EXISTS benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        .create_pipeline()
+        .get_result_table();
+  }
+
   // Retrieve the items to be executed and prepare the result vector
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
@@ -226,6 +234,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+  _snapshot_segment_access_counters("End of Benchmark");
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
@@ -273,6 +283,11 @@ void BenchmarkRunner::_benchmark_ordered() {
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+    // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
+    // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
+    // unclear advantage of excluding those runs, we only take one snapshot here.
+    _snapshot_segment_access_counters(name);
   }
 }
 
@@ -432,6 +447,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
 
+  if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
+    report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
+  }
+
   stream << std::setw(2) << report << std::endl;
 }
 
@@ -542,6 +561,26 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   }
 
   return output;
+}
+
+void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
+  if (!_config.metrics) return;
+
+  auto moment_or_timestamp = moment;
+  if (moment_or_timestamp.empty()) {
+    const auto timestamp =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
+            .count();
+    moment_or_timestamp = std::to_string(timestamp);
+  }
+
+  ++_snapshot_id;
+
+  auto sql_builder = std::stringstream{};
+  sql_builder << "INSERT INTO benchmark_segments_log SELECT " << _snapshot_id << ", '" << moment_or_timestamp + "'"
+              << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
+
+  SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
 }  // namespace opossum

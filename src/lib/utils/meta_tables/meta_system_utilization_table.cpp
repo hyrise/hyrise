@@ -260,6 +260,23 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
  * allocated memory as free'd memory is not immediately returned to the system (either due to internal page
  * fragmentation or because jemalloc keeps empty pages for future use). In rare cases, it can also be higher than
  * the amount of virtual memory if memory has been allocated but not committed yet.
+ *
+ * jemalloc's memory allocation uses different size classes, each with a different number of bytes to allocate. If a
+ * data structure's allocator requests a specific amount of bytes that exceeds a certain size class by only one byte,
+ * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between
+ * size classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory
+ * slightly exceeds, the larger the difference between the actually allocated and the requested memory.
+ *
+ * Example:
+ *   Assumed size classes: ... 20 KiB, 24 KiB, ..., 256 KiB, 320 KiB, ...
+ *
+ *                                           |  case 1        | case 2         |
+ *   ----------------------------------------+----------------+----------------+
+ *   requested memory                        |  20 KiB + 1 B  | 256 KiB + 1 B  |
+ *   used size class, i.e., allocated memory |  24 KiB        | 320 KiB        |
+ *   delta: allocated mem. - requested mem.  |  4 KiB - 1 B   | 64 KiB - 1 B   |
+ *
+ * Reference: https://www.freebsd.org/cgi/man.cgi?jemalloc(3)
  */
 std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
 #ifdef HYRISE_WITH_JEMALLOC

@@ -119,7 +119,7 @@ std::shared_ptr<TableScan> create_between_table_scan(const std::shared_ptr<Abstr
 
 ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
                                                         const SegmentEncodingSpec& desired_segment_encoding) {
-  auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
+  auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
 
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
     if (encoding_supports_data_type(desired_segment_encoding.encoding_type, table.column_data_type(column_id))) {

@@ -134,7 +134,7 @@ void _encode_partition_chunks(const std::chrono::nanoseconds& interval) {
       const auto& chunk = lineitem->get_chunk(chunk_id);
       if (chunk) {
           if (chunk->is_mutable()) chunk->finalize();
-          ChunkEncoder::encode_chunk(chunk, lineitem->column_data_types(), EncodingType::Dictionary);
+          ChunkEncoder::encode_chunk(chunk, lineitem->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
       } else {
         std::cout << "Weird behavior: chunks_to_encode contained a deleted chunk: " << chunk_id << std::endl;
       }

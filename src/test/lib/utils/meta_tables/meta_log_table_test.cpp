@@ -7,12 +7,12 @@ namespace opossum {
 
 class MetaLogTest : public BaseTest {
  protected:
-  void SetUp() {
+  void SetUp() override {
     meta_log_table = std::make_shared<MetaLogTable>();
     Hyrise::get().log_manager.add_message("foo", "bar", LogLevel::Info);
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   const std::shared_ptr<Table> generate_meta_table() const { return meta_log_table->_on_generate(); }
 

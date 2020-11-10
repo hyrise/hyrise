@@ -246,7 +246,7 @@ void ChunkwiseClusteringAlgo::_perform_clustering() {
       for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
         if (table->get_chunk(chunk_id)) existing_chunks.push_back(chunk_id);
       }
-      ChunkEncoder::encode_chunks(table, existing_chunks, EncodingType::Dictionary);
+      ChunkEncoder::encode_chunks(table, existing_chunks, SegmentEncodingSpec{EncodingType::Dictionary});
     });
   }
 }

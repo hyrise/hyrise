@@ -21,7 +21,7 @@ class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
                                                   ChunkOffset target_chunk_size = Chunk::DEFAULT_SIZE) {
     const auto table = load_table(path, target_chunk_size);
 
-    auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), EncodingType::Unencoded};
+    auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       if (encoding_supports_data_type(GetParam().encoding_type, table->column_data_type(column_id))) {
