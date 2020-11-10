@@ -18,6 +18,9 @@ int main() {
   constexpr auto PATH_TRAIN = "./data/train";
   constexpr auto PATH_TEST = "./data/test";
 
+  std::filesystem::create_directories(PATH_TRAIN);
+  std::filesystem::create_directories(PATH_TEST);
+
   // table generation settings
   const std::set<DataType> TABLE_DATA_TYPES = {DataType::Double, DataType::Float,  DataType::Int,
                                                DataType::Long,   DataType::String, DataType::Null};
@@ -35,11 +38,12 @@ int main() {
   // test data generation settings
   constexpr bool GENERATE_TEST_DATA = true;
   const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
-                                                      BenchmarkType::JOB};
+                                                      BenchmarkType::JOB, BenchmarkType::JCC_H};
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
   constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 100;
   constexpr int NUMBER_JOB_ITEM_RUNS = 2;
+  constexpr bool SKEW_JCCH = false;
 
   // Execute calibration
   auto table_config = std::make_shared<TableGeneratorConfig>(
@@ -58,7 +62,7 @@ int main() {
   if (GENERATE_TEST_DATA) {
     std::cout << "Generating test data" << std::endl;
     auto test_start = std::chrono::system_clock::now();
-    auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
+    auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST, SKEW_JCCH);
     for (const auto type : BENCHMARK_TYPES) {
       std::cout << "- Run " << magic_enum::enum_name(type) << std::endl;
       const auto item_runs = type == BenchmarkType::JOB ? NUMBER_JOB_ITEM_RUNS : NUMBER_BENCHMARK_ITEM_RUNS;

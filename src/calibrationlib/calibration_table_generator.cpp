@@ -20,8 +20,8 @@ CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGenera
           column_name_stringstream << data_type << "_" << encoding_type << "_" << column_count;
           auto column_name = column_name_stringstream.str();
           _column_data_distributions.emplace_back(column_data_distribution);
-          _column_specs.emplace_back(
-              ColumnSpecification(column_data_distribution, data_type, encoding_type, column_name));
+          _column_specs.emplace_back(ColumnSpecification(column_data_distribution, data_type,
+                                                         SegmentEncodingSpec(encoding_type), column_name));
           column_count++;
         }
       }  // if encoding is supported

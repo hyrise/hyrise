@@ -9,6 +9,8 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
+#include "jcch/jcch_benchmark_item_runner.hpp"
+#include "jcch/jcch_table_generator.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
@@ -18,13 +20,14 @@
 
 namespace opossum {
 
-CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {
+CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir, bool skew_jcch)
+    : _path_to_dir(path_to_dir), _skew_jcch(skew_jcch) {
   _config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
 }
 
 CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir,
-                                                       std::shared_ptr<BenchmarkConfig> config)
-    : _path_to_dir(path_to_dir) {
+                                                       std::shared_ptr<BenchmarkConfig> config, bool skew_jcch)
+    : _path_to_dir(path_to_dir), _skew_jcch(skew_jcch) {
   _config = config;
 }
 
@@ -35,6 +38,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
   auto subdirectory = std::string{magic_enum::enum_name(type)};
   boost::algorithm::to_lower(subdirectory);
   const auto path = _path_to_dir + "/" + subdirectory;
+  std::filesystem::create_directories(path);
   const auto feature_exporter = std::make_shared<OperatorFeatureExporter>(path);
   auto table_exporter = TableFeatureExporter(path);
 
@@ -48,6 +52,8 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
         return _build_tpcc(scale_factor, feature_exporter);
       case BenchmarkType::JOB:
         return _build_job(feature_exporter);
+      case BenchmarkType::JCC_H:
+        return _build_jcch(scale_factor, feature_exporter);
     }
   }();
 
@@ -133,6 +139,31 @@ std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_job(
   auto benchmark_runner =
       std::make_shared<BenchmarkRunner>(*_config, std::move(item_runner), std::move(table_generator),
                                         BenchmarkRunner::create_context(*_config), feature_exporter);
+  return benchmark_runner;
+}
+
+std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_jcch(
+    const float scale_factor, const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const {
+  auto jcch_dbgen_path = std::filesystem::canonical(".") / "third_party/jcch-dbgen";
+  Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"),
+         std::string{"JCC-H dbgen not found at "} + jcch_dbgen_path.c_str());
+  Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
+         std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
+
+  // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
+  auto jcch_data_path_str = std::ostringstream{};
+  jcch_data_path_str << "../jcch_data/sf-" << std::noshowpoint << scale_factor;
+  std::filesystem::create_directories(jcch_data_path_str.str());
+  // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
+  auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
+
+  auto table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, _config);
+  auto item_runner = std::make_unique<JCCHBenchmarkItemRunner>(_skew_jcch, jcch_dbgen_path, jcch_data_path, _config,
+                                                               false, scale_factor);
+  auto benchmark_runner =
+      std::make_shared<BenchmarkRunner>(*_config, std::move(item_runner), std::move(table_generator),
+                                        BenchmarkRunner::create_context(*_config), feature_exporter);
+
   return benchmark_runner;
 }
 

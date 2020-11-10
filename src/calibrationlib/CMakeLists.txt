@@ -25,6 +25,8 @@ add_library(hyriseCalibrationLib ${SOURCES})
 
 target_link_libraries(
     hyriseCalibrationLib
+
+    PUBLIC
     hyrise
     hyriseBenchmarkLib
 )
