@@ -35,7 +35,7 @@ int main() {
 
   // test data generation settings
   constexpr bool GENERATE_TEST_DATA = true;
-  constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
+  const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS};
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
   constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 100;
@@ -58,8 +58,11 @@ int main() {
     std::cout << "Generating test data" << std::endl;
     auto test_start = std::chrono::system_clock::now();
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
-    benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS,
+    for (const auto type : BENCHMARK_TYPES) {
+      std::cout << "- Run " << magic_enum::enum_name(type) << std::endl;
+    benchmark_runner.run_benchmark(type, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS,
                                    NUMBER_BENCHMARK_ITEM_RUNS);
+  }
     const auto test_duration =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
     std::cout << "Generated test data in " << test_duration << " s" << std::endl;
@@ -67,15 +70,14 @@ int main() {
 
   std::cout << "Generating training data" << std::endl;
   std::cout << "- Generating LQPS" << std::endl;
-  auto generation_start = std::chrono::system_clock::now();
 
+  auto generation_start = std::chrono::system_clock::now();
   auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
   auto lqp_generator = CalibrationLQPGenerator();
   auto table_exporter = TableFeatureExporter(PATH_TRAIN);
 
   for (const auto& table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
-
     lqp_generator.generate(OperatorType::TableScan, table);
   }
 

@@ -37,7 +37,8 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
     min_table_count += min_table_count * _column_data_distributions.size() / _config->column_data_distributions.size();
   }
 
-  auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>(min_table_count);
+  auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
+  table_wrappers.reserve(min_table_count);
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
   int max_distinct_values{0};
   std::for_each(_column_data_distributions.begin(), _column_data_distributions.end(),
