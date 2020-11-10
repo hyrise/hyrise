@@ -68,6 +68,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
+    ${PROJECT_SOURCE_DIR}/src/calibrationlib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugin/
 
@@ -95,6 +96,8 @@ if (ENABLE_CLANG_TIDY)
 endif()
 
 add_subdirectory(benchmarklib)
+add_subdirectory(calibrationlib)
+add_subdirectory(calibration)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)

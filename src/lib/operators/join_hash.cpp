@@ -40,6 +40,10 @@ bool JoinHash::supports(const JoinConfiguration config) {
          (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
 }
 
+bool JoinHash::satisfies_join_preference(const JoinType join_type) {
+  return join_type == JoinType::Auto || join_type == JoinType::Hash;
+}
+
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate,

@@ -120,6 +120,7 @@ Contact: firstname.lastname@hpi.de
 
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Lukas     Böhme
 -   Timo      Djürken
 -   Fabian    Dumke
 -   Leonard   Geier
@@ -155,10 +156,12 @@ Contact: firstname.lastname@hpi.de
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
+-   Lukas     Rambold
 -   Hendrik   Rätz
 -   Alexander Riese
 -   Johannes  Schneider
 -   David     Schumann
+-   Franziska Schumann
 -   Simon     Siegert
 -   Arthur    Silber
 -   Toni      Stachewicz

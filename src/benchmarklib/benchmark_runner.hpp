@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include "cxxopts.hpp"
 
+#include "../calibrationlib/operator_feature_exporter.hpp"
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
 #include "benchmark_item_result.hpp"
@@ -40,7 +41,8 @@ class BenchmarkRunner : public Noncopyable {
   static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::milliseconds{1000};
 
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
-                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context,
+                  std::shared_ptr<OperatorFeatureExporter> operator_exporter = nullptr);
 
   void run();
 
@@ -70,6 +72,8 @@ class BenchmarkRunner : public Noncopyable {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
+  void _export_pqps() const;
+
   // Converts the result of a SQL query into a JSON object
   static nlohmann::json _sql_to_json(const std::string& sql);
 
@@ -88,6 +92,8 @@ class BenchmarkRunner : public Noncopyable {
   std::vector<BenchmarkItemResult> _results;
 
   nlohmann::json _context;
+
+  std::shared_ptr<OperatorFeatureExporter> _operator_exporter;
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 

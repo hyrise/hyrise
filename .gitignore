@@ -48,3 +48,9 @@ tpcds_cached_tables/
 benchmark_runner/*
 benchmark_results/*
 clustering_config.json
+
+cost_model_output/
+__pycache__/
+
+# Ignore python notebook saves
+*.ipynb_checkpoints

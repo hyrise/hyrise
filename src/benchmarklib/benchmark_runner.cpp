@@ -23,11 +23,13 @@ namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
-                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
+                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context,
+                                 std::shared_ptr<OperatorFeatureExporter> operator_exporter)
     : _config(config),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
-      _context(context) {
+      _context(context),
+      _operator_exporter(operator_exporter) {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
@@ -284,6 +286,10 @@ void BenchmarkRunner::_benchmark_ordered() {
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
+    if (_operator_exporter) {
+      _export_pqps();
+    }
+
     // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
     // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
     // unclear advantage of excluding those runs, we only take one snapshot here.
@@ -532,6 +538,16 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+}
+
+void BenchmarkRunner::_export_pqps() const {
+  const auto& pqp_cache = Hyrise::get().default_pqp_cache;
+  const auto cache_map = pqp_cache->snapshot();
+  for (const auto& [_, entry] : cache_map) {
+    _operator_exporter->export_to_csv(entry.value);
+  }
+  // Clear pqp cache for next benchmark run
+  pqp_cache->clear();
 }
 
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {

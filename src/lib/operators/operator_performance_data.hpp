@@ -30,6 +30,7 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   bool has_output{false};
   uint64_t output_row_count{0};
   uint64_t output_chunk_count{0};
+  uint32_t output_column_count{0};
 };
 
 /**

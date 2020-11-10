@@ -87,6 +87,7 @@ target_link_libraries(
     PUBLIC
 
     hyrise
+    hyriseCalibrationLib
     ${Boost_DATE_TIME_LIBRARY}
     tpch_dbgen
     tpcds_dbgen

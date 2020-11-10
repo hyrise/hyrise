@@ -74,6 +74,10 @@ namespace opossum {
 
 bool JoinNestedLoop::supports(const JoinConfiguration config) { return true; }
 
+bool JoinNestedLoop::satisfies_join_preference(const JoinType join_type) {
+  return join_type == JoinType::Auto || join_type == JoinType::NestedLoop;
+}
+
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                const OperatorJoinPredicate& primary_predicate,

@@ -19,13 +19,15 @@ namespace opossum {
 class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  public:
   // Constructor for Cross Joins. join_mode has to be JoinMode::Cross
-  explicit JoinNode(const JoinMode init_join_mode);
+  explicit JoinNode(const JoinMode init_join_mode, const JoinType join_type = JoinType::Auto);
 
   // Utility constructor that just calls the multi predicated constructor
-  JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
+  JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate,
+           const JoinType join_type = JoinType::Auto);
 
   // Constructor for multi predicated joins
-  JoinNode(const JoinMode init_join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates);
+  JoinNode(const JoinMode init_join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates,
+           const JoinType join_type = JoinType::Auto);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
@@ -53,6 +55,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   JoinMode join_mode;
+
+  JoinType preffered_join_type;
 
  protected:
   /**

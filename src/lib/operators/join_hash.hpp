@@ -21,6 +21,7 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);
+  static bool satisfies_join_preference(const JoinType join_type);
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
