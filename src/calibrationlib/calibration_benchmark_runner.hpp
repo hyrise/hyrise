@@ -1,15 +1,12 @@
 #pragma once
 
-#include "string"
-
-#include <benchmark_config.hpp>
-#include <benchmark_runner.hpp>
-
+#include "benchmark_config.hpp"
+#include "benchmark_runner.hpp"
 #include "operator_feature_exporter.hpp"
 #include "table_feature_exporter.hpp"
 
 namespace opossum {
-enum BenchmarkType { TPC_H, TPC_C, TPC_DS };
+enum BenchmarkType { TPC_H, TPC_C, TPC_DS, JOB };
 
 class CalibrationBenchmarkRunner {
  public:
@@ -20,8 +17,13 @@ class CalibrationBenchmarkRunner {
                      const int item_runs);
 
  private:
-  std::shared_ptr<BenchmarkRunner> _build_tpch(const float scale_factor, const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
-  std::shared_ptr<BenchmarkRunner> _build_tpcds(const float scale_factor, const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
+  std::shared_ptr<BenchmarkRunner> _build_tpch(const float scale_factor,
+                                               const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
+  std::shared_ptr<BenchmarkRunner> _build_tpcds(const float scale_factor,
+                                                const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
+  std::shared_ptr<BenchmarkRunner> _build_tpcc(const float scale_factor,
+                                               const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
+  std::shared_ptr<BenchmarkRunner> _build_job(const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const;
 
   std::shared_ptr<BenchmarkConfig> _config;
   std::string _path_to_dir;

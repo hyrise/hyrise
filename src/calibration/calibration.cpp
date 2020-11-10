@@ -1,16 +1,15 @@
-#include "hyrise.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "operators/pqp_utils.hpp"
-#include "scheduler/operator_task.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "types.hpp"
-
 #include "calibration_benchmark_runner.hpp"
 #include "calibration_lqp_generator.hpp"
 #include "calibration_table_generator.hpp"
+#include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "operator_feature_exporter.hpp"
+#include "operators/pqp_utils.hpp"
+#include "scheduler/operator_task.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "table_feature_exporter.hpp"
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -35,10 +34,12 @@ int main() {
 
   // test data generation settings
   constexpr bool GENERATE_TEST_DATA = true;
-  const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS};
+  const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
+                                                      BenchmarkType::JOB};
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
   constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 100;
+  constexpr int NUMBER_JOB_ITEM_RUNS = 2;
 
   // Execute calibration
   auto table_config = std::make_shared<TableGeneratorConfig>(
@@ -60,9 +61,9 @@ int main() {
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
     for (const auto type : BENCHMARK_TYPES) {
       std::cout << "- Run " << magic_enum::enum_name(type) << std::endl;
-    benchmark_runner.run_benchmark(type, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS,
-                                   NUMBER_BENCHMARK_ITEM_RUNS);
-  }
+      const auto item_runs = type == BenchmarkType::JOB ? NUMBER_JOB_ITEM_RUNS : NUMBER_BENCHMARK_ITEM_RUNS;
+      benchmark_runner.run_benchmark(type, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS, item_runs);
+    }
     const auto test_duration =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - test_start).count();
     std::cout << "Generated test data in " << test_duration << " s" << std::endl;

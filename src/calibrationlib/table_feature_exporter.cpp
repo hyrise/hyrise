@@ -1,7 +1,6 @@
 #include "table_feature_exporter.hpp"
 
 #include <fstream>
-#include <string>
 
 #include "constant_mappings.hpp"
 #include "import_export/csv/csv_writer.hpp"
@@ -104,7 +103,7 @@ void TableFeatureExporter::_export_segment_data(std::shared_ptr<const Calibratio
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       auto const segment = table->get_chunk(chunk_id)->get_segment(column_id);
       AllTypeVariant encoding_type = {pmr_string{encoding_type_to_string.left.at(EncodingType::Unencoded)}};
-      AllTypeVariant compression_type = NULL_VALUE;
+      AllTypeVariant compression_type = "";
       // if segment is encoded write out values
       if (const auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
         // Encoding Type

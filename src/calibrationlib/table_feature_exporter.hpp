@@ -1,8 +1,6 @@
 
 #pragma once
 
-#include <string>
-
 #include "calibration_table_wrapper.hpp"
 #include "storage/table.hpp"
 

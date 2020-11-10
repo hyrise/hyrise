@@ -30,8 +30,10 @@ void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const Abstract
   std::lock_guard<std::mutex> lock(_mutex);
   _cardinality_estimator = std::make_shared<CardinalityEstimator>();
   visit_pqp(op, [&](const auto& node) {
-    Assert(op->performance_data->has_output, "Expected operator to have been executed.");
-    _export_operator(node);
+    //skip Insert, Update, Delete, ...
+    if (op->performance_data->has_output) {
+      _export_operator(node);
+    }
     return PQPVisitation::VisitInputs;
   });
 }

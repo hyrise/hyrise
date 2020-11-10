@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <mutex>
-#include <string>
 
 #include "expression/lqp_column_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"

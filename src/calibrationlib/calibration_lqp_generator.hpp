@@ -1,15 +1,12 @@
 #pragma once
 
-#include "string"
-
 #include <boost/hana/tuple.hpp>
 
-#include <expression/expression_functional.hpp>
-#include <logical_query_plan/abstract_lqp_node.hpp>
-#include <operators/abstract_operator.hpp>
-
 #include "calibration_table_wrapper.hpp"
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
