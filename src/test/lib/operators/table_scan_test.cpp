@@ -136,6 +136,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
+    table_wrapper->never_clear_output();
+
     return table_wrapper;
   }
 
@@ -156,6 +158,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
     table_wrapper->execute();
+    table_wrapper->never_clear_output();
+
     return table_wrapper;
   }
 
@@ -611,6 +615,7 @@ TEST_P(OperatorsTableScanTest, OperatorName) {
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
   auto table_wrapper =
       std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -625,6 +630,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -640,6 +646,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
@@ -654,6 +661,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
@@ -666,6 +674,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -678,6 +687,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
   auto table = load_table("resources/test_data/tbl/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -690,6 +700,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -704,6 +715,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) 
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -717,6 +729,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueSe
   auto table = create_referencing_table_w_null_row_id(false);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -729,6 +742,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompres
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
