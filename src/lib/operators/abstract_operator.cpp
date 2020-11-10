@@ -34,10 +34,12 @@ AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
     bool left_has_executed = _left_input ? _left_input->performance_data->executed : false;
     bool right_has_executed = _right_input ? _right_input->performance_data->executed : false;
-    bool aborted = _transaction_context.has_value() ? _transaction_context->lock()->aborted() : false;
 
-    Assert(this->performance_data->executed || aborted || (!left_has_executed && !right_has_executed),
-       "Operator did not execute, but at least one input operator has.");
+    auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
+    bool aborted = transaction_context ? transaction_context->aborted() : false;
+
+    Assert(this->performance_data->executed || aborted || !left_has_executed || !right_has_executed,
+           "Operator did not execute, but at least one input operator has.");
   }
 }
 
