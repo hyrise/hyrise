@@ -11,16 +11,16 @@
 #include "hyrise.hpp"
 #include "operators/clustering_partitioner.hpp"
 #include "operators/clustering_sorter.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -37,18 +37,20 @@ namespace opossum {
 
 DisjointClustersAlgo::DisjointClustersAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
 
-const std::string DisjointClustersAlgo::description() const {
-  return "DisjointClustersAlgo";
-}
-
+const std::string DisjointClustersAlgo::description() const { return "DisjointClustersAlgo"; }
 
 // NOTE: num_clusters is just an estimate.
 // The greedy logic that computes the boundaries currently sacrifices exact cluster count rather than balanced clusters
 template <typename ColumnDataType>
-ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters, const bool nullable) const {
+ClusterBoundaries DisjointClustersAlgo::_get_boundaries(
+    const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count,
+    const size_t num_clusters, const bool nullable) const {
   Assert(histogram, "histogram was nullptr");
-  Assert(num_clusters > 1, "having less than 2 clusters does not make sense (" + std::to_string(num_clusters) + " cluster(s) requested)");
-  Assert(num_clusters <= histogram->bin_count(), "more clusters (" + std::to_string(num_clusters) + ") than histogram bins (" + std::to_string(histogram->bin_count()) + ")");
+  Assert(num_clusters > 1,
+         "having less than 2 clusters does not make sense (" + std::to_string(num_clusters) + " cluster(s) requested)");
+  Assert(num_clusters <= histogram->bin_count(), "more clusters (" + std::to_string(num_clusters) +
+                                                     ") than histogram bins (" +
+                                                     std::to_string(histogram->bin_count()) + ")");
 
   // TODO: is that a good estimation?
   auto num_null_values = row_count - static_cast<size_t>(histogram->total_count());
@@ -81,7 +83,9 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     // The clusters should have approximately the same size.
     // A cluster contains always at least one bin, thus check that the bin size is reasonable.
     constexpr size_t MAX_CLUSTER_SIZE_DIVERGENCE = 2;
-    Assert(bin_size < MAX_CLUSTER_SIZE_DIVERGENCE * ideal_rows_per_cluster, "bin is too large: " + std::to_string(bin_size) + ", but a cluster should have about " + std::to_string(ideal_rows_per_cluster) + " rows");
+    Assert(bin_size < MAX_CLUSTER_SIZE_DIVERGENCE * ideal_rows_per_cluster,
+           "bin is too large: " + std::to_string(bin_size) + ", but a cluster should have about " +
+               std::to_string(ideal_rows_per_cluster) + " rows");
 
     if (rows_in_cluster + bin_size < ideal_rows_per_cluster) {
       // cluster has not yet reached its target size
@@ -115,29 +119,30 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
     }
   }
 
-  Assert(bin_id == histogram->bin_count(), "histogram has " + std::to_string(histogram->bin_count()) + " bins, but processed only " + std::to_string(bin_id));
-
+  Assert(bin_id == histogram->bin_count(), "histogram has " + std::to_string(histogram->bin_count()) +
+                                               " bins, but processed only " + std::to_string(bin_id));
 
   for (size_t boundary = 1; boundary < boundaries.size() - 1; boundary++) {
     if (nullable and boundary == 1) continue;
 
-    Assert(boundaries[boundary].second == boundaries[boundary + 1].first, "Hole between boundary " + std::to_string(boundary) + " and " + std::to_string(boundary + 1));
+    Assert(boundaries[boundary].second == boundaries[boundary + 1].first,
+           "Hole between boundary " + std::to_string(boundary) + " and " + std::to_string(boundary + 1));
   }
 
   return boundaries;
 }
 
-
 template <typename ColumnDataType>
-size_t _get_cluster_index(const ClusterBoundaries& cluster_boundaries, const std::optional<ColumnDataType>& optional_value) {
+size_t _get_cluster_index(const ClusterBoundaries& cluster_boundaries,
+                          const std::optional<ColumnDataType>& optional_value) {
   size_t cluster_index = 0;
-  
+
   if (!optional_value) {
     // null values are always in the first cluster
     return 0;
   } else {
     const ColumnDataType& value = *optional_value;
-    
+
     for (const std::pair<AllTypeVariant, AllTypeVariant>& boundary : cluster_boundaries) {
       if (variant_is_null(boundary.first) && variant_is_null(boundary.second)) {
         // null values are handled above
@@ -156,8 +161,8 @@ size_t _get_cluster_index(const ClusterBoundaries& cluster_boundaries, const std
     }
 
     if (cluster_index == cluster_boundaries.size()) {
-      std::cout << "no matching cluster found for " << value                 
-                << " with boundaries [" << cluster_boundaries[1].first << ", " << cluster_boundaries[1].second << "]" << std::endl;
+      std::cout << "no matching cluster found for " << value << " with boundaries [" << cluster_boundaries[1].first
+                << ", " << cluster_boundaries[1].second << "]" << std::endl;
       Fail("no matching cluster");
     }
   }
@@ -181,14 +186,13 @@ const ClusterKey DisjointClustersAlgo::_clustering_key_for_chunk(const std::shar
       std::optional<ColumnDataType> value;
       const auto variant_value = (*segment)[0];
       if (!variant_is_null(variant_value)) {
-       value = boost::lexical_cast<ColumnDataType>(variant_value);
+        value = boost::lexical_cast<ColumnDataType>(variant_value);
       }
       indices.push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
     });
   }
   return indices;
 }
-
 
 const std::vector<ClusterKey> DisjointClustersAlgo::_cluster_keys(const std::shared_ptr<Chunk>& chunk) const {
   std::vector<ClusterKey> cluster_keys(chunk->size());
@@ -203,37 +207,40 @@ const std::vector<ClusterKey> DisjointClustersAlgo::_cluster_keys(const std::sha
       const auto segment = chunk->get_segment(clustering_column_id);
       Assert(segment, "segment was nullptr");
 
-      ChunkOffset chunk_offset{0};      
+      ChunkOffset chunk_offset{0};
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          std::optional<ColumnDataType> value;
-          if (!position.is_null()) {
-            value = position.value();
-          }
-          cluster_keys[chunk_offset].push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
-          ++chunk_offset;
-        });
+        std::optional<ColumnDataType> value;
+        if (!position.is_null()) {
+          value = position.value();
+        }
+        cluster_keys[chunk_offset].push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
+        ++chunk_offset;
+      });
     });
   }
 
   return cluster_keys;
 }
 
-std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const {
+std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_sort_and_encode_chunks(
+    const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const {
   std::vector<std::shared_ptr<Chunk>> sorted_chunks;
   for (const auto& chunk : chunks) {
     Assert(chunk->mvcc_data(), "no mvcc");
     auto sorted_chunk = _sort_chunk(chunk, sort_column_id, _table->column_definitions());
     Assert(sorted_chunk->mvcc_data(), "no mvcc");
     sorted_chunk->finalize();
-    ChunkEncoder::encode_chunk(sorted_chunk, _table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
+    ChunkEncoder::encode_chunk(sorted_chunk, _table->column_data_types(),
+                               SegmentEncodingSpec{EncodingType::Dictionary});
     sorted_chunks.push_back(sorted_chunk);
     Assert(sorted_chunk->mvcc_data(), "no mvcc");
-  }      
+  }
 
-  return sorted_chunks;  
+  return sorted_chunks;
 }
 
-std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(const std::vector<size_t>& num_clusters_per_dimension) const {
+std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(
+    const std::vector<size_t>& num_clusters_per_dimension) const {
   std::vector<ClusterBoundaries> cluster_boundaries;
   const auto row_count = _table->row_count();
 
@@ -245,7 +252,6 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
     resolve_data_type(column_data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       const auto clustering_column = _table->column_name(clustering_column_id);
-
 
       const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(_table, clustering_column);
       const auto histogram_total_count = histogram->total_count();
@@ -262,10 +268,10 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
       //  std::cout << "boundary " << boundary_index << ": [" << boundary.first << ", " << boundary.second << "]" << std::endl;
       //  boundary_index++;
       //}
-      std::cout << "requested " << num_clusters << " boundaries, got " << boundaries.size() << " (" << 100.0 * boundaries.size() / num_clusters << "%)" << std::endl;
+      std::cout << "requested " << num_clusters << " boundaries, got " << boundaries.size() << " ("
+                << 100.0 * boundaries.size() / num_clusters << "%)" << std::endl;
     });
-
-  } 
+  }
 
   return cluster_boundaries;
 }
@@ -285,41 +291,40 @@ bool DisjointClustersAlgo::_can_delete_chunk(const std::shared_ptr<Chunk> chunk)
 }
 
 void _delete_rows(const size_t l_orderkey, const size_t ms_delay, const std::string& table_name) {
-    // dirty hack
-    if (table_name != "lineitem") {
-      std::cout << "dirty hack, aborting" << std::endl;
-      return;
-    }
+  // dirty hack
+  if (table_name != "lineitem") {
+    std::cout << "dirty hack, aborting" << std::endl;
+    return;
+  }
 
-    std::this_thread::sleep_for (std::chrono::milliseconds(ms_delay));
-    const std::string sql = "DELETE FROM lineitem WHERE l_orderkey = " + std::to_string(l_orderkey);
-    std::cout << "Executing " << sql << std::endl;
-    auto builder = SQLPipelineBuilder{ sql };
-    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
-    sql_pipeline->get_result_tables();
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms_delay));
+  const std::string sql = "DELETE FROM lineitem WHERE l_orderkey = " + std::to_string(l_orderkey);
+  std::cout << "Executing " << sql << std::endl;
+  auto builder = SQLPipelineBuilder{sql};
+  auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+  sql_pipeline->get_result_tables();
 }
 
 void DisjointClustersAlgo::_print_boundary_counts(const std::string& column_name) const {
-    const auto clustering_column_id = _table->column_id_by_name(column_name);
-    const auto nullable = _table->column_is_nullable(clustering_column_id);
-    const auto column_data_type = _table->column_data_type(clustering_column_id);
-    const auto row_count = _table->row_count();
-    resolve_data_type(column_data_type, [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
+  const auto clustering_column_id = _table->column_id_by_name(column_name);
+  const auto nullable = _table->column_is_nullable(clustering_column_id);
+  const auto column_data_type = _table->column_data_type(clustering_column_id);
+  const auto row_count = _table->row_count();
+  resolve_data_type(column_data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
 
-
-      std::vector<size_t> boundary_counts;
-      const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(_table, column_name);
-      for (size_t num_clusters {2}; num_clusters <= 100; num_clusters++) {
-        const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters, nullable);
-        boundary_counts.push_back(boundaries.size());
-      }
-      std::cout << "Boundary counts for " << column_name << ": [";
-      for (const auto count : boundary_counts) {
-        std::cout << count << ",";
-      }
-      std::cout << "]" << std::endl;
-    });
+    std::vector<size_t> boundary_counts;
+    const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(_table, column_name);
+    for (size_t num_clusters{2}; num_clusters <= 100; num_clusters++) {
+      const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters, nullable);
+      boundary_counts.push_back(boundaries.size());
+    }
+    std::cout << "Boundary counts for " << column_name << ": [";
+    for (const auto count : boundary_counts) {
+      std::cout << count << ",";
+    }
+    std::cout << "]" << std::endl;
+  });
 }
 
 void DisjointClustersAlgo::_perform_clustering() {
@@ -346,7 +351,6 @@ void DisjointClustersAlgo::_perform_clustering() {
 
     const auto& sort_column_name = clustering_config.back().first;
     const auto sort_column_id = _table->column_id_by_name(sort_column_name);
-    
 
     Timer per_step_timer;
 
@@ -357,7 +361,6 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto boundaries_duration = per_step_timer.lap();
     std::cout << "-   Computing boundaries done (" << format_duration(boundaries_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["boundaries"] = boundaries_duration.count();
-    
 
     size_t num_invalid_chunks = 0;
     size_t num_removed_chunks = 0;
@@ -388,12 +391,10 @@ void DisjointClustersAlgo::_perform_clustering() {
     //std::this_thread::sleep_for(std::chrono::seconds(2));
     //return;
 
-
-
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
     std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>> clusters;
 
-    size_t clustering_key_ns {0};
+    size_t clustering_key_ns{0};
     size_t partition_steps_failed = 0;
     size_t partition_steps_successful = 0;
     size_t partition_steps_failed_finally = 0;
@@ -411,12 +412,14 @@ void DisjointClustersAlgo::_perform_clustering() {
           clustering_key_ns += clustering_timer.lap().count();
 
           auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
+          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(
+              nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
           clustering_partitioner->set_transaction_context(partition_transaction);
           clustering_partitioner->execute();
 
           if (clustering_partitioner->execute_failed()) {
-            std::cout << "Chunk " << chunk_id << " could not be locked entirely or was modified since cluster keys were computed." << std::endl;
+            std::cout << "Chunk " << chunk_id
+                      << " could not be locked entirely or was modified since cluster keys were computed." << std::endl;
             partition_failed_chunks.push_back(chunk_id);
             partition_transaction->rollback(RollbackReason::Conflict);
             partition_steps_failed++;
@@ -439,7 +442,8 @@ void DisjointClustersAlgo::_perform_clustering() {
 
       if (partition_failed_chunks.size() > 0) {
         chunks_to_partition = partition_failed_chunks;
-        std::cout << "Partition attempt " << attempt + 1 << " failed for " << partition_failed_chunks.size() << " chunks" << std::endl;
+        std::cout << "Partition attempt " << attempt + 1 << " failed for " << partition_failed_chunks.size()
+                  << " chunks" << std::endl;
         partition_steps_failed_finally = partition_failed_chunks.size();
         partition_steps_failed_at_attempt[attempt] = partition_steps_failed_finally;
       } else {
@@ -458,9 +462,9 @@ void DisjointClustersAlgo::_perform_clustering() {
         Assert(chunk, "chunk disappeared");
         if (chunk->is_mutable()) {
           chunk->finalize();
-            Hyrise::get().chunks_to_encode_mutex->lock();
-            Hyrise::get().chunks_to_encode.insert(chunk_id);
-            Hyrise::get().chunks_to_encode_mutex->unlock();
+          Hyrise::get().chunks_to_encode_mutex->lock();
+          Hyrise::get().chunks_to_encode.insert(chunk_id);
+          Hyrise::get().chunks_to_encode_mutex->unlock();
         }
       }
     }
@@ -468,7 +472,6 @@ void DisjointClustersAlgo::_perform_clustering() {
     // TODO remove
     //Hyrise::get().update_thread_state = 4;
     //std::this_thread::sleep_for(std::chrono::seconds(2));
-
 
     std::cout << "Identifying the clustering keys took " << clustering_key_ns / 1e6 << "ms" << std::endl;
     const auto partition_duration = per_step_timer.lap();
@@ -493,7 +496,6 @@ void DisjointClustersAlgo::_perform_clustering() {
 
       std::cout << "-   Merging small chunks" << std::endl;
 
-
       std::vector<ClusterKey> chunks_to_merge;
       for (const auto& [cluster_key, cluster] : clusters) {
         if (cluster_key == MERGE_CLUSTER) {
@@ -509,7 +511,7 @@ void DisjointClustersAlgo::_perform_clustering() {
         std::cout << "Beginning with merge attempt " << attempt + 1 << " of " << NUM_REPEATS_MERGE << std::endl;
         std::vector<ClusterKey> merge_failed_chunks;
 
-        for (const auto &cluster_key : chunks_to_merge) {
+        for (const auto& cluster_key : chunks_to_merge) {
           Assert(cluster_key != MERGE_CLUSTER, "We should never merge the merge cluster");
 
           const auto& cluster = clusters[cluster_key];
@@ -519,7 +521,7 @@ void DisjointClustersAlgo::_perform_clustering() {
           Assert(chunk->size() <= 100000, "unreasonably large chunk: " + std::to_string(chunk->size()));
           const auto chunk_id = cluster.first;
 
-          if (chunk) { // always true, but necessary to limit the scope
+          if (chunk) {  // always true, but necessary to limit the scope
             number_merged_chunks++;
             number_merged_rows += chunk->size();
 
@@ -527,12 +529,14 @@ void DisjointClustersAlgo::_perform_clustering() {
             const auto cluster_keys = std::vector<ClusterKey>(chunk->size(), MERGE_CLUSTER);
 
             auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-            auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys, clusters, chunk_ids_per_cluster);
+            auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys,
+                                                                                  clusters, chunk_ids_per_cluster);
             clustering_partitioner->set_transaction_context(partition_transaction);
             clustering_partitioner->execute();
 
             if (clustering_partitioner->execute_failed()) {
-              std::cout << "Chunk " << chunk_id << " was supposed to be merged because its chunk size is less than " << SMALL_CHUNK_TRESHOLD << ", but was modified during the merge. Skipping it." << std::endl;
+              std::cout << "Chunk " << chunk_id << " was supposed to be merged because its chunk size is less than "
+                        << SMALL_CHUNK_TRESHOLD << ", but was modified during the merge. Skipping it." << std::endl;
               partition_transaction->rollback(RollbackReason::Conflict);
               merge_steps_failed++;
               merge_failed_chunks.push_back(cluster_key);
@@ -556,7 +560,8 @@ void DisjointClustersAlgo::_perform_clustering() {
         }
 
         if (merge_failed_chunks.size() > 0) {
-          std::cout << "Merge attempt " << attempt + 1 << " failed for " << merge_failed_chunks.size() << " chunks" << std::endl;
+          std::cout << "Merge attempt " << attempt + 1 << " failed for " << merge_failed_chunks.size() << " chunks"
+                    << std::endl;
           chunks_to_merge = merge_failed_chunks;
           merge_steps_failed_finally = merge_failed_chunks.size();
           merge_steps_failed_at_attempt[attempt] = merge_steps_failed_finally;
@@ -604,7 +609,8 @@ void DisjointClustersAlgo::_perform_clustering() {
       for (const auto& key : clusters_to_sort) {
         const auto& chunk_ids = chunk_ids_per_cluster[key];
         auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id, new_chunk_ids);
+        auto clustering_sorter =
+            std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id, new_chunk_ids);
         clustering_sorter->set_transaction_context(sort_transaction);
         clustering_sorter->execute();
 
@@ -635,7 +641,8 @@ void DisjointClustersAlgo::_perform_clustering() {
       }
 
       if (clusters_sort_failed.size() > 0) {
-        std::cout << "Sort attempt " << attempt + 1 << " failed for " << clusters_sort_failed.size() << " clusters" << std::endl;
+        std::cout << "Sort attempt " << attempt + 1 << " failed for " << clusters_sort_failed.size() << " clusters"
+                  << std::endl;
         clusters_to_sort = clusters_sort_failed;
         sort_steps_failed_finally = clusters_sort_failed.size();
         sort_steps_failed_at_attempt[attempt] = sort_steps_failed_finally;
@@ -650,15 +657,13 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::cout << "Sorting clusters done (" << format_duration(sort_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["sort"] = sort_duration.count();
 
-
-
     // signalize that the encode phase starts
     Hyrise::get().update_thread_state = 4;
 
     // phase 2.5: encode chunks
     std::cout << "-   Encoding clusters" << std::endl;
     for (const auto chunk_id : new_chunk_ids) {
-      const auto &chunk = _table->get_chunk(chunk_id);
+      const auto& chunk = _table->get_chunk(chunk_id);
       Assert(chunk, "chunk must not be deleted");
       ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
       _clustered_chunks.insert(chunk_id);
@@ -683,16 +688,18 @@ void DisjointClustersAlgo::_perform_clustering() {
       }
     }
 
-    std::cout << table_name << " has now " << _table->chunk_count() << " chunks (from originally " << chunk_count_before_clustering << ")" << std::endl;
-    std::cout << num_invalid_chunks << " of the " << _table->chunk_count() << " chunks are fully invalidated, and " << num_removed_chunks << " of those could be removed." << std::endl;
-
+    std::cout << table_name << " has now " << _table->chunk_count() << " chunks (from originally "
+              << chunk_count_before_clustering << ")" << std::endl;
+    std::cout << num_invalid_chunks << " of the " << _table->chunk_count() << " chunks are fully invalidated, and "
+              << num_removed_chunks << " of those could be removed." << std::endl;
 
     const auto cleanup_duration = per_step_timer.lap();
     std::cout << "-   Clean up done (" << format_duration(cleanup_duration) << ")" << std::endl;
     _runtime_statistics[table_name]["steps"]["cleanup"] = cleanup_duration.count();
 
     const auto table_clustering_duration = per_table_timer.lap();
-    std::cout << "-  Clustering " << table_name << " done (" << format_duration(table_clustering_duration) << ")" << std::endl;
+    std::cout << "-  Clustering " << table_name << " done (" << format_duration(table_clustering_duration) << ")"
+              << std::endl;
     _runtime_statistics[table_name]["total"] = table_clustering_duration.count();
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -701,14 +708,19 @@ void DisjointClustersAlgo::_perform_clustering() {
     Hyrise::get().update_thread_state = 6;
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-
     // print statistics
     const auto total_partition_steps = partition_steps_successful + partition_steps_failed;
     const auto total_merge_steps = merge_steps_successful + merge_steps_failed;
     const auto total_sort_steps = sort_steps_successful + sort_steps_failed;
-    std::cout << "Total partition attempts: " << total_partition_steps << ", " << partition_steps_successful << " of them successful (" << 100.0 * partition_steps_successful / total_partition_steps << "%). " << partition_steps_failed_finally << " partition steps failed finally." << std::endl;
-    std::cout << "Total merge attempts: " << total_merge_steps << ", " << merge_steps_successful << " of them successful (" << 100.0 * merge_steps_successful / total_merge_steps << "%). " <<  merge_steps_failed_finally  << " merge steps failed finally." << std::endl;
-    std::cout << "Total sort attempts: " << total_sort_steps << ", " << sort_steps_successful << " of them successful (" << 100.0 * sort_steps_successful / total_sort_steps << "%). " << sort_steps_failed_finally << " sort steps failed finally." << std::endl;
+    std::cout << "Total partition attempts: " << total_partition_steps << ", " << partition_steps_successful
+              << " of them successful (" << 100.0 * partition_steps_successful / total_partition_steps << "%). "
+              << partition_steps_failed_finally << " partition steps failed finally." << std::endl;
+    std::cout << "Total merge attempts: " << total_merge_steps << ", " << merge_steps_successful
+              << " of them successful (" << 100.0 * merge_steps_successful / total_merge_steps << "%). "
+              << merge_steps_failed_finally << " merge steps failed finally." << std::endl;
+    std::cout << "Total sort attempts: " << total_sort_steps << ", " << sort_steps_successful << " of them successful ("
+              << 100.0 * sort_steps_successful / total_sort_steps << "%). " << sort_steps_failed_finally
+              << " sort steps failed finally." << std::endl;
 
     std::cout << "Partition steps failed after attempt x: [";
     for (const auto fails : partition_steps_failed_at_attempt) {
@@ -734,5 +746,4 @@ void DisjointClustersAlgo::_perform_clustering() {
   _runtime_statistics["total"] = total_clustering_duration.count();
 }
 
-} // namespace opossum
-
+}  // namespace opossum

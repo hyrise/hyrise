@@ -1,8 +1,8 @@
 #include "clustering_sorter.hpp"
 
 #include <memory>
-#include <unordered_set>
 #include <string>
+#include <unordered_set>
 
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
@@ -15,15 +15,24 @@
 
 namespace opossum {
 
-ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids)
-    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sort_column_id{sort_column_id}, _new_chunk_ids{new_chunk_ids}, _num_locks{0}, _expected_num_locks{0}, _transaction_id{0} {
-      for (const auto chunk_id : _chunk_ids) {
-        const auto& chunk = _table->get_chunk(chunk_id);
-        Assert(chunk, "chunk disappeared");
-        Assert(!chunk->is_mutable(), "ClusteringSorter expects only immutable chunks");
-        _expected_num_locks += chunk->size() - chunk->invalid_row_count();
-      }
-    }
+ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op,
+                                   std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids,
+                                   const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids)
+    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op},
+      _table{table},
+      _chunk_ids{chunk_ids},
+      _sort_column_id{sort_column_id},
+      _new_chunk_ids{new_chunk_ids},
+      _num_locks{0},
+      _expected_num_locks{0},
+      _transaction_id{0} {
+  for (const auto& chunk_id : _chunk_ids) {
+    const auto& chunk = _table->get_chunk(chunk_id);
+    Assert(chunk, "chunk disappeared");
+    Assert(!chunk->is_mutable(), "ClusteringSorter expects only immutable chunks");
+    _expected_num_locks += chunk->size() - chunk->invalid_row_count();
+  }
+}
 
 const std::string& ClusteringSorter::name() const {
   static const auto name = std::string{"ClusteringSorter"};
@@ -33,24 +42,24 @@ const std::string& ClusteringSorter::name() const {
 std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<TransactionContext> context) {
   _transaction_id = context->transaction_id();
 
-  auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
+  auto sorting_table =
+      std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
 
   std::vector<size_t> invalid_row_counts;
-  for (const auto chunk_id : _chunk_ids) {
+  for (const auto& chunk_id : _chunk_ids) {
     const auto& chunk = _table->get_chunk(chunk_id);
     Assert(chunk, "chunk must not be deleted");
     invalid_row_counts.push_back(chunk->invalid_row_count());
 
     Segments segments;
     for (ColumnID column_id{0}; column_id < _table->column_count(); column_id++) {
-      const auto &segment = chunk->get_segment(column_id);
+      const auto& segment = chunk->get_segment(column_id);
       segments.push_back(segment);
     }
 
     sorting_table->append_chunk(segments, chunk->mvcc_data());
     sorting_table->last_chunk()->increase_invalid_row_count(chunk->invalid_row_count());
   }
-
 
   /* DEBUG
   size_t invalid_rows = 0;
@@ -69,7 +78,6 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
   Assert(invalid_rows >= official_invalid_row_count, "official: " + std::to_string(official_invalid_row_count) + ", actual: " + std::to_string(invalid_rows));
   //*/// DEBUG OVER
 
-
   auto wrapper = std::make_shared<TableWrapper>(sorting_table);
   wrapper->execute();
 
@@ -78,16 +86,20 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
   validate->set_transaction_context(transaction_context());
   validate->execute();
   const auto validate_output_size = validate->get_output()->row_count();
-  Assert(validate_output_size <= _expected_num_locks, "Expected validate output to contain at most " + std::to_string(_expected_num_locks) + " rows, but it contains " + std::to_string(validate_output_size) + " rows");
+  Assert(validate_output_size <= _expected_num_locks,
+         "Expected validate output to contain at most " + std::to_string(_expected_num_locks) +
+             " rows, but it contains " + std::to_string(validate_output_size) + " rows");
 
-  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(_sort_column_id, SortMode::Ascending) };
-  auto sort = std::make_shared<Sort>(validate, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+  const std::vector<SortColumnDefinition> sort_column_definitions = {
+      SortColumnDefinition(_sort_column_id, SortMode::Ascending)};
+  auto sort = std::make_shared<Sort>(validate, sort_column_definitions, _table->target_chunk_size(),
+                                     Sort::ForceMaterialization::Yes);
   sort->execute();
   _sorted_table = sort->get_output();
 
   // get locks for the unsorted chunks in the table
   size_t invalid_row_index = 0;
-  for (const auto chunk_id : _chunk_ids) {
+  for (const auto& chunk_id : _chunk_ids) {
     const auto& chunk = _table->get_chunk(chunk_id);
     Assert(chunk, "chunk is not supposed to be deleted");
 
@@ -99,7 +111,8 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
 
     if (chunk->invalid_row_count() != invalid_row_counts[invalid_row_index]) {
       // chunk was modified between sorting and locking
-      std::cout << "Invalid chunk count was " << invalid_row_counts[invalid_row_index] << ", but is now " << chunk->invalid_row_count() << std::endl;
+      std::cout << "Invalid chunk count was " << invalid_row_counts[invalid_row_index] << ", but is now "
+                << chunk->invalid_row_count() << std::endl;
       _mark_as_failed();
       return nullptr;
     }
@@ -112,12 +125,17 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
     // Thus, comparing the invalid row counters is not sufficient to detect the invalidation, and this operator would unintentionally restore an invalidated row.
     // Fix: a row that is invalidated is also locked - so we can check if we got exactly the expected number of locks
     Assert(_num_locks < _expected_num_locks, "Bug");
-    std::cout << "Race condition detected and handled: row was invalidated, but the invalid row counter not yet increased. Expected " << _expected_num_locks  << " locks, but got " << _num_locks << std::endl;
+    std::cout << "Race condition detected and handled: row was invalidated, but the invalid row counter not yet "
+                 "increased. Expected "
+              << _expected_num_locks << " locks, but got " << _num_locks << std::endl;
     _mark_as_failed();
     return nullptr;
   }
 
-  Assert(_sorted_table->row_count() == _num_locks, "locked " + std::to_string(_num_locks) + " rows, sorted table size is " + std::to_string(_sorted_table->row_count()) + ". Sorting table size is " + std::to_string(sorting_table->row_count()));
+  Assert(_sorted_table->row_count() == _num_locks,
+         "locked " + std::to_string(_num_locks) + " rows, sorted table size is " +
+             std::to_string(_sorted_table->row_count()) + ". Sorting table size is " +
+             std::to_string(sorting_table->row_count()));
   Assert(_sorted_table->row_count() == _expected_num_locks, "Bug2");
 
   // no need to get locks for the sorted chunks, as they get inserted as completely new chunks
@@ -127,7 +145,7 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
 
 void ClusteringSorter::_unlock_all() {
   // we only hold locks for the unsorted chunks
-  for (const auto chunk_id : _chunk_ids) {
+  for (const auto& chunk_id : _chunk_ids) {
     const auto& chunk = _table->get_chunk(chunk_id);
     Assert(chunk, "chunk is not supposed to be deleted");
     _unlock_chunk(chunk);
@@ -176,7 +194,7 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
   // all locks have been acquired by now
 
   // MVCC-delete the unsorted chunks
-  for (const auto chunk_id : _chunk_ids) {
+  for (const auto& chunk_id : _chunk_ids) {
     const auto& chunk = _table->get_chunk(chunk_id);
     // TODO can this happen?
     Assert(chunk, "chunk disappeared");
@@ -187,7 +205,8 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
         // We assume that nobody inserts rows into the clustering chunks, and that the ClusteringSorter is only executed after all ClusteringPartitioner operators.
         // If those assumptions do not hold, the chunk size might increase during the sort operation, leading to rows we did not lock.
         // Unfortunately, there is not really something as an "insert lock" that stops from inserting. We could simply lock all (i.e., including unused) rows of the old chunk, but is that pretty?
-        Assert(mvcc_data->get_tid(offset) == _transaction_id, "Row " + std::to_string(offset) + " was not locked. Did the chunk grow?");
+        Assert(mvcc_data->get_tid(offset) == _transaction_id,
+               "Row " + std::to_string(offset) + " was not locked. Did the chunk grow?");
         mvcc_data->set_end_cid(offset, commit_id);
         chunk->increase_invalid_row_count(1);
       }
@@ -231,7 +250,7 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     table_chunk->set_individually_sorted_by(chunk->individually_sorted_by());
   }
 
-  for (const auto chunk_id : _chunk_ids) {
+  for (const auto& chunk_id : _chunk_ids) {
     const auto& chunk = _table->get_chunk(chunk_id);
     Assert(chunk, "Chunk disappeared");
     chunk->set_cleanup_commit_id(commit_id);

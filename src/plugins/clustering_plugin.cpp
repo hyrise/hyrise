@@ -1,27 +1,27 @@
 #include "clustering_plugin.hpp"
 
-#include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <random>
 
 #include "clustering/abstract_clustering_algo.hpp"
-#include "clustering/simple_clustering_algo.hpp"
 #include "clustering/chunkwise_clustering_algo.hpp"
 #include "clustering/disjoint_clusters_algo.hpp"
+#include "clustering/simple_clustering_algo.hpp"
 #include "nlohmann/json.hpp"
-#include "operators/update.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/update.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
@@ -29,8 +29,10 @@ namespace opossum {
 std::string ClusteringPlugin::description() const { return "This is the Hyrise ClusteringPlugin"; }
 
 template <typename ColumnDataType>
-std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<BaseAttributeStatistics>& base_attribute_statistics) {
-  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+std::pair<ColumnDataType, ColumnDataType> _get_min_max(
+    const std::shared_ptr<BaseAttributeStatistics>& base_attribute_statistics) {
+  const auto attribute_statistics =
+      std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
   Assert(attribute_statistics, "could not cast to AttributeStatistics");
 
   ColumnDataType min;
@@ -51,7 +53,7 @@ std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<Base
 }
 
 template <typename ColumnDataType>
-std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<Chunk>& chunk, const ColumnID column_id) {
+std::pair<ColumnDataType, ColumnDataType> _get_min_max(const std::shared_ptr<Chunk>& chunk, const ColumnID column_id) {
   const auto pruning_statistics = chunk->pruning_statistics();
   Assert(pruning_statistics, "no pruning statistics");
 
@@ -61,7 +63,7 @@ std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<Chun
 void _export_chunk_pruning_statistics() {
   const std::string table_name{"lineitem"};
   if (!Hyrise::get().storage_manager.has_table(table_name)) return;
-  std::cout << "[ClusteringPlugin] Exporting " <<  table_name << " chunk pruning stats...";
+  std::cout << "[ClusteringPlugin] Exporting " << table_name << " chunk pruning stats...";
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const std::vector<std::string> column_names = {"l_orderkey", "l_shipdate", "l_discount"};
@@ -90,7 +92,7 @@ void _export_chunk_pruning_statistics() {
 void _export_chunk_size_statistics() {
   const std::string table_name = "lineitem";
   if (!Hyrise::get().storage_manager.has_table(table_name)) return;
-  std::cout << "[ClusteringPlugin] Exporting " <<  table_name << " chunk size stats...";
+  std::cout << "[ClusteringPlugin] Exporting " << table_name << " chunk size stats...";
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<size_t> chunk_sizes;
 
@@ -115,13 +117,12 @@ void _encode_partition_chunks(const std::chrono::nanoseconds& interval) {
   auto& chunks_to_encode = Hyrise::get().chunks_to_encode;
   auto lineitem = Hyrise::get().storage_manager.get_table("lineitem");
 
-  while(Hyrise::get().update_thread_state == 0) {
+  while (Hyrise::get().update_thread_state == 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   std::cout << "Starting to encode partition chunks" << std::endl;
 
   while (Hyrise::get().update_thread_state < 6) {
-
     //std::cout << "Mutex locking"<< std::endl;
     Hyrise::get().chunks_to_encode_mutex->lock();
     //std::cout << "Mutex locked"<< std::endl;
@@ -133,8 +134,8 @@ void _encode_partition_chunks(const std::chrono::nanoseconds& interval) {
     for (const auto chunk_id : chunk_ids) {
       const auto& chunk = lineitem->get_chunk(chunk_id);
       if (chunk) {
-          if (chunk->is_mutable()) chunk->finalize();
-          ChunkEncoder::encode_chunk(chunk, lineitem->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
+        if (chunk->is_mutable()) chunk->finalize();
+        ChunkEncoder::encode_chunk(chunk, lineitem->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
       } else {
         std::cout << "Weird behavior: chunks_to_encode contained a deleted chunk: " << chunk_id << std::endl;
       }
@@ -158,12 +159,11 @@ bool _can_delete_chunk(const std::shared_ptr<Chunk> chunk) {
   return !conflicting_transactions;
 }
 
-
 void _physically_delete_chunks(const std::chrono::nanoseconds& interval) {
   auto& chunks_to_delete = Hyrise::get().chunks_to_delete;
   auto lineitem = Hyrise::get().storage_manager.get_table("lineitem");
 
-  while(Hyrise::get().update_thread_state == 0) {
+  while (Hyrise::get().update_thread_state == 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   std::cout << "Starting to physically delete invalidated chunks" << std::endl;
@@ -198,14 +198,13 @@ void _physically_delete_chunks(const std::chrono::nanoseconds& interval) {
   }
 }
 
-
 std::vector<size_t> _bytes_used;
 std::vector<size_t> _time_offset;
 
 void _track_memory_consumption(const std::chrono::nanoseconds& interval) {
-  const std::string query {"SELECT SUM(estimated_size_in_bytes) FROm meta_segments WHERE table_name = 'lineitem'"};
+  const std::string query{"SELECT SUM(estimated_size_in_bytes) FROm meta_segments WHERE table_name = 'lineitem'"};
 
-  while(Hyrise::get().update_thread_state == 0) {
+  while (Hyrise::get().update_thread_state == 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   std::cout << "Starting to track memory consumption" << std::endl;
@@ -219,13 +218,11 @@ void _track_memory_consumption(const std::chrono::nanoseconds& interval) {
     Assert(table_size, "table_size is null");
     const auto current_time = std::chrono::system_clock::now();
     _bytes_used.push_back(*table_size);
-    _time_offset.push_back((current_time-start_time).count());
+    _time_offset.push_back((current_time - start_time).count());
     //std::cout << "memory consumption captured, sleeping " << format_duration(interval) << std::endl;
     std::this_thread::sleep_for(interval);
   }
 }
-
-
 
 std::mutex _cout_mutex;
 
@@ -234,29 +231,26 @@ std::vector<size_t> _successful_executed_updates(3, 0);
 std::mutex _update_mutex;
 std::mutex _chunk_id_mutex;
 
-template<typename S>
-auto select_random(const S &s, size_t n) {
+template <typename S>
+auto select_random(const S& s, size_t n) {
   auto it = std::begin(s);
   // 'advance' the iterator n times
   Assert(n < s.size(), "you advance too much");
-  std::advance(it,n);
+  std::advance(it, n);
 
   return it;
 }
 
-
 #define MAX_UPDATES_PER_SECOND 10
-
 
 void _update_rows_multithreaded(const size_t seed) {
   std::vector<size_t> executed_updates(3, 0);
   std::vector<size_t> successful_executed_updates(3, 0);
   const auto ideal_update_duration = std::chrono::nanoseconds(1'000'000'000 / MAX_UPDATES_PER_SECOND);
 
-
-  while(Hyrise::get().update_thread_state == 0) {
+  while (Hyrise::get().update_thread_state == 0) {
     // wait for the clustering to begin
-    std::this_thread::sleep_for (std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   _cout_mutex.lock();
@@ -316,7 +310,8 @@ void _update_rows_multithreaded(const size_t seed) {
     if (new_step != current_step) {
       _cout_mutex.lock();
       std::cout << "Thread " << seed << " step changes from " << current_step << " to " << new_step << std::endl;
-      std::cout << "Thread " << seed << " executed " << executed_updates[current_step - 1]  << " updates in step " << current_step << std::endl;
+      std::cout << "Thread " << seed << " executed " << executed_updates[current_step - 1] << " updates in step "
+                << current_step << std::endl;
       _cout_mutex.unlock();
     }
 
@@ -332,16 +327,15 @@ void _update_rows_multithreaded(const size_t seed) {
     timer.lap();
   }
 
-
   _cout_mutex.lock();
   std::cout << "Thread " << seed << " stopped executing updates" << std::endl;
   std::vector<std::string> step_names = {"partition", "merge", "sort"};
   for (size_t step_index = 0; step_index < step_names.size(); step_index++) {
     const auto total = executed_updates[step_index];
     const auto successful = successful_executed_updates[step_index];
-    std::cout << "Thread with seed " << seed << " executed " << total << " updates during the " << step_names[step_index] << " step, " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
-
-
+    std::cout << "Thread with seed " << seed << " executed " << total << " updates during the "
+              << step_names[step_index] << " step, " << successful << " (" << 100.0 * successful / total
+              << "%) of them successful." << std::endl;
   }
   std::cout << executed_updates[0] << " " << executed_updates[1] << " " << executed_updates[2] << std::endl;
   std::cout << std::endl;
@@ -354,8 +348,6 @@ void _update_rows_multithreaded(const size_t seed) {
   }
   _update_mutex.unlock();
 }
-
-
 
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
@@ -379,8 +371,6 @@ void ClusteringPlugin::start() {
     Fail("Unknown clustering algorithm: " + algorithm);
   }
 
-
-
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 
   constexpr size_t NUM_UPDATE_THREADS = 0;
@@ -391,21 +381,23 @@ void ClusteringPlugin::start() {
     std::cout << "Started thread " << thread_index << std::endl;
   }
 
-  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::nullopt;//std::chrono::seconds(8);
+  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL =
+      std::nullopt;  //std::chrono::seconds(8);
   std::thread memory_thread;
   if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
     std::cout << "Staring thread to track memory usage" << std::endl;
     memory_thread = std::thread(_track_memory_consumption, *TRACK_MEMORY_CONSUMPTION_INTERVAL);
   }
 
-
-  constexpr std::optional<std::chrono::nanoseconds> PHYSICAL_DELETE_INTERVAL = std::nullopt;//std::chrono::milliseconds(1000);
+  constexpr std::optional<std::chrono::nanoseconds> PHYSICAL_DELETE_INTERVAL =
+      std::nullopt;  //std::chrono::milliseconds(1000);
   std::thread physical_delete_thread;
   if (PHYSICAL_DELETE_INTERVAL) {
     physical_delete_thread = std::thread(_physically_delete_chunks, *PHYSICAL_DELETE_INTERVAL);
   }
 
-  constexpr std::optional<std::chrono::nanoseconds> PARTITION_ENCODING_INTERVAL = std::nullopt;//std::chrono::milliseconds(1000);
+  constexpr std::optional<std::chrono::nanoseconds> PARTITION_ENCODING_INTERVAL =
+      std::nullopt;  //std::chrono::milliseconds(1000);
   std::thread partition_encoding_thread;
   if (PARTITION_ENCODING_INTERVAL) {
     partition_encoding_thread = std::thread(_encode_partition_chunks, *PARTITION_ENCODING_INTERVAL);
@@ -419,7 +411,10 @@ void ClusteringPlugin::start() {
     const auto successful = _successful_executed_updates[step];
     //const std::string runtime = _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]];
     //const auto seconds = runtime / 1e9;
-    std::cout << "Executed " << total << " updates in " << _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]] << "s during the " << step_names[step] << " step, " << successful << " (" << 100.0 * successful / total << "%) of them successful." << std::endl;
+    std::cout << "Executed " << total << " updates in "
+              << _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]] << "s during the "
+              << step_names[step] << " step, " << successful << " (" << 100.0 * successful / total
+              << "%) of them successful." << std::endl;
   }
 
   for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {
@@ -471,11 +466,11 @@ void ClusteringPlugin::start() {
     size_t offset_encode_end = step_times["encode"];
     offset_encode_end += offset_sort_end;
 
-
     std::cout << "phase_ends";
     if (PHYSICAL_DELETE_INTERVAL) std::cout << "_delete";
     if (PARTITION_ENCODING_INTERVAL) std::cout << "_encoded";
-    std::cout << " = [" << offset_partition_end << ", " << offset_merge_end << ", " << offset_sort_end << ", " << offset_encode_end << "]" << std::endl;
+    std::cout << " = [" << offset_partition_end << ", " << offset_merge_end << ", " << offset_sort_end << ", "
+              << offset_encode_end << "]" << std::endl;
   }
 
   _write_clustering_information();
@@ -485,7 +480,7 @@ void ClusteringPlugin::start() {
   std::cout << "[ClusteringPlugin] Clustering complete." << std::endl;
 }
 
-void ClusteringPlugin::stop() { }
+void ClusteringPlugin::stop() {}
 
 const ClusteringByTable ClusteringPlugin::read_clustering_config(const std::string& filename) {
   if (!std::filesystem::exists(filename)) {

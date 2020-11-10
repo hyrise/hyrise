@@ -85,14 +85,12 @@ void BenchmarkRunner::run() {
     // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
     // supported.
     SQLPipelineBuilder{
-        "CREATE TABLE IF NOT EXISTS benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+        "CREATE TABLE IF NOT EXISTS benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS "
+        "\"timestamp\", * FROM "
         "meta_system_utilization"}
         .create_pipeline()
         .get_result_table();
-    SQLPipelineBuilder{
-        "DELETE FROM benchmark_system_utilization_log"}
-        .create_pipeline()
-        .get_result_table();
+    SQLPipelineBuilder{"DELETE FROM benchmark_system_utilization_log"}.create_pipeline().get_result_table();
 
     while (track_system_utilization) {
       const auto timestamp =
@@ -112,7 +110,8 @@ void BenchmarkRunner::run() {
   if (_config.metrics) {
     // Create a table for the segment access counter log
     SQLPipelineBuilder{
-        "CREATE TABLE IF NOT EXISTS benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        "CREATE TABLE IF NOT EXISTS benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM "
+        "meta_segments"}
         .create_pipeline()
         .get_result_table();
   }

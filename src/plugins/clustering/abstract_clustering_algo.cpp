@@ -11,8 +11,8 @@
 
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/base_attribute_statistics.hpp"
-#include "statistics/table_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/table_statistics.hpp"
 
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -29,25 +29,29 @@ namespace opossum {
 namespace detail {
 
 template <typename ColumnDataType>
-std::shared_ptr<const AbstractHistogram<ColumnDataType>> HistogramGetter<ColumnDataType>::get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) {
+std::shared_ptr<const AbstractHistogram<ColumnDataType>> HistogramGetter<ColumnDataType>::get_histogram(
+    const std::shared_ptr<const Table>& table, const std::string& column_name) {
   const auto table_statistics = table->table_statistics();
   const auto column_id = table->column_id_by_name(column_name);
   const auto base_attribute_statistics = table_statistics->column_statistics[column_id];
 
-  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+  const auto attribute_statistics =
+      std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
   Assert(attribute_statistics, "could not cast to AttributeStatistics");
   const auto histogram = attribute_statistics->histogram;
-  Assert(histogram, "no histogram available for column "  + column_name);
+  Assert(histogram, "no histogram available for column " + column_name);
   return histogram;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(HistogramGetter);
-} // namespace detail
+}  // namespace detail
 
 void AbstractClusteringAlgo::_run_assertions() const {
   std::cout << "[" << description() << "] Running assertions" << std::endl;
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
-    if (VERBOSE) std::cout << "[" << description() << "] " << "- Running assertions for table " << table_name << std::endl;
+    if (VERBOSE)
+      std::cout << "[" << description() << "] "
+                << "- Running assertions for table " << table_name << std::endl;
 
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
     Assert(table, "table named \"" + table_name + "\" disappeared");
@@ -64,12 +68,12 @@ void AbstractClusteringAlgo::_run_assertions() const {
     }
     const auto row_count = table->row_count() - invalidated_rows;
 
-    Assert(row_count == original_row_count, "Table " + table_name + " had " 
-      + std::to_string(original_row_count) + " rows when the clustering began, "
-      + "but has now " + std::to_string(row_count) + " rows");
+    Assert(row_count == original_row_count, "Table " + table_name + " had " + std::to_string(original_row_count) +
+                                                " rows when the clustering began, " + "but has now " +
+                                                std::to_string(row_count) + " rows");
 
     // Clustering config for this table
-    std::vector<std::pair<std::string, uint32_t>> clustering_columns {};
+    std::vector<std::pair<std::string, uint32_t>> clustering_columns{};
     if (clustering_by_table.find(table_name) != clustering_by_table.end()) {
       clustering_columns = clustering_by_table.at(table_name);
     }
@@ -88,7 +92,10 @@ void AbstractClusteringAlgo::_run_assertions() const {
       auto sorted_column_name = clustering_columns.back().first;
       ordered_by_column_id = table->column_id_by_name(sorted_column_name);
     }
-    if (VERBOSE) std::cout << "[" << description() << "] " << "-  Chunk count is correct" << " for table " << table_name << std::endl;
+    if (VERBOSE)
+      std::cout << "[" << description() << "] "
+                << "-  Chunk count is correct"
+                << " for table " << table_name << std::endl;
 
     // Iterate over all chunks, and check that ...
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
@@ -101,7 +108,8 @@ void AbstractClusteringAlgo::_run_assertions() const {
       if (chunk) {
         // ... pruning information is present
         // TODO: cannot perform that check when updates are executed, a chunk might be mutable or without pruning statistics
-        Assert(chunk->pruning_statistics(), "Chunk " + std::to_string(chunk_id) + " of " + table_name + " has no pruning statistics");
+        Assert(chunk->pruning_statistics(),
+               "Chunk " + std::to_string(chunk_id) + " of " + table_name + " has no pruning statistics");
 
         // Clustering algos might generate invalidated chunks as temporary results. Ignore them.
         bool chunk_is_invalidated = chunk->invalid_row_count() == chunk->size();
@@ -110,17 +118,27 @@ void AbstractClusteringAlgo::_run_assertions() const {
         }
 
         // TODO: cannot perform that check when updates are executed, there might a mutable chunk
-        Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
+        Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) +
+                                         " of table \"" + table_name +
+                                         "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
         if (ordered_by_column_id) {
-          Assert(!chunk->individually_sorted_by().empty(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
+          Assert(!chunk->individually_sorted_by().empty(),
+                 "chunk " + std::to_string(chunk_id) + " should be ordered by " +
+                     table->column_name(*ordered_by_column_id) + ", but is unordered");
           const auto sorted_column_id = chunk->individually_sorted_by()[0].column;
-          Assert(sorted_column_id == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id)
-            + ", but is ordered by " + table->column_name(sorted_column_id));
+          Assert(sorted_column_id == *ordered_by_column_id,
+                 "chunk should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is ordered by " +
+                     table->column_name(sorted_column_id));
         } else {
-          Assert(chunk->individually_sorted_by().empty(), "chunk should be unordered, but is ordered by " + table->column_name(chunk->individually_sorted_by()[0].column));
+          Assert(chunk->individually_sorted_by().empty(),
+                 "chunk should be unordered, but is ordered by " +
+                     table->column_name(chunk->individually_sorted_by()[0].column));
         }
-        if (VERBOSE) std::cout << "[" << description() << "] " << "-  Ordering information is correct" << " for table " << table_name << std::endl;
+        if (VERBOSE)
+          std::cout << "[" << description() << "] "
+                    << "-  Ordering information is correct"
+                    << " for table " << table_name << std::endl;
 
         // ... chunks are actually ordered according to the ordering information
         if (ordered_by_column_id) {
@@ -157,23 +175,31 @@ void AbstractClusteringAlgo::_run_assertions() const {
           });
 
           Assert(is_sorted, "segment should be sorted by " + table->column_name(sort_column_id) + ", but it isn't");
-          if (VERBOSE) std::cout << "[" << description() << "] " << "-  Segments are actually sorted" << " for table " << table_name << std::endl;
+          if (VERBOSE)
+            std::cout << "[" << description() << "] "
+                      << "-  Segments are actually sorted"
+                      << " for table " << table_name << std::endl;
         }
 
-
         // ... all segments should have DictionaryEncoding
-        for (ColumnID col_id{0}; col_id < table->column_count();col_id++) {
+        for (ColumnID col_id{0}; col_id < table->column_count(); col_id++) {
           const auto& segment = chunk->get_segment(col_id);
           Assert(segment, "could not get segment with column id " + std::to_string(col_id));
           const auto encoding_spec = get_segment_encoding_spec(segment);
           Assert(encoding_spec.encoding_type == EncodingType::Dictionary, "segment is not dictionary-encoded");
         }
-        if (VERBOSE) std::cout << "[" << description() << "] " << "-  All segments are DictionarySegments" << " for table " << table_name << std::endl;
+        if (VERBOSE)
+          std::cout << "[" << description() << "] "
+                    << "-  All segments are DictionarySegments"
+                    << " for table " << table_name << std::endl;
 
         // ... chunks have at most the target chunk size
         //Assert(chunk->size() <= target_chunk_size, "chunk size should be <= " + std::to_string(target_chunk_size)
         //  + ", but is " + std::to_string(chunk->size()));
-        if (VERBOSE) std::cout << "[" << description() << "] " << "-  All chunks have about the expected size" << " for table " << table_name << std::endl;
+        if (VERBOSE)
+          std::cout << "[" << description() << "] "
+                    << "-  All chunks have about the expected size"
+                    << " for table " << table_name << std::endl;
       }
     }
   }
@@ -201,14 +227,14 @@ void AbstractClusteringAlgo::run() {
   _run_assertions();
 }
 
-std::shared_ptr<Chunk> AbstractClusteringAlgo::_create_empty_chunk(const std::shared_ptr<const Table>& table, const size_t rows_per_chunk) const {
+std::shared_ptr<Chunk> AbstractClusteringAlgo::_create_empty_chunk(const std::shared_ptr<const Table>& table,
+                                                                   const size_t rows_per_chunk) const {
   Segments segments;
   const auto column_definitions = table->column_definitions();
   for (const auto& column_definition : column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(
-          std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, rows_per_chunk));
+      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, rows_per_chunk));
     });
   }
 
@@ -228,7 +254,8 @@ Segments AbstractClusteringAlgo::_get_segments(const std::shared_ptr<const Chunk
 }
 
 //TODO threadsafe?
-void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
+void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk> chunk,
+                                                    const std::shared_ptr<Table> table, bool allow_mutable) const {
   Assert(chunk, "chunk is nullptr");
   Assert(chunk->mvcc_data(), "chunk has no mvcc data");
   if (!allow_mutable) {
@@ -259,26 +286,31 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
   }
 }
 
-
-void AbstractClusteringAlgo::_append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
+void AbstractClusteringAlgo::_append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk,
+                                                           const std::shared_ptr<Table> table,
+                                                           bool allow_mutable) const {
   Assert(chunk, "chunk is nullptr");
   Assert(!chunk->individually_sorted_by().empty(), "chunk has no ordering information");
   _append_chunk_to_table(chunk, table, allow_mutable);
 }
 
-void AbstractClusteringAlgo::_append_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::shared_ptr<Table> table, bool allow_mutable) const {
+void AbstractClusteringAlgo::_append_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks,
+                                                     const std::shared_ptr<Table> table, bool allow_mutable) const {
   for (const auto& chunk : chunks) {
     _append_chunk_to_table(chunk, table, allow_mutable);
   }
 }
 
-void AbstractClusteringAlgo::_append_sorted_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::shared_ptr<Table> table, bool allow_mutable) const {
+void AbstractClusteringAlgo::_append_sorted_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks,
+                                                            const std::shared_ptr<Table> table,
+                                                            bool allow_mutable) const {
   for (const auto& chunk : chunks) {
     _append_sorted_chunk_to_table(chunk, table, allow_mutable);
   }
 }
 
-std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column, const TableColumnDefinitions& column_definitions) const {
+std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column,
+                                                           const TableColumnDefinitions& column_definitions) const {
   Assert(chunk, "chunk is nullptr");
   Assert(chunk->mvcc_data(), "chunk has no mvcc data");
 
@@ -291,8 +323,10 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   auto wrapper = std::make_shared<TableWrapper>(table);
   wrapper->execute();
   Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
-  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column, SortMode::Ascending) };
-  auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort, Sort::ForceMaterialization::Yes);
+  const std::vector<SortColumnDefinition> sort_column_definitions = {
+      SortColumnDefinition(sort_column, SortMode::Ascending)};
+  auto sort =
+      std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort, Sort::ForceMaterialization::Yes);
   sort->execute();
 
   const auto& sort_result = sort->get_output();
@@ -309,9 +343,6 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   return sorted_chunk_with_mvcc;
 }
 
-const nlohmann::json AbstractClusteringAlgo::runtime_statistics() const {
-  return _runtime_statistics;
-}
+const nlohmann::json AbstractClusteringAlgo::runtime_statistics() const { return _runtime_statistics; }
 
-
-} // namespace opossum
+}  // namespace opossum

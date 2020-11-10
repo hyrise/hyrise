@@ -20,11 +20,11 @@ namespace opossum {
 
 SimpleClusteringAlgo::SimpleClusteringAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
 
-const std::string SimpleClusteringAlgo::description() const {
-  return "SimpleClusteringAlgo";
-}
+const std::string SimpleClusteringAlgo::description() const { return "SimpleClusteringAlgo"; }
 
-std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_mutable(const std::shared_ptr<Table> table, const std::string& column_name, const ChunkOffset chunk_size){
+std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_mutable(const std::shared_ptr<Table> table,
+                                                                 const std::string& column_name,
+                                                                 const ChunkOffset chunk_size) {
   // We sort the tables after their creation so that we are independent of the order in which they are filled.
   // For this, we use the sort operator. Because it returns a `const Table`, we need to recreate the table and
   // migrate the sorted chunks to that table.
@@ -32,20 +32,24 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_mutable(const std::shar
   const auto sort_mode = SortMode::Ascending;
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), sort_mode) };
-  auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, chunk_size, Sort::ForceMaterialization::Yes);
+  const std::vector<SortColumnDefinition> sort_column_definitions = {
+      SortColumnDefinition(table->column_id_by_name(column_name), sort_mode)};
+  auto sort =
+      std::make_shared<Sort>(table_wrapper, sort_column_definitions, chunk_size, Sort::ForceMaterialization::Yes);
   sort->execute();
   const auto immutable_sorted_table = sort->get_output();
-  auto result = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
-                                  chunk_size, UseMvcc::Yes);
+  auto result =
+      std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data, chunk_size, UseMvcc::Yes);
   _append_chunks(immutable_sorted_table, result);
 
   return result;
 }
 
-std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::shared_ptr<const Table> table, const std::string& column_name, const uint64_t desired_chunk_split_count) {
-  auto clustered_table = std::make_shared<Table>(table->column_definitions(), TableType::Data,
-                            std::nullopt, UseMvcc::Yes);
+std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::shared_ptr<const Table> table,
+                                                                   const std::string& column_name,
+                                                                   const uint64_t desired_chunk_split_count) {
+  auto clustered_table =
+      std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     //std::cout << "sorting chunk " << chunk_id << std::endl;
@@ -54,17 +58,18 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::sh
     const auto chunk_row_count = chunk->size();
     const auto sort_chunk_size = static_cast<ChunkOffset>(std::ceil(1.0 * chunk_row_count / desired_chunk_split_count));
 
-    auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data,
-                            sort_chunk_size, UseMvcc::Yes);
+    auto new_table =
+        std::make_shared<Table>(table->column_definitions(), TableType::Data, sort_chunk_size, UseMvcc::Yes);
     _append_chunk(chunk, new_table);
-
 
     // We could simply use _sort_table_mutable(), but that would create another copy of the table to get rid of immutability
     const auto sort_mode = SortMode::Ascending;
     auto table_wrapper = std::make_shared<TableWrapper>(new_table);
     table_wrapper->execute();
-    const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), sort_mode) };
-    auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, sort_chunk_size, Sort::ForceMaterialization::Yes);
+    const std::vector<SortColumnDefinition> sort_column_definitions = {
+        SortColumnDefinition(table->column_id_by_name(column_name), sort_mode)};
+    auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, sort_chunk_size,
+                                       Sort::ForceMaterialization::Yes);
     sort->execute();
     const auto sorted_table = sort->get_output();
 
@@ -110,14 +115,18 @@ void SimpleClusteringAlgo::_perform_clustering() {
   Timer timer;
 
   if (!clustering_by_table.empty()) {
-    std::cout << "[" << description() << "] " << "Clustering tables" << std::endl;
+    std::cout << "[" << description() << "] "
+              << "Clustering tables" << std::endl;
 
     for (const auto& [table_name, clustering_columns] : clustering_by_table) {
-      Assert(clustering_columns.size() >= 1, "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
+      Assert(clustering_columns.size() >= 1,
+             "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
 
-      Assert(storage_manager.has_table(table_name), "clustering contains an entry for " + table_name + ", but no such table exists");
+      Assert(storage_manager.has_table(table_name),
+             "clustering contains an entry for " + table_name + ", but no such table exists");
       const auto original_table = storage_manager.get_table(table_name);
-      std::cout << "[" << description() << "] " << " Clustering " << table_name << std::endl;
+      std::cout << "[" << description() << "] "
+                << " Clustering " << table_name << std::endl;
 
       uint64_t expected_final_chunk_count = 1;
       for (const auto& [column_name, num_groups] : clustering_columns) {
@@ -125,7 +134,8 @@ void SimpleClusteringAlgo::_perform_clustering() {
       }
       Assert(expected_final_chunk_count < original_table->row_count(), "cannot have more chunks than rows");
       constexpr auto MIN_REASONABLE_CHUNK_SIZE = 5;
-      Assert(MIN_REASONABLE_CHUNK_SIZE * expected_final_chunk_count < original_table->row_count(), "chunks in " + table_name + " will have less than " + std::to_string(MIN_REASONABLE_CHUNK_SIZE) + " rows");
+      Assert(MIN_REASONABLE_CHUNK_SIZE * expected_final_chunk_count < original_table->row_count(),
+             "chunks in " + table_name + " will have less than " + std::to_string(MIN_REASONABLE_CHUNK_SIZE) + " rows");
 
       const auto initial_table_size = original_table->row_count();
       Timer per_clustering_timer;
@@ -138,38 +148,45 @@ void SimpleClusteringAlgo::_perform_clustering() {
       // first clustering column
       const auto& first_column_name = clustering_columns[0].first;
       const auto first_column_desired_chunk_count = clustering_columns[0].second;
-      const auto first_column_chunksize = static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / first_column_desired_chunk_count));
-      std::cout << "[" << description() << "] " << "  Clustering '" << table_name << "' by '" << first_column_name << "', split up is " << first_column_desired_chunk_count  << " " << std::flush;
+      const auto first_column_chunksize =
+          static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / first_column_desired_chunk_count));
+      std::cout << "[" << description() << "] "
+                << "  Clustering '" << table_name << "' by '" << first_column_name << "', split up is "
+                << first_column_desired_chunk_count << " " << std::flush;
 
       auto mutable_sorted_table = _sort_table_mutable(original_table, first_column_name, first_column_chunksize);
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
-
       // all subsequent clustering columns
-      for (auto clustering_column_index = 1u;clustering_column_index < clustering_columns.size();clustering_column_index++) {
+      for (auto clustering_column_index = 1u; clustering_column_index < clustering_columns.size();
+           clustering_column_index++) {
         const auto& column_name = clustering_columns[clustering_column_index].first;
         const auto desired_chunk_count = clustering_columns[clustering_column_index].second;
 
         if (desired_chunk_count == 1) {
-          std::cout << "[" << description() << "] " << "  Sorting '" << table_name << "' on chunk level by '" << column_name << "' " << std::flush;
+          std::cout << "[" << description() << "] "
+                    << "  Sorting '" << table_name << "' on chunk level by '" << column_name << "' " << std::flush;
         } else {
-          std::cout << "[" << description() << "] " << "  Clustering '" << table_name << "' by '" << column_name << "', split up is " << desired_chunk_count << " " << std::flush;
+          std::cout << "[" << description() << "] "
+                    << "  Clustering '" << table_name << "' by '" << column_name << "', split up is "
+                    << desired_chunk_count << " " << std::flush;
         }
 
         mutable_sorted_table = _sort_table_chunkwise(mutable_sorted_table, column_name, desired_chunk_count);
         std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
       }
 
-
       // copy constraints, TPCHBenchmarkItemRunner complains otherwise
-      std::cout << "[" << description() << "] " << "  Adding unique constraints to " << table_name << " " << std::flush;
-      for (const auto &constraint : original_table->soft_key_constraints()) {
+      std::cout << "[" << description() << "] "
+                << "  Adding unique constraints to " << table_name << " " << std::flush;
+      for (const auto& constraint : original_table->soft_key_constraints()) {
         mutable_sorted_table->add_soft_key_constraint(constraint);
       }
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
       // finalize all chunks, then perform encoding (currently fixed to Dictionary)
-      std::cout << "[" << description() << "] " << "  Applying Dictionary encoding to " << table_name << " " << std::flush;
+      std::cout << "[" << description() << "] "
+                << "  Applying Dictionary encoding to " << table_name << " " << std::flush;
       for (auto chunk_id = ChunkID{0}; chunk_id < mutable_sorted_table->chunk_count(); ++chunk_id) {
         const auto chunk = mutable_sorted_table->get_chunk(chunk_id);
         if (chunk->is_mutable()) chunk->finalize();
@@ -178,7 +195,8 @@ void SimpleClusteringAlgo::_perform_clustering() {
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
       // add table
-      std::cout << "[" << description() << "] " << "  Adding " << table_name << " again " << std::flush;
+      std::cout << "[" << description() << "] "
+                << "  Adding " << table_name << " again " << std::flush;
       storage_manager.drop_table(table_name);
       storage_manager.add_table(table_name, mutable_sorted_table);
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
@@ -195,4 +213,4 @@ void SimpleClusteringAlgo::_perform_clustering() {
   _run_assertions();
 }
 
-} // namespace opossum
+}  // namespace opossum

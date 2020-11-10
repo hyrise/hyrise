@@ -118,7 +118,7 @@ if paper_mode:
         bar.set_hatch(hatch)
         bar.set_linewidth(0)
 
-fontsize=10
+fontsize = 10
 # Set labels
 ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()], fontsize=fontsize)
 ax.set_ylabel("Share of run time\n(Hiding operators <1%)", fontsize=fontsize)
@@ -132,14 +132,18 @@ if paper_mode:
     # Plot the legend under the graph (good for papers)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width, box.height * 0.8])
-    legend = ax.legend(reversed(handles), reversed(labels), loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.82), fontsize=fontsize)
+    legend = ax.legend(
+        reversed(handles), reversed(labels), loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.82), fontsize=fontsize
+    )
 
     print("Plotting in 'paper' mode (legend below graph, hatching) - remove 'paper' argument to change")
 else:
     # Plot the legend to the right of the graph (good for screens)
-    legend = ax.legend(reversed(handles), reversed(labels), loc="center left", ncol=1, bbox_to_anchor=(1.0, 0.5), fontsize=fontsize)
+    legend = ax.legend(
+        reversed(handles), reversed(labels), loc="center left", ncol=1, bbox_to_anchor=(1.0, 0.5), fontsize=fontsize
+    )
     print("Plotting in 'screen' mode (legend on right, no hatching) - use 'paper' argument to change")
 
 # Layout and save
 plt.tight_layout()
-plt.savefig("operator_breakdown.png",dpi=600, bbox_extra_artists=(legend,), bbox_inches="tight")
+plt.savefig("operator_breakdown.png", dpi=600, bbox_extra_artists=(legend,), bbox_inches="tight")

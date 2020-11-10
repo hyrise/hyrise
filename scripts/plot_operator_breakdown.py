@@ -65,24 +65,24 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 df = df.fillna(0)
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-#df.loc["Absolute"] = df.sum() / df.count()
+# df.loc["Absolute"] = df.sum() / df.count()
 
 # Normalize data from nanoseconds to milliseconds
 df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / 1000000, axis=1)
 
 # Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
 # row for that
-#df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
+# df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
 
 # Print the dataframe for easy access to the raw numbers
 print(df)
-print(df['AggregateHash'].sum())
-print(df['JoinHash'].sum())
-print(df['TableScan'].sum())
+print(df["AggregateHash"].sum())
+print(df["JoinHash"].sum())
+print(df["TableScan"].sum())
 
 # Drop all operators that do not exceed 1ms in any query
 # TODO maybe something percentual would be better
-df = df[df > 10].dropna(axis='columns', how='all')
+df = df[df > 10].dropna(axis="columns", how="all")
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
@@ -120,9 +120,9 @@ if paper_mode:
         bar.set_linewidth(0)
 
 # Set labels
-#ax.set_ylim(top=2000)
-ax.set_yticklabels(['{:0}'.format(x) for x in ax.get_yticks()])
-ax.set_ylabel('Total runtime per operator and query in ms')
+# ax.set_ylim(top=2000)
+ax.set_yticklabels(["{:0}".format(x) for x in ax.get_yticks()])
+ax.set_ylabel("Total runtime per operator and query in ms")
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
@@ -142,4 +142,3 @@ else:
 # Layout and save
 plt.tight_layout()
 plt.savefig("operator_breakdown.pdf", bbox_extra_artists=(legend,), bbox_inches="tight")
-

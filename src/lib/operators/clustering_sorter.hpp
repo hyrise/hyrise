@@ -5,7 +5,6 @@
 #include <set>
 #include <string>
 
-
 #include "abstract_read_write_operator.hpp"
 #include "utils/assert.hpp"
 
@@ -16,7 +15,9 @@ namespace opossum {
  */
 class ClusteringSorter : public AbstractReadWriteOperator {
  public:
-  explicit ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids);
+  explicit ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op,
+                            const std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids,
+                            const ColumnID sort_column_id, std::unordered_set<ChunkID>& new_chunk_ids);
 
   const std::string& name() const override;
 

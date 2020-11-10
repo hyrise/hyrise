@@ -63,7 +63,7 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
 
-  if (description_mode == DescriptionMode::SingleLine)  {
+  if (description_mode == DescriptionMode::SingleLine) {
     stream << " ";
   } else {
     stream << "\n";
@@ -448,7 +448,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                                                        probe_side_bloom_filter);
     }
     _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
-
 
     /**
      * Short cut for AntiNullAsTrue:

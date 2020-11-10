@@ -1,7 +1,6 @@
 #include "util.hpp"
 
 #include <cstdio>
-#include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -40,7 +39,8 @@ const std::set<std::string> tpcds_filename_whitelist() {
   return filename_whitelist;
 }
 
-void _extract_get_tables(const std::shared_ptr<const AbstractOperator> pqp_node, std::set<std::shared_ptr<const GetTable>>& get_table_operators) {
+void _extract_get_tables(const std::shared_ptr<const AbstractOperator> pqp_node,
+                         std::set<std::shared_ptr<const GetTable>>& get_table_operators) {
   if (pqp_node->type() == OperatorType::GetTable) {
     auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp_node);
     Assert(get_table_op, "could not cast to GetTable");
@@ -75,7 +75,8 @@ const nlohmann::json _compute_pruned_chunks_per_table() {
   return pruned_chunks_per_table;
 }
 
-bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node, std::map<std::string, std::vector<std::shared_ptr<const TableScan>>>& table_scans) {
+bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node,
+                          std::map<std::string, std::vector<std::shared_ptr<const TableScan>>>& table_scans) {
   // we want only scans that happen before joins, and on permanent columns
   // to filter those out, we need to walk down the entire PQP recursively
   // on the way back (i.e., up the PQP), use the return values to decide whether table scans above should be considered
@@ -93,8 +94,7 @@ bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node
   std::vector<std::string> forbidden_words = {"ColumnVsColumn", "SUBQUERY", "SUM", "AVG", "COUNT"};
   const auto& description = pqp_node->description();
   for (const auto& forbidden_word : forbidden_words) {
-    if (description.find(forbidden_word) != std::string::npos)
-      return true;
+    if (description.find(forbidden_word) != std::string::npos) return true;
   }
 
   // this operator is interesting
@@ -133,8 +133,10 @@ const nlohmann::json _compute_skipped_chunks_per_table() {
 
     for (const auto& [table_name, table_scans] : table_scans) {
       for (const auto& table_scan : table_scans) {
-        Assert(dynamic_cast<TableScan::PerformanceData*>(table_scan->performance_data.get()), "performance data was not of type TableScanPerformanceData");
-        const auto& table_scan_performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+        Assert(dynamic_cast<TableScan::PerformanceData*>(table_scan->performance_data.get()),
+               "performance data was not of type TableScanPerformanceData");
+        const auto& table_scan_performance_data =
+            dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
 
         for (size_t run{0}; run < *frequency; run++) {
           skipped_chunks_per_table[table_name].push_back(table_scan_performance_data.chunk_scans_skipped);
@@ -159,23 +161,26 @@ const nlohmann::json _read_clustering_information() {
 }
 
 void _append_additional_statistics(const std::string& result_file_path) {
-      std::ifstream benchmark_result_file(result_file_path);
-      auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
+  std::ifstream benchmark_result_file(result_file_path);
+  auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
 
-      const auto benchmark_count = benchmark_result_json["benchmarks"].size();
-      Assert(benchmark_count == 1, "expected " + result_file_path + " file containing exactly one benchmark, but it contains " + std::to_string(benchmark_count));
-      const std::string query_name = benchmark_result_json["benchmarks"].at(0)["name"];
+  const auto benchmark_count = benchmark_result_json["benchmarks"].size();
+  Assert(benchmark_count == 1, "expected " + result_file_path +
+                                   " file containing exactly one benchmark, but it contains " +
+                                   std::to_string(benchmark_count));
+  const std::string query_name = benchmark_result_json["benchmarks"].at(0)["name"];
 
-      benchmark_result_json["pruning_stats"][query_name] = _compute_pruned_chunks_per_table();
-      benchmark_result_json["skipped_chunk_stats"][query_name] = _compute_skipped_chunks_per_table();
+  benchmark_result_json["pruning_stats"][query_name] = _compute_pruned_chunks_per_table();
+  benchmark_result_json["skipped_chunk_stats"][query_name] = _compute_skipped_chunks_per_table();
 
-      // write results back
-      std::ofstream final_result_file(result_file_path);
-      final_result_file << benchmark_result_json.dump(2) << std::endl;
-      final_result_file.close();
+  // write results back
+  std::ofstream final_result_file(result_file_path);
+  final_result_file << benchmark_result_json.dump(2) << std::endl;
+  final_result_file.close();
 }
 
-void _merge_result_files(const std::string& merge_result_file_name, const std::vector<std::string>& merge_input_file_names, bool delete_files) {
+void _merge_result_files(const std::string& merge_result_file_name,
+                         const std::vector<std::string>& merge_input_file_names, bool delete_files) {
   Assert(!merge_input_file_names.empty(), "you have to provide file names to merge");
   nlohmann::json merge_result_json;
 
@@ -183,9 +188,12 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
     std::ifstream benchmark_result_file(file_name);
     auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
     const auto benchmark_count = benchmark_result_json["benchmarks"].size();
-    Assert(benchmark_count == 1, "expected " + file_name + " file containing exactly one benchmark, but it contains " + std::to_string(benchmark_count));
+    Assert(benchmark_count == 1, "expected " + file_name + " file containing exactly one benchmark, but it contains " +
+                                     std::to_string(benchmark_count));
     const auto pruning_stats_count = benchmark_result_json["pruning_stats"].size();
-    Assert(pruning_stats_count == 1, "expected " + file_name + " file containing exactly pruning stats for just one query, but it contains " + std::to_string(pruning_stats_count));
+    Assert(pruning_stats_count == 1, "expected " + file_name +
+                                         " file containing exactly pruning stats for just one query, but it contains " +
+                                         std::to_string(pruning_stats_count));
 
     if (merge_result_json.empty()) {
       merge_result_json = benchmark_result_json;
@@ -214,4 +222,4 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
   final_result_file.close();
 }
 
-} // namespace opossum
+}  // namespace opossum

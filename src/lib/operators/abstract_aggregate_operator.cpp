@@ -49,7 +49,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
     if (expression_idx + 1 < _aggregates.size()) desc << ", ";
   }
 
-  if (description_mode == DescriptionMode::SingleLine)  {
+  if (description_mode == DescriptionMode::SingleLine) {
     desc << " ";
   } else {
     desc << "\n";
