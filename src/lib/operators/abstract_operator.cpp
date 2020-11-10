@@ -34,17 +34,16 @@ AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
     bool left_has_executed = _left_input ? _left_input->performance_data->executed : false;
     bool right_has_executed = _right_input ? _right_input->performance_data->executed : false;
+    bool aborted = _transaction_context.has_value() ? _transaction_context->lock()->aborted() : false;
 
-    if ((left_has_executed || right_has_executed) && !_requested_for_execution) {
-      std::cout << "Operator did not execute, but at least one input operator has." << std::endl;
-    }
+    Assert(this->performance_data->executed || aborted || (!left_has_executed && !right_has_executed),
+       "Operator did not execute, but at least one input operator has.");
   }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
-  _requested_for_execution = true;
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
 
   /**

@@ -174,9 +174,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::atomic<u_short> _consumer_count = 0;
   std::atomic<u_short> _consumer_count_max = 0;  // for debugging only
 
-  // Tracks whether execute() has been called at least once.
-  bool _requested_for_execution = false;
-
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;
 };
