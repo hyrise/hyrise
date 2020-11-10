@@ -62,8 +62,7 @@ Optionally, the result may also contain:
 - secondary aggregates, which are currently only used by STDDEV_SAMP
 */
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-class AggregateResult {
- public:
+struct AggregateResult {
   using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
@@ -79,6 +78,9 @@ class AggregateResult {
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;
   RowID row_id{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
+
+  // Note that the size of this struct is a significant performance factor (see #2252). Be careful when adding fields or
+  // changing data types.
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.

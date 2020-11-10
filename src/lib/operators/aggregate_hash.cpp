@@ -756,7 +756,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
     if (result.aggregate_count > 1) {
       values[output_offset] = result.accumulator[3];
     } else {
-      // STDDEV_SAMP is undefined if only a single value has been seen
+      // STDDEV_SAMP is undefined for lists with less than two elements
       null_values[output_offset] = true;
     }
     ++output_offset;

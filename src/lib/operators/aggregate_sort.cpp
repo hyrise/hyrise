@@ -277,7 +277,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       if (value_count >= 2) {
         aggregate_results[aggregate_group_index] = accumulator[3];
       } else {
-        // STDDEV_SAMP requires at least two values
+        // STDDEV_SAMP is undefined for lists with less than two elements
         is_null = true;
       }
     } else {
