@@ -62,7 +62,7 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr SegmentEncodingSpec(EncodingType init_encoding_type) : encoding_type{init_encoding_type} {}  // NOLINT
+  explicit constexpr SegmentEncodingSpec(EncodingType init_encoding_type) : encoding_type{init_encoding_type} {}
   constexpr SegmentEncodingSpec(EncodingType init_encoding_type,
                                 std::optional<VectorCompressionType> init_vector_compression_type)
       : encoding_type{init_encoding_type}, vector_compression_type{init_vector_compression_type} {}

@@ -88,7 +88,7 @@ class SyntheticTableGenerator {
   // Simple table generation, mainly for simple tests
   std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows,
                                         const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                                        const SegmentEncodingSpec segment_encoding_spec = {
+                                        const SegmentEncodingSpec segment_encoding_spec = SegmentEncodingSpec{
                                             EncodingType::Unencoded}) const;
 
   static std::shared_ptr<Table> generate_table(const std::vector<ColumnSpecification>& column_specifications,

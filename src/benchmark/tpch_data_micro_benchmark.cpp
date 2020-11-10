@@ -29,7 +29,7 @@ class TableWrapper;
 // Defining the base fixture class
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) {
+  void SetUp(::benchmark::State& state) override {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 0.01f;
     const auto default_encoding = EncodingType::Dictionary;
@@ -87,7 +87,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State&) {}
+  void TearDown(::benchmark::State&) override {}
 
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;

@@ -148,7 +148,8 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
   const auto with_position_filter = std::get<2>(GetParam());
   std::shared_ptr<Table> test_table = (nullable ? table : table_with_null);
 
-  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  auto chunk_encoding_spec =
+      ChunkEncodingSpec{test_table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
   for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
     if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
       chunk_encoding_spec[column_id] = encoding_spec;
@@ -253,7 +254,8 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
   const auto encoding_spec = std::get<0>(GetParam());
   const auto with_position_filter = std::get<1>(GetParam());
 
-  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  auto chunk_encoding_spec =
+      ChunkEncodingSpec{test_table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
   for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
     if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
       chunk_encoding_spec[column_id] = encoding_spec;
@@ -315,7 +317,8 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
   auto test_table = table;
 
   const auto encoding_spec = GetParam();
-  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  auto chunk_encoding_spec =
+      ChunkEncodingSpec{test_table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
   for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
     if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
       chunk_encoding_spec[column_id] = encoding_spec;

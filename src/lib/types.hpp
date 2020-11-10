@@ -10,6 +10,11 @@
 #include <tuple>
 #include <vector>
 
+#include <boost/version.hpp>
+#if BOOST_VERSION < 107400                      // TODO(anyone): remove this block once Ubuntu ships boost 1.74
+#include "utils/boost_bimap_core_override.hpp"  // NOLINT
+#endif
+
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>

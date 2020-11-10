@@ -224,7 +224,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 void JoinHash::_on_cleanup() { _impl.reset(); }
 
 template <typename BuildColumnType, typename ProbeColumnType>
-class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
+class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const Table>& build_input_table,
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,

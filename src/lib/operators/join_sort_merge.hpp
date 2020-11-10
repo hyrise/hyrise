@@ -47,7 +47,7 @@ class JoinSortMerge : public AbstractJoinOperator {
   template <typename T>
   friend class JoinSortMergeImpl;
 
-  std::unique_ptr<AbstractJoinOperatorImpl> _impl;
+  std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 };
 
 }  // namespace opossum
