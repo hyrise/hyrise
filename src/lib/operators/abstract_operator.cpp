@@ -38,7 +38,11 @@ AbstractOperator::~AbstractOperator() {
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
     bool aborted = transaction_context ? transaction_context->aborted() : false;
 
-    Assert(this->performance_data->executed || aborted || !left_has_executed || !right_has_executed,
+    // Hack: The condition _consumer_count == 0 is useful for some tests that create operators, but do not execute
+    //       them. We do not want to force tests to call execute() on operators when their only purpose is to test the
+    //       output of, for example, the description() function.
+    Assert(this->performance_data->executed || aborted || !left_has_executed || !right_has_executed ||
+               _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
 }
