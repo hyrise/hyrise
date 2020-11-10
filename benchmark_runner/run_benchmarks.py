@@ -47,6 +47,17 @@ def run_benchmark(benchmark, config_name, chunk_size):
     p = Popen(["mv", "lineitem.stats", output_file + ".stats" ])
     p.wait()
 
+  
+  visualization_path = f"visualizations/final/{benchmark.name()}/sf{benchmark.scale()}-3d-corrected/{config_name}_{chunk_size}"
+  if not os.path.exists(visualization_path):
+    os.makedirs(visualization_path)
+
+  visualization_file_pattern = benchmark.visualization_pattern()
+  import glob
+  import shutil
+  for file in glob.glob(visualization_file_pattern):
+    shutil.move(file, visualization_path + '/' + file)
+
 def build_sort_order_string(sort_order_per_table):
   return json.dumps(sort_order_per_table)
 

@@ -4,26 +4,243 @@ class TPCDSBenchmark(AbstractBenchmark):
   def name(self):
   	return "tpcds"
 
+  def visualization_pattern(self):
+    return "*-*QP.svg"
+
   def exec_path(self):
     return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpcds/tmp"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpcds/sf10-3d-corrected"
 
   def time(self):
-    return 10
+    return 500
 
   def max_runs(self):
-    return -1
+    return 20
 
   def scale(self):
-    return 1
+    return 10
 
   def chunk_sizes(self):
     #return [25000, 100000]
     return [65535]
 
   def sort_orders(self):
+
+    # final store sales top 20 3d replacements
+    return {
+  '21-ss_sold_date_sk-8_ss_cdemo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_cdemo_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '22-ss_sold_date_sk-8_ss_promo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_promo_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '23-ss_sold_date_sk-8_ss_sold_time_sk-8_ss_ticket_number-8': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 8)]},
+    }
+
+
+    # final store sales top 20 3d corrections
+    return {
+ '17-ss_sold_date_sk-8_ss_hdemo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_hdemo_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '19-ss_sold_date_sk-8_ss_customer_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_customer_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '20-ss_sold_date_sk-8_ss_store_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    8),
+   ('ss_store_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+    }
+
+    # final stores sales top 20 3d clusterings
+    return {
+
+ #'01-ss_item_sk-8_ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_addr_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'02-ss_sold_date_sk-8_ss_item_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+ #   8),
+ #  ('ss_item_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'03-ss_item_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'04-ss_item_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'05-ss_item_sk-8_ss_hdemo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_hdemo_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'06-ss_item_sk-8_ss_customer_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_customer_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'07-ss_item_sk-8_ss_store_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_store_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'08-ss_item_sk-8_ss_cdemo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_cdemo_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'09-ss_item_sk-8_ss_promo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_promo_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ #'10-ss_item_sk-8_ss_sold_time_sk-8_ss_ticket_number-8': {'store_sales': [('ss_item_sk',
+ #   8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 8)]},
+ #'11-ss_addr_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_addr_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'12-ss_addr_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_addr_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'13-ss_sold_date_sk-8_ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+ #   8),
+ #  ('ss_addr_sk', 8),
+ #  ('ss_sold_time_sk', 8),
+ #  ('ss_ticket_number', 1)]},
+ '14-ss_hdemo_sk-8_ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_hdemo_sk',
+    8),
+   ('ss_addr_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '15-ss_customer_sk-8_ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_customer_sk',
+    8),
+   ('ss_addr_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '16-ss_store_sk-8_ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_store_sk',
+    8),
+   ('ss_addr_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '17-ss_addr_sk-8_ss_cdemo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_addr_sk',
+    8),
+   ('ss_cdemo_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '18-ss_addr_sk-8_ss_promo_sk-8_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_addr_sk',
+    8),
+   ('ss_promo_sk', 8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ '19-ss_addr_sk-8_ss_sold_time_sk-8_ss_ticket_number-8': {'store_sales': [('ss_addr_sk',
+    8),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 8)]},
+ '20-ss_sold_date_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    21),
+   ('ss_sold_time_sk', 21),
+   ('ss_ticket_number', 1)]}}
+
+
+    # final top 20 SF
+    return {
+    #'00-nosort':{'store_sales': [['ss_ticket_number', 2]]},
+
+    #'01-ss_item_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    #21),
+   #('ss_sold_time_sk', 21),
+   #('ss_ticket_number', 1)]},
+ #'02-ss_addr_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_addr_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'03-ss_sold_date_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'04-ss_sold_time_sk-100_ss_ticket_number-1': {'store_sales': [('ss_sold_time_sk',
+ #   100),
+ #  ('ss_ticket_number', 1)]},
+ #'05-ss_customer_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_customer_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'06-ss_hdemo_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_hdemo_sk',
+ #  21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'07-ss_cdemo_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_cdemo_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'08-ss_store_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_store_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'09-ss_promo_sk-21_ss_sold_time_sk-21_ss_ticket_number-1': {'store_sales': [('ss_promo_sk',
+ #   21),
+ #  ('ss_sold_time_sk', 21),
+ #  ('ss_ticket_number', 1)]},
+ #'10-ss_sold_time_sk-21_ss_ticket_number-21': {'store_sales': [('ss_sold_time_sk',
+ #   21),
+ #  ('ss_ticket_number', 21)]},
+ '11-ss_ticket_number-100': {'store_sales': [('ss_ticket_number', 100)]},
+ '12-ss_item_sk-21_ss_addr_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_addr_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '13-ss_sold_date_sk-21_ss_item_sk-21_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    21),
+   ('ss_item_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '14-ss_item_sk-100_ss_ticket_number-1': {'store_sales': [('ss_item_sk', 100),
+   ('ss_ticket_number', 1)]},
+ '15-ss_item_sk-21_ss_customer_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_customer_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '16-ss_item_sk-21_ss_hdemo_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_hdemo_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '17-ss_item_sk-21_ss_cdemo_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_cdemo_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '18-ss_item_sk-21_ss_store_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_store_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '19-ss_item_sk-21_ss_promo_sk-21_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    21),
+   ('ss_promo_sk', 21),
+   ('ss_ticket_number', 1)]},
+ '20-ss_item_sk-21_ss_ticket_number-21': {'store_sales': [('ss_item_sk', 21),
+   ('ss_ticket_number', 21)]}}
+
+
 
     # tmp
     return {

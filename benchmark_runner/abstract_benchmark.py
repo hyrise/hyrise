@@ -4,6 +4,9 @@ class AbstractBenchmark:
   def name(self):
     raise NotImplementedError()
 
+  def visualization_pattern(self):
+    raise NotImplementedError()    
+
   def exec_path(self):
     raise NotImplementedError()
 

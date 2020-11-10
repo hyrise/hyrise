@@ -4,25 +4,327 @@ class TPCHBenchmark(AbstractBenchmark):
   def name(self):
   	return "tpch"
 
+  def visualization_pattern(self):
+    return f"TPC-H_*QP.svg"
+
   def exec_path(self):
     return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
-  def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch/post_midterm"
+  def result_path(self):    
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpch/sf10-3d-corrected"
 
   def max_runs(self):
-    return -1
+    return 20
 
   def time(self):
-    return 60
+    return 500
 
   def scale(self):
-    return 1
+    return 10
   
   def chunk_sizes(self):
     return [65535]
 
   def sort_orders(self):
+
+    # final SF 10 top 20 3d corrections
+    return {
+      '10-l_receiptdate-31_l_discount-11_l_suppkey-3_l_orderkey-1': {
+        'lineitem': [['l_receiptdate', 31], ['l_discount', 11], ['l_suppkey', 3], ['l_orderkey', 1]]
+      },
+      '11-l_receiptdate-23_l_quantity-14_l_suppkey-3_l_orderkey-1': {
+        'lineitem': [['l_receiptdate', 23], ['l_quantity', 14], ['l_suppkey', 3], ['l_orderkey', 1]]
+      },
+      '13-l_receiptdate-100_l_partkey-3_l_suppkey-3_l_orderkey-1': {
+        'lineitem': [['l_receiptdate', 100], ['l_partkey', 3], ['l_suppkey', 3], ['l_orderkey', 1]]
+      },
+      '14-l_receiptdate-100_l_suppkey-3_l_orderkey-3': {
+        'lineitem': [['l_receiptdate', 100], ['l_suppkey', 3], ['l_orderkey', 3]]
+      },
+    }
+
+    # final SF 10 cluster count experiments
+    return  {
+      '01-l_shipdate-100_l_orderkey-1)': {
+        'lineitem': [['l_shipdate', 100], ['l_orderkey', 1]]
+      },
+      '02-l_shipdate-100_l_orderkey-9)': {
+        'lineitem': [['l_shipdate', 100], ['l_orderkey', 9]]
+      },
+      '03-l_shipdate-50_l_orderkey-19)': {
+        'lineitem': [['l_shipdate', 50], ['l_orderkey', 19]]
+      },
+      '04-l_shipdate-31_l_orderkey-30)': {
+        'lineitem': [['l_shipdate', 31], ['l_orderkey', 30]]
+      },
+      '05-l_shipdate-20-l_orderkey-46)': {
+        'lineitem': [['l_shipdate', 20], ['l_orderkey', 46]]
+      },
+      '06-l_shipdate-9-l_orderkey-100)': {
+        'lineitem': [['l_shipdate', 9], ['l_orderkey', 100]]
+      },
+    }
+
+
+    # final SF 10 2d Top 20 corrections
+    return {
+      '06-l_partkey-31_l_suppkey-31_l_orderkey-1': {'lineitem': [('l_partkey', 31),
+        ('l_suppkey', 31),
+       ('l_orderkey', 1)]},
+       '12-l_suppkey-100_l_orderkey-1': {'lineitem': [('l_suppkey', 100),
+   ('l_orderkey', 1)]},
+ '13-l_suppkey-31_l_orderkey-31': {'lineitem': [('l_suppkey', 31),
+   ('l_orderkey', 31)]},
+    }
+
+
+    # final SF 10 Top 20 3d lineitem clusterings
+    return {
+ '01-l_orderkey-100': {'lineitem': [('l_orderkey', 100)]},
+ '02-l_partkey-100_l_orderkey-1': {'lineitem': [('l_partkey', 100),
+   ('l_orderkey', 1)]},
+ '03-l_shipdate-31_l_discount-11_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    31),
+   ('l_discount', 11),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '04-l_shipdate-23_l_quantity-14_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    23),
+   ('l_quantity', 14),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '05-l_shipdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '06-l_shipdate-100_l_partkey-3_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_partkey', 3),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '07-l_shipdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '08-l_shipdate-100_l_suppkey-3_l_orderkey-3': {'lineitem': [('l_shipdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 3)]},
+ '09-l_receiptdate-18_l_shipdate-18_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    18),
+   ('l_shipdate', 18),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '10-l_shipdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_shipdate',
+    53),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '11-l_shipdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_shipdate',
+    53),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '12-l_shipdate-31_l_discount-11_l_partkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    31),
+   ('l_discount', 11),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '13-l_shipdate-31_l_discount-11_l_orderkey-3': {'lineitem': [('l_shipdate',
+    31),
+   ('l_discount', 11),
+   ('l_orderkey', 3)]},
+ '14-l_shipdate-17_l_quantity-10_l_discount-6_l_orderkey-1': {'lineitem': [('l_shipdate',
+    17),
+   ('l_quantity', 10),
+   ('l_discount', 6),
+   ('l_orderkey', 1)]},
+ '15-l_receiptdate-15_l_shipdate-15_l_discount-5_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    15),
+   ('l_shipdate', 15),
+   ('l_discount', 5),
+   ('l_orderkey', 1)]},
+ '16-l_shipdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_shipdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '17-l_shipdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_shipdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '18-l_shipdate-23_l_quantity-14_l_partkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    23),
+   ('l_quantity', 14),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '19-l_shipdate-23_l_quantity-14_l_orderkey-3': {'lineitem': [('l_shipdate',
+    23),
+   ('l_quantity', 14),
+   ('l_orderkey', 3)]},
+ '20-l_receiptdate-12_l_shipdate-12_l_quantity-7_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    12),
+   ('l_shipdate', 12),
+   ('l_quantity', 7),
+   ('l_orderkey', 1)]}}
+
+
+    # final TOP 20 SF 10 lineitem clusterings
+    return {'01-l_orderkey-100': {'lineitem': [('l_orderkey', 100)]},
+ '02-l_partkey-100_l_orderkey-1': {'lineitem': [('l_partkey', 100),
+   ('l_orderkey', 1)]},
+ '03-l_shipdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '04-l_shipdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_shipdate',
+    53),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '05-l_shipdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_shipdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '06-l_receiptdate-31_l_shipdate-31_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    31),
+   ('l_shipdate', 31),
+   ('l_orderkey', 1)]},
+ '07-l_shipdate-100_l_orderkey-1': {'lineitem': [('l_shipdate', 100),
+   ('l_orderkey', 1)]},
+ '08-l_shipdate-100_l_partkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '09-l_shipdate-100_l_orderkey-3': {'lineitem': [('l_shipdate', 100),
+   ('l_orderkey', 3)]},
+ '10-l_receiptdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '11-l_receiptdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    53),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '12-l_receiptdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '13-l_receiptdate-100_l_orderkey-1': {'lineitem': [('l_receiptdate', 100),
+   ('l_orderkey', 1)]},
+ '14-l_receiptdate-100_l_partkey-3_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    100),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '15-l_receiptdate-100_l_orderkey-3': {'lineitem': [('l_receiptdate', 100),
+   ('l_orderkey', 3)]},
+ '16-l_discount-11_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '17-l_quantity-41_l_discount-11_l_orderkey-1': {'lineitem': [('l_quantity',
+    41),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '18-l_discount-11_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '19-l_discount-11_l_partkey-3_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '20-l_discount-11_l_orderkey-3': {'lineitem': [('l_discount', 11),
+   ('l_orderkey', 3)]}}
+
+
+    return  {
+    'nosort': {
+        'lineitem': [['l_orderkey', 2]]
+      }
+    }
+
+    # final top 20 lineitem SF 10 benchmarks
+    return {
+    #'01-l_partkey-100_l_orderkey-1': {'lineitem': [('l_partkey', 100),
+   #('l_orderkey', 1)]},
+ #'02-l_shipdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    #100),
+   #('l_suppkey', 3),
+   #('l_orderkey', 1)]},
+ #'03-l_shipdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_shipdate',
+    #53),
+   #('l_discount', 11),
+   #('l_orderkey', 1)]},
+ '04-l_shipdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_shipdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '05-l_receiptdate-31_l_shipdate-31_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    31),
+   ('l_shipdate', 31),
+   ('l_orderkey', 1)]},
+ '06-l_shipdate-100_l_orderkey-1': {'lineitem': [('l_shipdate', 100),
+   ('l_orderkey', 1)]},
+ '07-l_shipdate-100_l_partkey-3_l_orderkey-1': {'lineitem': [('l_shipdate',
+    100),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '08-l_shipdate-100_l_orderkey-3': {'lineitem': [('l_shipdate', 100),
+   ('l_orderkey', 3)]},
+ '09-l_receiptdate-100_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    100),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '10-l_receiptdate-53_l_discount-11_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    53),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '11-l_receiptdate-40_l_quantity-24_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    40),
+   ('l_quantity', 24),
+   ('l_orderkey', 1)]},
+ '12-l_receiptdate-100_l_orderkey-1': {'lineitem': [('l_receiptdate', 100),
+   ('l_orderkey', 1)]},
+ '13-l_receiptdate-100_l_partkey-3_l_orderkey-1': {'lineitem': [('l_receiptdate',
+    100),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '14-l_receiptdate-100_l_orderkey-3': {'lineitem': [('l_receiptdate', 100),
+   ('l_orderkey', 3)]},
+ '15-l_discount-11_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]},
+ '16-l_quantity-41_l_discount-11_l_orderkey-1': {'lineitem': [('l_quantity',
+    41),
+   ('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '17-l_discount-11_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_orderkey', 1)]},
+ '18-l_discount-11_l_partkey-3_l_orderkey-1': {'lineitem': [('l_discount', 11),
+   ('l_partkey', 3),
+   ('l_orderkey', 1)]},
+ '19-l_discount-11_l_orderkey-3': {'lineitem': [('l_discount', 11),
+   ('l_orderkey', 3)]},
+ '20-l_quantity-50_l_suppkey-3_l_orderkey-1': {'lineitem': [('l_quantity', 50),
+   ('l_suppkey', 3),
+   ('l_orderkey', 1)]}}
+
+    # final 2020-08-31
+    return  {      
+      #'shipdate-92': {
+      #  'lineitem': [['l_shipdate', 92]],
+      #},
+      #'shipdate-92_orderkey-1': {
+      #  'lineitem': [['l_shipdate', 92], ['l_orderkey', 1]],
+      #},
+      'shipdate-30_orderkey-3': {
+        'lineitem': [['l_shipdate', 30], ['l_orderkey', 3]],
+      },
+      'shipdate-10_orderkey-9': {
+        'lineitem': [['l_shipdate', 10], ['l_orderkey', 9]],
+      },
+      'shipdate-3_orderkey-30': {
+        'lineitem': [['l_shipdate', 3], ['l_orderkey', 30]],
+      },
+      'orderkey-92': {
+        'lineitem': [['l_orderkey', 92]],
+      },
+    }
+
+
     # Post-master-merge  2020-06-23
 
     return {

@@ -65,24 +65,23 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 df = df.fillna(0)
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-#df.loc["Absolute"] = df.sum() / df.count()
+df.loc["Absolute"] = df.sum() / df.count()
+print(df.loc["Absolute"])
+print(df.loc["Absolute"].sum())
 
-# Normalize data from nanoseconds to milliseconds
-df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / 1000000, axis=1)
+# Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
+# the row it appears in)
+df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 
 # Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
 # row for that
-#df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
+df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
 
 # Print the dataframe for easy access to the raw numbers
 print(df)
-print(df['AggregateHash'].sum())
-print(df['JoinHash'].sum())
-print(df['TableScan'].sum())
 
-# Drop all operators that do not exceed 1ms in any query
-# TODO maybe something percentual would be better
-df = df[df > 10].dropna(axis='columns', how='all')
+# Drop all operators that do not exceed 1% in any query
+df = df[df > 0.01].dropna(axis="columns", how="all")
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
@@ -119,10 +118,12 @@ if paper_mode:
         bar.set_hatch(hatch)
         bar.set_linewidth(0)
 
+fontsize=10
 # Set labels
-#ax.set_ylim(top=2000)
-ax.set_yticklabels(['{:0}'.format(x) for x in ax.get_yticks()])
-ax.set_ylabel('Total runtime per operator and query in ms')
+ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()], fontsize=fontsize)
+ax.set_ylabel("Share of run time\n(Hiding operators <1%)", fontsize=fontsize)
+plt.xticks(fontsize=fontsize)
+
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
@@ -131,15 +132,14 @@ if paper_mode:
     # Plot the legend under the graph (good for papers)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width, box.height * 0.8])
-    legend = ax.legend(reversed(handles), reversed(labels), loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.45))
+    legend = ax.legend(reversed(handles), reversed(labels), loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.82), fontsize=fontsize)
 
     print("Plotting in 'paper' mode (legend below graph, hatching) - remove 'paper' argument to change")
 else:
     # Plot the legend to the right of the graph (good for screens)
-    legend = ax.legend(reversed(handles), reversed(labels), loc="center left", ncol=1, bbox_to_anchor=(1.0, 0.5))
+    legend = ax.legend(reversed(handles), reversed(labels), loc="center left", ncol=1, bbox_to_anchor=(1.0, 0.5), fontsize=fontsize)
     print("Plotting in 'screen' mode (legend on right, no hatching) - use 'paper' argument to change")
 
 # Layout and save
 plt.tight_layout()
-plt.savefig("operator_breakdown.pdf", bbox_extra_artists=(legend,), bbox_inches="tight")
-
+plt.savefig("operator_breakdown.png",dpi=600, bbox_extra_artists=(legend,), bbox_inches="tight")
