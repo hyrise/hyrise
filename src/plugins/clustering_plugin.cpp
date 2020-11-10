@@ -391,7 +391,7 @@ void ClusteringPlugin::start() {
     std::cout << "Started thread " << thread_index << std::endl;
   }
 
-  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::chrono::seconds(8);
+  constexpr std::optional<std::chrono::nanoseconds> TRACK_MEMORY_CONSUMPTION_INTERVAL = std::nullopt;//std::chrono::seconds(8);
   std::thread memory_thread;
   if (TRACK_MEMORY_CONSUMPTION_INTERVAL) {
     std::cout << "Staring thread to track memory usage" << std::endl;
@@ -399,13 +399,13 @@ void ClusteringPlugin::start() {
   }
 
 
-  constexpr std::optional<std::chrono::nanoseconds> PHYSICAL_DELETE_INTERVAL = std::chrono::milliseconds(1000);
+  constexpr std::optional<std::chrono::nanoseconds> PHYSICAL_DELETE_INTERVAL = std::nullopt;//std::chrono::milliseconds(1000);
   std::thread physical_delete_thread;
   if (PHYSICAL_DELETE_INTERVAL) {
     physical_delete_thread = std::thread(_physically_delete_chunks, *PHYSICAL_DELETE_INTERVAL);
   }
 
-  constexpr std::optional<std::chrono::nanoseconds> PARTITION_ENCODING_INTERVAL = std::chrono::milliseconds(1000);
+  constexpr std::optional<std::chrono::nanoseconds> PARTITION_ENCODING_INTERVAL = std::nullopt;//std::chrono::milliseconds(1000);
   std::thread partition_encoding_thread;
   if (PARTITION_ENCODING_INTERVAL) {
     partition_encoding_thread = std::thread(_encode_partition_chunks, *PARTITION_ENCODING_INTERVAL);
