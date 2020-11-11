@@ -1,0 +1,59 @@
+{
+    "columns": [
+        {
+            "name": "o_orderkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "o_custkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "o_orderstatus",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "o_totalprice",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "o_orderdate",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "o_orderpriority",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "o_clerk",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "o_shippriority",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "o_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

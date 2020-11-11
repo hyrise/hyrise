@@ -43,15 +43,11 @@ enum class ExpressionType {
  *
  * Expressions are evaluated (typically for all rows of a Chunk) using the ExpressionEvaluator.
  */
-class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
+class AbstractExpression : public std::enable_shared_from_this<AbstractExpression>, private Noncopyable {
  public:
-  /**
-   * Set if expression was already replaced when caching to avoid double replacement
-   */
-  std::shared_ptr<AbstractExpression> replaced_by;
+  AbstractExpression(const ExpressionType init_type,
+                     const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
 
-  explicit AbstractExpression(const ExpressionType init_type,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
   virtual ~AbstractExpression() = default;
 
   /**
@@ -60,6 +56,11 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    */
   bool operator==(const AbstractExpression& other) const;
   bool operator!=(const AbstractExpression& other) const;
+
+  /**
+   * Set if expression was already replaced when caching to avoid double replacement
+   */
+  std::shared_ptr<AbstractExpression> replaced_by;
 
   /**
    * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
