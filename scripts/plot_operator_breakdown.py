@@ -66,15 +66,11 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 df = df.fillna(0)
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-df.loc["Absolute"] = df.sum() / df.count()
+df.loc["Total"] = df.sum() / df.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
 df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
-
-# Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
-# row for that. This has to be the arithmetic mean, not the geometric mean (#2250).
-df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
 
 # Print the dataframe for easy access to the raw numbers
 print(df)
