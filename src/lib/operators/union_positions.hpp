@@ -116,7 +116,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::vector<ColumnID> _column_cluster_offsets;
 
   // For each ColumnCluster, the table its pos_list references
-  std::vector<std::shared_ptr<const Table>> _referenced_tables;
+  std::vector<std::shared_ptr<const Table>> _referenced_tables; // TODO weak pointer? vielleicht besser -> on_cleanup()
 
   // For each column_idx in the input tables, specifies the referenced column in the referenced table
   std::vector<ColumnID> _referenced_column_ids;

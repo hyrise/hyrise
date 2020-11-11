@@ -24,7 +24,10 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      expressions(init_expressions) {}
+      expressions(init_expressions) {
+
+  // TODO Register as a consumer for PQPSubqueryExpressions
+}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -244,6 +247,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
+
+  // TODO Deregister as a consumer for PQPSubqueryExpressions
 
   return std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());
