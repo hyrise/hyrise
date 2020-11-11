@@ -19,6 +19,8 @@ class StoredTableNode;
 class PredicateNode;
 class Table;
 
+using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+
 /**
  * This rule determines which chunks can be pruned from table scans based on
  * the predicates present in the LQP and stores that information in the stored
@@ -44,10 +46,8 @@ class ChunkPruningRule : public AbstractRule {
                                                                   size_t num_rows_pruned);
 
   void _recurse_on_inputs(const std::shared_ptr<AbstractLQPNode>& node,
-                          std::unordered_map<std::shared_ptr<StoredTableNode>,
-                                             std::vector<std::shared_ptr<PredicateNode>>>& predicates_for_table_nodes,
-                          std::vector<std::shared_ptr<PredicateNode>> predicate_nodes =
-                              std::vector<std::shared_ptr<PredicateNode>>{}) const;
+                          std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>& predicates_for_table_nodes,
+                          PredicateChain predicate_nodes) const;
 };
 
 }  // namespace opossum
