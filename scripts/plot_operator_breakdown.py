@@ -13,9 +13,10 @@ import re
 import sys
 import seaborn as sns
 import matplotlib.colors as mplcolors
+import matplotlib.ticker as ticker
 from matplotlib.colors import LinearSegmentedColormap
 
-if len(sys.argv) not in [1, 2]:
+if len(sys.argv) not in [1, 2] or len(glob.glob("*-PQP.svg")) == 0:
     exit("Call in a folder containing *-PQP.svg files, pass `paper` as an argument to change legend and hatching")
 paper_mode = len(sys.argv) == 2 and sys.argv[1] == "paper"
 
@@ -72,7 +73,7 @@ df.loc["Absolute"] = df.sum() / df.count()
 df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 
 # Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
-# row for that
+# row for that. This has to be the arithmetic mean, not the geometric mean (#2250).
 df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
 
 # Print the dataframe for easy access to the raw numbers
@@ -117,7 +118,7 @@ if paper_mode:
         bar.set_linewidth(0)
 
 # Set labels
-ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()])
+ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
 ax.set_ylabel("Share of run time\n(Hiding ops <1%)")
 
 # Reverse legend so that it matches the stacked bars
