@@ -35,7 +35,7 @@ AbstractOperator::~AbstractOperator() {
     bool left_has_executed = _left_input ? _left_input->performance_data->executed : false;
     bool right_has_executed = _right_input ? _right_input->performance_data->executed : false;
 
-    auto transaction_context = this->transaction_context();
+    auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
     bool aborted = transaction_context ? transaction_context->aborted() : false;
 
     // Hack: The condition _consumer_count == 0 is useful for some tests that create operators, but do not execute
