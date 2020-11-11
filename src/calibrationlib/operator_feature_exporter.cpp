@@ -278,7 +278,7 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
   visit_expression(predicate, [&](const auto& expression) {
     if (expression->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(expression);
+      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
       const auto& table_column_information = _table_column_information(node, column_expression);
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,
@@ -308,7 +308,7 @@ void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const Ind
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
   visit_expression(predicate, [&](const auto& expression) {
     if (expression->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(expression);
+      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
       const auto& table_column_information = _table_column_information(node, column_expression);
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,

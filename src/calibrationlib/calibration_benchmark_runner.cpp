@@ -54,6 +54,9 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
         return _build_job(feature_exporter);
       case BenchmarkType::JCC_H:
         return _build_jcch(scale_factor, feature_exporter);
+      default:
+        std::cout << "Unhandled case, please address this" << std::endl;
+        return std::shared_ptr<BenchmarkRunner>();
     }
   }();
 
