@@ -489,8 +489,8 @@ template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
   // TODO: I cannot remember, why this was necessary. I think in crashed for the "meta_segments" table and string columns
   // which are completely empty.
-  if (_string_offsets && *_string_offsets) {
-    return (*_string_offsets)->type();
+  if (_string_offsets) {
+    return _string_offsets->type();
   }
   return std::nullopt;
 }

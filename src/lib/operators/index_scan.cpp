@@ -92,8 +92,8 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
     std::lock_guard<std::mutex> lock(output_mutex);
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
     _out_table->last_chunk()->finalize();
-    if (!chunk->sorted_by().empty()) {
-      _out_table->last_chunk()->set_sorted_by(chunk->sorted_by());
+    if (!chunk->individually_sorted_by().empty()) {
+      _out_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
     }
   });
 
