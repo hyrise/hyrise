@@ -3,11 +3,11 @@
 namespace opossum {
 
 bool PerformanceWarningClass::_disabled = []() {  // NOLINT
-// static initializer hack to print some warnings in various binaries
+  // static initializer hack to print some warnings in various binaries
 
-#if HYRISE_DEBUG
-  PerformanceWarning("Hyrise is running as a debug build.");
-#endif
+  if constexpr (HYRISE_DEBUG) {
+    PerformanceWarning("Hyrise is running as a debug build.");
+  }
 
   return false;
 }();

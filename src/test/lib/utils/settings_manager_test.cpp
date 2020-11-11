@@ -7,13 +7,13 @@ namespace opossum {
 
 class SettingsManagerTest : public BaseTest {
  protected:
-  void SetUp() {
+  void SetUp() override {
     Hyrise::reset();
     mock_setting = std::make_shared<MockSetting>("mock_setting");
     another_mock_setting = std::make_shared<MockSetting>("mock_setting");
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   void add_setting(std::shared_ptr<AbstractSetting> setting) { Hyrise::get().settings_manager._add(setting); }
 

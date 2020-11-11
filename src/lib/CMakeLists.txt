@@ -142,6 +142,8 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_unique_constraint.cpp
+    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
@@ -322,6 +324,7 @@ set(
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
+    scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
@@ -417,14 +420,14 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/abstract_table_constraint.cpp
+    storage/abstract_table_constraint.hpp
+    storage/table_key_constraint.cpp
+    storage/table_key_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/constraints/abstract_table_constraint.cpp
-    storage/constraints/abstract_table_constraint.hpp
-    storage/constraints/table_key_constraint.cpp
-    storage/constraints/table_key_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -555,6 +558,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_bimap_core_override.hpp
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
@@ -651,6 +655,7 @@ set(
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
+    # Additional libraries added with target_link_libraries_system below
 )
 
 if (NOT APPLE)
@@ -703,16 +708,20 @@ set_source_files_properties(
     SKIP_PRECOMPILE_HEADERS TRUE
 )
 
+# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 
-if(NOT "${ENABLE_THREAD_SANITIZATION}")
-    # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
-    # -rdynamic tells the linker to export the library's symbols so that plugins can use them. Do not use it for
-    # thread sanitization as tsan on Mac works better with its own allocator.
-    target_link_libraries(hyrise_impl INTERFACE custom_jemalloc -rdynamic)
+if(NOT APPLE)
+    # Do not use jemalloc on Mac as we cannot properly replace the allocator - see third_party/CMakeLists.txt for details.
+    target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
+    target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
+
+    # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions
+    target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR}/third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential

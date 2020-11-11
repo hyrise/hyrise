@@ -36,14 +36,14 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   auto current_node = node;
   while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
          _is_non_filtering_node(*current_node)) {
-    if (current_node->type == LQPNodeType::Predicate) {
-      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
+    // based on the conditions found only in a single branch.
+    if (current_node->output_count() > 1) {
+      predicate_nodes.clear();
     }
 
-    // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->output_count() > 1) {
-      _apply_to_inputs(node);
-      return;
+    if (current_node->type == LQPNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
     }
 
     current_node = current_node->left_input();
@@ -178,7 +178,7 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
 
     // Range filters are only available for arithmetic (non-string) types.
-    if constexpr (std::is_arithmetic_v<ColumnDataType>) {  // NOLINT
+    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (segment_statistics.range_filter) {
         if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;

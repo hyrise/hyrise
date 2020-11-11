@@ -107,6 +107,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (matches_out->empty()) return;
 
       Segments out_segments;
+      out_segments.reserve(in_table->column_count());
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can directly use
@@ -119,66 +120,81 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        */
       auto keep_chunk_sort_order = true;
       if (in_table->type() == TableType::References) {
-        auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
-
-        for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
-          auto segment_in = chunk_in->get_segment(column_id);
-
-          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-          DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
-
-          const auto pos_list_in = ref_segment_in->pos_list();
-
-          const auto table_out = ref_segment_in->referenced_table();
-          const auto column_id_out = ref_segment_in->referenced_column_id();
-
-          auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
-
-          if (!filtered_pos_list) {
-            filtered_pos_list = std::make_shared<RowIDPosList>(matches_out->size());
-            if (pos_list_in->references_single_chunk()) {
-              filtered_pos_list->guarantee_single_chunk();
-            } else {
-              // When segments reference multiple chunks, we do not keep the sort order of the input chunk. The main
-              // reason is that several table scan implementations split the pos lists by chunks (see
-              // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus shuffle the data. While this
-              // does not affect all scan implementations, we chose the safe and defensive path for now.
-              keep_chunk_sort_order = false;
-            }
-
-            size_t offset = 0;
-            for (const auto& match : *matches_out) {
-              const auto row_id = (*pos_list_in)[match.chunk_offset];
-              (*filtered_pos_list)[offset] = row_id;
-              ++offset;
-            }
+        if (matches_out->size() == chunk_in->size()) {
+          // Shortcut - the entire input reference segment matches, so we can simply forward that chunk
+          for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
+            const auto segment_in = chunk_in->get_segment(column_id);
+            out_segments.emplace_back(segment_in);
           }
+        } else {
+          auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
-          out_segments.push_back(ref_segment_out);
+          for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
+            const auto segment_in = chunk_in->get_segment(column_id);
+
+            auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+            DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+
+            const auto pos_list_in = ref_segment_in->pos_list();
+
+            const auto table_out = ref_segment_in->referenced_table();
+            const auto column_id_out = ref_segment_in->referenced_column_id();
+
+            auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+            if (!filtered_pos_list) {
+              filtered_pos_list = std::make_shared<RowIDPosList>(matches_out->size());
+              if (pos_list_in->references_single_chunk()) {
+                filtered_pos_list->guarantee_single_chunk();
+              } else {
+                // When segments reference multiple chunks, we do not keep the sort order of the input chunk. The main
+                // reason is that several table scan implementations split the pos lists by chunks (see
+                // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus shuffle the data. While
+                // this does not affect all scan implementations, we chose the safe and defensive path for now.
+                keep_chunk_sort_order = false;
+              }
+
+              size_t offset = 0;
+              for (const auto& match : *matches_out) {
+                const auto row_id = (*pos_list_in)[match.chunk_offset];
+                (*filtered_pos_list)[offset] = row_id;
+                ++offset;
+              }
+            }
+
+            const auto ref_segment_out =
+                std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
+            out_segments.push_back(ref_segment_out);
+          }
         }
       } else {
         matches_out->guarantee_single_chunk();
-        for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, matches_out);
+
+        // If the entire chunk is matched, create an EntireChunkPosList instead
+        const auto output_pos_list = matches_out->size() == chunk_in->size()
+                                         ? static_cast<std::shared_ptr<AbstractPosList>>(
+                                               std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size()))
+                                         : static_cast<std::shared_ptr<AbstractPosList>>(matches_out);
+
+        for (auto column_id = ColumnID{0u}; column_id < in_table->column_count(); ++column_id) {
+          const auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, output_pos_list);
           out_segments.push_back(ref_segment_out);
         }
       }
 
       const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
       chunk->finalize();
-      if (keep_chunk_sort_order && !chunk_in->sorted_by().empty()) {
-        chunk->set_sorted_by(chunk_in->sorted_by());
+      if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
+        chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
       }
       std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(chunk);
     });
 
     jobs.push_back(job_task);
-    job_task->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;

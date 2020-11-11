@@ -289,4 +289,15 @@ TEST_F(CsvParserTest, WithScheduler) {
   Hyrise::get().set_scheduler(scheduler);
 }
 
+TEST_F(CsvParserTest, FinalizedChunks) {
+  const auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{40});
+
+  EXPECT_EQ(table->chunk_count(), 3U);
+
+  // check if all chunks are finalized
+  EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
+  EXPECT_FALSE(table->get_chunk(ChunkID{2})->is_mutable());
+}
+
 }  // namespace opossum

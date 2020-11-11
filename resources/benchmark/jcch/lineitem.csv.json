@@ -1,0 +1,94 @@
+{
+    "columns": [
+        {
+            "name": "l_orderkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "l_partkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "l_suppkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "l_linenumber",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "l_quantity",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "l_extendedprice",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "l_discount",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "l_tax",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "l_returnflag",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_linestatus",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_shipdate",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_commitdate",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_receiptdate",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_shipinstruct",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_shipmode",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "l_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

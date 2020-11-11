@@ -269,7 +269,7 @@ const char* const tpch_query_7 =
               c_nationkey = n2.n_nationkey AND
               ((n1.n_name = ? AND n2.n_name = ?) OR
                (n1.n_name = ? AND n2.n_name = ?)) AND
-              l_shipdate BETWEEN '1995-01-01' AND '1996-12-31'
+              l_shipdate BETWEEN ? AND ?
           ) as shipping
       GROUP BY
           supp_nation, cust_nation, l_year
@@ -329,8 +329,8 @@ const char* const tpch_query_8 =
      n2.n_name as nation FROM part, supplier, lineitem, orders, customer, nation n1, nation n2, region
      WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
      o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND
-     r_name = ? AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01'
-     AND '1996-12-31' AND p_type = ?) as all_nations GROUP BY o_year ORDER BY o_year;)";
+     r_name = ? AND s_nationkey = n2.n_nationkey AND o_orderdate between ?
+     AND ? AND p_type = ?) as all_nations GROUP BY o_year ORDER BY o_year;)";
 
 /**
  * TPC-H 9

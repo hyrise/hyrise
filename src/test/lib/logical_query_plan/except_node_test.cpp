@@ -62,6 +62,6 @@ TEST_F(ExceptNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(ExceptNodeTest, Copy) { EXPECT_EQ(*_except_node->deep_copy(), *_except_node); }
 
-TEST_F(ExceptNodeTest, NodeExpressions) { ASSERT_EQ(_except_node->node_expressions.size(), 0u); }
+TEST_F(ExceptNodeTest, NodeExpressions) { EXPECT_EQ(_except_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

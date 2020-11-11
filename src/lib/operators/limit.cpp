@@ -100,9 +100,9 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     output_chunk->finalize();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
     // operator.
-    const auto& sorted_by = input_chunk->sorted_by();
+    const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
-      output_chunk->set_sorted_by(sorted_by);
+      output_chunk->set_individually_sorted_by(sorted_by);
     }
     output_chunks.emplace_back(output_chunk);
   }

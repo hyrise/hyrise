@@ -21,7 +21,8 @@ MetaSegmentsAccurateTable::MetaSegmentsAccurateTable()
                                                {"point_accesses", DataType::Long, false},
                                                {"sequential_accesses", DataType::Long, false},
                                                {"monotonic_accesses", DataType::Long, false},
-                                               {"random_accesses", DataType::Long, false}}) {}
+                                               {"random_accesses", DataType::Long, false},
+                                               {"dictionary_accesses", DataType::Long, false}}) {}
 
 const std::string& MetaSegmentsAccurateTable::name() const {
   static const auto name = std::string{"segments_accurate"};

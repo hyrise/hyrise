@@ -12,8 +12,10 @@ namespace opossum {
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      if (!chunk) continue;  // Skip physically deleted chunks
+
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        const auto& chunk = table->get_chunk(chunk_id);
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
@@ -82,7 +84,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random])});
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
@@ -93,7 +96,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random])});
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         }
       }
     }

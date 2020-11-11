@@ -20,6 +20,10 @@ std::string LimitNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
+std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
+  return _forward_left_unique_constraints();
+}
+
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

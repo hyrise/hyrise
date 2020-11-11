@@ -217,16 +217,17 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-const std::vector<SortColumnDefinition>& Chunk::sorted_by() const { return _sorted_by; }
+const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const { return _sorted_by; }
 
-void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
-  set_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
+void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
+  set_individually_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
 }
 
-void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
-  Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
-  // Currently, we assume that set_sorted_by is called only once at most. As such, there should be no existing sorting
-  // and the new sorting should contain at least one column. Feel free to remove this assertion if necessary.
+void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
+  Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
+  // Currently, we assume that set_individually_sorted_by is called only once at most.
+  // As such, there should be no existing sorting and the new sorting should contain at least one column.
+  // Feel free to remove this assertion if necessary.
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {

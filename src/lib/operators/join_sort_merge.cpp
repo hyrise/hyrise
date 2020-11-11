@@ -88,7 +88,7 @@ const std::string& JoinSortMerge::name() const {
 ** Start of implementation.
 **/
 template <typename T>
-class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
+class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
@@ -792,10 +792,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
         this->_join_cluster(cluster_number, multi_predicate_join_evaluator);
       }));
-      jobs.back()->schedule();
     }
 
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
@@ -953,8 +952,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
             _mode == JoinMode::Inner) {
           output_chunk->finalize();
           // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-          output_chunk->set_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                       SortColumnDefinition(right_join_column, SortMode::Ascending)});
+          output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                                    SortColumnDefinition(right_join_column, SortMode::Ascending)});
         }
         output_chunks[pos_list_id] = output_chunk;
       };

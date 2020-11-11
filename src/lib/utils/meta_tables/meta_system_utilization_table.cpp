@@ -5,6 +5,10 @@
 #include <mach/mach.h>
 #endif
 
+#ifdef HYRISE_WITH_JEMALLOC
+#include <jemalloc/jemalloc.h>
+#endif
+
 #include "hyrise.hpp"
 #include "meta_system_utilization_table.hpp"
 
@@ -21,6 +25,7 @@ MetaSystemUtilizationTable::MetaSystemUtilizationTable()
                                                {"system_memory_available", DataType::Long, false},
                                                {"process_virtual_memory", DataType::Long, false},
                                                {"process_RSS", DataType::Long, false},
+                                               {"allocated_memory", DataType::Long, true},
                                                {"cpu_affinity_count", DataType::Int, false}}) {}
 
 const std::string& MetaSystemUtilizationTable::name() const {
@@ -37,6 +42,9 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto load_avg = _get_load_avg();
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
+  const auto allocated_memory = _get_allocated_memory();
+  const auto allocated_memory_variant =
+      allocated_memory ? AllTypeVariant{static_cast<int64_t>(*allocated_memory)} : AllTypeVariant{NULL_VALUE};
   const auto cpu_affinity_count = Hyrise::get().topology.num_cpus();
 
   output_table->append({static_cast<int64_t>(system_cpu_ticks), static_cast<int64_t>(process_cpu_ticks),
@@ -44,15 +52,15 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
                         load_avg.load_15_min, static_cast<int64_t>(system_memory_usage.free_memory),
                         static_cast<int64_t>(system_memory_usage.available_memory),
                         static_cast<int64_t>(process_memory_usage.virtual_memory),
-                        static_cast<int64_t>(process_memory_usage.physical_memory),
+                        static_cast<int64_t>(process_memory_usage.physical_memory), allocated_memory_variant,
                         static_cast<int32_t>(cpu_affinity_count)});
 
   return output_table;
 }
 
-/*
+/**
   * Returns the load average values for 1min, 5min, and 15min.
-*/
+ */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   std::array<double, 3> load_avg{};
   const int nelem = getloadavg(load_avg.data(), 3);
@@ -60,7 +68,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
 }
 
-/*
+/**
   * Returns the time in ns since epoch.
 */
 uint64_t MetaSystemUtilizationTable::_get_total_time() {
@@ -68,7 +76,7 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 }
 
-/*
+/**
  * Returns the time in ns that ALL processes have spent on the CPU
  * since an arbitrary point in the past.
  * This might be used to differentiate between CPU time consumed by this process 
@@ -122,10 +130,10 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   Fail("Method not implemented for this platform");
 }
 
-/*
+/**
  * Returns the time in ns that THIS process has spent on the CPU
  * since an arbitrary point in the past.
-*/
+ */
 uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
@@ -149,14 +157,14 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   Fail("Method not implemented for this platform");
 }
 
-/*
+/**
  * Returns a struct that contains the available and free memory size in bytes.
  * - Free memory is unallocated memory.
  * - Available memory includes free memory and currently allocated memory that
  *   could be made available (e.g. buffers, caches ...).
  *   This is not equivalent to the total memory size, since certain data can not
  *   be paged at any time.
-*/
+ */
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
   std::ifstream meminfo_file;
@@ -205,11 +213,11 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   Fail("Method not implemented for this platform");
 }
 
-/*
+/**
  * Returns a struct that contains the virtual and physical memory used by this process in bytes.
  * - Virtual Memory is the total memory usage of the process
  * - Physical Memory is the resident set size (RSS), the portion of memory that is held in RAM
-*/
+ */
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #ifdef __linux__
   std::ifstream self_status_file;
@@ -244,6 +252,66 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
   Fail("Method not implemented for this platform");
+}
+
+/**
+ * This returns the actually allocated memory. It differs from _get_process_memory_usage in that it only returns
+ * memory that has been allocated. The reported virtual memory consumption is usually higher than the amount of
+ * allocated memory as free'd memory is not immediately returned to the system (either due to internal page
+ * fragmentation or because jemalloc keeps empty pages for future use). In rare cases, it can also be higher than
+ * the amount of virtual memory if memory has been allocated but not committed yet.
+ *
+ * jemalloc's memory allocation uses different size classes, each with a different number of bytes to allocate. If a
+ * data structure's allocator requests a specific amount of bytes that exceeds a certain size class by only one byte,
+ * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between
+ * size classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory
+ * slightly exceeds, the larger the difference between the actually allocated and the requested memory.
+ *
+ * Example:
+ *   Assumed size classes: ... 20 KiB, 24 KiB, ..., 256 KiB, 320 KiB, ...
+ *
+ *                                           |  case 1        | case 2         |
+ *   ----------------------------------------+----------------+----------------+
+ *   requested memory                        |  20 KiB + 1 B  | 256 KiB + 1 B  |
+ *   used size class, i.e., allocated memory |  24 KiB        | 320 KiB        |
+ *   delta: allocated mem. - requested mem.  |  4 KiB - 1 B   | 64 KiB - 1 B   |
+ *
+ * Reference: https://www.freebsd.org/cgi/man.cgi?jemalloc(3)
+ */
+std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
+#ifdef HYRISE_WITH_JEMALLOC
+  if (HYRISE_DEBUG) {
+    // Check that jemalloc was built with statistics support
+
+    bool stats_enabled;
+    size_t stats_enabled_size{sizeof(stats_enabled)};
+
+    auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
+    Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
+    Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled");
+  }
+
+  // Before retrieving the statistics, we need to update jemalloc's epoch to get current values. See the mallctl
+  // documentation for details.
+  {
+    uint64_t epoch = 1;
+    auto epoch_size = sizeof(epoch);
+    auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    Assert(!error_code, "Setting epoch failed");
+  }
+
+  size_t allocated;
+  auto allocated_size = sizeof(allocated);
+
+  auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
+  Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code));
+
+  return allocated;
+#else
+  // Hyrise is compiled with jemalloc unless tsan is used (see src/lib/CMakeLists.txt). To maintain compatibility with
+  // other allocators, we return nullopt here.
+  return std::nullopt;
+#endif
 }
 
 #ifdef __linux__

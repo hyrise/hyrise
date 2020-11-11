@@ -47,8 +47,6 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
-  virtual ~AdaptiveRadixTreeIndex() = default;
-
   /**
    *All keys in the ART have to be binary comparable in the sense that if the most significant differing bit between
    *BinaryComparable a and BinaryComparable b is greater for a <=> a > b.
@@ -83,7 +81,7 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
                                         size_t depth, Iterator& it);
 
-  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const final;
 
   size_t _memory_consumption() const final;
 

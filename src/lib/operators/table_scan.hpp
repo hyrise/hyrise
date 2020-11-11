@@ -52,12 +52,12 @@ class TableScan : public AbstractReadOnlyOperator {
     size_t chunk_scans_skipped{0};
     size_t chunk_scans_sorted{0};
 
-    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
       if (chunk_scans_skipped == 0 && chunk_scans_sorted == 0) {
         return;
       }
 
-      const auto *const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+      const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
       stream << separator << "Chunks: ";
       if (chunk_scans_skipped > 0) {
         stream << chunk_scans_skipped << " skipped";

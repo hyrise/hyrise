@@ -37,6 +37,11 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
+    jcch/jcch_benchmark_item_runner.cpp
+    jcch/jcch_benchmark_item_runner.hpp
+    jcch/jcch_table_generator.cpp
+    jcch/jcch_table_generator.hpp
+
     tpcds/tpcds_table_generator.cpp
     tpcds/tpcds_table_generator.hpp
 
@@ -75,6 +80,7 @@ set(
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
+add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 
 #if (APPLE)
 #    set_property(TARGET hyriseBenchmarkLib PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyriseBenchmarkLib>)
@@ -84,7 +90,10 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 
 target_link_libraries(
     hyriseBenchmarkLib
+    PUBLIC
+
     hyrise
+    ${Boost_DATE_TIME_LIBRARY}
     tpch_dbgen
     tpcds_dbgen
 )
