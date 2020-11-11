@@ -22,13 +22,15 @@ class AbstractLQPNode;
  * Applies optimization rules to an LQP.
  * On each invocation of optimize(), these Batches are applied in the same order as they were added
  * to the Optimizer.
+ *
+ * Optimizer::create_default_optimizer() creates the Optimizer with the default rule set that is executed before caching.
+ *
+ * Optimizer::create_post_caching_optimizer() creates the Optimizer with the default rule set that is executed after caching.
  */
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
-  /**
-   * This Optimizer applies specific optimizer rules that cannot be executed before caching
-   */
+
   static std::shared_ptr<Optimizer> create_post_caching_optimizer();
 
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =

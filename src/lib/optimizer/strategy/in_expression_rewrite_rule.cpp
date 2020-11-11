@@ -97,7 +97,10 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
-InExpressionRewriteRule::InExpressionRewriteRule() { cacheable = false; }
+InExpressionRewriteRule::InExpressionRewriteRule() {
+  // Rewriting IN-expressions to joins with static tables renders the LQP non-cacheable.
+  cacheable = false;
+}
 
 void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (strategy == Strategy::ExpressionEvaluator) {

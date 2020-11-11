@@ -25,9 +25,6 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
-//DEBUG
-#include "visualization/lqp_visualizer.hpp"
-
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
  *
@@ -96,9 +93,9 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
-  // This rule is like the BetweenCompositionRule, the ExpressionReductionRule and the InExpressionRewriteRule
+  // The ChunkPruningRule is like the BetweenCompositionRule, the ExpressionReductionRule and the InExpressionRewriteRule
   // not reuse-safe. However since this rule has an impact on nearly every plan, excluding queries from caching
-  // that get optimized by this rule would make the whole cache useless. Therefore, this rule is applied after
+  // that get optimized by this rule would render the whole cache useless. Therefore, this rule is applied after
   // caching.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
   return optimizer;
@@ -107,10 +104,6 @@ std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  //This rule cannot work properly on PlaceholderExpressions --> caching it might be problematic
-  // Constant expressions can only be reduced when the predicate values are substitued.
-  // However, this does not work if the predicate originates from a dummy table
-  // See: SELECT * FROM meta_system_information WHERE cpu_count IN (SELECT 14 + 1)
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -127,7 +120,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // (FDs) used by the DependentGroupByReductionRule.
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
-  // This rule cannot work properly on PlaceholderExpressions --> caching it might be problematic
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
@@ -193,31 +185,19 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
-  //int i = 0;
   for (const auto& rule : _rules) {
     Timer rule_timer{};
 
     if (!rule->cacheable) {
       const auto previous_plan = root_node->deep_copy();
       _apply_rule(*rule, root_node);
-      //auto& rule_reference = *rule;
-      //auto rule_name = std::string(typeid(rule_reference).name());
-      //std::cout << rule_name << " " << (rule->cacheable ? "yes" : "no") << std::endl;
-      //LQPVisualizer visualizer;
-      //visualizer.visualize({root_node}, "./" +  std::to_string(i) + rule_name + ".png");
-      //++i;
 
       if (*previous_plan != *root_node) {
+        // in case that the rule didn't change the plan, we can safely reuse it
         *cacheable = false;
       }
     } else {
       _apply_rule(*rule, root_node);
-      //auto& rule_reference = *rule;
-      //auto rule_name = std::string(typeid(rule_reference).name());
-      //std::cout << rule_name << " " << (rule->cacheable ? "yes" : "no") << std::endl;
-      //LQPVisualizer visualizer;
-      //visualizer.visualize({root_node}, "./" +  std::to_string(i) + rule_name + ".png");
-      //++i;
     }
 
     auto rule_duration = rule_timer.lap();

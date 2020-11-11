@@ -18,7 +18,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-BetweenCompositionRule::BetweenCompositionRule() { cacheable = false; }
+BetweenCompositionRule::BetweenCompositionRule() {
+  // Rewriting predicate chains into between expressions renders the LQP non-cacheable.
+  cacheable = false;
+}
 
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode

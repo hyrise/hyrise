@@ -107,7 +107,7 @@ class SQLPipelineStatement : public Noncopyable {
 
   static void expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
                                               std::vector<std::shared_ptr<AbstractExpression>>& values);
-  const std::shared_ptr<AbstractLQPNode> split_logical_plan(std::shared_ptr<AbstractLQPNode>& logical_plan,
+  const std::shared_ptr<AbstractLQPNode> split_logical_plan(const std::shared_ptr<const AbstractLQPNode>& logical_plan,
                                                             std::vector<std::shared_ptr<AbstractExpression>>& values);
 
  private:

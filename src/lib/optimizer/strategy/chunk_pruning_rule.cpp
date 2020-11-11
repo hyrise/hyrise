@@ -62,7 +62,7 @@ void ChunkPruningRule::_recurse_on_inputs(
 }
 
 void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  // we only want to follow chains of predicates
+  // we want to follow chains of predicates across joins
   if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::Join) {
     _apply_to_inputs(node);
     return;
