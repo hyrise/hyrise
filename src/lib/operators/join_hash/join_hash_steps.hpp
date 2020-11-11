@@ -74,6 +74,7 @@ using RadixContainer = std::vector<Partition<T>>;
 // cache.
 template <typename HashedType>
 class PosHashTable {
+ public:
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
   //
@@ -88,7 +89,6 @@ class PosHashTable {
   // smaller side.
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
- public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {
     // _pos_lists is initialized with an additional element to make the enforcement of the assertions easier.

@@ -17,6 +17,7 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/functional/hash.hpp>
 #include <bytell_hash_map.hpp>
 #include <uninitialized_vector.hpp>
@@ -63,25 +64,25 @@ Optionally, the result may also contain:
 - secondary aggregates, which are currently only used by STDDEV_SAMP
 */
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-class AggregateResult {
- public:
+struct AggregateResult {
   using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;
 
-  using PrimaryAggregateType =
-    std::conditional_t<
-      aggregate_function == AggregateFunction::StandardDeviationSample,
-      SecondaryAggregates<AggregateType>,
-      std::conditional_t<
-        aggregate_function == AggregateFunction::CountDistinct,
-        DistinctValues,
-        AggregateType>>;
+  // Find the correct accumulator type using nested conditionals.
+  using AccumulatorType = std::conditional_t<
+      // For StandardDeviationSample, use StandardDeviationSampleData as the accumulator,
+      aggregate_function == AggregateFunction::StandardDeviationSample, StandardDeviationSampleData,
+      // for CountDistinct, use DistinctValues, otherwise use AggregateType
+      std::conditional_t<aggregate_function == AggregateFunction::CountDistinct, DistinctValues, AggregateType>>;
 
-  PrimaryAggregateType current_primary_aggregate;
+  AccumulatorType accumulator{};
   size_t aggregate_count = 0;
-  RowID row_id = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
+  RowID row_id{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
+
+  // Note that the size of this struct is a significant performance factor (see #2252). Be careful when adding fields or
+  // changing data types.
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
@@ -139,7 +140,7 @@ class AggregateHash : public AbstractAggregateOperator {
   const std::string& name() const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnDataType, AggregateFunction function>
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
   void write_aggregate_output(ColumnID aggregate_index);
 
   enum class OperatorSteps : uint8_t {
@@ -169,17 +170,17 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                               AggregateFunction function);
+                               AggregateFunction aggregate_function);
 
   void _write_groupby_output(RowIDPosList& pos_list);
 
-  template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                   const AggregateFunction function) const;
+                                                                   const AggregateFunction aggregate_function) const;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;

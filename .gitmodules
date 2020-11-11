@@ -50,3 +50,6 @@
 [submodule "third_party/robin-map"]
 	path = third_party/robin-map
 	url = https://github.com/Tessil/robin-map.git
+[submodule "third_party/jcch-dbgen"]
+	path = third_party/jcch-dbgen
+	url = https://github.com/mrks/dbgen.JCC-H.git
