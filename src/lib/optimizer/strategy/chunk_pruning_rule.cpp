@@ -57,7 +57,7 @@ void ChunkPruningRule::_recurse_on_inputs(
   const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
 
-  if (predicates_for_table_nodes.contains(stored_table)){
+  if (predicates_for_table_nodes.contains(stored_table)) {
     predicates_for_table_nodes[stored_table].push_back(predicate_chain);
   } else {
     predicates_for_table_nodes[stored_table] = {predicate_chain};
@@ -72,11 +72,10 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 
   // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering, ValidateNodes and Joins.
-  // Starting from the current node, drilling down might result in multple cains of predicates ending 
-  // at different or the same StoredTableNodes. 
+  // Starting from the current node, drilling down might result in multple cains of predicates ending
+  // at different or the same StoredTableNodes.
   // predicates_for_table_nodes keeps track of the predicate chains for each stored table
-  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>
-      predicates_for_table_nodes{};
+  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>> predicates_for_table_nodes{};
   _recurse_on_inputs(node, predicates_for_table_nodes, PredicateChain{});
 
   for (auto& [stored_table, predicate_chains] : predicates_for_table_nodes) {
@@ -96,7 +95,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
           if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
 
           const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
-          Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+          Assert(lqp_column_expression_ptr,
+                 "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
           if (lqp_column_expression_ptr->original_node.lock() != stored_table) {
             predicate_matches_table = false;
@@ -115,8 +115,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
       const auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
       if (!already_pruned_chunk_ids.empty()) {
         std::vector<ChunkID> intersection;
-        std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), pruned_chunk_ids.begin(),
-                              pruned_chunk_ids.end(), std::back_inserter(intersection));
+        std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(),
+                              pruned_chunk_ids.begin(), pruned_chunk_ids.end(), std::back_inserter(intersection));
         stored_table->set_pruned_chunk_ids(intersection);
       } else {
         stored_table->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
