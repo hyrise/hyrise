@@ -10,11 +10,13 @@ int main() {
   std::filesystem::create_directories(DATA_PATH);
 
   // Data generation settings
-  const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
-                                                      BenchmarkType::JCC_H, BenchmarkType::JOB};
+  //const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
+  //                                                    BenchmarkType::JCC_H, BenchmarkType::JOB};
+  const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H};
+
   constexpr float SCALE_FACTOR = 1.0f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
-  constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 100;
+  constexpr int NUMBER_BENCHMARK_ITEM_RUNS = 10;
   constexpr int NUMBER_JOB_ITEM_RUNS = 2;
   constexpr bool SKEW_JCCH = false;
 
