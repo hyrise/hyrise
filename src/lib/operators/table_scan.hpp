@@ -87,8 +87,8 @@ class TableScan : public AbstractReadOnlyOperator {
 
   // Turns top-level uncorrelated subqueries into their value, e.g. `a = (SELECT 123)` becomes `a = 123`. This makes it
   // easier to avoid using the more expensive ExpressionEvaluatorTableScanImpl.
-  static std::shared_ptr<AbstractExpression> _resolve_uncorrelated_subqueries(
-      const std::shared_ptr<AbstractExpression>& predicate);
+  static std::shared_ptr<const AbstractExpression> _resolve_uncorrelated_subqueries(
+      const std::shared_ptr<const AbstractExpression>& predicate);
 
  private:
   const std::shared_ptr<AbstractExpression> _predicate;

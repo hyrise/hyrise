@@ -6,7 +6,7 @@
 namespace opossum {
 
 ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
-    const std::shared_ptr<const Table>& in_table, const std::shared_ptr<AbstractExpression>& expression)
+    const std::shared_ptr<const Table>& in_table, const std::shared_ptr<const AbstractExpression>& expression)
     : _in_table(in_table), _expression(expression) {
   _uncorrelated_subquery_results = ExpressionEvaluator::populate_uncorrelated_subquery_results_cache({expression});
 }

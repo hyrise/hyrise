@@ -217,23 +217,25 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
-    const std::shared_ptr<AbstractExpression>& predicate) {
+// TODO(anyone): Making const std::shared_ptr<const AbstractExpression>& predicate
+std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
+    const std::shared_ptr<const AbstractExpression>& predicate) {
   // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
   // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
   // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
   // those complex queries anyway.
 
-  if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
-      !std::dynamic_pointer_cast<IsNullExpression>(predicate) &&
-      !std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+  if (!std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate) &&
+      !std::dynamic_pointer_cast<const IsNullExpression>(predicate) &&
+      !std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
     // We have no dedicated Impl for these, so we leave them untouched
     return predicate;
   }
 
-  auto predicate_with_subquery_results = predicate;
-  for (auto& argument : predicate_with_subquery_results->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
+  auto predicate_with_subquery_results = predicate->deep_copy();
+  auto arguments_count = predicate->arguments.size();
+  for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
+    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
     if (!subquery || subquery->is_correlated()) continue;
 
     auto subquery_result = AllTypeVariant{};
@@ -247,7 +249,8 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     });
     // Deregister, because we already have the result and no longer need the subquery.
     subquery->pqp->deregister_consumer();
-    argument = std::make_shared<ValueExpression>(std::move(subquery_result));
+    predicate_with_subquery_results->arguments.at(argument_idx)
+        = std::make_shared<ValueExpression>(std::move(subquery_result));
   }
 
   return predicate_with_subquery_results;
@@ -266,10 +269,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
    * an expression.
    */
 
-  auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
+  const auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
 
   if (const auto binary_predicate_expression =
-          std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
+          std::dynamic_pointer_cast<const BinaryPredicateExpression>(resolved_predicate)) {
     auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
@@ -336,7 +339,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
+  if (const auto is_null_expression = std::dynamic_pointer_cast<const IsNullExpression>(resolved_predicate)) {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
@@ -345,7 +348,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+  if (const auto between_expression = std::dynamic_pointer_cast<const BetweenExpression>(resolved_predicate)) {
     // The ColumnBetweenTableScanImpl expects both values to be of the same data type as the column that is being
     // scanned. We retrieve the lower and upper bounds of the BetweenExpression, perform a
     // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
