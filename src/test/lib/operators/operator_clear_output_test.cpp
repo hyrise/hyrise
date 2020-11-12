@@ -1,5 +1,12 @@
 #include "base_test.hpp"
 
+#include <memory>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "expression/aggregate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/projection.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -14,13 +21,24 @@ namespace opossum {
 class OperatorClearOutputTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl", 2));
-    _gt = std::make_shared<GetTable>("int_int_int");
+    _table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
+    Hyrise::get().storage_manager.add_table(_table_name, _table);
+    _a = PQPColumnExpression::from_table(*_table, ColumnID{0});
+    _b = PQPColumnExpression::from_table(*_table, ColumnID{1});
+    _c = PQPColumnExpression::from_table(*_table, ColumnID{2});
+
+    _gt = std::make_shared<GetTable>(_table_name);
     _gt->execute();
+
+    _ta_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   }
 
+  const std::string _table_name = "int_int_int";
+  std::shared_ptr<Table> _table;
+  std::shared_ptr<PQPColumnExpression> _a, _b, _c;
+
   std::shared_ptr<GetTable> _gt;
-//  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d;
+  std::shared_ptr<TransactionContext> _ta_context;
 };
 
 TEST_F(OperatorClearOutputTest, ConsumerTracking) {
@@ -30,8 +48,11 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
 
   // Add consumers
   auto validate1 = std::make_shared<Validate>(_gt);
+  validate1->set_transaction_context(_ta_context);
   EXPECT_EQ(_gt->consumer_count(), 1);
+
   auto validate2 = std::make_shared<Validate>(_gt);
+  validate2->set_transaction_context(_ta_context);
   EXPECT_EQ(_gt->consumer_count(), 2);
 
   // Remove consumers
@@ -44,10 +65,6 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
 
   // Output should have been cleared by now.
   EXPECT_EQ(_gt->get_output(), nullptr);
-}
-
-TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryProjection) {
-
 }
 
 TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryTableScan) {
@@ -64,6 +81,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryTableScan) {
 
   // b > (SELECT 9 + 2)
   auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(_ta_context);
   auto pqp_subquery_expression = pqp_subquery_(literal_projection, DataType::Int, false);
   auto table_scan = std::make_shared<TableScan>(validate, greater_than_(pqp_column_(ColumnID{1}, DataType::Int,false, "b"), pqp_subquery_expression));
 
@@ -71,7 +89,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryTableScan) {
   const auto semi_join_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   const auto semi_join = std::make_shared<JoinHash>(table_scan, literal_projection, JoinMode::Semi, semi_join_predicate);
 
-  // Check consumer registering
+  // Check for consumer registration
   EXPECT_EQ(_gt->consumer_count(), 1);
   EXPECT_EQ(validate->consumer_count(), 1);
   EXPECT_EQ(table_scan->consumer_count(), 1);
@@ -80,7 +98,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryTableScan) {
   EXPECT_EQ(dummy_table_wrapper->consumer_count(), 1);
   EXPECT_EQ(literal_projection->consumer_count(), 2);
 
-  // Check consumer deregistering
+  // Check for consumer deregistration / output clearing
   validate->execute();
   table_scan->execute();
   EXPECT_EQ(literal_projection->consumer_count(), 1);
@@ -88,8 +106,63 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryTableScan) {
   EXPECT_EQ(literal_projection->consumer_count(), 0);
 }
 
-TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanSubqueryCorrelated) {
+TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryProjection) {
+  // SELECT COUNT(*) - (SELECT MAX(a) FROM int_int_int) FROM int_int_int
 
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(_ta_context);
+  validate->execute();
+
+  // Subquery: (SELECT MAX(a) FROM int_int_int)
+  auto max_id = std::make_shared<AggregateExpression>(AggregateFunction::Max, _a);
+  auto aggregates1 = std::vector<std::shared_ptr<AggregateExpression>>{max_id};
+  auto groupby = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}};
+  auto aggregate_max_id = std::make_shared<AggregateHash>(validate, aggregates1, groupby);
+  auto pqp_subquery_expression = pqp_subquery_(aggregate_max_id, DataType::Int, false);
+
+  // COUNT(*)
+  const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+  auto count_star = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+  auto aggregates2 = std::vector<std::shared_ptr<AggregateExpression>>{max_id};
+  auto aggregate_count_star = std::make_shared<AggregateHash>(validate, aggregates2, groupby);
+
+  // Projection
+  auto projection = std::make_shared<Projection>(aggregate_count_star, expression_vector());
+
+  // Check for consumer registration
+  EXPECT_NE(validate->get_output(), nullptr);
+  EXPECT_EQ(validate->consumer_count(), 2);
+  EXPECT_EQ(aggregate_count_star->consumer_count(), 1);
+  EXPECT_EQ(aggregate_max_id->consumer_count(), 1);
+
+  // Check for consumer deregistration & output clearing
+  aggregate_max_id->execute();
+  EXPECT_EQ(validate->consumer_count(), 1);
+  aggregate_count_star->execute();
+  EXPECT_EQ(validate->consumer_count(), 0);
+  EXPECT_EQ(validate->get_output(), nullptr);
+  projection->execute();
+  EXPECT_EQ(aggregate_count_star->consumer_count(), 0);
+  EXPECT_EQ(aggregate_max_id->consumer_count(), 0);
+  EXPECT_EQ(aggregate_count_star->get_output(), nullptr);
+  EXPECT_EQ(aggregate_max_id->get_output(), nullptr);
+}
+
+TEST_F(OperatorClearOutputTest, NeverClearOutput) {
+  // Prerequisite
+  EXPECT_EQ(_gt->consumer_count(), 0);
+  EXPECT_NE(_gt->get_output(), nullptr);
+
+  // Prepare
+  _gt->never_clear_output();
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(_ta_context);
+  EXPECT_EQ(_gt->consumer_count(), 1);
+
+  // Check whether output of GetTable is retained
+  validate->execute();
+  EXPECT_EQ(_gt->consumer_count(), 0);
+  EXPECT_NE(_gt->get_output(), nullptr);
 }
 
 }
