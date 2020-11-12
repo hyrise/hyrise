@@ -8,7 +8,8 @@ namespace opossum {
 ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const std::shared_ptr<const AbstractExpression>& expression)
     : _in_table(in_table), _expression(expression) {
-  _uncorrelated_subquery_results = ExpressionEvaluator::populate_uncorrelated_subquery_results_cache({expression});
+  _uncorrelated_subquery_results = ExpressionEvaluator::populate_uncorrelated_subquery_results_cache
+      ({std::const_pointer_cast<AbstractExpression>(expression)});
 }
 
 std::string ExpressionEvaluatorTableScanImpl::description() const { return "ExpressionEvaluator"; }

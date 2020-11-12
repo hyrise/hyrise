@@ -45,10 +45,12 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
 
-  // Register as a consumer for subqueries
+  // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
+  // Correlated subqueries are more difficult: They lead to PQP changes, so that we cannot easily share operator
+  // results. Thus we do not register as a consumer for those.
   for (auto& argument : _predicate->arguments) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
-    if(subquery) subquery->pqp->register_consumer();
+    if(subquery && !subquery->is_correlated()) subquery->pqp->register_consumer();
   }
 }
 
@@ -207,12 +209,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
   scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
-
-  // Tell subquery PQPs that we no longer need them
-  for (auto& argument : _predicate->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
-    if (subquery) subquery->pqp->deregister_consumer();
-  }
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
