@@ -32,6 +32,18 @@ Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predic
 }
 
 template <typename T>
+std::string RangeFilter<T>::range_strings() const {
+  std::string output_string = "{";
+
+  for (const auto& range : ranges) {
+    output_string += std::to_string(range.first) + "->" + std::to_string(range.second) + ";";
+  }
+
+  output_string += "}";
+  return output_string;
+}
+
+template <typename T>
 std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {

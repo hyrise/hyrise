@@ -53,6 +53,8 @@ class BaseAttributeStatistics {
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   const DataType data_type;
+
+  std::string range_strings() const {return "";};
 };
 
 }  // namespace opossum

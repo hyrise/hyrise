@@ -2,10 +2,33 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+
+#include <algorithm>
+#include <iostream>
+
+#include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
+#include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "lossless_cast.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -37,6 +60,16 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
+
+          std::string statistics_string = "";
+
+          resolve_data_type((*chunk->pruning_statistics())[column_id]->data_type, [&](auto type) {
+            using ColumnDataType = typename decltype(type)::type;
+
+            statistics_string = (static_cast<const AttributeStatistics<ColumnDataType>&>(*(*chunk->pruning_statistics())[column_id])).range_strings();
+          });
+          
+
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
                               vector_compression, static_cast<int64_t>(estimated_size),
@@ -44,7 +77,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary]),
+                              pmr_string{statistics_string} });
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,

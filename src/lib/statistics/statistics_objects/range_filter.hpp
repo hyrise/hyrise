@@ -52,6 +52,8 @@ class RangeFilter : public AbstractStatisticsObject {
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   const std::vector<std::pair<T, T>> ranges;
+
+  std::string range_strings() const;
 };
 
 template <typename T>

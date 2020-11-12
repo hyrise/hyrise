@@ -41,6 +41,7 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
   }
 }
 
+
 template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
@@ -65,6 +66,17 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
   }
 
   return statistics;
+}
+
+template <typename T>
+std::string AttributeStatistics<T>::range_strings() const {
+  if constexpr (std::is_arithmetic_v<T>) {
+  if (range_filter) {
+    return range_filter->range_strings();
+  }
+  }
+
+  return "";
 }
 
 template <typename T>
