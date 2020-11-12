@@ -337,6 +337,10 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
                                                                pqp_subquery_(subquery_pqp, DataType::Int, false)));
   scan->execute();
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
+  // TODO Discuss: Do we ever need to call create_impl() twice or more times in practise?
+  //  create_impl() already executes uncorrelated subqueries. Therefore, we can deregister from subquery PQPs very
+  //  early. But following calls to create_impl() might fail due the auto-clearing behavior of operators.
+  //  The above test, for example, fails.
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
