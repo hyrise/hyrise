@@ -331,17 +331,20 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-
-  auto scan = std::make_shared<TableScan>(get_int_float_op(),
-                                          greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
-  scan->execute();
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
-  // TODO Discuss: Do we ever need to call create_impl() twice or more times in practise?
-  //  create_impl() already executes uncorrelated subqueries. Therefore, we can deregister from subquery PQPs very
-  //  early. But following calls to create_impl() might fail due the auto-clearing behavior of operators.
-  //  The above test, for example, fails.
-  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+  subquery_pqp->never_clear_output();
+  {
+    auto scan = std::make_shared<TableScan>(get_int_float_op(),
+                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
+    EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
+  }
+  {
+    auto scan = std::make_shared<TableScan>(get_int_float_op(),
+                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
+    scan->execute();
+    EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+  }
 }
 
 TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
@@ -350,14 +353,27 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-
+  subquery_pqp->never_clear_output();
+  {
+    auto scan = std::make_shared<TableScan>(
+        get_int_float_op(),
+        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
+    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
+  }
+  {
+    auto scan = std::make_shared<TableScan>(
+        get_int_float_op(),
+        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
+    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
+  }
   {
     auto scan = std::make_shared<TableScan>(
         get_int_float_op(),
         between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                            pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
     scan->execute();
-    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
     EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
   }
 }

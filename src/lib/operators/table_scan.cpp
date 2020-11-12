@@ -210,12 +210,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
   scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
 
-  // TODO Discuss: We could do the following earlier. See table_scan_test.cpp 339ff.
-  for (auto& argument : _predicate->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
-    if (subquery && !subquery->is_correlated()) subquery->pqp->deregister_consumer();
-  }
-
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
@@ -252,7 +246,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     predicate_with_subquery_results->arguments.at(argument_idx)
         = std::make_shared<ValueExpression>(std::move(subquery_result));
     // Deregister, because we already captured the result and no longer need the subquery.
-    // subquery->pqp->deregister_consumer(); TODO Discuss: See table_scan_test.cpp 339ff.
+    subquery->pqp->deregister_consumer();
   }
 
   return predicate_with_subquery_results;
