@@ -21,8 +21,8 @@ PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOpera
     : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(init_pqp), parameters(init_parameters) {}
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    if (_data_type_info) {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  if (_data_type_info) {
     return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), _data_type_info->data_type,
                                                    _data_type_info->nullable, parameters);
   } else {

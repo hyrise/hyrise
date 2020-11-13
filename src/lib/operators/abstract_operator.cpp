@@ -157,9 +157,7 @@ void AbstractOperator::execute() {
   }
 }
 
-const std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  return _output;
-}
+const std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
@@ -173,21 +171,21 @@ std::string AbstractOperator::description(DescriptionMode description_mode) cons
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    const auto copied_ops_iter = copied_ops.find(this);
-    if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  const auto copied_ops_iter = copied_ops.find(this);
+  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
 
-    const auto copied_left_input =
-        left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
-    const auto copied_right_input =
-        right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_left_input =
+      left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_right_input =
+      right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-    auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
-    if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
+  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
-    copied_ops.emplace(this, copied_op);
+  copied_ops.emplace(this, copied_op);
 
-    return copied_op;
+  return copied_op;
 }
 
 std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
@@ -204,12 +202,10 @@ void AbstractOperator::register_consumer() {
 void AbstractOperator::deregister_consumer() {
   DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
   _consumer_count--;
-   if (_consumer_count == 0) clear_output();
+  if (_consumer_count == 0) clear_output();
 }
 
-void AbstractOperator::never_clear_output() {
-  _clear_output = false;
-}
+void AbstractOperator::never_clear_output() { _clear_output = false; }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 

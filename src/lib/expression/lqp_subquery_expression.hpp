@@ -28,9 +28,9 @@ class LQPSubqueryExpression : public AbstractExpression {
                         const std::vector<std::shared_ptr<AbstractExpression>>& init_parameter_expressions);
 
   std::shared_ptr<AbstractExpression> deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops
-      = *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>())
-  const override;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops =
+          *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>())
+      const override;
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 

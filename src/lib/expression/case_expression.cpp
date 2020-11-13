@@ -31,9 +31,9 @@ DataType CaseExpression::data_type() const {
 }
 
 std::shared_ptr<AbstractExpression> CaseExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    return std::make_shared<CaseExpression>(when()->deep_copy(copied_ops), then()->deep_copy(copied_ops),
-                                            otherwise()->deep_copy(copied_ops));
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<CaseExpression>(when()->deep_copy(copied_ops), then()->deep_copy(copied_ops),
+                                          otherwise()->deep_copy(copied_ops));
 }
 
 bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const {

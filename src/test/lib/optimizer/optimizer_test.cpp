@@ -218,6 +218,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
     size_t& counter;
+
    protected:
     void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override { ++counter; }
   };

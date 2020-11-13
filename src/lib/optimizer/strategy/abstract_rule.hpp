@@ -39,14 +39,14 @@ class AbstractRule {
 
 // All SubqueryExpressions referencing the same LQP
 using SubqueryExpressionsByLQP =
-std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
+    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
 
 /**
  * Identifies unique LQPs and the (multiple) SubqueryExpressions referencing each of these unique LQPs.
  */
 void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
                                          const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes
-                                         = *std::make_unique<std::unordered_set<std::shared_ptr<AbstractLQPNode>>>());
+                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes =
+                                             *std::make_unique<std::unordered_set<std::shared_ptr<AbstractLQPNode>>>());
 
 }  // namespace opossum

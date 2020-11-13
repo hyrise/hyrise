@@ -22,8 +22,8 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID i
       parameter_id(init_parameter_id),
       _referenced_expression_info(referenced_expression_info) {}
 
-  std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   auto copy = std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
   copy->_value = _value;
   return copy;

@@ -103,10 +103,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // TODO(Julian) comment about arg
   // // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
   std::shared_ptr<AbstractOperator> deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops
-      = *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>()) const;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops =
+          *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>()) const;
 
-    // Get the input operators.
+  // Get the input operators.
   std::shared_ptr<const AbstractOperator> left_input() const;
   std::shared_ptr<const AbstractOperator> right_input() const;
 

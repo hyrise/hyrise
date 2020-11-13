@@ -68,9 +68,7 @@ std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
 
 void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void UnionPositions::_on_cleanup() {
-  _referenced_tables.clear();
-}
+void UnionPositions::_on_cleanup() { _referenced_tables.clear(); }
 
 const std::string& UnionPositions::name() const {
   static const auto name = std::string{"UnionPositions"};

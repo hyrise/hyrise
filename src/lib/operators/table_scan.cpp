@@ -44,7 +44,6 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-
   // Register as a consumer for all PQPSubqueryExpressions
   for (auto& expression : _predicate->arguments) {
     visit_expression(expression, [&](const auto& sub_expression) {
@@ -249,8 +248,8 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    predicate_with_subquery_results->arguments.at(argument_idx)
-        = std::make_shared<ValueExpression>(std::move(subquery_result));
+    predicate_with_subquery_results->arguments.at(argument_idx) =
+        std::make_shared<ValueExpression>(std::move(subquery_result));
     // Deregister, because we already captured the result and no longer need the subquery.
     subquery->pqp->deregister_consumer();
   }

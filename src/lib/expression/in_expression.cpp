@@ -22,8 +22,9 @@ const std::shared_ptr<AbstractExpression>& InExpression::value() const { return 
 const std::shared_ptr<AbstractExpression>& InExpression::set() const { return arguments[1]; }
 
 std::shared_ptr<AbstractExpression> InExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    return std::make_shared<InExpression>(predicate_condition, value()->deep_copy(copied_ops), set()->deep_copy(copied_ops));
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<InExpression>(predicate_condition, value()->deep_copy(copied_ops),
+                                        set()->deep_copy(copied_ops));
 }
 
 std::string InExpression::description(const DescriptionMode mode) const {

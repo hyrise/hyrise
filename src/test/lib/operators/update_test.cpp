@@ -40,7 +40,6 @@ class OperatorsUpdateTest : public BaseTest {
     where_scan->never_clear_output();
     const auto updated_values_projection = std::make_shared<Projection>(where_scan, update_expressions);
 
-
     get_table->execute();
     where_scan->execute();
     updated_values_projection->execute();

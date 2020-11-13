@@ -25,10 +25,10 @@ namespace opossum {
  * !!!
  */
 void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& root_node) const {
-   // (1) Optimize root LQP
+  // (1) Optimize root LQP
   _apply_to(root_node);
 
-   // (2) Optimize distinct subquery LQPs, one-by-one.
+  // (2) Optimize distinct subquery LQPs, one-by-one.
   auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
   collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
@@ -40,7 +40,7 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& root_node) cons
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_root_node->left_input();
     }
-    local_root_node->set_left_input(nullptr); // TODO remove?
+    local_root_node->set_left_input(nullptr);  // TODO remove?
   }
 }
 
@@ -75,6 +75,5 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
   collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
   collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
-
 
 }  // namespace opossum

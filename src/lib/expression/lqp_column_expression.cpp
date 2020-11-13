@@ -18,8 +18,8 @@ LQPColumnExpression::LQPColumnExpression(const std::shared_ptr<const AbstractLQP
       original_column_id(init_original_column_id) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    return std::make_shared<LQPColumnExpression>(original_node.lock(), original_column_id);
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<LQPColumnExpression>(original_node.lock(), original_column_id);
 }
 
 std::string LQPColumnExpression::description(const DescriptionMode mode) const {

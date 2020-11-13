@@ -158,8 +158,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubqueryNes
   validate->set_transaction_context(_ta_context);
   auto pqp_subquery_expression = pqp_subquery_(projection_literals, DataType::Int, false);
   auto table_scan = std::make_shared<TableScan>(
-      validate,
-      in_(pqp_column_(ColumnID{1}, DataType::Int, false, "b"), list_(9, 10, pqp_subquery_expression)));
+      validate, in_(pqp_column_(ColumnID{1}, DataType::Int, false, "b"), list_(9, 10, pqp_subquery_expression)));
 
   // a IN (SELECT 9 + 2)
   const auto semi_join_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
@@ -219,8 +218,8 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) 
   auto pqp_count_star =
       pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), false, aggregate_count_star->as_column_name());
   auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_a, DataType::Int, false);
-  auto projection = std::make_shared<Projection>(aggregate_hash_count_star,
-                                                 expression_vector(pqp_count_star, pqp_subquery_max_id));
+  auto projection =
+      std::make_shared<Projection>(aggregate_hash_count_star, expression_vector(pqp_count_star, pqp_subquery_max_id));
   // Check for consumer registration
   EXPECT_NE(validate->get_output(), nullptr);
   EXPECT_EQ(validate->consumer_count(), 2);

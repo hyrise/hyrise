@@ -23,9 +23,10 @@ const std::shared_ptr<AbstractExpression>& BetweenExpression::lower_bound() cons
 const std::shared_ptr<AbstractExpression>& BetweenExpression::upper_bound() const { return arguments[2]; }
 
 std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-    return std::make_shared<BetweenExpression>(predicate_condition, value()->deep_copy(copied_ops),
-                                       lower_bound()->deep_copy(copied_ops), upper_bound()->deep_copy(copied_ops));
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<BetweenExpression>(predicate_condition, value()->deep_copy(copied_ops),
+                                             lower_bound()->deep_copy(copied_ops),
+                                             upper_bound()->deep_copy(copied_ops));
 }
 
 std::string BetweenExpression::description(const DescriptionMode mode) const {

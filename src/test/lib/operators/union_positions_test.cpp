@@ -108,7 +108,6 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
   table_scan_a_op->never_clear_output();
   table_scan_b_op->never_clear_output();
 
-
   execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
