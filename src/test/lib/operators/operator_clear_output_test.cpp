@@ -127,7 +127,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingUncorrelatedSubqueryProjection) 
   auto aggregate_count_star = std::make_shared<AggregateHash>(validate, aggregates2, groupby);
 
   // Projection
-  auto projection = std::make_shared<Projection>(aggregate_count_star, expression_vector());
+  auto projection = std::make_shared<Projection>(aggregate_count_star, expression_vector(sub_(count_star, max_id)));
 
   // Check for consumer registration
   EXPECT_NE(validate->get_output(), nullptr);

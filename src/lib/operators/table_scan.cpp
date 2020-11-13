@@ -45,12 +45,19 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
 
-  // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
-  // Correlated subqueries are more difficult: They lead to PQP changes, so that we cannot easily share operator
-  // results. Thus we do not register as a consumer for those.
-  for (auto& argument : _predicate->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
-    if (subquery && !subquery->is_correlated()) subquery->pqp->register_consumer();
+  // Register as a consumer for all PQPSubqueryExpressions
+  for (auto& expression : _predicate->arguments) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
+        // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
+        // Correlated subqueries are more difficult because they lead to multiple PQPs. We cannot easily share results and
+        // thus, do not register as a consumer.
+        pqp_subquery_expression->pqp->register_consumer();
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+      return ExpressionVisitation::VisitArguments;
+    });
   }
 }
 
@@ -213,7 +220,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-// TODO(anyone): Making const std::shared_ptr<const AbstractExpression>& predicate
 std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     const std::shared_ptr<const AbstractExpression>& predicate) {
   // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can

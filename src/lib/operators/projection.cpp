@@ -26,7 +26,20 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
 
-  // TODO Register as a consumer for PQPSubqueryExpressions
+  // Register as a consumer for all PQPSubqueryExpressions
+  for (auto& expression : expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
+        // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
+        // Correlated subqueries are more difficult because they lead to multiple PQPs. We cannot easily share results and
+        // thus, do not register as a consumer.
+        pqp_subquery_expression->pqp->register_consumer();
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
 }
 
 const std::string& Projection::name() const {
@@ -94,6 +107,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto column_is_nullable = std::vector<bool>(expressions.size(), false);
 
   // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
+  // TODO comment takes care of calling deregister
   const auto uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
 
@@ -247,8 +261,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
-
-  // TODO Deregister as a consumer for PQPSubqueryExpressions
 
   return std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());
