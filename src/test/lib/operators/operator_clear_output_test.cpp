@@ -106,46 +106,46 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   EXPECT_EQ(literal_projection->consumer_count(), 0);
 }
 
-TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionNestedUncorrelatedSubquery) {
+TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNested) {
   // SELECT COUNT(*) - (SELECT MAX(a) FROM int_int_int) FROM int_int_int
 
   auto validate = std::make_shared<Validate>(_gt);
   validate->set_transaction_context(_ta_context);
   validate->execute();
 
-  // Subquery: (SELECT a FROM int_int_int LIMIT 1)
-  auto max_id = std::make_shared<AggregateExpression>(AggregateFunction::Max, _a);
-  auto groupby = std::vector<ColumnID>{_b->column_id, _c->column_id};
-  auto aggregates1 = std::vector<std::shared_ptr<AggregateExpression>>{max_id};
-  auto aggregate_max_id = std::make_shared<AggregateHash>(validate, aggregates1, groupby);
-  auto pqp_subquery_expression = pqp_subquery_(aggregate_max_id, DataType::Int, false);
-
-  // COUNT(*)
+  // Left input node: COUNT(*)
   const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-  auto count_star = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
-  auto aggregates2 = std::vector<std::shared_ptr<AggregateExpression>>{count_star};
-  auto aggregate_count_star = std::make_shared<AggregateHash>(validate, aggregates2, groupby);
+  auto aggregate_count_star = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+  auto aggregate_hash_count_star = std::make_shared<AggregateHash>(validate,
+                                                              std::vector<std::shared_ptr<AggregateExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
+  // Subquery expression: (SELECT MAX(a) FROM int_int_int)
+  auto aggregate_max_id = std::make_shared<AggregateExpression>(AggregateFunction::Max, _a);
+  auto aggregate_hash_max_id = std::make_shared<AggregateHash>(validate,
+      std::vector<std::shared_ptr<AggregateExpression>>{aggregate_max_id}, std::vector<ColumnID>{});
 
-  // Projection
-  auto projection = std::make_shared<Projection>(aggregate_count_star, expression_vector(sub_(count_star, pqp_subquery_expression)));
-
+  // Projection: COUNT(*) - (SELECT MAX(a) FROM int_int_int)
+  auto pqp_count_star = pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), false,
+                                    aggregate_count_star->as_column_name());
+  auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_id, DataType::Int, false);
+  auto projection = std::make_shared<Projection>(aggregate_hash_count_star, expression_vector(sub_(pqp_count_star,
+                                                                                              pqp_subquery_max_id)));
   // Check for consumer registration
   EXPECT_NE(validate->get_output(), nullptr);
   EXPECT_EQ(validate->consumer_count(), 2);
-  EXPECT_EQ(aggregate_count_star->consumer_count(), 1);
-  EXPECT_EQ(aggregate_max_id->consumer_count(), 1);
+  EXPECT_EQ(aggregate_hash_count_star->consumer_count(), 1);
+  EXPECT_EQ(aggregate_hash_max_id->consumer_count(), 1);
 
   // Check for consumer deregistration & output clearing
-  aggregate_max_id->execute();
+  aggregate_hash_max_id->execute();
   EXPECT_EQ(validate->consumer_count(), 1);
-  aggregate_count_star->execute();
+  aggregate_hash_count_star->execute();
   EXPECT_EQ(validate->consumer_count(), 0);
   EXPECT_EQ(validate->get_output(), nullptr);
   projection->execute();
-  EXPECT_EQ(aggregate_count_star->consumer_count(), 0);
-  EXPECT_EQ(aggregate_max_id->consumer_count(), 0);
-  EXPECT_EQ(aggregate_count_star->get_output(), nullptr);
-  EXPECT_EQ(aggregate_max_id->get_output(), nullptr);
+  EXPECT_EQ(aggregate_hash_count_star->consumer_count(), 0);
+  EXPECT_EQ(aggregate_hash_max_id->consumer_count(), 0);
+  EXPECT_EQ(aggregate_hash_count_star->get_output(), nullptr);
+  EXPECT_EQ(aggregate_hash_max_id->get_output(), nullptr);
 }
 
 TEST_F(OperatorClearOutputTest, NeverClearOutput) {
