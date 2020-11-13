@@ -287,6 +287,14 @@ try {
               Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
             }
           }
+        }, tpchQueryPlanQ15: {
+          stage("tpchQ15QueryPlans") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 -q 15 --visualize"
+              archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
+            } else {
+              Utils.markStageSkippedForConditional("tpchQ15QueryPlans")
+            }
         }, tpcdsQueryPlansAndVerification: {
           stage("tpcdsQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
