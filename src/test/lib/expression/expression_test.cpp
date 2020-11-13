@@ -114,6 +114,13 @@ TEST_F(ExpressionTest, DeepCopy) {
   EXPECT_NE(*parameter_a, *parameter_b);
 }
 
+TEST_F(ExpressionTest, DeepCopyDiamondShapeForXXXExpression) {
+  // TODO(Julian) Test for all expression types available
+    // create simple PQP Subquery e.g. (SELECT 9 + 2)
+    // assign it to all operands of expression
+    // deep copy and check for correct consumer counts
+}
+
 TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(sum_(a)->requires_computation());
   EXPECT_TRUE(between_inclusive_(a, 1, 5)->requires_computation());

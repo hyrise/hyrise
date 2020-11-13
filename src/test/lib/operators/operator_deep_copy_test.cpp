@@ -27,7 +27,7 @@ namespace opossum {
 
 // At the moment all the deep_copy() methods just call the constructor again. At first sight, these tests
 // do not seem to add too much value because. This might change in the future. Then, these tests will
-// make much more sense.
+// make much more sense.ss
 
 class OperatorDeepCopyTest : public BaseTest {
  protected:
@@ -201,6 +201,16 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
   auto copied_pqp = union_positions->deep_copy();
 
   EXPECT_EQ(copied_pqp->left_input()->left_input(), copied_pqp->right_input()->left_input());
+}
+
+TEST_F(OperatorDeepCopyTest, DiamondShapeAcrossRootAndSubqueryPQPs) {  // TODO(Julian)
+  // similar to TPC-H Q11
+}
+
+TEST_F(OperatorDeepCopyTest, DiamondShapeAmongSubqueries) { // TODO(Julian)
+  // similar to TPC-DS Q9
+  // Prepare diamond-shaped PQP
+
 }
 
 TEST_F(OperatorDeepCopyTest, Subquery) {
