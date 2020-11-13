@@ -100,23 +100,24 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
+  const auto chunk_count = input_table.chunk_count();
+
   // Perform the actual projection on a per-chunk level. `output_segments_by_chunk` will contain both forwarded and
   // newly generated columns. In the upcoming loop, we do not yet deal with the projection_result_table indirection
   // described above.
-  auto output_segments_by_chunk = std::vector<Segments>(input_table.chunk_count());
+  auto output_segments_by_chunk = std::vector<Segments>(chunk_count);
 
   // Create a vector that will hold all jobs that are getting executed in parallel.
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(input_table.chunk_count());
+  jobs.reserve(chunk_count);
 
-  const auto chunk_count = input_table.chunk_count();
   const auto expression_size = expressions.size();
 
   // Create a two-dimensional vector that saves the information if a column is nullable for every segment.
   // This allows parallel write operation per thread. Later this data structure is aggregated
   // to a vector with information if a column is nullable for every column.
   auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(
-    input_table.chunk_count(),
+    chunk_count,
     std::vector<bool>(expression_size, false));
 
   // All projections that operate on chunks of sufficient size and newly generated columns will be executed after the
@@ -126,12 +127,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{expression_size};
+    auto forwared_count = size_t{0};
 
     for (auto column_id = ColumnID{0}; column_id < expression_size; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
       if (expression->type == ExpressionType::PQPColumn) {
         // Forward input column if possible
+        forwared_count++;
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
         column_is_nullable_by_chunk[chunk_id][column_id] =
@@ -143,6 +146,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // Output segments are associated with their chunk. At the moment the segments are only ReferenceSegments.
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
+
+    // All columns are forwarded. We do not need to evaluate newly generated columns. 
+    if (forwared_count == expression_size) continue;
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [
