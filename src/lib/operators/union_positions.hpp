@@ -96,6 +96,8 @@ class UnionPositions : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
+  void _on_cleanup() override;
+
   /**
    * Validates the input AND initializes some utility data it uses (_column_cluster_offsets, _referenced_tables,
    * _referenced_column_ids).
@@ -116,7 +118,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::vector<ColumnID> _column_cluster_offsets;
 
   // For each ColumnCluster, the table its pos_list references
-  std::vector<std::shared_ptr<const Table>> _referenced_tables; // TODO weak pointer? vielleicht besser -> on_cleanup()
+  std::vector<std::shared_ptr<const Table>> _referenced_tables;
 
   // For each column_idx in the input tables, specifies the referenced column in the referenced table
   std::vector<ColumnID> _referenced_column_ids;
