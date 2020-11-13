@@ -67,6 +67,23 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   EXPECT_EQ(_gt->get_output(), nullptr);
 }
 
+TEST_F(OperatorClearOutputTest, NeverClearOutput) {
+  // Prerequisite
+  EXPECT_EQ(_gt->consumer_count(), 0);
+  EXPECT_NE(_gt->get_output(), nullptr);
+
+  // Prepare
+  _gt->never_clear_output();
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(_ta_context);
+  EXPECT_EQ(_gt->consumer_count(), 1);
+
+  // Check whether output of GetTable is retained
+  validate->execute();
+  EXPECT_EQ(_gt->consumer_count(), 0);
+  EXPECT_NE(_gt->get_output(), nullptr);
+}
+
 TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   /**
    * Models the PQP of the following SQL query
@@ -104,10 +121,17 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   EXPECT_EQ(literal_projection->consumer_count(), 1);
   semi_join->execute();
   EXPECT_EQ(literal_projection->consumer_count(), 0);
+  EXPECT_EQ(literal_projection->get_output(), nullptr);
+  EXPECT_EQ(dummy_table_wrapper->consumer_count(), 0);
+  EXPECT_EQ(dummy_table_wrapper->get_output(), nullptr);
 }
 
 TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNested) {
-  // SELECT COUNT(*) - (SELECT MAX(a) FROM int_int_int) FROM int_int_int
+  /**
+   * Test is based on the following SQL query:
+   * SELECT COUNT(*) - (SELECT MAX(a) FROM int_int_int)
+   * FROM int_int_int
+   */
 
   auto validate = std::make_shared<Validate>(_gt);
   validate->set_transaction_context(_ta_context);
@@ -146,23 +170,6 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
   EXPECT_EQ(aggregate_hash_max_id->consumer_count(), 0);
   EXPECT_EQ(aggregate_hash_count_star->get_output(), nullptr);
   EXPECT_EQ(aggregate_hash_max_id->get_output(), nullptr);
-}
-
-TEST_F(OperatorClearOutputTest, NeverClearOutput) {
-  // Prerequisite
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
-
-  // Prepare
-  _gt->never_clear_output();
-  auto validate = std::make_shared<Validate>(_gt);
-  validate->set_transaction_context(_ta_context);
-  EXPECT_EQ(_gt->consumer_count(), 1);
-
-  // Check whether output of GetTable is retained
-  validate->execute();
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
 }
 
 }
