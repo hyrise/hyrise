@@ -287,7 +287,7 @@ try {
               Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
             }
           }
-        }, tpchQueryPlanQ15: {
+        }, tpchQ15QueryPlans: {
           stage("tpchQ15QueryPlans") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 -q 15 --visualize"
