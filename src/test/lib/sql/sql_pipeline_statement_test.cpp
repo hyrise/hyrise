@@ -467,6 +467,12 @@ TEST_F(SQLPipelineStatementTest, GetResultTable) {
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   const auto [pipeline_status, table] = statement->get_result_table();
 
+  // Check whether operator results have been cleared
+  for (const auto& task : statement->get_tasks()) {
+    const auto& executed_operator = static_cast<const OperatorTask&>(*task).get_operator();
+    EXPECT_EQ(executed_operator->get_output(), nullptr);
+  }
+
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
