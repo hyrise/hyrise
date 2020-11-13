@@ -25,7 +25,8 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
-  // Register as a consumer for all PQPSubqueryExpressions
+
+  // Register as a consumer for subquery PQPs
   for (auto& expression : expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);

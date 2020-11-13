@@ -38,6 +38,9 @@ class OperatorsProjectionTest : public BaseTest {
 
     a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
     a_b = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "b");
+
+    b_a = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "a");
+    b_b = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "b");
   }
 
   std::shared_ptr<TableWrapper> table_wrapper_a, table_wrapper_b;
