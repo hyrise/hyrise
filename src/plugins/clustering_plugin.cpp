@@ -405,16 +405,18 @@ void ClusteringPlugin::start() {
 
   _clustering_algo->run();
 
-  std::vector<std::string> step_names = {"partition", "merge", "sort"};
-  for (size_t step = 0; step < step_names.size(); step++) {
-    const auto total = _executed_updates[step];
-    const auto successful = _successful_executed_updates[step];
-    //const std::string runtime = _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]];
-    //const auto seconds = runtime / 1e9;
-    std::cout << "Executed " << total << " updates in "
-              << _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]] << "s during the "
-              << step_names[step] << " step, " << successful << " (" << 100.0 * successful / total
-              << "%) of them successful." << std::endl;
+  if (_clustering_config.size() > 0) {
+    std::vector<std::string> step_names = {"partition", "merge", "sort"};
+    for (size_t step = 0; step < step_names.size(); step++) {
+      const auto total = _executed_updates[step];
+      const auto successful = _successful_executed_updates[step];
+      //const std::string runtime = _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]];
+      //const auto seconds = runtime / 1e9;
+      std::cout << "Executed " << total << " updates in "
+                << _clustering_algo->runtime_statistics()["lineitem"]["steps"][step_names[step]] << "s during the "
+                << step_names[step] << " step, " << successful << " (" << 100.0 * successful / total
+                << "%) of them successful." << std::endl;
+    }
   }
 
   for (size_t thread_index = 0; thread_index < NUM_UPDATE_THREADS; thread_index++) {

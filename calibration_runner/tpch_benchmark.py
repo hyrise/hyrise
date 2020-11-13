@@ -8,24 +8,36 @@ class TPCHBenchmark(AbstractBenchmark):
     return f"TPC-H_*QP.svg"
 
   def exec_path(self):
-    return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
+    return "build-release/hyriseCalibration"
 
-  def result_path(self):    
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpch/sf10-3d-corrected"
+  #def result_path(self):    
+  #  return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpch/sf10-3d-corrected"
 
   def max_runs(self):
-    return 20
+    return 100
 
   def time(self):
     return 500
 
   def scale(self):
-    return 10
+    return 1
   
   def chunk_sizes(self):
     return [65535]
 
   def sort_orders(self):
+
+    return {
+      'l_orderkey': {
+        'lineitem': [['l_orderkey', 2]]
+      },
+      'l_shipdate': {
+        'lineitem': [['l_shipdate', 2]]
+      }
+    }
+
+
+
 
     # final SF 10 top 20 3d corrections
     return {

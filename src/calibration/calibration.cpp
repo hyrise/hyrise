@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
 
   // Export directory
-  std::string DATA_PATH = "./data/" + benchmark_name + "/sf_" + std::to_string(scale_factor) + "-runs_" + std::to_string(config->max_runs);
+  std::string DATA_PATH = "./data/" + benchmark_name;
   std::filesystem::create_directories(DATA_PATH);
 
 
