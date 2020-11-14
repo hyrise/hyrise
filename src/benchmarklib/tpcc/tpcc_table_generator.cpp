@@ -541,7 +541,8 @@ void TPCCTableGenerator::_add_constraints(
 
   const auto& district_table = table_info_by_name.at("DISTRICT").table;
   district_table->add_soft_key_constraint(
-      {{district_table->column_id_by_name("D_ID")}, KeyConstraintType::PRIMARY_KEY});
+      {{district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
+       KeyConstraintType::PRIMARY_KEY});
 
   const auto& customer_table = table_info_by_name.at("CUSTOMER").table;
   customer_table->add_soft_key_constraint(
@@ -572,7 +573,7 @@ void TPCCTableGenerator::_add_constraints(
 
   const auto& stock_table = table_info_by_name.at("STOCK").table;
   stock_table->add_soft_key_constraint(
-      {{stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_D_ID")},
+      {{stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_I_ID")},
        KeyConstraintType::PRIMARY_KEY});
 }
 
