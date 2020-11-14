@@ -57,6 +57,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
  protected:
   IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;
+  void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
   template <typename T>
   std::vector<std::optional<T>> _generate_inner_order_line_column(
