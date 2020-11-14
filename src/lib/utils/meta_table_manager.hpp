@@ -28,6 +28,7 @@ class MetaTableManager : public Noncopyable {
   bool can_delete_from(const std::string& table_name) const;
   bool can_update(const std::string& table_name) const;
 
+  void add(const std::shared_ptr<AbstractMetaTable>& table);
   void insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values);
   void delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values);
   void update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
@@ -40,8 +41,7 @@ class MetaTableManager : public Noncopyable {
   friend class ChangeMetaTableTest;
 
   MetaTableManager();
-
-  void _add(const std::shared_ptr<AbstractMetaTable>& table);
+  
   static std::string _trim_table_name(const std::string& table_name);
 
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;

@@ -89,7 +89,7 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
   }
 }
 
-void MetaTableManager::_add(const std::shared_ptr<AbstractMetaTable>& table) {
+void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;
   _table_names.push_back(table->name());
   std::sort(_table_names.begin(), _table_names.end());
