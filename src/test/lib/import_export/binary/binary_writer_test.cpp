@@ -69,7 +69,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   table->append({"test"});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
   EXPECT_TRUE(file_exists(filename));
@@ -90,7 +90,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
   table->append({opossum::NULL_VALUE});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
   EXPECT_TRUE(file_exists(filename));
@@ -109,7 +109,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   table->append({"test"});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
   EXPECT_TRUE(file_exists(filename));
@@ -129,7 +129,7 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
   table->append({5});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
   EXPECT_TRUE(file_exists(filename));
@@ -183,7 +183,7 @@ TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
   table->append({5});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -204,7 +204,7 @@ TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
   table->append({5});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -225,7 +225,7 @@ TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
   table->append({opossum::NULL_VALUE});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -253,7 +253,7 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   }
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::LZ4});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -314,7 +314,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {
   table->append({1});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   EXPECT_TRUE(file_exists(filename));
@@ -332,7 +332,7 @@ TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
   table->append({16.2f});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -369,7 +369,7 @@ TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
   table->append({"test"});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -394,7 +394,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -419,7 +419,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -443,7 +443,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -464,7 +464,7 @@ TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
   table->append({""});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -490,7 +490,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -518,7 +518,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   table->append(null_values);
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =
@@ -539,7 +539,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
   table->append_chunk(Segments{value_segment});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, GetParam());
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
   const auto reference_filename =

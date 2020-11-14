@@ -191,7 +191,7 @@ class PosHashTable {
 //     not optimal in every situation.
 // (3) Check whether using multiple hash functions (k>1) brings any improvement.
 // (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
-//     intermediary results. When a bloom filter-supported materialization has been done (i.e., materialization has not
+//     intermediary results. When a bloom filter-supported partitioning has been done (i.e., partitioning has not
 //     been skipped), we do not need to use a bloom filter in the build phase anymore.
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
@@ -203,6 +203,11 @@ static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 // needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
 using BloomFilter = boost::dynamic_bitset<>;
+
+// ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
+// negation (~x). As the negation is surprisingly expensive, we create a static empty bloom filter and reference
+// it where needed. Having a bloom filter that always returns true avoids a branch in the hot loop.
+static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
 // @param column_id            Column within that table to materialize
@@ -217,10 +222,7 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
-                                    const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
-  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
-  // negation (~x).
-
+                                    const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -363,9 +365,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         output_bloom_filter |= local_output_bloom_filter;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return radix_container;
 }
@@ -440,10 +441,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
-      jobs.back()->schedule();
     }
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, shrink_to_fit is called above.
   if (radix_bits == 0) hash_tables[0]->shrink_to_fit();
@@ -454,9 +454,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                     const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
-  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
-  // negation (~x).
+                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) return radix_container;
 
   if constexpr (keep_null_values) {
@@ -535,9 +533,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         ++output_idx;
       }
     }));
-    jobs.back()->schedule();
   }
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -550,9 +547,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
               null_values_as_char[output_partition_idx][element_idx];
         }
       }));
-      jobs.back()->schedule();
     }
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   return output;
@@ -706,10 +702,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
       pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -752,14 +747,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
               // Could be either skipped or NULL
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if (null_values[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
@@ -791,7 +786,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
@@ -799,7 +794,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;
@@ -817,10 +812,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
       pos_lists[partition_idx] = std::move(pos_list_local);
     }));
-    jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;

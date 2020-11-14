@@ -11,6 +11,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/print.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -97,6 +98,27 @@ TEST_F(OperatorDeepCopyTest, DeepCopyDifference) {
   copied_difference->mutable_right_input()->execute();
   copied_difference->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_difference->get_output(), expected_result);
+}
+
+TEST_F(OperatorDeepCopyTest, DeepCopyPrint) {
+  auto ostream = std::stringstream{};
+
+  auto print1 = std::make_shared<Print>(_table_wrapper_a, PrintFlags::IgnoreChunkBoundaries, ostream);
+  print1->execute();
+
+  const auto result1 = ostream.str();
+
+  // Reset ostream
+  ostream.str("");
+  ostream.clear();
+
+  auto print2 = print1->deep_copy();
+  print2->mutable_left_input()->execute();
+  print2->execute();
+
+  const auto result2 = ostream.str();
+
+  EXPECT_EQ(result1, result2);
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
@@ -206,7 +228,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  const auto copied_result = tasks.back()->get_operator()->get_output();
+  const auto copied_result = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
 
   auto expected_copied = std::make_shared<Table>(column_definitions, TableType::Data);
   expected_copied->append({11, 10, 11});

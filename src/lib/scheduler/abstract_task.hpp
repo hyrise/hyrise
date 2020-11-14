@@ -20,6 +20,9 @@ class Worker;
  * Derive and implement logic in _on_execute()
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
+  // Using friend classes is quite uncommon in Hyrise. The reason it is done here is that the _join method must
+  // absolutely not be called from anyone but the scheduler. As the interface could tempt developers to do so if that
+  // method was public, we chose this approach.
   friend class AbstractScheduler;
 
  public:

@@ -72,38 +72,128 @@ TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
   }
 }
 
-TEST_F(SegmentAccessCounterTest, AccessPatternIncreasing) {
+TEST_F(SegmentAccessCounterTest, AccessPattern1) {
   auto positions = std::make_shared<RowIDPosList>();
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(AccessPattern::SequentiallyIncreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyIncreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(AccessPattern::RandomlyIncreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyIncreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(AccessPattern::RandomlyIncreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyIncreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(AccessPattern::Random, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+  positions->push_back({ChunkID{0}, ChunkOffset{1}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+  positions->push_back({ChunkID{0}, ChunkOffset{2}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+  positions->push_back({ChunkID{0}, ChunkOffset{4}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+  positions->push_back({ChunkID{0}, ChunkOffset{3}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+  positions->push_back({ChunkID{0}, ChunkOffset{0}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
 }
 
-TEST_F(SegmentAccessCounterTest, AccessPatternDecreasing) {
+TEST_F(SegmentAccessCounterTest, AccessPattern2) {
   auto positions = std::make_shared<RowIDPosList>();
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{0}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{3}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{3}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{4}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{3}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern3) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
-  EXPECT_EQ(AccessPattern::SequentiallyDecreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyDecreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
-  EXPECT_EQ(AccessPattern::SequentiallyDecreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyDecreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{660}});
-  EXPECT_EQ(AccessPattern::RandomlyDecreasing, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{659}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{659}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyDecreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Random, _access_pattern(positions));
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern4) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{665}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{664}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{663}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{664}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern5) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{665}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{664}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{666}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern6) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{665}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{666}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{666}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{667}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{666}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern7) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{665}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{666}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::SequentiallyIncreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{660}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, AccessPattern8) {
+  auto positions = std::make_shared<RowIDPosList>();
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{665}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Point);
+  positions->push_back({ChunkID{0}, ChunkOffset{660}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyDecreasing);
+  positions->push_back({ChunkID{0}, ChunkOffset{661}});
+  EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
 }
 
 }  // namespace opossum

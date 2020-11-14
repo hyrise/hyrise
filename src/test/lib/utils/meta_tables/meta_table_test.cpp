@@ -57,16 +57,16 @@ class MetaTableTest : public BaseTest {
   std::shared_ptr<Table> int_int_int_null;
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() {
+  void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
     int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
     int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
 
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
-                               {{EncodingType::RunLength},
-                                {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                                {EncodingType::Unencoded}});
+                               {SegmentEncodingSpec{EncodingType::RunLength},
+                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                SegmentEncodingSpec{EncodingType::Unencoded}});
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
@@ -79,7 +79,7 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager._add(table);

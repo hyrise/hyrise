@@ -527,7 +527,7 @@ int Console::_generate_tpcds(const std::string& args) {
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
-  TpcdsTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  TPCDSTableGenerator{scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -587,7 +587,7 @@ int Console::_load_table(const std::string& args) {
         immutable_chunks.emplace_back(chunk_id);
       }
     }
-    ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
+    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{encoding_type->second});
   }
 
   return ReturnCode::Ok;
