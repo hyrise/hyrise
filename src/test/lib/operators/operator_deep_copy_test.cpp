@@ -27,7 +27,7 @@ namespace opossum {
 
 // At the moment all the deep_copy() methods just call the constructor again. At first sight, these tests
 // do not seem to add too much value because. This might change in the future. Then, these tests will
-// make much more sense.ss
+// make much more sense.
 
 class OperatorDeepCopyTest : public BaseTest {
  protected:

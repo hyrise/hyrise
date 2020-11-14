@@ -88,6 +88,19 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   EXPECT_EQ(subquery_table_copy->pqp->type(), OperatorType::TableScan);
 }
 
+TEST_F(PQPSubqueryExpressionTest, DeepCopyDiamondShape) {
+  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan_a->execute();
+
+  auto scan_b = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
+
+  auto copied_pqp = union_positions->deep_copy();
+
+  EXPECT_EQ(copied_pqp->left_input()->left_input(), copied_pqp->right_input()->left_input());
+}
+
 TEST_F(PQPSubqueryExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(subquery_single_value_one_parameter->requires_computation());
   EXPECT_TRUE(subquery_table->requires_computation());

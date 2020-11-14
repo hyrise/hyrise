@@ -115,10 +115,12 @@ TEST_F(ExpressionTest, DeepCopy) {
 }
 
 TEST_F(ExpressionTest, DeepCopyDiamondShapeForXXXExpression) {
+
+
   // TODO(Julian) Test for all expression types available
-    // create simple PQP Subquery e.g. (SELECT 9 + 2)
-    // assign it to all operands of expression
-    // deep copy and check for correct consumer counts
+  // create simple PQP Subquery e.g. (SELECT 9 + 2)
+  // assign it to all operands of expression
+  // deep copy and check for correct consumer counts
 }
 
 TEST_F(ExpressionTest, RequiresCalculation) {
