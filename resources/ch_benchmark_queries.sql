@@ -246,8 +246,9 @@ SELECT C_COUNT, COUNT(*) AS CUSTDIST FROM (SELECT C_ID, COUNT(O_ID) FROM CUSTOME
 -- Changes:
 -- (i) Capitalization.
 -- (ii) Converted timestamps to unix timestamps.
+-- (iii) Changed i_data like from 'PR%' to 'pr%'.
 -- 
-SELECT 100.00 * SUM(CASE WHEN I_DATA LIKE 'PR%' THEN OL_AMOUNT ELSE 0 END) / (1+SUM(OL_AMOUNT)) AS PROMO_REVENUE FROM ORDER_LINE, ITEM WHERE OL_I_ID = I_ID AND OL_DELIVERY_D >= 1170288000 AND OL_DELIVERY_D < 1577836800;
+SELECT 100.00 * SUM(CASE WHEN I_DATA LIKE 'pr%' THEN OL_AMOUNT ELSE 0 END) / (1+SUM(OL_AMOUNT)) AS PROMO_REVENUE FROM ORDER_LINE, ITEM WHERE OL_I_ID = I_ID AND OL_DELIVERY_D >= 1170288000 AND OL_DELIVERY_D < 1577836800;
 
 
 -- Query 15
@@ -319,4 +320,154 @@ SELECT I_NAME, SUBSTR(I_DATA, 1, 3) AS BRAND, I_PRICE, COUNT(DISTINCT (S_W_ID * 
 -- Changes:
 -- (i) Capitalization.
 --
-SELECT SUM(OL_AMOUNT) / 2.0 AS AVG_YEARLY FROM ORDER_LINE, (SELECT I_ID, AVG(OL_QUANTITY) AS A FROM ITEM, ORDER_LINE WHERE I_DATA LIKE '%B' AND OL_I_ID = I_ID GROUP BY I_ID) T WHERE OL_I_ID = T.I_ID AND OL_QUANTITY < T.A;
+SELECT SUM(OL_AMOUNT) / 2.0 AS AVG_YEARLY FROM ORDER_LINE, (SELECT I_ID, AVG(OL_QUANTITY) AS A FROM ITEM, ORDER_LINE WHERE I_DATA LIKE '%b' AND OL_I_ID = I_ID GROUP BY I_ID) T WHERE OL_I_ID = T.I_ID AND OL_QUANTITY < T.A;
+
+
+-- Query 18
+-- 
+-- Original:
+--
+-- select c_last, c_id o_id, o_entry_d, o_ol_cnt, sum(ol_amount)
+-- from	 customer, orders, orderline
+-- where c_id = o_c_id
+-- 	 and c_w_id = o_w_id
+-- 	 and c_d_id = o_d_id
+-- 	 and ol_w_id = o_w_id
+-- 	 and ol_d_id = o_d_id
+-- 	 and ol_o_id = o_id
+-- group by o_id, o_w_id, o_d_id, c_id, c_last, o_entry_d, o_ol_cnt
+-- having sum(ol_amount) > 200
+-- order by sum(ol_amount) desc, o_entry_d
+--
+-- Changes:
+-- (i) Capitalization.
+--
+SELECT C_LAST, C_ID O_ID, O_ENTRY_D, O_OL_CNT, SUM(OL_AMOUNT) FROM CUSTOMER, "ORDER", ORDER_LINE WHERE C_ID = O_C_ID AND C_W_ID = O_W_ID AND C_D_ID = O_D_ID AND OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID GROUP BY O_ID, O_W_ID, O_D_ID, C_ID, C_LAST, O_ENTRY_D, O_OL_CNT HAVING SUM(OL_AMOUNT) > 200 ORDER BY SUM(OL_AMOUNT) DESC, O_ENTRY_D;
+
+
+-- Query 19
+-- 
+-- Original:
+--
+-- select	sum(ol_amount) as revenue
+-- from	orderline, item
+-- where	(
+-- 	  ol_i_id = i_id
+--           and i_data like '%a'
+--           and ol_quantity >= 1
+--           and ol_quantity <= 10
+--           and i_price between 1 and 400000
+--           and ol_w_id in (1,2,3)
+-- 	) or (
+-- 	  ol_i_id = i_id
+-- 	  and i_data like '%b'
+-- 	  and ol_quantity >= 1
+-- 	  and ol_quantity <= 10
+-- 	  and i_price between 1 and 400000
+-- 	  and ol_w_id in (1,2,4)
+-- 	) or (
+-- 	  ol_i_id = i_id
+-- 	  and i_data like '%c'
+-- 	  and ol_quantity >= 1
+-- 	  and ol_quantity <= 10
+-- 	  and i_price between 1 and 400000
+-- 	  and ol_w_id in (1,5,3)
+-- 	)
+--
+-- Changes:
+-- (i) Capitalization.
+--
+SELECT SUM(OL_AMOUNT) AS REVENUE FROM ORDER_LINE, ITEM WHERE ( OL_I_ID = I_ID AND I_DATA LIKE '%a' AND OL_QUANTITY >= 1 AND OL_QUANTITY <= 10 AND I_PRICE BETWEEN 1 AND 400000 AND OL_W_ID IN (1,2,3) ) OR ( OL_I_ID = I_ID AND I_DATA LIKE '%b' AND OL_QUANTITY >= 1 AND OL_QUANTITY <= 10 AND I_PRICE BETWEEN 1 AND 400000 AND OL_W_ID IN (1,2,4) ) OR ( OL_I_ID = I_ID AND I_DATA LIKE '%c' AND OL_QUANTITY >= 1 AND OL_QUANTITY <= 10 AND I_PRICE BETWEEN 1 AND 400000 AND OL_W_ID IN (1,5,3) );
+
+
+-- Query 20
+-- 
+-- Original:
+--
+-- select	 su_name, su_address
+-- from	 supplier, nation
+-- where	 su_suppkey in
+-- 		(select  mod(s_i_id * s_w_id, 10000)
+-- 		from     stock, orderline
+-- 		where    s_i_id in
+-- 				(select i_id
+-- 				 from item
+-- 				 where i_data like 'co%')
+-- 			 and ol_i_id=s_i_id
+-- 			 and ol_delivery_d > '2010-05-23 12:00:00'
+-- 		group by s_i_id, s_w_id, s_quantity
+-- 		having   2*s_quantity > sum(ol_quantity))
+-- 	 and su_nationkey = n_nationkey
+-- 	 and n_name = 'Germany'
+-- order by su_name
+--
+-- Changes:
+-- (i) Capitalization.
+-- (ii) Changed n_name filter from 'Germany' to 'GERMANY'
+-- (iii) Removed mod().
+-- (iv) Converted '2007-01-02' to unix timestamp 1274616000.
+--
+-----------------------------------------------------------               Disabled due to empty result (larger scale factors are needed to get the INs yielding results, remove the Germany filter does help; cannot evaluate large scale factors)
+--
+-- SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey IN (SELECT S_I_ID * S_W_ID FROM STOCK, ORDER_LINE WHERE S_I_ID IN (SELECT I_ID FROM ITEM WHERE I_DATA LIKE 'co%') AND OL_I_ID=S_I_ID AND OL_DELIVERY_D > 1274616000 GROUP BY S_I_ID, S_W_ID, S_QUANTITY HAVING 2*S_QUANTITY > SUM(OL_QUANTITY)) AND s_nationkey = n_nationkey AND n_name = 'GERMANY' ORDER BY s_name;
+
+
+-- Query 21
+-- 
+-- Original:
+--
+-- select	 su_name, count(*) as numwait
+-- from	 supplier, orderline l1, orders, stock, nation
+-- where	 ol_o_id = o_id
+-- 	 and ol_w_id = o_w_id
+-- 	 and ol_d_id = o_d_id
+-- 	 and ol_w_id = s_w_id
+-- 	 and ol_i_id = s_i_id
+-- 	 and mod((s_w_id * s_i_id),10000) = su_suppkey
+-- 	 and l1.ol_delivery_d > o_entry_d
+-- 	 and not exists (select *
+-- 			 from	orderline l2
+-- 			 where  l2.ol_o_id = l1.ol_o_id
+-- 				and l2.ol_w_id = l1.ol_w_id
+-- 				and l2.ol_d_id = l1.ol_d_id
+-- 				and l2.ol_delivery_d > l1.ol_delivery_d)
+-- 	 and su_nationkey = n_nationkey
+-- 	 and n_name = 'Germany'
+-- group by su_name
+-- order by numwait desc, su_name
+--
+-- Changes:
+-- (i) Capitalization.
+-- (ii) Using "ORDER" over orders
+-- (iii) Supplier renamings (SU_ > s_)
+--
+-----------------------------------------------------------               Disabled due to long runtime. Large AntiAsNullFalse join with several secondary predicates.
+--
+-- SELECT s_name, COUNT(*) AS NUMWAIT FROM supplier, ORDER_LINE L1, "ORDER", STOCK, nation WHERE OL_O_ID = O_ID AND OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_W_ID = S_W_ID AND OL_I_ID = S_I_ID AND S_W_ID * S_I_ID = s_suppkey AND L1.OL_DELIVERY_D > O_ENTRY_D AND NOT EXISTS (SELECT * FROM ORDER_LINE L2 WHERE L2.OL_O_ID = L1.OL_O_ID AND L2.OL_W_ID = L1.OL_W_ID AND L2.OL_D_ID = L1.OL_D_ID AND L2.OL_DELIVERY_D > L1.OL_DELIVERY_D) AND s_nationkey = n_nationkey AND n_name = 'GERMANY' GROUP BY s_name ORDER BY NUMWAIT DESC, s_name;
+
+
+-- Query 22
+-- 
+-- Original:
+--
+-- select	 substr(c_state,1,1) as country,
+-- 	 count(*) as numcust,
+-- 	 sum(c_balance) as totacctbal
+-- from	 customer
+-- where	 substr(c_phone,1,1) in ('1','2','3','4','5','6','7')
+-- 	 and c_balance > (select avg(c_BALANCE)
+-- 			  from 	 customer
+-- 			  where  c_balance > 0.00
+-- 			 	 and substr(c_phone,1,1) in ('1','2','3','4','5','6','7'))
+-- 	 and not exists (select *
+-- 			 from	orders
+-- 			 where	o_c_id = c_id
+-- 			     	and o_w_id = c_w_id
+-- 			    	and o_d_id = c_d_id)
+-- group by substr(c_state,1,1)
+-- order by substr(c_state,1,1)
+--
+-- Changes:
+-- (i) Capitalization.
+--
+SELECT SUBSTR(C_STATE,1,1) AS COUNTRY, COUNT(*) AS NUMCUST, SUM(C_BALANCE) AS TOTACCTBAL FROM CUSTOMER WHERE SUBSTR(C_PHONE,1,1) IN ('1','2','3','4','5','6','7') AND C_BALANCE > (SELECT AVG(C_BALANCE) FROM CUSTOMER WHERE C_BALANCE > 0.00 AND SUBSTR(C_PHONE,1,1) IN ('1','2','3','4','5','6','7')) AND NOT EXISTS (SELECT * FROM "ORDER" WHERE O_C_ID = C_ID AND O_W_ID = C_W_ID AND O_D_ID = C_D_ID) GROUP BY SUBSTR(C_STATE,1,1) ORDER BY SUBSTR(C_STATE,1,1);
