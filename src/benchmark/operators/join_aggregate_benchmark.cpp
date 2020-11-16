@@ -176,8 +176,6 @@ void BM_Join_Aggregate(benchmark::State& state) {
   }
 }
 
-// Note: the generated data does not explicitly set a possible clustering of the table (cf.
-// table->value_clustered_by()), which is exploited by the sort-based aggregate.
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
