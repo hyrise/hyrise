@@ -9,6 +9,7 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "operators/get_table.hpp"
+#include "operators/union_positions.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
@@ -27,28 +28,30 @@ class PQPSubqueryExpressionTest : public BaseTest {
     _a = PQPColumnExpression::from_table(*_table, "a");
     _b = PQPColumnExpression::from_table(*_table, "b");
 
-    // Build a PQP WITHOUT PARAMETERS
-    const auto get_table1 = std::make_shared<GetTable>("int_float");
+    // Create PQPSubqueryExpression
+    //  Build a PQP WITHOUT PARAMETERS
+    const auto get_table1 = std::make_shared<GetTable>(_table_name);
     _pqp = std::make_shared<TableScan>(get_table1, greater_than_(_a, 5));
 
-    // Build a PQP with ONE PARAMETER returning a SINGLE NON-NULLABLE VALUE
-    // (1) GetTable
-    const auto get_table2 = std::make_shared<GetTable>("int_float");
-    // (2) Projection: a + ?
+    _pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(_pqp);
+
+    // Create PQPSubqueryExpression with Parameter
+    //  Build a PQP with ONE PARAMETER returning a SINGLE NON-NULLABLE VALUE
+    //  (1) GetTable
+    const auto get_table2 = std::make_shared<GetTable>(_table_name);
+    //  (2) Projection: a + ?
     const auto parameter0 = placeholder_(ParameterID{0});
     const auto projection = std::make_shared<Projection>(get_table2, expression_vector(add_(_a, parameter0)));
-    // (3) Limit
+    //  (3) Limit
     _pqp_with_param = std::make_shared<Limit>(projection, value_(1));
-
-    // Create PQPSubqueryExpression
-    _pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(_pqp);
-    // Create PQPSubqueryExpression with Parameter
     _parameters = {std::make_pair(ParameterID{2}, ColumnID{3})};
+
     _pqp_subquery_expression_with_param =
         std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, _parameters);
   }
 
  protected:
+  std::string _table_name = "int_float";
   std::shared_ptr<Table> _table;
   std::shared_ptr<PQPColumnExpression> _a, _b;
 
@@ -77,6 +80,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
 }
 
 TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
+  // With Parameter
   const auto _pqp_subquery_expression_with_param_copy =
       std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression_with_param->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_with_param_copy);
@@ -87,6 +91,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   EXPECT_NE(_pqp_subquery_expression_with_param_copy->pqp, _pqp_subquery_expression_with_param->pqp);
   EXPECT_EQ(_pqp_subquery_expression_with_param_copy->pqp->type(), OperatorType::Limit);
 
+  // Without Parameter
   const auto _pqp_subquery_expression_copy = std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_copy);
 
@@ -95,17 +100,21 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   EXPECT_EQ(_pqp_subquery_expression_copy->pqp->type(), OperatorType::TableScan);
 }
 
-TEST_F(PQPSubqueryExpressionTest, DeepCopyDiamondShape) {
-//  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-//  scan_a->execute();
-//
-//  auto scan_b = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
-//  auto scan_c = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
-//  auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
-//
-//  auto copied_pqp = union_positions->deep_copy();
-//
-//  EXPECT_EQ(copied_pqp->left_input()->left_input(), copied_pqp->right_input()->left_input());
+TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesSubplanReuse) {
+  // Prepare DIAMOND-SHAPED PQP
+  auto get_table = std::make_shared<GetTable>(_table_name);
+  auto scan_a = std::make_shared<TableScan>(get_table, greater_than_(_a, 5));
+  auto scan_b = std::make_shared<TableScan>(get_table, greater_than_(_b, 10));
+  auto union_positions = std::make_shared<UnionPositions>(scan_a, scan_b);
+  auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(union_positions);
+  ASSERT_EQ(get_table->consumer_count(), 2);
+
+  const auto copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>
+      (pqp_subquery_expression->deep_copy());
+  const auto copied_pqp = copied_pqp_subquery_expression->pqp;
+
+  EXPECT_NE(pqp_subquery_expression->pqp, copied_pqp);
+  EXPECT_EQ(get_table->consumer_count(), copied_pqp->left_input()->left_input()->consumer_count());
 }
 
 TEST_F(PQPSubqueryExpressionTest, RequiresCalculation) {
