@@ -20,7 +20,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
+  Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
