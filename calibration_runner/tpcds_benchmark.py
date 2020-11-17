@@ -8,7 +8,8 @@ class TPCDSBenchmark(AbstractBenchmark):
     return "*-*QP.svg"
 
   def exec_path(self):
-    return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
+    #return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
+    return "build-release/hyriseCalibration"
 
   def result_path(self):
     return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpcds/sf10-3d-corrected"
@@ -17,16 +18,22 @@ class TPCDSBenchmark(AbstractBenchmark):
     return 500
 
   def max_runs(self):
-    return 20
+    return 100
 
   def scale(self):
-    return 10
+    return 1
 
   def chunk_sizes(self):
     #return [25000, 100000]
     return [65535]
 
   def sort_orders(self):
+
+    return {
+      'ss_ticket_number-2': {
+        'store_sales': [['ss_ticket_number', 2]]
+      }
+    }
 
     # final store sales top 20 3d replacements
     return {

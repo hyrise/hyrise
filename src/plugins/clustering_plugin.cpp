@@ -405,7 +405,7 @@ void ClusteringPlugin::start() {
 
   _clustering_algo->run();
 
-  if (_clustering_config.size() > 0) {
+  if (_clustering_config.size() > 0 && false) {
     std::vector<std::string> step_names = {"partition", "merge", "sort"};
     for (size_t step = 0; step < step_names.size(); step++) {
       const auto total = _executed_updates[step];
