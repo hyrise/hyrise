@@ -154,7 +154,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     auto perform_projection_evaluation = [
       this,
       chunk_id,
-      uncorrelated_subquery_results,
+      &uncorrelated_subquery_results,
       expression_size,
       &output_segments_by_chunk,
       &column_is_nullable_by_chunk
@@ -176,11 +176,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
           }
         }
     };
-    // It is checked if the job should be executed in parallel. If so it will be pushed to the task vector
-    // if not it will be executed right away.
-    // The upper bound of the chunk size which defines if it will be executed in parallel or not
+    // It is checked if the job should be executed in parallel. If not, it will be executed right away.
+    // The upper bound of the chunk size,  which defines if it will be executed in parallel or not,
     // still needs to be re-evaluated over time to find the value which gives the best performance.
-    if (ChunkOffset{500} < input_chunk->size()) {
+    constexpr auto job_spawn_threshold = ChunkOffset{0};
+    if (job_spawn_threshold < input_chunk->size()) {
           auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
           jobs.push_back(job_task);
     } else {
