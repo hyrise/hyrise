@@ -948,14 +948,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
-        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-            _mode == JoinMode::Inner) {
-          output_chunk->finalize();
-          // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-          output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                                    SortColumnDefinition(right_join_column, SortMode::Ascending)});
+        output_chunk->finalize();
+        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+          if (_mode == JoinMode::Inner) {
+            // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+            output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                                      SortColumnDefinition(right_join_column, SortMode::Ascending)});
+          } else if (_mode == JoinMode::Left) {
+            output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending)});
+          } else if (_mode == JoinMode::Right) {
+            output_chunk->set_individually_sorted_by({SortColumnDefinition(right_join_column, SortMode::Ascending)});
+          }
         }
         output_chunks[pos_list_id] = output_chunk;
+
       };
 
       if (write_output_concurrently) {
@@ -979,11 +985,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         output_chunks.end());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+    if (_mode != JoinMode::FullOuter &&
         _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
-      // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
-      // non-equal predicates.
-      result_table->set_value_clustered_by({left_join_column, right_join_column});
+      if (_mode == JoinMode::Left) {
+        result_table->set_value_clustered_by({left_join_column});
+      } else if (_mode == JoinMode::Right) {
+        result_table->set_value_clustered_by({right_join_column});
+      } else {
+        // Sorting is not given for non-equal predicates.
+        result_table->set_value_clustered_by({left_join_column, right_join_column});
+      }
     }
 
     return result_table;

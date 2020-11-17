@@ -34,6 +34,7 @@
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_sort.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/delete.hpp"
@@ -354,6 +355,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (join_operator) return;
 
+    if (join_node->join_mode == JoinMode::Left) {
+      std::cout << "a" << std::endl;
+      join_operator = std::make_shared<JoinSortMerge>(left_input_operator, right_input_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates));
+      return;
+    }
+
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
@@ -401,7 +409,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
+  return std::make_shared<AggregateSort>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
+
+  // return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
