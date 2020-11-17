@@ -101,7 +101,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
-    auto job_task = std::make_shared<JobTask>([this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
+    auto table_scan = [this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
@@ -189,9 +189,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
       std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(chunk);
-    });
+    };
 
-    jobs.push_back(job_task);
+    if (ChunkOffset{500} < chunk_in->size()) {
+          auto job_task = std::make_shared<JobTask>(table_scan);
+          jobs.push_back(job_task);
+    } else {
+      table_scan();
+    }
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
