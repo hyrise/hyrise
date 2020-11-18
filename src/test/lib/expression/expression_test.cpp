@@ -10,8 +10,8 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/projection.hpp"
 #include "operators/get_table.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
@@ -131,13 +131,19 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
   auto projection_int1 = std::make_shared<Projection>(union_positions, expression_vector(pqp_column_a));
   auto projection_int2 = std::make_shared<Projection>(union_positions, expression_vector(pqp_column_a));
   auto projection_int3 = std::make_shared<Projection>(union_positions, expression_vector(pqp_column_a));
-  auto projection_string = std::make_shared<Projection>(union_positions,
-                                                  expression_vector(cast_(pqp_column_a,DataType::String)));
-  auto pqp_subquery_expression_int1 = std::make_shared<PQPSubqueryExpression>(projection_int1);
-  auto pqp_subquery_expression_int2 = std::make_shared<PQPSubqueryExpression>(projection_int2);
-  auto pqp_subquery_expression_int3 = std::make_shared<PQPSubqueryExpression>(projection_int3);
-  auto pqp_subquery_expression_string = std::make_shared<PQPSubqueryExpression>(projection_string);
+  auto projection_string =
+      std::make_shared<Projection>(union_positions, expression_vector(cast_(pqp_column_a, DataType::String)));
+  auto pqp_subquery_expression_int1 = std::make_shared<PQPSubqueryExpression>(projection_int1, DataType::Int, false,
+                                                                              PQPSubqueryExpression::Parameters{});
+  auto pqp_subquery_expression_int2 = std::make_shared<PQPSubqueryExpression>(projection_int2, DataType::Int, false,
+                                                                              PQPSubqueryExpression::Parameters{});
+  auto pqp_subquery_expression_int3 = std::make_shared<PQPSubqueryExpression>(projection_int3, DataType::Int, false,
+                                                                              PQPSubqueryExpression::Parameters{});
+  auto pqp_subquery_expression_string = std::make_shared<PQPSubqueryExpression>(
+      projection_string, DataType::String, false, PQPSubqueryExpression::Parameters{});
 
+  // We are going to check whether the following property survives deep_copy(). We do not want to see duplicated
+  // operators in copied PQPs.
   ASSERT_EQ(table_wrapper->consumer_count(), 2);
 
   // Prepare expressions for testing
@@ -149,8 +155,8 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
   // Cast Expression
   expressions.emplace_back(cast_(pqp_subquery_expression_int1, DataType::String));
   // Case Expression
-  expressions.emplace_back(case_(pqp_subquery_expression_int1, pqp_subquery_expression_int2,
-                                 pqp_subquery_expression_int3));
+  expressions.emplace_back(
+      case_(pqp_subquery_expression_int1, pqp_subquery_expression_int2, pqp_subquery_expression_int3));
   // CorrelatedParameter Expression:  [never contains PQPSubqueryExpression]
   // PQPColumn Expression:            [never contains PQPSubqueryExpression]
   // LQPColumn Expression:            [never contains PQPSubqueryExpression]
@@ -161,8 +167,8 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
   // Function Expression
   expressions.emplace_back(substr_(pqp_subquery_expression_string, 0, 1));
   // List Expression
-  expressions.emplace_back(list_(pqp_subquery_expression_int1, pqp_subquery_expression_int2,
-                                   pqp_subquery_expression_int3));
+  expressions.emplace_back(
+      list_(pqp_subquery_expression_int1, pqp_subquery_expression_int2, pqp_subquery_expression_int3));
   // Logical Expression
   expressions.emplace_back(and_(pqp_subquery_expression_int1, pqp_subquery_expression_int2));
   // Placeholder Expression           [never contains PQPSubqueryExpression]
@@ -170,8 +176,8 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
   // - InExpression
   expressions.emplace_back(in_(pqp_subquery_expression_int1, pqp_subquery_expression_int2));
   // - BetweenExpression
-  expressions.emplace_back(between_inclusive_(pqp_subquery_expression_int1, pqp_subquery_expression_int2,
-                                              pqp_subquery_expression_int3));
+  expressions.emplace_back(
+      between_inclusive_(pqp_subquery_expression_int1, pqp_subquery_expression_int2, pqp_subquery_expression_int3));
   // - BinaryPredicateExpression
   expressions.emplace_back(greater_than_(pqp_subquery_expression_int1, pqp_subquery_expression_int2));
   // - IsNullExpression
@@ -184,13 +190,14 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
 
   for (const auto& expression : expressions) {
     auto copied_expression = expression->deep_copy();
-    
+
     const auto& arguments = expression->arguments;
     const auto& copied_arguments = copied_expression->arguments;
     ASSERT_EQ(arguments.size(), copied_arguments.size());
-    
+
     for (const auto& copied_argument : copied_arguments) {
       const auto& copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_argument);
+      if(!copied_pqp_subquery_expression) continue;
 
       // Check for TableWrapper / subplan reuse
       const auto& copied_table_wrapper = copied_pqp_subquery_expression->pqp->left_input()->left_input()->left_input();

@@ -9,10 +9,10 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "operators/get_table.hpp"
-#include "operators/union_positions.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_positions.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -92,7 +92,8 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   EXPECT_EQ(_pqp_subquery_expression_with_param_copy->pqp->type(), OperatorType::Limit);
 
   // Without Parameter
-  const auto _pqp_subquery_expression_copy = std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
+  const auto _pqp_subquery_expression_copy =
+      std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_copy);
 
   ASSERT_EQ(_pqp_subquery_expression_copy->parameters.size(), 0u);
@@ -109,8 +110,8 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesSubplanReuse) {
   auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(union_positions);
   ASSERT_EQ(get_table->consumer_count(), 2);
 
-  const auto copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>
-      (pqp_subquery_expression->deep_copy());
+  const auto copied_pqp_subquery_expression =
+      std::dynamic_pointer_cast<PQPSubqueryExpression>(pqp_subquery_expression->deep_copy());
   const auto copied_pqp = copied_pqp_subquery_expression->pqp;
 
   EXPECT_NE(pqp_subquery_expression->pqp, copied_pqp);
@@ -137,7 +138,8 @@ TEST_F(PQPSubqueryExpressionTest, IsNullable) {
 }
 
 TEST_F(PQPSubqueryExpressionTest, AsColumnName) {
-  EXPECT_TRUE(std::regex_search(_pqp_subquery_expression->as_column_name(), std::regex{"SUBQUERY \\(PQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(
+      std::regex_search(_pqp_subquery_expression->as_column_name(), std::regex{"SUBQUERY \\(PQP, 0x[0-9a-f]+\\)"}));
   EXPECT_TRUE(std::regex_search(_pqp_subquery_expression_with_param->as_column_name(),
                                 std::regex{"SUBQUERY \\(PQP, 0x[0-9a-f]+\\)"}));
 }
