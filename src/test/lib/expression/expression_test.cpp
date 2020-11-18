@@ -190,18 +190,28 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
 
   for (const auto& expression : expressions) {
     auto copied_expression = expression->deep_copy();
-
-    const auto& arguments = expression->arguments;
     const auto& copied_arguments = copied_expression->arguments;
-    ASSERT_EQ(arguments.size(), copied_arguments.size());
+    ASSERT_EQ(expression->arguments.size(), copied_arguments.size());
 
-    for (const auto& copied_argument : copied_arguments) {
-      const auto& copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_argument);
+    auto pqp_subquery_expression_count = size_t{0};
+    for (auto argument_idx = size_t{0}; argument_idx < copied_arguments.size(); ++argument_idx) {
+      const auto& copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_arguments.at
+                                                                                                    (argument_idx));
+      // Skip e.g. ValueExpressions
       if(!copied_pqp_subquery_expression) continue;
 
-      // Check for TableWrapper / subplan reuse
-      const auto& copied_table_wrapper = copied_pqp_subquery_expression->pqp->left_input()->left_input()->left_input();
+      // (1) Check for TableWrapper / subplan reuse inside a PQPSubqueryExpression
+      const auto& copied_projection = copied_pqp_subquery_expression->pqp;
+      const auto& copied_union_positions = copied_projection->left_input();
+      const auto& copied_scan_less_than = copied_union_positions->left_input();
+      const auto& copied_table_wrapper = copied_scan_less_than->left_input();
       EXPECT_EQ(table_wrapper->consumer_count(), copied_table_wrapper->consumer_count());
+
+      // (2) Bonus: Check for reuse of UnionPositions among multiple PQPSubqueryExpressions
+      pqp_subquery_expression_count++;
+      if (argument_idx == (copied_arguments.size() - 1)) {
+        EXPECT_EQ(copied_union_positions->consumer_count(), pqp_subquery_expression_count);
+      }
     }
   }
 }
