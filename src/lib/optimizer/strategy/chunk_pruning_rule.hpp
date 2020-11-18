@@ -30,6 +30,8 @@ class ChunkPruningRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
+  bool prevents_caching() const override;
+
  protected:
   static std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
                                                  const std::shared_ptr<StoredTableNode>& stored_table_node);

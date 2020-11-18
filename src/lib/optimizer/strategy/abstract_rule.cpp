@@ -14,4 +14,6 @@ void AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const
   if (node->right_input()) apply_to(node->right_input());
 }
 
+bool AbstractRule::prevents_caching() const { return false; }
+
 }  // namespace opossum

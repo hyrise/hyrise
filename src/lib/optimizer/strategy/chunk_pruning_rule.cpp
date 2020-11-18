@@ -22,6 +22,9 @@
 
 namespace opossum {
 
+// Chunk pruning may render the LQP non-cacheable.
+bool ChunkPruningRule::prevents_caching() const { return true; }
+
 void ChunkPruningRule::_recurse_on_inputs(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>& predicates_for_table_nodes,

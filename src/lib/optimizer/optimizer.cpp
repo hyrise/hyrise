@@ -188,7 +188,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   for (const auto& rule : _rules) {
     Timer rule_timer{};
 
-    if (!rule->cacheable) {
+    if (rule->prevents_caching()) {
       const auto previous_plan = root_node->deep_copy();
       _apply_rule(*rule, root_node);
 

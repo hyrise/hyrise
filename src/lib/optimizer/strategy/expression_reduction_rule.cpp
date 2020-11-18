@@ -17,10 +17,8 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-ExpressionReductionRule::ExpressionReductionRule() {
-  // Reducing expressions renders the LQP non-cacheable.
-  cacheable = false;
-}
+// Reducing expressions renders the LQP non-cacheable.
+bool ExpressionReductionRule::prevents_caching() const { return true; }
 
 void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");

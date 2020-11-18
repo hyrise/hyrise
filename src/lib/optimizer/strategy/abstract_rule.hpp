@@ -22,7 +22,7 @@ class AbstractRule {
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
-  bool cacheable = true;
+  virtual bool prevents_caching() const;
 
  protected:
   /**

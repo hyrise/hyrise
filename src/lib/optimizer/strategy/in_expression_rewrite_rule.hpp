@@ -18,13 +18,14 @@ class PredicateNode;
 
 class InExpressionRewriteRule : public AbstractRule {
  public:
-  InExpressionRewriteRule();
   // With the auto strategy, IN expressions with up to MAX_ELEMENTS_FOR_DISJUNCTION on the right side are rewritten
   // into disjunctive predicates. This value was chosen conservatively, also to keep the LQPs easy to read.
   constexpr static auto MAX_ELEMENTS_FOR_DISJUNCTION = 3;
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
+
+  bool prevents_caching() const override;
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
