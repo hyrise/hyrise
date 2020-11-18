@@ -148,7 +148,7 @@ void AbstractOperator::execute() {
             if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
               // If segment is nullable, the column must be nullable as well
               Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
-                     "Nullable segment found in non-nullable column");
+                     std::string{"Nullable segment found in non-nullable column "} + _output->column_name(column_id));
             }
           });
         }

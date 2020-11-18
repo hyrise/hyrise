@@ -1,0 +1,29 @@
+{
+    "columns": [
+        {
+            "name": "r_regionkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "r_name",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "r_comment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}
