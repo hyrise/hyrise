@@ -120,7 +120,7 @@ TEST_F(ExpressionTest, DeepCopy) {
   EXPECT_NE(*parameter_a, *parameter_b);
 }
 
-TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
+TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
   // Prepare DIAMOND-SHAPED PQPs / PQPSubqueryExpressions
   auto pqp_column_a = PQPColumnExpression::from_table(*table_int_float, "a");
   auto table_wrapper = std::make_shared<TableWrapper>(table_int_float);
@@ -195,10 +195,10 @@ TEST_F(ExpressionTest, DeepCopyPreservesPQPSubplanReuse) {
 
     auto pqp_subquery_expression_count = size_t{0};
     for (auto argument_idx = size_t{0}; argument_idx < copied_arguments.size(); ++argument_idx) {
-      const auto& copied_pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_arguments.at
-                                                                                                    (argument_idx));
+      const auto& copied_pqp_subquery_expression =
+          std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_arguments.at(argument_idx));
       // Skip e.g. ValueExpressions
-      if(!copied_pqp_subquery_expression) continue;
+      if (!copied_pqp_subquery_expression) continue;
 
       // (1) Check for TableWrapper / subplan reuse inside a PQPSubqueryExpression
       const auto& copied_projection = copied_pqp_subquery_expression->pqp;
