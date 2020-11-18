@@ -57,11 +57,6 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   bool operator!=(const AbstractExpression& other) const;
 
   /**
-   * Set if expression was already replaced when caching to avoid double replacement
-   */
-  std::shared_ptr<AbstractExpression> replaced_by;
-
-  /**
    * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
    * temporary columns with their result in them
    */

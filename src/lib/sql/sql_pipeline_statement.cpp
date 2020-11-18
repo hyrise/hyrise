@@ -9,7 +9,7 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/typed_placeholder_expression.hpp"
+#include "expression/placeholder_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -115,18 +115,13 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
                                                            std::vector<std::shared_ptr<AbstractExpression>>& values) {
   if (expression->type == ExpressionType::Value) {
     const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
-    if (expression->replaced_by) {
-      expression = expression->replaced_by;
-    } else {
-      if (value_expression->data_type() != DataType::Null) {
-        Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
-        Assert(value_expression->value_expression_id, "ValueExpression has no ValueExpressionID.");
-        values.push_back(expression);
-        auto parameter_id = static_cast<ParameterID>(*value_expression->value_expression_id);
-        auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
-        expression->replaced_by = new_expression;
-        expression = new_expression;
-      }
+    if (value_expression->data_type() != DataType::Null) {
+      Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
+      Assert(value_expression->value_expression_id, "ValueExpression has no ValueExpressionID.");
+      values.push_back(expression);
+      auto parameter_id = static_cast<ParameterID>(*value_expression->value_expression_id);
+      auto new_expression = std::make_shared<PlaceholderExpression>(parameter_id, expression->data_type());
+      expression = new_expression;
     }
   }
 }

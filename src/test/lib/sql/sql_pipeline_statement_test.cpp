@@ -784,10 +784,12 @@ TEST_F(SQLPipelineStatementTest, ParameterExtraction) {
   const auto cache_key = statement->split_logical_plan(unoptimized_lqp, extracted_values);
 
   EXPECT_EQ(extracted_values.size(), 2);
-  auto value_1 = std::static_pointer_cast<ValueExpression>(extracted_values.at(0))->value;
-  auto value_2 = std::static_pointer_cast<ValueExpression>(extracted_values.at(1))->value;
-  EXPECT_EQ(boost::get<int32_t>(value_1), 1000);
-  EXPECT_EQ(boost::get<int32_t>(value_2), 458);
+  auto value_expression_1 = std::static_pointer_cast<ValueExpression>(extracted_values.at(0));
+  auto value_expression_2 = std::static_pointer_cast<ValueExpression>(extracted_values.at(1));
+  EXPECT_EQ(boost::get<int32_t>(value_expression_1->value), 1000);
+  EXPECT_EQ(boost::get<int32_t>(value_expression_2->value), 458);
+  EXPECT_EQ(*(value_expression_1->value_expression_id), 0);
+  EXPECT_EQ(*(value_expression_2->value_expression_id), 1);
 }
 
 }  // namespace opossum
