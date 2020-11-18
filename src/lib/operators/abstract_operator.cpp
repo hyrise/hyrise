@@ -38,9 +38,11 @@ AbstractOperator::~AbstractOperator() {
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
     bool aborted = transaction_context ? transaction_context->aborted() : false;
 
-    // Hack: The condition _consumer_count == 0 is useful for some tests that create operators, but do not execute
-    //       them. We do not want to force tests to call execute() on operators when their only purpose is to test the
-    //       output of, for example, the description() function.
+    /**
+     * Hack: The condition _consumer_count == 0 is useful for some tests that create operators, but do not execute
+     *       them. We do not want to force tests to call execute() on operators when their only purpose is to test the
+     *       output of, for example, the description() function.
+     */
     Assert(this->performance_data->executed || aborted || !left_has_executed || !right_has_executed ||
                _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
@@ -165,9 +167,7 @@ void AbstractOperator::clear_output() {
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const {
-  std::ostringstream stream;
-  stream << name();
-  return stream.str();
+  return name();
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
@@ -196,7 +196,6 @@ size_t AbstractOperator::consumer_count() const { return _consumer_count.load();
 
 void AbstractOperator::register_consumer() {
   _consumer_count++;
-  _consumer_count_max++;
 }
 
 void AbstractOperator::deregister_consumer() {
@@ -260,7 +259,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
   };
 
   const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
-    fn_stream << op->description() << "\n Pointer: " << op;
+    fn_stream << op->description() << op;
 
     // If the operator was already executed, print some info about data and performance
     const auto output = op->get_output();

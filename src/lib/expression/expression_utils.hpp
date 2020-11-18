@@ -40,7 +40,7 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions
- * // TODO comment on arg
+ * Uses @param copied_ops to deduplicate subplans.
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,

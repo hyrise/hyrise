@@ -97,11 +97,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Calls set_transaction_context on itself and both input operators recursively
   void set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context);
 
-  // Returns a new instance of the same operator with the same configuration.
-  // Recursively copies the input operators.
-  // An operator needs to implement this method in order to be cacheable.
-  // TODO(Julian) comment about arg
-  // // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
+  /**
+   * Returns a new instance of the same operator with the same configuration.
+   * Recursively copies the input operators. An operator needs to implement this method in order to be cacheable.
+   * Uses @param copied_ops to deduplicate subplans.
+   */
   std::shared_ptr<AbstractOperator> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops =
           *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>()) const;
@@ -172,7 +172,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // We track the number of consuming operators to determine when to flush results.
   std::atomic<u_short> _consumer_count = 0;
-  std::atomic<u_short> _consumer_count_max = 0;  // for debugging only
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;
