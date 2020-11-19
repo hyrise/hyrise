@@ -79,10 +79,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
 
-  // returns the result of the operator
+  // Returns the result of the operator
   const std::shared_ptr<const Table> get_output() const;
 
-  // clears the output of this operator to free up space
+  // Clears this operator's results to free up space, unless never_clear_output() has been called.
   void clear_output();
 
   virtual const std::string& name() const = 0;
@@ -119,13 +119,18 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> left_input_table() const;
   std::shared_ptr<const Table> right_input_table() const;
 
-  // Consumer tracking
+  // Returns the current count of operators that registered themselves for output consumption
   size_t consumer_count() const;
+
+  // Increases the count of consuming operators by one.
   void register_consumer();
+
+  // Decreases the count of consuming operators by one. If the counter reaches zero, _clear_ouput() is called.
   void deregister_consumer();
 
-  // Disables the auto-clearing of operator results due to consumer count changes.
-  // We introduced this function for some tests that reuse operator results in e.g. for-loops over and over again.
+  // Disables the automatic and manual clearing of operator results.
+  // This function was introduced for several tests that reuse operator results, in e.g. for-loops, and ran into
+  // conflicts with auto-cleared operator results.
   void never_clear_output();
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values

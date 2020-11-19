@@ -135,8 +135,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-    table_wrapper->execute();
     table_wrapper->never_clear_output();
+    table_wrapper->execute();
 
     return table_wrapper;
   }
@@ -157,8 +157,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
-    table_wrapper->execute();
     table_wrapper->never_clear_output();
+    table_wrapper->execute();
 
     return table_wrapper;
   }

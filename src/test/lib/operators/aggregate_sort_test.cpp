@@ -78,6 +78,7 @@ class AggregateSortTest : public BaseTest {
     table_1->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
     table_1->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
     _table_wrapper_1 = std::make_shared<TableWrapper>(table_1);
+    _table_wrapper_1->never_clear_output();
     _table_wrapper_1->execute();
 
     const auto table_2 =
@@ -92,11 +93,8 @@ class AggregateSortTest : public BaseTest {
                                       SortColumnDefinition(ColumnID{1}, SortMode::Descending),
                                       SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
-    _table_wrapper_multi_columns->execute();
-
-    // Prevent auto-clearing of both operators' output
-    _table_wrapper_1->never_clear_output();
     _table_wrapper_multi_columns->never_clear_output();
+    _table_wrapper_multi_columns->execute();
   }
 
  protected:

@@ -25,14 +25,14 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
-  // Register as a consumer for subquery PQPs
+
+  // Register as a consumer for PQPs of uncorrelated subqueries. We might be able to share results with other subplans.
+  // Correlated subqueries contain templated PQPs which are ambiguous. They have to be copied and parameterized
+  // before execution. Thus, it does not make sense to register as a consumer for those.
   for (auto& expression : expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
       if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
-        // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
-        // Correlated subqueries are more difficult because they lead to multiple PQPs. We cannot easily share results and
-        // thus, do not register as a consumer.
         pqp_subquery_expression->pqp->register_consumer();
         return ExpressionVisitation::DoNotVisitArguments;
       }
@@ -50,7 +50,7 @@ std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  // TODO comment on copied_ops subplan reuse
+  // Passing copied_ops is essential to allow for global subplan deduplication, including subqueries.
   return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions, copied_ops));
 }
 

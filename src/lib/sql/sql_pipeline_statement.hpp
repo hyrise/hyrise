@@ -89,8 +89,8 @@ class SQLPipelineStatement : public Noncopyable {
   //   - {Success, table}       if the statement was successful and returned a table
   //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
   //   - {Failure, nullptr}     if the transaction failed
-  // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
+  // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
   // transaction into account.
   std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table();
 

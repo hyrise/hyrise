@@ -53,7 +53,6 @@ class OperatorsJoinIndexTest : public BaseTest {
     _table_wrapper_i->never_clear_output();
     _table_wrapper_i_no_index->never_clear_output();
 
-    // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
     _table_wrapper_c->execute();

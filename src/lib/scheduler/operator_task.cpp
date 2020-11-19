@@ -9,7 +9,6 @@
 
 #include "scheduler/job_task.hpp"
 #include "scheduler/worker.hpp"
-#include "utils/timer.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
@@ -31,7 +30,7 @@ std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operato
 std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
     std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
-  // Early out: Maybe there are already results from previous tasks, so we do not have to re-run the operator.
+  // Early out: We do not want to re-run operators, if they have been executed by previous tasks.
   if (op->performance_data->executed) return nullptr;
 
   const auto task_by_op_it = task_by_op.find(op);
@@ -63,7 +62,6 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
 
 void OperatorTask::_on_execute() {
-  Timer performance_timer;
   auto context = _op->transaction_context();
   if (context) {
     switch (context->phase()) {

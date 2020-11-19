@@ -16,9 +16,9 @@ class AbstractRule {
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
-   * The optimizer will pass the immutable LogicalPlanRootNode (@param root_node) to this function.
+   * The optimizer will pass the immutable LogicalPlanRootNode (@param lqp_root) to this function.
    */
-  virtual void apply(const std::shared_ptr<AbstractLQPNode>& root_node) const;
+  virtual void apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const;
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 

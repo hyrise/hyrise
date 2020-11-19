@@ -162,9 +162,8 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
-  validate->never_clear_output();
   validate->set_transaction_context(tx_context_verification);
-
+  validate->never_clear_output();
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), gt_post_delete->get_output());

@@ -21,11 +21,11 @@ class OperatorsDifferenceTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
     _table_wrapper_a->never_clear_output();
-    _table_wrapper_b->never_clear_output();
-
     _table_wrapper_a->execute();
+
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
+    _table_wrapper_b->never_clear_output();
     _table_wrapper_b->execute();
   }
 

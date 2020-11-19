@@ -59,6 +59,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _int_int = std::make_shared<TableWrapper>(std::move(int_int_7));
     _int_int->never_clear_output();
     _int_int->execute();
+
     _int_int_small_chunk = std::make_shared<TableWrapper>(std::move(int_int_5));
     _int_int_small_chunk->never_clear_output();
     _int_int_small_chunk->execute();

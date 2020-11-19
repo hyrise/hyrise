@@ -24,23 +24,22 @@ namespace opossum {
  * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
  * !!!
  */
-void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& root_node) const {
+void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // (1) Optimize root LQP
-  _apply_to(root_node);
+  _apply_to(lqp_root);
 
   // (2) Optimize distinct subquery LQPs, one-by-one.
   auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node);
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, lqp_root);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     // (2.1) Prepare
-    const auto local_root_node = LogicalPlanRootNode::make(lqp);
+    const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
     // (2.2) Optimize subquery LQP
-    _apply_to(local_root_node);
+    _apply_to(local_lqp_root);
     // (2.3) Assign optimized LQP to all corresponding SubqueryExpressions
     for (const auto& subquery_expression : subquery_expressions) {
-      subquery_expression->lqp = local_root_node->left_input();
+      subquery_expression->lqp = local_lqp_root->left_input();
     }
-    local_root_node->set_left_input(nullptr);  // TODO remove?
   }
 }
 
