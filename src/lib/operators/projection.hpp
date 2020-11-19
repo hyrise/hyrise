@@ -15,6 +15,8 @@
 
 namespace opossum {
 
+class PQPSubqueryExpression;
+
 /**
  * Operator to evaluate Expressions (except for AggregateExpressions)
  */
@@ -61,6 +63,8 @@ class Projection : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
+
+  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 };
 
 }  // namespace opossum

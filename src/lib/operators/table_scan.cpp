@@ -44,6 +44,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
+
   // Register as a consumer for all PQPSubqueryExpressions
   for (auto& expression : _predicate->arguments) {
     visit_expression(expression, [&](const auto& sub_expression) {
@@ -53,6 +54,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
         // Correlated subqueries are more difficult because they lead to multiple PQPs. We cannot easily share results and
         // thus, do not register as a consumer.
         pqp_subquery_expression->pqp->register_consumer();
+        _uncorrelated_subquery_expressions.push_back(pqp_subquery_expression);
         return ExpressionVisitation::DoNotVisitArguments;
       }
       return ExpressionVisitation::VisitArguments;
@@ -233,7 +235,9 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     return predicate;
   }
 
-  auto predicate_with_subquery_results = predicate->deep_copy();
+  // ToDo(Julian) Discuss: We do not want to deep copy any PQPs, because they become irrelevant after this function.
+  // Instead, we could (1) materialize the uncorrelated subqueries and (2) manually create a new predicate from it.
+  auto predicate_with_materialized_subquery_results = predicate->deep_copy();
   auto arguments_count = predicate->arguments.size();
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
@@ -248,13 +252,13 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    predicate_with_subquery_results->arguments.at(argument_idx) =
+    predicate_with_materialized_subquery_results->arguments.at(argument_idx) =
         std::make_shared<ValueExpression>(std::move(subquery_result));
-    // Deregister, because we already captured the result and no longer need the subquery.
+    // Deregister, because we obtained the subquery result and no longer need its PQP.
     subquery->pqp->deregister_consumer();
   }
 
-  return predicate_with_subquery_results;
+  return predicate_with_materialized_subquery_results;
 }
 
 std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
@@ -393,8 +397,15 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate);
+  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
+  const auto& uncorrelated_subquery_results =
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
+  // Deregister, because we obtained the results and no longer need the subqueries' PQPs.
+  for (auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+    pqp_subquery_expression->pqp->deregister_consumer();
+  }
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
+                                                            uncorrelated_subquery_results);
 }
 
 void TableScan::_on_cleanup() { _impl.reset(); }

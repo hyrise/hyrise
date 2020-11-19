@@ -74,7 +74,7 @@ class ExpressionEvaluator final {
 
   // Utility to populate a cache of UncorrelatedSubqueryResults
   static std::shared_ptr<UncorrelatedSubqueryResults> populate_uncorrelated_subquery_results_cache(
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+      const std::vector<std::shared_ptr<PQPSubqueryExpression>>& expressions);
 
  private:
   template <typename Result>

@@ -937,22 +937,15 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
 std::shared_ptr<ExpressionEvaluator::UncorrelatedSubqueryResults>
 ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+    const std::vector<std::shared_ptr<PQPSubqueryExpression>>& expressions) {
   auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
   auto evaluator = ExpressionEvaluator{};
-  for (const auto& expression : expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
-        // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
-        auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
-        uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, result);
-        // TODO comment
-        pqp_subquery_expression->pqp->deregister_consumer();
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
+
+  for (const auto& pqp_subquery_expression : expressions) {
+    Assert(!pqp_subquery_expression->is_correlated(), "Did not expect a correlated subquery.");
+    // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
+    auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
+    uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, result);
   }
   return uncorrelated_subquery_results;
 }
