@@ -280,10 +280,12 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   performance_data.output_row_count = 1u;
   performance_data.output_chunk_count = 1u;
 
-  performance_data.walltime = std::chrono::nanoseconds{2u};
-  std::stringstream stringstream_throw;
-  // output_to_stream() throws when cumulative step runtimes are larger than operator runtime.
-  EXPECT_THROW(performance_data.output_to_stream(stringstream_throw, DescriptionMode::SingleLine), std::logic_error);
+  if constexpr (HYRISE_DEBUG) {
+    performance_data.walltime = std::chrono::nanoseconds{2u};
+    std::stringstream stringstream_throw;
+    // output_to_stream() throws when cumulative step runtimes are larger than operator runtime.
+    EXPECT_THROW(performance_data.output_to_stream(stringstream_throw, DescriptionMode::SingleLine), std::logic_error);
+  }
 
   performance_data.walltime = std::chrono::nanoseconds{35u};
   std::stringstream stringstream;
