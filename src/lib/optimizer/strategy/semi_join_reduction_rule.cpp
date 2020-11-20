@@ -7,8 +7,8 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
-void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+void SemiJoinReductionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
   // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after
@@ -22,7 +22,7 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(root, [&](const auto& node) {
+  visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 

@@ -17,12 +17,12 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+void ExpressionReductionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
-  visit_lqp(node, [&](const auto& sub_node) {
+  visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type == LQPNodeType::Aggregate) {
-      remove_duplicate_aggregate(sub_node->node_expressions, sub_node, node);
+      remove_duplicate_aggregate(sub_node->node_expressions, sub_node, lqp_root);
     }
 
     for (auto& expression : sub_node->node_expressions) {

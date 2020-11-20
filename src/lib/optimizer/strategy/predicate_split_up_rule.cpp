@@ -68,11 +68,11 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
 
 PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions) : _split_disjunctions(split_disjunctions) {}
 
-void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
+void PredicateSplitUpRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Assert(lqp_root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
   auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-  visit_lqp(root, [&](const auto& sub_node) {
+  visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
       predicate_nodes.emplace_back(predicate_node);
     }

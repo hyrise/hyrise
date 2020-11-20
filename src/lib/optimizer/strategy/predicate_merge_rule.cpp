@@ -33,8 +33,8 @@ namespace opossum {
  * that are inputs to a merged subplan but do not necessarily belong to that subplan. When it becomes necessary, this
  * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
-void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
+void PredicateMergeRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
   // (Potentially mergeable) subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from
   // PredicateNodes and UnionNodes within such subplans to the respective topmost UnionNode.
@@ -47,7 +47,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   std::map<const std::shared_ptr<UnionNode>, size_t> topmost_to_union_count;
 
   // Step 1: Collect mergeable nodes
-  visit_lqp(root, [&](const auto& node) {
+  visit_lqp(lqp_root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
     // We need to check for SetOperationMode::Positions as other SetOperationModes are
     // not guaranteed to represent a disjunction

@@ -532,7 +532,7 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
   return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false).first;
 }
 
-void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void SubqueryToJoinRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
   // To do this, we
   //   - Check whether node is of a supported type:
@@ -555,9 +555,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   /**
    * 1. Skip non-PredicateNodes
    */
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp_root);
   if (!predicate_node) {
-    _apply_to_inputs(node);
+    _apply_to_inputs(lqp_root);
     return;
   }
 
@@ -567,7 +567,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
    */
   auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
   if (!predicate_node_info) {
-    _apply_to_inputs(node);
+    _apply_to_inputs(lqp_root);
     return;
   }
 
@@ -584,7 +584,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   const auto& [optimizable, correlated_predicate_node_count] =
       assess_correlated_parameter_usage(predicate_node_info->subquery->lqp, parameter_mapping);
   if (!optimizable) {
-    _apply_to_inputs(node);
+    _apply_to_inputs(lqp_root);
     return;
   }
 
@@ -596,7 +596,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     // Not all correlated predicate nodes can be pulled up
     DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
                 "Inconsistent results from scan for correlated predicate nodes");
-    _apply_to_inputs(node);
+    _apply_to_inputs(lqp_root);
     return;
   }
 
@@ -616,13 +616,13 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
                      return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
                             PredicateCondition::Equals;
                    }) == join_predicates.end()) {
-    _apply_to_inputs(node);
+    _apply_to_inputs(lqp_root);
     return;
   }
 
   const auto join_mode = predicate_node_info->join_mode;
   const auto join_node = JoinNode::make(join_mode, join_predicates);
-  lqp_replace_node(node, join_node);
+  lqp_replace_node(lqp_root, join_node);
   join_node->set_right_input(pull_up_result.adapted_lqp);
 
   _apply_to_inputs(join_node);

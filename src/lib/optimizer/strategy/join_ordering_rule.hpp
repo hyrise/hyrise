@@ -13,8 +13,8 @@ class AbstractCostEstimator;
  * Currently only the order of inner joins is modified using a single underlying algorithm, DpCcp.
  */
 class JoinOrderingRule : public AbstractRule {
- public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
+ protected:
+  void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
   std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(
