@@ -11,6 +11,7 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/dependent_group_by_reduction_rule.hpp"
+#include "strategy/dips_creation_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -135,6 +136,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  optimizer->add_rule(std::make_unique<DipsCreationRule>());
 
   // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
   // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
