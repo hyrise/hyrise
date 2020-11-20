@@ -40,6 +40,7 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_lqp_root->left_input();
     }
+    local_lqp_root->set_left_input(nullptr);
   }
 }
 
