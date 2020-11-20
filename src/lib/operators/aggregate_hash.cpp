@@ -608,7 +608,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   _output_column_definitions.resize(num_output_columns);
   _output_segments.resize(num_output_columns);
 
-
   // _aggregate<>() has its own, internal timer.
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
