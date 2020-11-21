@@ -147,7 +147,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // Output segments are associated with their chunk. At the moment the segments are only ReferenceSegments.
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
-    // All columns are forwarded. We do not need to evaluate newly generated columns. 
+    // All columns are forwarded. We do not need to evaluate newly generated columns.
     if (forwared_count == expression_size) continue;
 
     // Defines the job that performs the evaluation if the columns are newly generated.
