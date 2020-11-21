@@ -6,6 +6,7 @@ from adjustText import adjust_text
 import copy
 import json
 import matplotlib as mpl
+from matplotlib import cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -36,9 +37,9 @@ assert df["moment"].iloc[0] == "init"
 groupby = ["table_name", "column_id"]
 agg = {"column_name": "max", "estimated_size_in_bytes": "max", "all_accesses": "sum"}
 
-init_snapshot = df[df["snapshot_id"] == 0].groupby(by=groupby).agg(agg)
+init_snapshot = df[df["snapshot_id"] == 0].groupby(by=groupby).agg(agg).reset_index()
 
-last_snapshot = df[df["snapshot_id"] == df["snapshot_id"].max()].groupby(by=groupby).agg(agg)
+last_snapshot = df[df["snapshot_id"] == df["snapshot_id"].max()].groupby(by=groupby).agg(agg).reset_index()
 
 assert len(init_snapshot) == len(last_snapshot)
 
@@ -62,7 +63,12 @@ totals["max_z"] = totals[["estimated_size_in_bytes_z", "all_accesses_z"]].max(ax
 fig, ax = plt.subplots()
 ax.margins(x=.25, y=.25)
 
-totals.plot(kind="scatter", x="estimated_size_in_bytes", y="all_accesses", ax=ax, logx=True, logy=True)
+cmap = cm.get_cmap("tab10")
+table_names = totals["table_name"].unique()
+colors = cmap(np.linspace(0, 1, len(table_names)))
+totals["color"] = totals.apply(lambda row: colors[np.where(table_names==row["table_name"])[0][0]], axis=1)
+
+scatter = totals.plot(kind="scatter", x="estimated_size_in_bytes", y="all_accesses", c="color", ax=ax, logx=True, logy=True)
 
 annotations = []
 x = []
@@ -73,6 +79,6 @@ for v in totals.iterrows():
     if v[1].max_z > 1.2:
         annotations.append(plt.text(v[1].estimated_size_in_bytes, v[1].all_accesses, v[1].column_name))
 
-adjust_text(annotations, x, y=y, expand_text=(1.2, 1.2), expand_points=(1.1, 1.1), arrowprops=dict(arrowstyle='-', color='grey'))
+# adjust_text(annotations, x, y=y, expand_text=(1.2, 1.2), expand_points=(1.1, 1.1), arrowprops=dict(arrowstyle='-', color='grey'))
 
 fig.savefig("segment_value.png")
