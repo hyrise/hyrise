@@ -139,6 +139,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<DipsCreationRule>());
 
+
+
+
   // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
   // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
   // executed after the ColumnPruningRule and ChunkPruningRule.
