@@ -164,11 +164,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         }
       }
     };
-    // Evaluate the expression immediately if it contains less than `job_spawn_threshold` rows, otherwise wrap
+    // Evaluate the expression immediately if it contains less than `JOB_SPAWN_THRESHOLD` rows, otherwise wrap
     // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
     // still needs to be re-evaluated over time to find the value which gives the best performance.
-    constexpr auto job_spawn_threshold = ChunkOffset{500};
-    if (job_spawn_threshold < input_chunk->size()) {
+    constexpr auto JOB_SPAWN_THRESHOLD = ChunkOffset{500};
+    if (input_chunk->size() >= JOB_SPAWN_THRESHOLD) {
       auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
       jobs.push_back(job_task);
     } else {
