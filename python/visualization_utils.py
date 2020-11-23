@@ -58,9 +58,12 @@ def runtime_plots(
     vertical_span = len(vertical_dimensions) > 1
     horizontal_width = len(horizontal_filter) * len(horizontal_dimensions)
     horizontal_span = horizontal_width > 1
-    plt.rcParams["figure.figsize"] = [4 * horizontal_width, 3 * len(vertical_dimensions) + 1]
+    plt.rcParams["figure.figsize"] = [
+        4 * horizontal_width,
+        3 * len(vertical_dimensions) + 1,
+    ]
     fig, axes = plt.subplots(
-        nrows=len(vertical_dimensions), ncols=horizontal_width, constrained_layout=constrained_layout
+        nrows=len(vertical_dimensions), ncols=horizontal_width, constrained_layout=constrained_layout,
     )
     fig.suptitle(f"{operator_name}, max. {y_axis} {title_max}{unit}", size=16)
     axis_max = np.amax(data_frame[y_axis]) * 1.05
@@ -147,7 +150,9 @@ def runtime_plots(
             if not ((type(x_value) == float and np.isnan(x_value)) or x_value == "0")
         ]
         filtered_plot_data = plot_data[plot_data[x_axis].isin(x_values)]
-        plot.scatter(filtered_plot_data[x_axis], filtered_plot_data[y_axis], c=[colors[horizontal_index % len(colors)]])
+        plot.scatter(
+            filtered_plot_data[x_axis], filtered_plot_data[y_axis], c=[colors[horizontal_index % len(colors)]],
+        )
         if abline:
             plot.plot(abline_values, abline_values, c="r", linestyle="-")
             plot.set_xlim([0, axis_max])
