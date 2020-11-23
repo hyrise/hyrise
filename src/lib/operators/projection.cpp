@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
@@ -116,9 +116,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // Create a two-dimensional vector that saves the information if a column is nullable for every segment.
   // This allows parallel write operation per thread. Later this data structure is aggregated
   // to a vector with information if a column is nullable for every column.
-  auto column_is_nullable_by_chunk = std::vector<std::vector<bool>>(
-    chunk_count,
-    std::vector<bool>(expression_count, false));
+  auto column_is_nullable_by_chunk =
+      std::vector<std::vector<bool>>(chunk_count, std::vector<bool>(expression_count, false));
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
@@ -135,9 +134,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
         column_is_nullable_by_chunk[chunk_id][column_id] =
-          input_table.column_is_nullable(pqp_column_expression.column_id);
-      }
-      else {
+            input_table.column_is_nullable(pqp_column_expression.column_id);
+      } else {
         all_segments_forwarded = false;
       }
     }
@@ -150,36 +148,29 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (all_segments_forwarded) continue;
 
     // Defines the job that performs the evaluation if the columns are newly generated.
-    auto perform_projection_evaluation = [
-      this,
-      chunk_id,
-      &uncorrelated_subquery_results,
-      expression_count,
-      &output_segments_by_chunk,
-      &column_is_nullable_by_chunk
-      ] () {
-        ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
+    auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
+                                          &output_segments_by_chunk, &column_is_nullable_by_chunk]() {
+      ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
-        for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-          const auto& expression = expressions[column_id];
-          if (expression->type != ExpressionType::PQPColumn) {
-            // Newly generated column - the expression needs to be evaluated
-            auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-            column_is_nullable_by_chunk[chunk_id][column_id] = output_segment->is_nullable();
-            // Storing the result in output_segments_by_chunk means that the vector
-            // for the separate chunks may contain both ReferenceSegments and
-            // ValueSegments. We deal with this later.
-            output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
-          }
+      for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+        const auto& expression = expressions[column_id];
+        if (expression->type != ExpressionType::PQPColumn) {
+          // Newly generated column - the expression needs to be evaluated
+          auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
+          column_is_nullable_by_chunk[chunk_id][column_id] = output_segment->is_nullable();
+          // Storing the result in output_segments_by_chunk means that the vector for the separate chunks may contain
+          // both ReferenceSegments and ValueSegments. We deal with this later.
+          output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
         }
+      }
     };
-    // It is checked if the job should be executed in parallel. If not, it will be executed right away.
-    // The upper bound of the chunk size,  which defines if it will be executed in parallel or not,
+    // Evaluate the expression immediately if it contains less than `job_spawn_threshold` rows, otherwise wrap
+    // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
     // still needs to be re-evaluated over time to find the value which gives the best performance.
     constexpr auto job_spawn_threshold = ChunkOffset{500};
     if (job_spawn_threshold < input_chunk->size()) {
-          auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
-          jobs.push_back(job_task);
+      auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
+      jobs.push_back(job_task);
     } else {
       perform_projection_evaluation();
       expression_evaluator_cost += timer.lap();
