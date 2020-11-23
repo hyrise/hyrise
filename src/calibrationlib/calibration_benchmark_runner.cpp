@@ -130,13 +130,13 @@ std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tpcc(
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_job(
     const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const {
-  const std::string table_path = "../imdb_data";
-  const std::string query_path = "../third_party/join-order-benchmark";
+  const std::string table_path = "imdb_data";
+  const std::string query_path = "third_party/join-order-benchmark";
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
 
-  const auto setup_imdb_command = std::string{"python3 ../scripts/setup_imdb.py "} + table_path;
+  const auto setup_imdb_command = std::string{"python3 scripts/setup_imdb.py "} + table_path;
   const auto setup_imdb_return_code = system(setup_imdb_command.c_str());
-  Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the build dir?");
+  Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the root dir?");
 
   auto table_generator = std::make_unique<FileBasedTableGenerator>(_config, table_path);
   auto item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(_config, query_path, non_query_file_names);
