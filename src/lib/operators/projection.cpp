@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
@@ -127,19 +128,20 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{expression_count};
-    auto forwared_count = size_t{0};
+    auto all_segments_forwarded = true;
 
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
       if (expression->type == ExpressionType::PQPColumn) {
         // Forward input column if possible
-        forwared_count++;
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
         column_is_nullable_by_chunk[chunk_id][column_id] =
-          column_is_nullable_by_chunk[chunk_id][column_id] ||
           input_table.column_is_nullable(pqp_column_expression.column_id);
+      }
+      else {
+        all_segments_forwarded = false;
       }
     }
     forwarding_cost += timer.lap();
@@ -148,7 +150,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
-    if (forwared_count == expression_count) continue;
+    if (all_segments_forwarded) continue;
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [
@@ -166,9 +168,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
           if (expression->type != ExpressionType::PQPColumn) {
             // Newly generated column - the expression needs to be evaluated
             auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-            column_is_nullable_by_chunk[chunk_id][column_id] =
-              column_is_nullable_by_chunk[chunk_id][column_id] ||
-              output_segment->is_nullable();
+            column_is_nullable_by_chunk[chunk_id][column_id] = output_segment->is_nullable();
             // Storing the result in output_segments_by_chunk means that the vector
             // for the separate chunks may contain both ReferenceSegments and
             // ValueSegments. We deal with this later.
