@@ -150,7 +150,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
                                           &output_segments_by_chunk, &column_is_nullable_by_chunk]() {
-      ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
+      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
