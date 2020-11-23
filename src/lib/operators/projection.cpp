@@ -1,8 +1,8 @@
 #include "projection.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -113,18 +113,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto expression_count = expressions.size();
 
-  // Create a two-dimensional vector that saves the information if a column is nullable for every segment.
-  // This allows parallel write operation per thread. Later this data structure is aggregated
-  // to a vector with information if a column is nullable for every column.
-  auto column_is_nullable_by_chunk =
-      std::vector<std::vector<bool>>(chunk_count, std::vector<bool>(expression_count, false));
+  // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
+  // vector sores atomic bool values. This allows parallel write operation per thread.
+  auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{expression_count};
-    auto all_segments_forwarded = true;
+    auto all_segments_forwarded = bool{true};
 
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
@@ -133,8 +131,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         // Forward input segment if possible
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-        column_is_nullable_by_chunk[chunk_id][column_id] =
-            input_table.column_is_nullable(pqp_column_expression.column_id);
+        column_is_nullable[column_id] =
+            column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
       } else {
         all_segments_forwarded = false;
       }
@@ -149,7 +147,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
-                                          &output_segments_by_chunk, &column_is_nullable_by_chunk]() {
+                                          &output_segments_by_chunk, &column_is_nullable]() {
       auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
@@ -157,7 +155,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         if (expression->type != ExpressionType::PQPColumn) {
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-          column_is_nullable_by_chunk[chunk_id][column_id] = output_segment->is_nullable();
+          column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
           // Storing the result in output_segments_by_chunk means that the vector for the separate chunks may contain
           // both ReferenceSegments and ValueSegments. We deal with this later.
           output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
@@ -179,16 +177,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // Instruct the scheduler to execute the jobs.
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
-
-  // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator
-  auto column_is_nullable = std::vector<bool>(expression_count, false);
-
-  // Merge column is nullable information from chunks.
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-      column_is_nullable[column_id] = column_is_nullable[column_id] || column_is_nullable_by_chunk[chunk_id][column_id];
-    }
-  }
 
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
