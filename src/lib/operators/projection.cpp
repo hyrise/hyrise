@@ -108,7 +108,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // described above.
   auto output_segments_by_chunk = std::vector<Segments>(chunk_count);
 
-  // Create a vector that will hold all jobs that are getting executed in parallel.
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(chunk_count);
 
@@ -121,8 +120,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     chunk_count,
     std::vector<bool>(expression_count, false));
 
-  // All projections that operate on chunks of sufficient size and newly generated columns will be executed after the
-  // loop by the job scheduler to parallelize the evaluation operation.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -134,7 +131,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
       if (expression->type == ExpressionType::PQPColumn) {
-        // Forward input column if possible
+        // Forward input segment if possible
         const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
         column_is_nullable_by_chunk[chunk_id][column_id] =
@@ -146,7 +143,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
     forwarding_cost += timer.lap();
 
-    // Output segments are associated with their chunk. At the moment the segments are only ReferenceSegments.
+    // `output_segments_by_chunk` contains now all forwarded segments.
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
