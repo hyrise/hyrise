@@ -114,7 +114,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto expression_count = expressions.size();
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
-  // vector sores atomic bool values. This allows parallel write operation per thread.
+  // vector stores atomic bool values. This allows parallel write operation per thread.
   auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -127,15 +127,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
-      if (expression->type == ExpressionType::PQPColumn) {
-        // Forward input segment if possible
-        const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
-        output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
-        column_is_nullable[column_id] =
-            column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
-      } else {
+      if (expression->type != ExpressionType::PQPColumn) {
         all_segments_forwarded = false;
+        continue;
       }
+      // Forward input segment if possible
+      const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
+      output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
+      column_is_nullable[column_id] =
+          column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression.column_id);
     }
     forwarding_cost += timer.lap();
 
