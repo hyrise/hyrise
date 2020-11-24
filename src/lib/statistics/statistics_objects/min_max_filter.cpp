@@ -3,6 +3,9 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
@@ -157,6 +160,47 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
+    }
+    case PredicateCondition::Like: {
+
+      const auto pattern = boost::get<pmr_string>(variant_value);
+
+      // Continue only if pattern don't start with "_"-wildcard
+      if (pattern.find_first_of('_') != std::string::npos) {
+        return false;
+      }
+
+      const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+        
+      // Only continue if "%"-wildcard exist and isn't on position 0.
+      if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0){
+        return false;
+      }
+
+      // Calculate lower bound of the search pattern
+      const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
+      const auto current_character_value = lower_bound.back();
+
+      // Find next value according to ASCII-table
+      constexpr int MAX_ASCII_VALUE = 127;
+      if (current_character_value >= MAX_ASCII_VALUE) {
+        // current_character_value + 1 would overflow; TODO: need to be handled
+        return false;
+      }
+
+      const auto next_character = static_cast<char>(current_character_value + 1);
+      const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
+      //hacky solution. Somehow I can't simply compare max/min and lower_bound/upper_bound with each other. TODO find a better solution
+      std::stringstream max_ss;
+      std::stringstream min_ss;
+      std::stringstream lower_bound_ss;
+      std::stringstream upper_bound_ss;
+      max_ss << max;
+      min_ss << min;
+      lower_bound_ss << lower_bound;
+      upper_bound_ss << upper_bound;
+
+      return max_ss.str() < lower_bound_ss.str() || upper_bound_ss.str() < min_ss.str();
     }
     default:
       return false;
