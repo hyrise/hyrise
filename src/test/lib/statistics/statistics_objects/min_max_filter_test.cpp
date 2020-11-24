@@ -64,6 +64,7 @@ TEST_F(MinMaxFilterTestLike, CanPrune) {
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "z%"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "switzerland:%"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "at%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "%at%"));
   
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "au%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "switzerland%"));
@@ -71,6 +72,8 @@ TEST_F(MinMaxFilterTestLike, CanPrune) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%200%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:.....%200%"));
+
+
 
 }
 
