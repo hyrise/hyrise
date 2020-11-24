@@ -48,6 +48,32 @@ class MinMaxFilterTest<pmr_string> : public BaseTest {
   pmr_string _before_range, _min_value, _max_value, _after_range, _in_between, _in_between2;
 };
 
+class MinMaxFilterTestLike : public BaseTest {
+protected: 
+  void SetUp() override {
+    _values = pmr_vector<pmr_string>{"aus", "denmark", "japan", "japan:200", "japan:12344200", "switzerland"};
+  }
+  pmr_vector<pmr_string> _values;
+};
+
+TEST_F(MinMaxFilterTestLike, CanPrune) {
+  auto filter = std::make_unique<MinMaxFilter<pmr_string>>(this->_values.front(), this->_values.back());
+  // for the predicate condition of Like, we expect only values where the lower_bound is bigger then max
+  // or the upper_bound is smaller then min to be prunable
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "A:%"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "z%"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "switzerland:%"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "at%"));
+  
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "au%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "switzerland%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "aur%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%200%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:.....%200%"));
+
+}
+
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
 TYPED_TEST_SUITE(MinMaxFilterTest, MixMaxFilterTypes, );  // NOLINT(whitespace/parens)
 
