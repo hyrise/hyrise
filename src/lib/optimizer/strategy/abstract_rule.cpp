@@ -36,7 +36,7 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
     std::cout << "Subquery LQP \n\n" << *lqp << "\n\n" << std::endl;
     // (2.2) Optimize subquery LQP
-    _apply_to(local_lqp_root);
+    apply(local_lqp_root);
     // (2.3) Assign optimized LQP to all corresponding SubqueryExpressions
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_lqp_root->left_input();
