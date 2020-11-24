@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace opossum {
 
@@ -42,7 +44,8 @@ using SubqueryExpressionsByLQP =
     std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
 
 /**
- * Identifies unique LQPs and the (multiple) SubqueryExpressions referencing each of these unique LQPs.
+ * Traverses @param node with all its (nested) subquery expressions to identify unique LQPs and the (multiple)
+ * SubqueryExpressions referencing each of these unique LQPs.
  */
 void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
                                          const std::shared_ptr<AbstractLQPNode>& node,
