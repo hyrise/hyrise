@@ -645,16 +645,15 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++aggregate_idx;
   }
 
-  // _aggregate, _write_groupby_output, and write_aggregate_output have their own, internal timers.
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
-
   // Write the output
+  Timer timer;
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
   }
 
+  // _aggregate, _write_groupby_output, and _write_aggregate_output have their own, internal timers.
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
   return output;
@@ -953,7 +952,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   _output_segments[output_column_id] = output_segment;
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.add_to_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap() - write_groupby_output_duration);
+  step_performance_data.add_to_step_runtime(OperatorSteps::AggregateColumnsWriting,
+                                            timer.lap() - write_groupby_output_duration);
 }
 
 template <typename AggregateKey>
