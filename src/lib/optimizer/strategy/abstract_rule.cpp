@@ -40,6 +40,7 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_lqp_root->left_input();
     }
+    // (2.4) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
     local_lqp_root->set_left_input(nullptr);
   }
 }

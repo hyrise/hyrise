@@ -82,4 +82,6 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
   EXPECT_NE(*_stored_table_node_left, *_stored_table_node_right);
 }
 
+// Tests?
+
 }  // namespace opossum
