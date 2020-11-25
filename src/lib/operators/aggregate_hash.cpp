@@ -652,9 +652,13 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     output->append_chunk(_output_segments);
   }
 
-  // _aggregate, _write_groupby_output, and _write_aggregate_output have their own, internal timers.
+  // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
+  // stored in members and later written to the operator performance data struct.
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, aggregate_columns_writing_duration);
 
   return output;
 }
@@ -771,9 +775,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
-
+  Timer timer;
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -846,7 +848,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     });
   }
 
-  step_performance_data.add_to_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
+  groupby_columns_writing_duration += timer.lap();
 }
 
 template <typename ColumnDataType>
@@ -951,9 +953,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   }
   _output_segments[output_column_id] = output_segment;
 
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.add_to_step_runtime(OperatorSteps::AggregateColumnsWriting,
-                                            timer.lap() - write_groupby_output_duration);
+  aggregate_columns_writing_duration += timer.lap() - write_groupby_output_duration;
 }
 
 template <typename AggregateKey>
