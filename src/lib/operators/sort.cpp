@@ -352,9 +352,9 @@ class Sort::SortImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  std::chrono::nanoseconds materialization_time{0};
-  std::chrono::nanoseconds temporary_result_writing_time{0};
-  std::chrono::nanoseconds sort_time{0};
+  std::chrono::nanoseconds materialization_time{};
+  std::chrono::nanoseconds temporary_result_writing_time{};
+  std::chrono::nanoseconds sort_time{};
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const SortMode sort_mode = SortMode::Ascending)
