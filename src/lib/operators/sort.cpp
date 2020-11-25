@@ -290,8 +290,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
-  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWritingTime,
-                                         total_temporary_result_writing_time);
+  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, total_temporary_result_writing_time);
   step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
