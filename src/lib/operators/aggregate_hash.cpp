@@ -608,10 +608,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   _output_column_definitions.resize(num_output_columns);
   _output_segments.resize(num_output_columns);
 
-  // _aggregate<>() has its own, internal timer.
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
-
   /**
    * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call _write_groupby_output.
    *   Example: SELECT c_custkey, c_name FROM customer GROUP BY c_custkey, c_name (same as SELECT DISTINCT), which
@@ -628,7 +624,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
 
   /*
   Write the aggregated columns to the output
@@ -649,7 +644,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
+
+  // _aggregate, _write_groupby_output, and write_aggregate_output have their own, internal timers.
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
@@ -774,6 +772,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
+
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -845,6 +846,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       _output_segments[output_column_id] = value_segment;
     });
   }
+
+  step_performance_data.add_to_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
 }
 
 template <typename ColumnDataType>
@@ -880,6 +883,9 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
 
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
+  // Used to substract groupby writing in case it needs to be done.
+  auto write_groupby_output_duration = std::chrono::nanoseconds{0};
+
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
   auto aggregate_data_type = AggregateTraits<ColumnDataType, aggregate_function>::AGGREGATE_DATA_TYPE;
@@ -907,7 +913,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
       pos_list[chunk_offset] = (result.row_id);
       ++chunk_offset;
     }
+    Timer timer;
     _write_groupby_output(pos_list);
+    write_groupby_output_duration = timer.lap();
   }
 
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
@@ -942,6 +950,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
         std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
+
+  step_performance_data.add_to_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap() - write_groupby_output_duration);
 }
 
 template <typename AggregateKey>

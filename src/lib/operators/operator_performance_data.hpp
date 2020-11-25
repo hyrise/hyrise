@@ -92,6 +92,11 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
     step_runtimes[static_cast<size_t>(step)] = duration;
   }
 
+  void add_to_step_runtime(const Steps step, const std::chrono::nanoseconds duration) {
+    DebugAssert(magic_enum::enum_integer(step) < magic_enum::enum_count<Steps>(), "Invalid step.");
+    step_runtimes[static_cast<size_t>(step)] = get_step_runtime(step) + duration;
+  }
+
   std::array<std::chrono::nanoseconds, magic_enum::enum_count<Steps>()> step_runtimes{};
 };
 
