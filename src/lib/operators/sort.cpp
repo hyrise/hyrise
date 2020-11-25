@@ -245,7 +245,6 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  Timer timer;
   const auto& input_table = left_input_table();
 
   for (const auto& column_sort_definition : _sort_definitions) {
@@ -269,6 +268,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // ReferenceSegments.
   auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
 
+  auto total_materialization_time = std::chrono::nanoseconds{};
+  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
+  auto total_sort_time = std::chrono::nanoseconds{};
+
   for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
     const auto& sort_definition = _sort_definitions[sort_step];
     const auto data_type = input_table->column_data_type(sort_definition.column);
@@ -278,17 +281,25 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
+
+      total_materialization_time += sort_impl.materialization_time;
+      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
+      total_sort_time += sort_impl.sort_time;
     });
   }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
+  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWritingTime,
+                                         total_temporary_result_writing_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
+  Timer timer;
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -342,6 +353,10 @@ class Sort::SortImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
+  std::chrono::nanoseconds materialization_time{0};
+  std::chrono::nanoseconds temporary_result_writing_time{0};
+  std::chrono::nanoseconds sort_time{0};
+
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const SortMode sort_mode = SortMode::Ascending)
       : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
@@ -354,8 +369,10 @@ class Sort::SortImpl {
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
   RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
+    Timer timer;
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
+    materialization_time = timer.lap();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
@@ -367,6 +384,7 @@ class Sort::SortImpl {
     } else {
       sort_with_comparator(std::greater<>{});
     }
+    sort_time = timer.lap();
 
     // 2b. Insert null rows in front of all non-NULL rows
     if (!_null_value_rows.empty()) {
@@ -383,6 +401,7 @@ class Sort::SortImpl {
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);
     }
+    temporary_result_writing_time = timer.lap();
     return pos_list;
   }
 
