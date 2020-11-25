@@ -884,7 +884,8 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // Used to substract groupby writing in case it needs to be done.
-  auto write_groupby_output_duration = std::chrono::nanoseconds{0};
+  auto write_groupby_output_duration = std::chrono::nanoseconds{};
+  Timer timer;
 
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
@@ -913,9 +914,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
       pos_list[chunk_offset] = (result.row_id);
       ++chunk_offset;
     }
-    Timer timer;
+    Timer write_groupby_output_timer;
     _write_groupby_output(pos_list);
-    write_groupby_output_duration = timer.lap();
+    write_groupby_output_duration = write_groupby_output_timer.lap();
   }
 
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
@@ -951,6 +952,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   }
   _output_segments[output_column_id] = output_segment;
 
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.add_to_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap() - write_groupby_output_duration);
 }
 
