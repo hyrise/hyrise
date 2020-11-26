@@ -10,7 +10,7 @@
 namespace opossum {
 
 
-void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void AbstractRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP
   _apply_to(lqp_root);
 

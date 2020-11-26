@@ -10,6 +10,7 @@ namespace opossum {
 class AbstractCardinalityEstimator;
 class AbstractCostEstimator;
 class AbstractLQPNode;
+class LogicalPlanRootNode;
 class LQPSubqueryExpression;
 
 class AbstractRule {
@@ -17,6 +18,8 @@ class AbstractRule {
   virtual ~AbstractRule() = default;
 
   /**
+   * This function applies the concrete Optimizer Rule to an LQP.
+   *
    * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
    *
    * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
@@ -30,13 +33,8 @@ class AbstractRule {
    * !!!
    * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
    * !!!
-   *
-   * TODO
-   *
-   * This function applies the concrete Optimizer Rule to an LQP.
-   * The optimizer will pass the immutable LogicalPlanRootNode (@param lqp_root) to this function.
    */
-  virtual void apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const;
+  virtual void apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 

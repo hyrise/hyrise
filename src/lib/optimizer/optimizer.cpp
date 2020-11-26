@@ -124,7 +124,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
-    rule->apply(root_node);
+    rule->apply_to(root_node);
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
