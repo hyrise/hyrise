@@ -4,8 +4,7 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/logical_expression.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
