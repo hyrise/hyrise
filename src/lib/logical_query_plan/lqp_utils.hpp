@@ -24,6 +24,8 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_
 
 /**
  * TODO(Julian) Doc
+ * Traverses @param node with all its (nested) subquery expressions to identify unique LQPs and the (multiple)
+ * SubqueryExpressions referencing each of these unique LQPs.
  * @param node
  * @return
  */

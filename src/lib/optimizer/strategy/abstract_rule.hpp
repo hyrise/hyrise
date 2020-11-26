@@ -17,6 +17,22 @@ class AbstractRule {
   virtual ~AbstractRule() = default;
 
   /**
+   * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
+   *
+   * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
+   * ProjectionNode computing a subquery and a subsequent PredicateNode filtering based on it.
+   * We do not WANT to optimize the LQP twice (optimization takes time after all) and we CANNOT optimize it twice, since,
+   * e.g., a non-deterministic rule, could produce two different LQPs while optimizing and then the SubqueryExpression
+   * in the PredicateNode couldn't be resolved to a column anymore. There are more subtle ways LQPs might break in this
+   * scenario, and frankly, this is one of the weak links in the expression system...
+   *
+   * ...long story short:
+   * !!!
+   * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
+   * !!!
+   *
+   * TODO
+   *
    * This function applies the concrete Optimizer Rule to an LQP.
    * The optimizer will pass the immutable LogicalPlanRootNode (@param lqp_root) to this function.
    */
@@ -38,10 +54,5 @@ class AbstractRule {
    */
   void _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
 };
-
-/**
- * Traverses @param node with all its (nested) subquery expressions to identify unique LQPs and the (multiple)
- * SubqueryExpressions referencing each of these unique LQPs.
- */
 
 }  // namespace opossum
