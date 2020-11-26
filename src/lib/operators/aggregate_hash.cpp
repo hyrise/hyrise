@@ -654,7 +654,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
   // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
   // stored in members and later written to the operator performance data struct.
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
   step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
@@ -884,8 +884,9 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
 
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
-  // Used to substract groupby writing in case it needs to be done.
-  auto write_groupby_output_duration = std::chrono::nanoseconds{};
+  // Used to track the duration of groupby columns writing, which is done for the first aggregate only. Value is
+  // substraced from the runtime of this method (thus, it's either 0 or non-zero for the first aggregate).
+  auto first_aggregate_column_groupby_writing_time = std::chrono::nanoseconds{};
   Timer timer;
 
   // retrieve type information from the aggregation traits
@@ -911,13 +912,13 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   if (aggregate_index == 0) {
     auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
-    for (auto& result : context->results) {
-      pos_list[chunk_offset] = (result.row_id);
+    for (const auto& result : context->results) {
+      pos_list[chunk_offset] = result.row_id;
       ++chunk_offset;
     }
     Timer write_groupby_output_timer;
     _write_groupby_output(pos_list);
-    write_groupby_output_duration = write_groupby_output_timer.lap();
+    first_aggregate_column_groupby_writing_time = write_groupby_output_timer.lap();
   }
 
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
@@ -953,7 +954,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   }
   _output_segments[output_column_id] = output_segment;
 
-  aggregate_columns_writing_duration += timer.lap() - write_groupby_output_duration;
+  aggregate_columns_writing_duration += timer.lap() - first_aggregate_column_groupby_writing_time;
 }
 
 template <typename AggregateKey>
