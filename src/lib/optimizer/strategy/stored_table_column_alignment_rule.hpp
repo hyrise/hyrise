@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 
 /*
  The PQP sub-plan memoization (see LQPTranslator::_operator_by_lqp_node) for StoredTableNodes is sensitive to the node's

@@ -5,23 +5,29 @@
 #include <queue>
 #include <set>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 
 class AbstractExpression;
+class AbstractLQPNode;
+class LQPSubqueryExpression;
+
 enum class LQPInputSide;
 
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
+using SubqueryExpressionsByLQP =
+std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
+
+/**
+ * TODO(Julian) Doc
+ * @param node
+ * @return
+ */
+SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.

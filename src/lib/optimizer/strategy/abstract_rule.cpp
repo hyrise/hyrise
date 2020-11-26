@@ -29,8 +29,7 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const
   _apply_to(lqp_root);
 
   // (2) Optimize distinct subquery LQPs, one-by-one.
-  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, lqp_root);
+  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(lqp_root);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     // (2.1) Prepare
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
@@ -48,36 +47,6 @@ void AbstractRule::apply(const std::shared_ptr<AbstractLQPNode>& lqp_root) const
 void AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
   if (node->left_input()) _apply_to(node->left_input());
   if (node->right_input()) _apply_to(node->right_input());
-}
-
-void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
-                                         const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) return;
-  if (!visited_nodes.emplace(node).second) return;
-
-  for (const auto& expression : node->node_expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
-
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
-        }
-      }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
-
-      // Subqueries can be nested. We are also interested LQPs from deeply nested subqueries.
-      collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp, visited_nodes);
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-  }
-
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
 }  // namespace opossum

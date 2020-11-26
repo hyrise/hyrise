@@ -8,6 +8,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace {
 using namespace opossum;  // NOLINT
@@ -108,8 +109,7 @@ void StoredTableColumnAlignmentRule::_apply_to(const std::shared_ptr<AbstractLQP
   // (1) Collect all distinct LQPs:   a) Root node
   //                                  b) Subquery LQPs
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{lqp_root};
-  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, lqp_root);
+  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(lqp_root);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }
