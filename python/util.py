@@ -45,7 +45,6 @@ def preprocess_data(data):
         "COLUMN_TYPE",
         "DATA_TYPE",
         "ENCODING",
-        "OPERATOR_IMPLEMENTATION",
         "COMPRESSION_TYPE",
         "SORTED",
         "JOIN_IMPLEMENTATION",
