@@ -19,9 +19,9 @@ class AbstractRule {
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
-   * Default implementation:
-   *  (1) Optimize root LQP.
-   *  (2) Optimize subquery LQPs of optimized root LQP, one-by-one.
+   * The default implementation
+   *  (1) optimizes the root LQP
+   *  (2) optimizes all (nested) subquery LQPs of the optimized root LQP, one-by-one.
    *
    *      IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS:
    *
