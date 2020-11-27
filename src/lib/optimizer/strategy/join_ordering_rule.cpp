@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-void JoinOrderingRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinOrderingRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
 
   /**

@@ -8,7 +8,7 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
-void SemiJoinReductionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void SemiJoinReductionRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the

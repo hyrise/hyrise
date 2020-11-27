@@ -14,7 +14,7 @@ class AbstractCostEstimator;
  */
 class JoinOrderingRule : public AbstractRule {
  protected:
-  void _apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
   std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(

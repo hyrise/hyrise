@@ -68,7 +68,7 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
 
 namespace opossum {
 
-void DependentGroupByReductionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void DependentGroupByReductionRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;

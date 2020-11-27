@@ -122,7 +122,7 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<LogicalPlanR
   align_pruned_column_ids(grouped_stored_table_nodes);
 }
 
-void StoredTableColumnAlignmentRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void StoredTableColumnAlignmentRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Fail("Did not expect this function to be called.");
 }
 
