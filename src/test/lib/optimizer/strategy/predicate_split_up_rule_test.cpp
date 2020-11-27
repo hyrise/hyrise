@@ -3,9 +3,9 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_split_up_rule.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

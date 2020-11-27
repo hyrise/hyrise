@@ -9,7 +9,6 @@
 
 namespace opossum {
 
-
 void AbstractRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP
   _apply_recursively_to(lqp_root);

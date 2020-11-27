@@ -82,8 +82,9 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
-void recursively_collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
- const std::shared_ptr<AbstractLQPNode>& node, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+void recursively_collect_subquery_expressions_by_lqp(
+    SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node) return;
   if (!visited_nodes.emplace(node).second) return;
 
@@ -101,7 +102,8 @@ void recursively_collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& s
       subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
-      recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp, visited_nodes);
+      recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
+                                                      visited_nodes);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
