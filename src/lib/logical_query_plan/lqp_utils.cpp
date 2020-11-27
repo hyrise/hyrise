@@ -99,7 +99,8 @@ void recursively_collect_subquery_expressions_by_lqp(
           return ExpressionVisitation::DoNotVisitArguments;
         }
       }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
+      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp,
+                                               std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
