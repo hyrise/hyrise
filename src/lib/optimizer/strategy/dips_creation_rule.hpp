@@ -7,6 +7,8 @@
 
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/abstract_expression.hpp"
 
 #include "abstract_rule.hpp"
 
@@ -26,7 +28,8 @@ namespace opossum {
     void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   protected:
-    std::vector<std::shared_ptr<PredicateNode>> get_pruned_attribute_statistics(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<LQPColumnExpression> join_partner) const;
+    std::shared_ptr<PredicateNode> get_pruned_attribute_statistics(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<LQPColumnExpression> join_partner) const;
+    std::shared_ptr<AbstractExpression> build_logical_expression(std::vector<std::shared_ptr<AbstractExpression>> expressions, long unsigned int index) const;
   };
 
 }  // namespace opossum
