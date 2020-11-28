@@ -125,7 +125,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{expression_count};
-    auto all_segments_forwarded = bool{true};
+    auto all_segments_forwarded = true;
 
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
@@ -140,7 +140,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
     forwarding_cost += timer.lap();
 
-    // `output_segments_by_chunk` contains now all forwarded segments.
+    // `output_segments_by_chunk` now contains all forwarded segments.
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
