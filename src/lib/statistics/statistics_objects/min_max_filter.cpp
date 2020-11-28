@@ -162,14 +162,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     case PredicateCondition::Like: {
-      //hacky solution. Somehow I can't simply compare max/min and lower_bound/upper_bound with each other. TODO find a better solution
-      std::stringstream max_ss;
-      std::stringstream min_ss;
-      std::stringstream lower_bound_ss;
-      std::stringstream upper_bound_ss;
-      max_ss << max;
-      min_ss << min;
-
+      
       const auto pattern = boost::get<pmr_string>(variant_value);
 
       const auto single_char_wildcard_pos = pattern.find_first_of('_');
@@ -195,20 +188,22 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       // Calculate lower bound of the search pattern
       const auto lower_bound = pattern.substr(0, wildcard_pos);
       const auto current_character_value = lower_bound.back();
-      lower_bound_ss << lower_bound;
+
+      const auto value_lower_bound = boost::get<T>(variant_value);
 
       // Find next value according to ASCII-table
       constexpr int MAX_ASCII_VALUE = 127;
       if (current_character_value >= MAX_ASCII_VALUE) {
         // current_character_value + 1 would overflow; TODO: need to be handled
-        return max_ss.str() < lower_bound_ss.str();
+        return max < value_lower_bound;
       }
 
       const auto next_character = static_cast<char>(current_character_value + 1);
       const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
-      upper_bound_ss << upper_bound;
 
-      return max_ss.str() < lower_bound_ss.str() || upper_bound_ss.str() < min_ss.str();
+      const auto value_upper_bound = boost::get<T>(upper_bound);
+
+      return max < value_lower_bound || value_upper_bound < min;
     }
     default:
       return false;
