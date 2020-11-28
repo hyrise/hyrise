@@ -72,9 +72,6 @@ TEST_F(MinMaxFilterTestLike, CanPrune) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:%200%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "japan:.....%200%"));
-
-
-
 }
 
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
