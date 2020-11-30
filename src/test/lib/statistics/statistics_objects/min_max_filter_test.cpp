@@ -49,10 +49,8 @@ class MinMaxFilterTest<pmr_string> : public BaseTest {
 };
 
 class MinMaxFilterTestLike : public BaseTest {
-protected: 
-  void SetUp() override {
-    _values = pmr_vector<pmr_string>{"bb", "cc", "dd"};
-  }
+ protected:
+  void SetUp() override { _values = pmr_vector<pmr_string>{"bb", "cc", "dd"}; }
   pmr_vector<pmr_string> _values;
 };
 
@@ -71,7 +69,6 @@ TEST_F(MinMaxFilterTestLike, CanPrune) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "cc%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_"));
-
 }
 
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;

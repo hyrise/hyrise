@@ -202,10 +202,11 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   }
 
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
-  // TODO: we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%" to "c >= RED
-  //and C < REE and c LIKE RED%E%" but that would require adding new predicate nodes. For now, we assume that the potential
-  //pruning of such LIKE predicates via the chunk pruning rule is sufficient. However, if not many chunks can be pruned,
-  //rewriting with additional predicates might show to be beneficial.
+  // TODO(user): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite
+  // "c LIKE RED%E%" to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new predicate
+  // nodes. For now, we assume that the potential pruning of such LIKE predicates via the chunk pruning
+  // rule is sufficient. However, if not many chunks can be pruned, rewriting with additional predicates
+  // might show to be beneficial.
   if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
       multi_char_wildcard_pos + 1 != pattern.size()) {
     return;

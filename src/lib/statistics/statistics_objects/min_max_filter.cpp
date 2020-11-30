@@ -1,11 +1,11 @@
 #include "min_max_filter.hpp"
 
+#include <iostream>
 #include <memory>
 #include <optional>
-#include <utility>
-#include <string>
-#include <iostream>
 #include <sstream>
+#include <string>
+#include <utility>
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
@@ -174,16 +174,16 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
         auto wildcard_pos = size_t{};
 
-        if (!single_valid_char_wildcard_exist && !multi_char_wildcard_pos_exsists){
+        if (!single_valid_char_wildcard_exist && !multi_char_wildcard_pos_exsists) {
           return false;
         }
         if (single_char_wildcard_pos == 0 || multi_char_wildcard_pos == 0) {
           return false;
         }
-        if (single_valid_char_wildcard_exist && single_char_wildcard_pos != 0){
+        if (single_valid_char_wildcard_exist && single_char_wildcard_pos != 0) {
           wildcard_pos = single_char_wildcard_pos;
         }
-        if (multi_char_wildcard_pos_exsists && multi_char_wildcard_pos != 0 && wildcard_pos < multi_char_wildcard_pos){
+        if (multi_char_wildcard_pos_exsists && multi_char_wildcard_pos != 0 && wildcard_pos < multi_char_wildcard_pos) {
           wildcard_pos = multi_char_wildcard_pos;
         }
 
@@ -194,7 +194,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
         //// Calculate upper bound of the search pattern according to ASCII-table
         constexpr int MAX_ASCII_VALUE = 127;
         if (current_character_value >= MAX_ASCII_VALUE) {
-          // current_character_value + 1 would overflow. 
+          // current_character_value + 1 would overflow.
           return max < lower_bound;
         }
         const auto next_character = static_cast<char>(current_character_value + 1);
@@ -202,7 +202,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
         return max < lower_bound || upper_bound < min;
       }
-    return false;
+      return false;
     }
     default:
       return false;
