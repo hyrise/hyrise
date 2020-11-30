@@ -49,7 +49,7 @@ benchmark_runner/*
 benchmark_results/*
 clustering_config.json
 
-cost_model_output/
+# cost_model_output/
 __pycache__/
 
 # Ignore python notebook saves

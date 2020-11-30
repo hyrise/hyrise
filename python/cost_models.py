@@ -245,7 +245,10 @@ def get_join_scores(model_types, train_data, test_data, implementation, ohe_cand
                     model_name = get_join_model_name(model_type, implementation, build_column_type, probe_column_type)
                     filename = os.path.join(out + "models", f"{model_name}.sav")
                     joblib.dump(model, filename)
-                    save_model_input_columns(model_train_data.drop(labels=["RUNTIME_NS"], axis=1), os.path.join(out, "models", f"{model_name}_columns.csv"))
+                    save_model_input_columns(
+                        model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                        os.path.join(out, "models", f"{model_name}_columns.csv"),
+                    )
 
                     if not model_test_data.empty:
                         scores[model_name] = generate_model_plot(
@@ -300,7 +303,10 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
             model_name = get_table_scan_model_name(model_type, implementation)
             filename = os.path.join(out + "models", f"{model_name}.sav")
             joblib.dump(model, filename)
-            save_model_input_columns(model_train_data.drop(labels=["RUNTIME_NS"], axis=1), os.path.join(out, "models", f"{model_name}_columns.csv"))
+            save_model_input_columns(
+                model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                os.path.join(out, "models", f"{model_name}_columns.csv"),
+            )
             if not model_test_data.empty:
                 scores[model_name] = generate_model_plot(
                     model, model_test_data, "TableScan", model_type, implementation, [], out,
@@ -346,7 +352,10 @@ def get_aggregate_scores(model_types, train_data, test_data, implementation, ohe
             model_name = get_aggregate_model_name(model_type, implementation)
             filename = os.path.join(out + "models", f"{model_name}.sav")
             joblib.dump(model, filename)
-            save_model_input_columns(model_train_data.drop(labels=["RUNTIME_NS"], axis=1), os.path.join(out, "models", f"{model_name}_columns.csv"))
+            save_model_input_columns(
+                model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                os.path.join(out, "models", f"{model_name}_columns.csv"),
+            )
             if not model_test_data.empty:
                 scores[model_name] = generate_model_plot(
                     model, model_test_data, "Aggregate", model_type, implementation, [], out,
@@ -375,7 +384,7 @@ def train_cost_models(train_data, test_data, args):
         "COMPRESSION_TYPE",
         "SORTED",
         "JOIN_MODE",
-        "PREDICATE"
+        "PREDICATE",
     ]
 
     # make separate models for different operators

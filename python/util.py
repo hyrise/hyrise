@@ -50,7 +50,7 @@ def preprocess_data(data):
         "SORTED",
         "JOIN_IMPLEMENTATION",
         "JOIN_MODE",
-        "PREDICATE"
+        "PREDICATE",
     ]
     ohe_columns = np.concatenate([[label for label in data.columns if keyword in label] for keyword in ohe_candidates])
     ohe_data = pd.get_dummies(data, columns=ohe_columns)
