@@ -6,6 +6,7 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -24,10 +25,29 @@ OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
     : _path_to_dir(path_to_dir),
       _output_path(path_to_dir + "/operators.csv"),
       _join_output_path(_path_to_dir + "/joins.csv"),
-      _join_stages_output_path(path_to_dir + "/join_stages.csv") {}
+      _join_stages_output_path(path_to_dir + "/join_stages.csv"),
+      _query_output_path(path_to_dir + "/queries.csv") {}
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) {
   std::lock_guard<std::mutex> lock(_mutex);
+  _current_query_hash = "";
+  _export_to_csv(op);
+}
+
+void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op,
+                                            const std::string& query) {
+  std::lock_guard<std::mutex> lock(_mutex);
+  std::stringstream query_hex_hash;
+  query_hex_hash << std::hex << std::hash<std::string>{}(query);
+  auto query_single_line{query};
+  query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),
+                          query_single_line.end());
+  _current_query_hash = pmr_string{query_hex_hash.str()};
+  _query_table->append({_current_query_hash, pmr_string{query_single_line}});
+  _export_to_csv(op);
+}
+
+void OperatorFeatureExporter::_export_to_csv(const std::shared_ptr<const AbstractOperator>& op) {
   _cardinality_estimator = std::make_shared<CardinalityEstimator>();
   visit_pqp(op, [&](const auto& node) {
     //skip Insert, Update, Delete, ...
@@ -43,6 +63,7 @@ void OperatorFeatureExporter::flush() {
   CsvWriter::write(*_general_output_table, _output_path);
   CsvWriter::write(*_join_output_table, _join_output_path);
   CsvWriter::write(*_join_stages_table, _join_stages_output_path);
+  CsvWriter::write(*_query_table, _query_output_path);
 }
 
 void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractOperator>& op) {
@@ -106,6 +127,10 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
 void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
   const auto node = op->lqp_node;
+  const pmr_string input_sorted =
+      op->groupby_column_ids().size() > 0
+          ? _check_column_sorted(op->left_input()->performance_data, op->groupby_column_ids().at(0))
+          : "";
 
   for (const auto& el : node->node_expressions) {
     if (el->type == ExpressionType::LQPColumn) {
@@ -124,7 +149,11 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                           table_column_information.column_type,
                                                           table_column_information.table_name,
                                                           table_column_information.column_name,
-                                                          operator_info.name};
+                                                          operator_info.name,
+                                                          input_sorted,
+                                                          _current_query_hash,
+                                                          operator_info.left_input_chunks,
+                                                          ""};
       _general_output_table->append(output_row);
     }
   }
@@ -140,6 +169,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   pmr_string right_column_name{};
   pmr_string left_column_type{};
   pmr_string right_column_type{};
+  pmr_string left_column_sorted{};
+  pmr_string right_column_sorted{};
   int64_t left_distinct_values = -1;
   int64_t right_distinct_values = -1;
 
@@ -149,7 +180,6 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   //                                                                       *node->left_input(), *node->right_input());
   const auto& operator_predicate = op->primary_predicate();
 
-  //if (operator_predicate.has_value()) {
   const auto predicate_expression =
       static_pointer_cast<const AbstractPredicateExpression>(join_node->node_expressions[0]);
 
@@ -167,6 +197,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     left_table_name = left_table_column_information.table_name;
     left_column_name = left_table_column_information.column_name;
     left_column_type = left_table_column_information.column_type;
+    left_column_sorted = _check_column_sorted(op->left_input()->performance_data, operator_predicate.column_ids.first);
   }
 
   const auto second_predicate_expression = predicate_expression->arguments[1];
@@ -177,6 +208,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_table_name = right_table_column_information.table_name;
     right_column_name = right_table_column_information.column_name;
     right_column_type = right_table_column_information.column_type;
+    right_column_sorted =
+        _check_column_sorted(op->right_input()->performance_data, operator_predicate.column_ids.second);
   }
 
   const auto column_ids = operator_predicate.column_ids;
@@ -225,7 +258,12 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                 right_table_name,
                                                 right_column_name,
                                                 right_column_type,
-                                                operator_flipped_inputs};
+                                                operator_flipped_inputs,
+                                                left_column_sorted,
+                                                right_column_sorted,
+                                                _current_query_hash,
+                                                operator_info.left_input_chunks,
+                                                operator_info.right_input_chunks};
 
   // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
   // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
@@ -241,6 +279,10 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     output_row[18] = left_table_name;
     output_row[19] = left_column_name;
     output_row[20] = left_column_type;
+    output_row[22] = right_column_sorted;
+    output_row[23] = left_column_sorted;
+    output_row[25] = operator_info.right_input_chunks;
+    output_row[26] = operator_info.left_input_chunks;
   }
 
   _join_output_table->append(output_row);
@@ -261,7 +303,10 @@ void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetT
                                                       "",
                                                       pmr_string{op->table_name()},
                                                       "",
-                                                      ""};
+                                                      "",
+                                                      "",
+                                                      _current_query_hash,
+                                                      operator_info.left_input_chunks, ""};
 
   _general_output_table->append(output_row);
 }
@@ -273,6 +318,12 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   const auto node = op->lqp_node;
   const auto predicate_node = static_pointer_cast<const PredicateNode>(node);
   const auto predicate = predicate_node->predicate();
+  const pmr_string input_sorted = _find_input_sorted(op->left_input()->performance_data, op->predicate());
+  pmr_string predicate_str{};
+
+  if (const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate)) {
+    predicate_str = pmr_string{magic_enum::enum_name(predicate_expression->predicate_condition)};
+  }
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
@@ -291,7 +342,10 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           table_column_information.column_type,
                                                           table_column_information.table_name,
                                                           table_column_information.column_name,
-                                                          implementation};
+                                                          implementation,
+                                                          input_sorted,
+                                                          _current_query_hash,
+                                                          operator_info.left_input_chunks, predicate_str};
       _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
@@ -303,6 +357,7 @@ void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const Ind
   const auto node = op->lqp_node;
   const auto predicate_node = static_pointer_cast<const PredicateNode>(node);
   const auto predicate = predicate_node->predicate();
+  //const pmr_string input_sorted = _find_input_sorted(op->left_input()->get_output(), op->predicate());
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
@@ -321,7 +376,11 @@ void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const Ind
                                                           table_column_information.column_type,
                                                           table_column_information.table_name,
                                                           table_column_information.column_name,
-                                                          operator_info.name};
+                                                          operator_info.name,
+                                                          "",
+                                                          _current_query_hash,
+                                                          operator_info.left_input_chunks,
+                                                          ""};
       _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
@@ -385,10 +444,12 @@ const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporte
   if (op->left_input()) {
     operator_info.left_input_rows = static_cast<int64_t>(op->left_input()->performance_data->output_row_count);
     operator_info.left_input_columns = static_cast<int32_t>(op->left_input()->performance_data->output_column_count);
+    operator_info.left_input_chunks = op->left_input()->performance_data->output_chunk_count;
   }
   if (op->right_input()) {
     operator_info.right_input_rows = static_cast<int64_t>(op->right_input()->performance_data->output_row_count);
     operator_info.right_input_columns = static_cast<int32_t>(op->right_input()->performance_data->output_column_count);
+    operator_info.right_input_chunks = op->right_input()->performance_data->output_chunk_count;
   }
 
   const auto lqp_node = op->lqp_node;
@@ -406,6 +467,60 @@ const OperatorFeatureExporter::GeneralOperatorInformation OperatorFeatureExporte
   operator_info.estimated_cardinality = _cardinality_estimator->estimate_cardinality(lqp_node);
 
   return operator_info;
+}
+
+const pmr_string OperatorFeatureExporter::_check_column_sorted(
+    const std::unique_ptr<AbstractOperatorPerformanceData>& performance_data, const ColumnID column_id) const {
+  bool sorted_ascending = true;
+  bool sorted_descending = true;
+
+  if (!performance_data) {
+    return pmr_string{};
+  }
+  if (column_id > performance_data->output_column_count) {
+    return pmr_string{};
+  }
+
+  for (const auto& chunk_sorted_by : performance_data->chunks_sorted_by) {
+    if (!(sorted_ascending || sorted_descending)) break;
+
+    if (chunk_sorted_by.empty()) {
+      sorted_ascending = false;
+      sorted_descending = false;
+      break;
+    }
+
+    bool chunk_sorted_ascending = false;
+    bool chunk_sorted_descending = false;
+    for (const auto& sort_definition : chunk_sorted_by) {
+      if (sort_definition.column == column_id) {
+        if (sort_definition.sort_mode == SortMode::Ascending) {
+          chunk_sorted_ascending = true;
+        } else
+          chunk_sorted_descending = true;
+      }
+    }
+    sorted_ascending &= chunk_sorted_ascending;
+    sorted_descending &= chunk_sorted_descending;
+  }
+  if (sorted_ascending) return pmr_string{"Ascending"};
+  if (sorted_descending) return pmr_string{"Descending"};
+  return pmr_string{"No"};
+}
+
+const pmr_string OperatorFeatureExporter::_find_input_sorted(
+    const std::unique_ptr<AbstractOperatorPerformanceData>& performance_data,
+    const std::shared_ptr<AbstractExpression>& predicate) const {
+  auto input_sorted = pmr_string{};
+  visit_expression(predicate, [&](const auto& expression) {
+    if (expression->type == ExpressionType::PQPColumn) {
+      const auto column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
+      input_sorted = _check_column_sorted(performance_data, column_expression->column_id);
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+    return ExpressionVisitation::VisitArguments;
+  });
+  return input_sorted;
 }
 
 }  // namespace opossum

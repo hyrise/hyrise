@@ -5,14 +5,17 @@
 #include "hyrise.hpp"
 #include "types.hpp"
 
-
 using namespace opossum;  // NOLINT
 
 int main(int argc, char** argv) {
   // Data generation settings
   //const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
-  //                                                    BenchmarkType::JCC_H, BenchmarkType::JOB};  
-  const std::map<std::string, BenchmarkType> BENCHMARK_TYPES {{"tpch", BenchmarkType::TPC_H}, {"tpcds", BenchmarkType::TPC_DS}, {"tpcc", BenchmarkType::TPC_C}, {"jcch", BenchmarkType::JCC_H}, {"job", BenchmarkType::JOB}};
+  //                                                    BenchmarkType::JCC_H, BenchmarkType::JOB};
+  const std::map<std::string, BenchmarkType> BENCHMARK_TYPES{{"tpch", BenchmarkType::TPC_H},
+                                                             {"tpcds", BenchmarkType::TPC_DS},
+                                                             {"tpcc", BenchmarkType::TPC_C},
+                                                             {"jcch", BenchmarkType::JCC_H},
+                                                             {"job", BenchmarkType::JOB}};
 
   // create benchmark config
   auto cli_options = BenchmarkRunner::get_basic_cli_options("What-If Clustering Statistics Generator");
@@ -36,11 +39,9 @@ int main(int argc, char** argv) {
   const auto scale_factor = cli_parse_result["scale"].as<float>();
   constexpr bool SKEW_JCCH = false;
 
-
   // Export directory
   std::string DATA_PATH = "./data/" + benchmark_name;
   std::filesystem::create_directories(DATA_PATH);
-
 
   // Execute calibration
   std::cout << "Generating data" << std::endl;

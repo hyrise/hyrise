@@ -542,8 +542,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 void BenchmarkRunner::_export_pqps() const {
   const auto& pqp_cache = Hyrise::get().default_pqp_cache;
   const auto cache_map = pqp_cache->snapshot();
-  for (const auto& [_, entry] : cache_map) {
-    _operator_exporter->export_to_csv(entry.value);
+  for (const auto& [query, entry] : cache_map) {
+    _operator_exporter->export_to_csv(entry.value, query);
   }
   // Clear pqp cache for next benchmark run
   pqp_cache->clear();
