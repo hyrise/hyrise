@@ -173,7 +173,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       expression_evaluator_cost += timer.lap();
     }
   }
-  // Instruct the scheduler to execute the jobs.
+
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
 
