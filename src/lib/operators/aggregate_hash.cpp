@@ -625,10 +625,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     _write_groupby_output(pos_list);
   }
 
-  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
-
   /*
   Write the aggregated columns to the output
   */
@@ -648,15 +644,21 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
 
   // Write the output
+  Timer timer;
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
   }
 
+  // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
+  // stored in members and later written to the operator performance data struct.
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, aggregate_columns_writing_duration);
 
   return output;
 }
@@ -773,9 +775,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
-
+  Timer timer;
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -848,7 +848,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     });
   }
 
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
+  groupby_columns_writing_duration += timer.lap();
 }
 
 template <typename ColumnDataType>
@@ -884,6 +884,12 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
 
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
+  // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
+  // subtracted from the runtime of this method (thus, it's either non-zero for the first aggregate column or zero for
+  // the remaining columns).
+  auto excluded_time = std::chrono::nanoseconds{};
+  Timer timer;
+
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
   auto aggregate_data_type = AggregateTraits<ColumnDataType, aggregate_function>::AGGREGATE_DATA_TYPE;
@@ -907,11 +913,13 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   if (aggregate_index == 0) {
     auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
-    for (auto& result : context->results) {
-      pos_list[chunk_offset] = (result.row_id);
+    for (const auto& result : context->results) {
+      pos_list[chunk_offset] = result.row_id;
       ++chunk_offset;
     }
+    Timer write_groupby_output_timer;
     _write_groupby_output(pos_list);
+    excluded_time = write_groupby_output_timer.lap();
   }
 
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
@@ -946,6 +954,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
         std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
+
+  aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>
