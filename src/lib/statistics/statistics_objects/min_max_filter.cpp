@@ -1,10 +1,7 @@
 #include "min_max_filter.hpp"
 
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <utility>
 
 #include "abstract_statistics_object.hpp"
