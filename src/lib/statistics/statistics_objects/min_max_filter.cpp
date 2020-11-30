@@ -162,48 +162,47 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     case PredicateCondition::Like: {
-      
-      const auto pattern = boost::get<pmr_string>(variant_value);
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        const auto pattern = boost::get<pmr_string>(variant_value);
 
-      const auto single_char_wildcard_pos = pattern.find_first_of('_');
-      const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+        const auto single_char_wildcard_pos = pattern.find_first_of('_');
+        const auto multi_char_wildcard_pos = pattern.find_first_of('%');
 
-      const auto single_valid_char_wildcard_exist = bool{(single_char_wildcard_pos != std::string::npos)};
-      const auto multi_char_wildcard_pos_exsists = bool{(multi_char_wildcard_pos != std::string::npos)};
+        const auto single_valid_char_wildcard_exist = bool{(single_char_wildcard_pos != std::string::npos)};
+        const auto multi_char_wildcard_pos_exsists = bool{(multi_char_wildcard_pos != std::string::npos)};
 
-      auto wildcard_pos = size_t{};
+        auto wildcard_pos = size_t{};
 
-      if (!single_valid_char_wildcard_exist && !multi_char_wildcard_pos_exsists){
+        if (!single_valid_char_wildcard_exist && !multi_char_wildcard_pos_exsists){
+          return false;
+        }
+        if (single_char_wildcard_pos == 0 || multi_char_wildcard_pos == 0) {
+          return false;
+        }
+        if (single_valid_char_wildcard_exist && single_char_wildcard_pos != 0){
+          wildcard_pos = single_char_wildcard_pos;
+        }
+        if (multi_char_wildcard_pos_exsists && multi_char_wildcard_pos != 0 && wildcard_pos < multi_char_wildcard_pos){
+          wildcard_pos = multi_char_wildcard_pos;
+        }
+        // Calculate lower bound of the search pattern
+        const auto lower_bound = pattern.substr(0, wildcard_pos);
+        const auto current_character_value = lower_bound.back();
+
+        // Find next value according to ASCII-table
+        constexpr int MAX_ASCII_VALUE = 127;
+        if (current_character_value >= MAX_ASCII_VALUE) {
+          // current_character_value + 1 would overflow; TODO: need to be handled
+          return max < lower_bound;
+        }
+
+        const auto next_character = static_cast<char>(current_character_value + 1);
+        const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
+
+        return max < lower_bound || upper_bound < min;
+      } else {
         return false;
       }
-      if (single_char_wildcard_pos == 0 || multi_char_wildcard_pos == 0) {
-        return false;
-      }
-      if (single_valid_char_wildcard_exist && single_char_wildcard_pos != 0){
-        wildcard_pos = single_char_wildcard_pos;
-      }
-      if (multi_char_wildcard_pos_exsists && multi_char_wildcard_pos != 0 && wildcard_pos < multi_char_wildcard_pos){
-        wildcard_pos = multi_char_wildcard_pos;
-      }
-      // Calculate lower bound of the search pattern
-      const auto lower_bound = pattern.substr(0, wildcard_pos);
-      const auto current_character_value = lower_bound.back();
-
-      const auto value_lower_bound = boost::get<T>(variant_value);
-
-      // Find next value according to ASCII-table
-      constexpr int MAX_ASCII_VALUE = 127;
-      if (current_character_value >= MAX_ASCII_VALUE) {
-        // current_character_value + 1 would overflow; TODO: need to be handled
-        return max < value_lower_bound;
-      }
-
-      const auto next_character = static_cast<char>(current_character_value + 1);
-      const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
-
-      const auto value_upper_bound = boost::get<T>(upper_bound);
-
-      return max < value_lower_bound || value_upper_bound < min;
     }
     default:
       return false;
