@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
@@ -211,19 +212,11 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
     return;
   }
 
-  // Calculate lower and upper bound of the search pattern
-  const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
-  const auto current_character_value = lower_bound.back();
+  const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
 
-  // Find next value according to ASCII-table
-  constexpr int MAX_ASCII_VALUE = 127;
-  if (current_character_value >= MAX_ASCII_VALUE) {
-    // current_character_value + 1 would overflow; use regexp-based LIKE for this edge case
+  if (lower_bound == upper_bound) {
     return;
   }
-
-  const auto next_character = static_cast<char>(current_character_value + 1);
-  const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
 
   if (binary_predicate->predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
