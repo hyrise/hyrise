@@ -60,7 +60,9 @@ TEST_F(LikeMatcherTest, LowerUpperBound) {
   const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
   ASSERT_EQ(lower_bound, "Japan");
   ASSERT_EQ(upper_bound, "Japao");
+}
 
+TEST_F(LikeMatcherTest, ASCIIOverflow) {
   // Check that if the char ASCII value before the wildcard has the max ASCII value 127, the upper and lower bound are
   // the same.
   auto max_ascii_value = pmr_string(1, static_cast<char>(127));
