@@ -48,10 +48,6 @@ class MetaTableManagerTest : public BaseTest {
     return names;
   }
 
-  // We need this as the add method of MetaTableManager is protected.
-  // Won't compile if add is not called by test class, which is a friend of MetaTableManager.
-  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager.add(table); }
-
  protected:
   std::shared_ptr<const Table> mock_manipulation_values;
 
@@ -95,7 +91,7 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   const auto mock_table = std::make_shared<MetaMockTable>();
   auto& mtm = Hyrise::get().meta_table_manager;
 
-  MetaTableManagerTest::add_meta_table(mock_table);
+  Hyrise::get().meta_table_manager.add(mock_table);
   mtm.insert_into(mock_table->name(), mock_manipulation_values);
   mtm.delete_from(mock_table->name(), mock_manipulation_values);
   mtm.update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
