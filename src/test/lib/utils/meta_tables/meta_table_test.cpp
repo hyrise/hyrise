@@ -135,7 +135,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
-TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) { 
+TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
   // Meta tables that access stored tables without going through GetTable need to handle nullptr explicitly. We do not
   // check the actual results in order to avoid the number of test tables (that would have to be updated if the memory
   // consumption changes) low. Instead, we simply ensure that the meta table is generated without dereferencing said
@@ -148,7 +148,6 @@ TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
 
   generate_meta_table(GetParam());
 }
-
 
 TEST_P(MultiMetaTablesTest, SQLFeatures) {
   // TEST SQL features on meta tables
