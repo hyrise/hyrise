@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <utility>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -45,6 +46,11 @@ class LikeMatcher {
    * PatternWildcard::AnyChars, "ld"}
    */
   static PatternTokens pattern_string_to_tokens(const pmr_string& pattern);
+
+  // Calculates the upper and lower bound of a given pattern. For example, with the pattern `Japan%`, the lower
+  // bound `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the
+  // lower bound the second the upper bound.
+  static std::pair<pmr_string, pmr_string> get_lower_upper_bound(const pmr_string& pattern);
 
   /**
    * To speed up LIKE there are special implementations available for simple, common patterns.

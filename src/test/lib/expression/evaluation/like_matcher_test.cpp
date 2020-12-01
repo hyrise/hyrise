@@ -1,4 +1,5 @@
 #include <string>
+#include <utility>
 
 #include "base_test.hpp"
 
@@ -52,6 +53,19 @@ TEST_F(LikeMatcherTest, NotMatching) {
   EXPECT_FALSE(match("hello", "Hello"));
   EXPECT_FALSE(match("Hello", "Hello_"));
   EXPECT_FALSE(match("Hello", "He_o"));
+}
+
+TEST_F(LikeMatcherTest, LowerUpperBound) {
+  auto pattern = pmr_string("Japan%");
+  auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
+  ASSERT_EQ(lower_bound, "Japan");
+  ASSERT_EQ(upper_bound, "Japao");
+
+  auto max_ascii_value = pmr_string(1, static_cast<char>(127));
+  max_ascii_value.append("%");
+  auto [lower_bound_max_ascii, upper_bound_max_ascii] = LikeMatcher::get_lower_upper_bound(max_ascii_value);
+  ASSERT_EQ(lower_bound_max_ascii, pmr_string(1, static_cast<char>(127)));
+  ASSERT_EQ(lower_bound_max_ascii, upper_bound_max_ascii);
 }
 
 }  // namespace opossum
