@@ -52,18 +52,21 @@ class MinMaxFilterTestLike : public BaseTest {
  protected:
   void SetUp() override { 
     _values = pmr_vector<pmr_string>{"b", "bb", "bbb", "bbbb", "c"};
+    _values_max_ascii = pmr_vector<pmr_string>{pmr_string(1, static_cast<char>(127)) ,pmr_string(1, static_cast<char>(127))};
     _values_with_max_ascii = pmr_vector<pmr_string>{pmr_string(1, static_cast<char>(126)) ,pmr_string(1, static_cast<char>(127))};
+    _equal_values = pmr_vector<pmr_string>{"a", "a", "a"};
     max_ascii_value = pmr_string(1, static_cast<char>(127));
     max_ascii_value.append("%");
   }
-  pmr_vector<pmr_string> _values;
-  pmr_vector<pmr_string> _values_with_max_ascii;
+  pmr_vector<pmr_string> _values, _values_max_ascii, _values_with_max_ascii, _equal_values;
   pmr_string max_ascii_value;
 };
 
 TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   auto filter = std::make_unique<MinMaxFilter<pmr_string>>(this->_values.front(), this->_values.back());
   auto filter_with_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(this->_values_with_max_ascii.front(), this->_values_with_max_ascii.back());
+  auto filter_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(this->_values_max_ascii.front(), this->_values_max_ascii.back());
+  auto filter_equal_values = std::make_unique<MinMaxFilter<pmr_string>>(this->_equal_values.front(), this->_equal_values.back());
   // for the predicate condition of Like, we expect only values where the lower_bound is bigger then max
   // or the upper_bound is smaller then min to be prunable
 
@@ -82,18 +85,20 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b"));
-  EXPECT_FALSE(filter_with_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
-
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::NotLike, "b%"));
+  EXPECT_TRUE(filter_equal_values->does_not_contain(PredicateCondition::NotLike, "a"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::NotLike, "%"));
+  EXPECT_TRUE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "a%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "c%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "bb%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "d%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "aa%"));
+  EXPECT_FALSE(filter_with_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
 }
-
 
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
 TYPED_TEST_SUITE(MinMaxFilterTest, MixMaxFilterTypes, );  // NOLINT(whitespace/parens)

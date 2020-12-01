@@ -158,7 +158,6 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
     }
-    case PredicateCondition::NotLike:
     case PredicateCondition::Like: {
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto pattern = boost::get<pmr_string>(variant_value);
@@ -175,18 +174,49 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
         // Calculate lower bound of the search pattern
         const auto lower_bound = pattern.substr(0, wildcard_pos);
-        const auto current_character_value = lower_bound.back();
+        const auto last_character_of_lower_bound = lower_bound.back();
 
         //// Calculate upper bound of the search pattern according to ASCII-table
         constexpr int MAX_ASCII_VALUE = 127;
-        if (current_character_value >= MAX_ASCII_VALUE) {
+        if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
           // current_character_value + 1 would overflow.
           return max < lower_bound;
         }
-        const auto next_character = static_cast<char>(current_character_value + 1);
+        const auto next_character = static_cast<char>(last_character_of_lower_bound + 1);
         const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
 
         return max < lower_bound || upper_bound < min;
+      }
+      return false;
+    }
+    case PredicateCondition::NotLike: {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        const auto pattern = boost::get<pmr_string>(variant_value);
+
+        const auto wildcard_pos = pattern.find_first_of("_%");
+
+        if (wildcard_pos == std::string::npos) {
+          return value == min && value == max;
+        }
+
+        if (wildcard_pos == 0) {
+          return true;
+        }
+
+        // Calculate lower bound of the search pattern
+        const auto lower_bound = pattern.substr(0, wildcard_pos);
+        const auto last_character_of_lower_bound = lower_bound.back();
+
+        //// Calculate upper bound of the search pattern according to ASCII-table
+        constexpr int MAX_ASCII_VALUE = 127;
+        if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
+          // current_character_value + 1 would overflow.
+          return max == lower_bound && lower_bound == min;
+        }
+        const auto next_character = static_cast<char>(last_character_of_lower_bound + 1);
+        const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
+
+        return max <= upper_bound && lower_bound <= min;
       }
       return false;
     }
