@@ -171,7 +171,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
           return false;
         }
 
-        auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
+        const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
 
         if (lower_bound == upper_bound) {
           return max < lower_bound;
@@ -194,7 +194,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
           return true;
         }
 
-        auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
+        const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
 
         if (lower_bound == upper_bound) {
           return max == lower_bound && lower_bound == min;
