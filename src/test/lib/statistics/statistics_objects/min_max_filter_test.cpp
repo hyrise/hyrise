@@ -65,6 +65,7 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "aa_"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "cc%"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "cc_"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "a"));
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "bbbb%"));
@@ -73,6 +74,7 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b"));
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::NotLike, "b%"));
 

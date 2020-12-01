@@ -163,25 +163,14 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto pattern = boost::get<pmr_string>(variant_value);
 
-        const auto single_char_wildcard_pos = pattern.find_first_of('_');
-        const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+        const auto wildcard_pos = pattern.find_first_of("_%");
 
-        const auto single_valid_char_wildcard_exist = (single_char_wildcard_pos != std::string::npos);
-        const auto multi_char_wildcard_pos_exsists = (multi_char_wildcard_pos != std::string::npos);
+        if (wildcard_pos == std::string::npos) {
+          return value < min || value > max;
+        }
 
-        auto wildcard_pos = size_t{};
-
-        if (!single_valid_char_wildcard_exist && !multi_char_wildcard_pos_exsists) {
+        if (wildcard_pos == 0) {
           return false;
-        }
-        if (single_char_wildcard_pos == 0 || multi_char_wildcard_pos == 0) {
-          return false;
-        }
-        if (single_valid_char_wildcard_exist && single_char_wildcard_pos != 0) {
-          wildcard_pos = single_char_wildcard_pos;
-        }
-        if (multi_char_wildcard_pos_exsists && multi_char_wildcard_pos != 0 && wildcard_pos < multi_char_wildcard_pos) {
-          wildcard_pos = multi_char_wildcard_pos;
         }
 
         // Calculate lower bound of the search pattern
