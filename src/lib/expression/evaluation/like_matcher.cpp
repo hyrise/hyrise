@@ -57,7 +57,6 @@ std::pair<pmr_string, pmr_string> LikeMatcher::get_lower_upper_bound(const pmr_s
   const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_ascii_character;
 
   return std::pair<pmr_string, pmr_string>(lower_bound, upper_bound);
-
 }
 
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const pmr_string& pattern) {

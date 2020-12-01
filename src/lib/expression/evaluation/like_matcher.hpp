@@ -3,9 +3,9 @@
 #include <experimental/functional>
 #include <regex>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
-#include <utility>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
