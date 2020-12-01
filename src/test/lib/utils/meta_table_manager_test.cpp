@@ -50,12 +50,12 @@ class MetaTableManagerTest : public BaseTest {
 
   // We need this as the add method of MetaTableManager is protected.
   // Won't compile if add is not called by test class, which is a friend of MetaTableManager.
-  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager._add(table); }
+  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager.add(table); }
 
  protected:
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() {
+  void SetUp() override {
     Hyrise::reset();
 
     const auto column_definitions = MetaMockTable().column_definitions();
@@ -66,7 +66,7 @@ class MetaTableManagerTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 };
 
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
