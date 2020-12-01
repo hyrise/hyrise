@@ -9,6 +9,7 @@
 #include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 
 namespace opossum {
 
@@ -162,62 +163,46 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto pattern = boost::get<pmr_string>(variant_value);
 
-        const auto wildcard_pos = pattern.find_first_of("_%");
-
-        if (wildcard_pos == std::string::npos) {
+        if (!LikeMatcher::contains_wildcard(pattern)) {
           return value < min || value > max;
         }
 
-        if (wildcard_pos == 0) {
+        if (LikeMatcher::get_index_of_next_wildcard(pattern, 0) == 0) {
           return false;
         }
 
-        // Calculate lower bound of the search pattern
-        const auto lower_bound = pattern.substr(0, wildcard_pos);
-        const auto last_character_of_lower_bound = lower_bound.back();
+        auto [lower_bound, upper_bound] =  LikeMatcher::get_lower_upper_bound(pattern);
 
-        //// Calculate upper bound of the search pattern according to ASCII-table
-        constexpr int MAX_ASCII_VALUE = 127;
-        if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
-          // current_character_value + 1 would overflow.
+        if (lower_bound == upper_bound) {
           return max < lower_bound;
         }
-        const auto next_character = static_cast<char>(last_character_of_lower_bound + 1);
-        const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
 
         return max < lower_bound || upper_bound < min;
       }
+
       return false;
     }
     case PredicateCondition::NotLike: {
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto pattern = boost::get<pmr_string>(variant_value);
 
-        const auto wildcard_pos = pattern.find_first_of("_%");
-
-        if (wildcard_pos == std::string::npos) {
+        if (!LikeMatcher::contains_wildcard(pattern)) {
           return value == min && value == max;
         }
 
-        if (wildcard_pos == 0) {
+        if (LikeMatcher::get_index_of_next_wildcard(pattern, 0) == 0) {
           return true;
         }
 
-        // Calculate lower bound of the search pattern
-        const auto lower_bound = pattern.substr(0, wildcard_pos);
-        const auto last_character_of_lower_bound = lower_bound.back();
+        auto [lower_bound, upper_bound] =  LikeMatcher::get_lower_upper_bound(pattern);
 
-        //// Calculate upper bound of the search pattern according to ASCII-table
-        constexpr int MAX_ASCII_VALUE = 127;
-        if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
-          // current_character_value + 1 would overflow.
+        if (lower_bound == upper_bound) {
           return max == lower_bound && lower_bound == min;
         }
-        const auto next_character = static_cast<char>(last_character_of_lower_bound + 1);
-        const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
 
         return max <= upper_bound && lower_bound <= min;
       }
+
       return false;
     }
     default:
