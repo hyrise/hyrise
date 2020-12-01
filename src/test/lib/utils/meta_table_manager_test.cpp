@@ -55,7 +55,7 @@ class MetaTableManagerTest : public BaseTest {
  protected:
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() override {
+  void SetUp() {
     Hyrise::reset();
 
     const auto column_definitions = MetaMockTable().column_definitions();
@@ -66,7 +66,7 @@ class MetaTableManagerTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() { Hyrise::reset(); }
 };
 
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};

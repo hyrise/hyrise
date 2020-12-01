@@ -13,7 +13,7 @@ namespace opossum {
 
 class ChangeMetaTableTest : public BaseTest {
  protected:
-  void SetUp() override {
+  void SetUp() {
     Hyrise::reset();
 
     auto column_definitions = MetaMockTable().column_definitions();
@@ -34,7 +34,7 @@ class ChangeMetaTableTest : public BaseTest {
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() { Hyrise::reset(); }
 
   std::shared_ptr<AbstractOperator> left_input;
   std::shared_ptr<AbstractOperator> right_input;
