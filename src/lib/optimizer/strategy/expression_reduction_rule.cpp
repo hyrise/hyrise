@@ -17,7 +17,7 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-void ExpressionReductionRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ExpressionReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {

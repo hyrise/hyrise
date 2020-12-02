@@ -40,24 +40,25 @@ class AbstractRule {
    * Rules can define their own strategy of optimizing subquery LQPs by overriding this function. See, for example, the
    * StoredTableColumnAlignmentRule.
    */
-  virtual void apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
+  virtual void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
  protected:
   /**
-   * This function applies the concrete rule to a given plan. It is intended to be called recursively by the rule,
-   * but for non-subquery-plans only.
+   * This function applies the concrete rule to the given plan, but not to its subquery plans.
+   * To traverse LQPs, use the visit_lqp function. Do not call this function recursively.
    */
-  virtual void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
+  virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
 
   /**
-   * Calls _apply_recursively_to() for each input of @param node.
+   * LEGACY FUNCTION: Use visit_lqp for LQP traversal instead.
    *
+   * Calls _apply_to_plan_without_subqueries() for each input of @param node.
    * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
    * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
    */
-  void _apply_recursively_to_inputs(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
+  void _apply_to_plan_without_subqueries_inputs(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
 };
 
 }  // namespace opossum

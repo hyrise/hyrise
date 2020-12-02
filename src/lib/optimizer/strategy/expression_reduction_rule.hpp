@@ -60,7 +60,7 @@ class ExpressionReductionRule : public AbstractRule {
                                          const std::shared_ptr<AbstractLQPNode>& root_node);
 
  protected:
-  void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

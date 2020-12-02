@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-void AbstractRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
+void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP
-  _apply_recursively_to(lqp_root);
+  _apply_to_plan_without_subqueries(lqp_root);
 
   // (2) Optimize distinct subquery LQPs, one-by-one.
   auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(lqp_root);
@@ -25,7 +25,7 @@ void AbstractRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root
     // (2.2) Prepare
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
     // (2.3) Optimize subquery LQP
-    _apply_recursively_to(local_lqp_root);
+    _apply_to_plan_without_subqueries(local_lqp_root);
     // (2.4) Assign optimized LQP to all corresponding SubqueryExpressions
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression.lock()->lqp = local_lqp_root->left_input();
@@ -35,9 +35,9 @@ void AbstractRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& lqp_root
   }
 }
 
-void AbstractRule::_apply_recursively_to_inputs(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
-  if (node->left_input()) _apply_recursively_to(node->left_input());
-  if (node->right_input()) _apply_recursively_to(node->right_input());
+void AbstractRule::_apply_to_plan_without_subqueries_inputs(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
+  if (node->left_input()) _apply_to_plan_without_subqueries(node->left_input());
+  if (node->right_input()) _apply_to_plan_without_subqueries(node->right_input());
 }
 
 }  // namespace opossum

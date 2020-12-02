@@ -27,7 +27,7 @@ class PredicateNode;
 
 class IndexScanRule : public AbstractRule {
  protected:
-  void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
   bool _is_index_scan_applicable(const IndexStatistics& index_statistics,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
   static bool _is_single_segment_index(const IndexStatistics& index_statistics);

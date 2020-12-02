@@ -21,10 +21,10 @@
 
 namespace opossum {
 
-void ChunkPruningRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // we only want to follow chains of predicates
   if (lqp_root->type != LQPNodeType::Predicate) {
-    _apply_recursively_to_inputs(lqp_root);
+    _apply_to_plan_without_subqueries_inputs(lqp_root);
     return;
   }
 
@@ -50,7 +50,7 @@ void ChunkPruningRule::_apply_recursively_to(const std::shared_ptr<AbstractLQPNo
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    _apply_recursively_to_inputs(lqp_root);
+    _apply_to_plan_without_subqueries_inputs(lqp_root);
     return;
   }
   const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);

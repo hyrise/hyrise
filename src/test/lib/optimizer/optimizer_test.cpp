@@ -110,7 +110,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
 
-    void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) return;
@@ -138,9 +138,9 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
 
    protected:
-    void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       nodes.emplace(lqp_root);
-      _apply_recursively_to_inputs(lqp_root);
+      _apply_to_plan_without_subqueries_inputs(lqp_root);
     }
 
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
@@ -220,7 +220,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     size_t& counter;
 
    protected:
-    void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override { ++counter; }
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override { ++counter; }
   };
 
   auto rule = std::make_unique<MockRule>(counter);

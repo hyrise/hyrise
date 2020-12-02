@@ -29,7 +29,7 @@ class PredicateSplitUpRule : public AbstractRule {
   explicit PredicateSplitUpRule(const bool split_disjunctions = true);
 
  protected:
-  void _apply_recursively_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
   void _split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
