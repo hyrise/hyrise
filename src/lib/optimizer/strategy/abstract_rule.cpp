@@ -16,21 +16,19 @@ void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp
   // (2) Optimize distinct subquery LQPs, one-by-one.
   auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(lqp_root);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-    // (2.1) Check, whether the subquery expression / LQP is still being used. We do not want to optimize subquery LQPs
-    //       that have been removed by previous rule iterations.
     if (std::all_of(subquery_expressions.cbegin(), subquery_expressions.cend(),
-                    [](auto subquery_expression) { return subquery_expression.expired(); })) {
+                         [](auto subquery_expression) { return subquery_expression.expired(); })) {
       continue;
     }
-    // (2.2) Prepare
+    // (2.1) Prepare
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
-    // (2.3) Optimize subquery LQP
+    // (2.2) Optimize subplan
     _apply_to_plan_without_subqueries(local_lqp_root);
-    // (2.4) Assign optimized LQP to all corresponding SubqueryExpressions
+    // (2.3) Assign optimized subplan to all corresponding SubqueryExpressions
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression.lock()->lqp = local_lqp_root->left_input();
     }
-    // (2.5) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
+    // (2.4) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
     local_lqp_root->set_left_input(nullptr);
   }
 }
