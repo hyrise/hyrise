@@ -60,7 +60,7 @@ namespace opossum {
 
 class StoredTableColumnAlignmentRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<LogicalPlanRootNode>& root_node) const override;
+  void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const override;
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

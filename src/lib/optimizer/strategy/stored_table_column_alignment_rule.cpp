@@ -107,7 +107,7 @@ namespace opossum {
  * for each plan.
  * We override this function to align StoredTableNodes across all LQPs, including subquery plans.
  */
-void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
+void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
   // (1) Collect all plans
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{std::static_pointer_cast<AbstractLQPNode>(root_node)};
   auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
