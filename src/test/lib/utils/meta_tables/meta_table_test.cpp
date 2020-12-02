@@ -82,7 +82,7 @@ class MetaTableTest : public BaseTest {
   void TearDown() override { Hyrise::reset(); }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
-    Hyrise::get().meta_table_manager.add(table);
+    Hyrise::get().meta_table_manager.add_table(table);
   }
 };
 

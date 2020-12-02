@@ -42,6 +42,12 @@ bool MetaTableManager::is_meta_table_name(const std::string& name) {
 
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
+void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
+  _meta_tables[table->name()] = table;
+  _table_names.push_back(table->name());
+  std::sort(_table_names.begin(), _table_names.end());
+}
+
 bool MetaTableManager::has_table(const std::string& table_name) const {
   return _meta_tables.count(_trim_table_name(table_name));
 }
@@ -91,12 +97,6 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
   for (size_t row = 0; row < selected_rows.size(); row++) {
     _meta_tables.at(table_name)->_update(selected_rows[row], update_rows[row]);
   }
-}
-
-void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {
-  _meta_tables[table->name()] = table;
-  _table_names.push_back(table->name());
-  std::sort(_table_names.begin(), _table_names.end());
 }
 
 std::string MetaTableManager::_trim_table_name(const std::string& table_name) {

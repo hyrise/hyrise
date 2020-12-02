@@ -91,7 +91,7 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   const auto mock_table = std::make_shared<MetaMockTable>();
   auto& mtm = Hyrise::get().meta_table_manager;
 
-  Hyrise::get().meta_table_manager.add(mock_table);
+  Hyrise::get().meta_table_manager.add_table(mock_table);
   mtm.insert_into(mock_table->name(), mock_manipulation_values);
   mtm.delete_from(mock_table->name(), mock_manipulation_values);
   mtm.update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
@@ -99,6 +99,15 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   EXPECT_EQ(mock_table->insert_calls(), 1);
   EXPECT_EQ(mock_table->remove_calls(), 1);
   EXPECT_EQ(mock_table->update_calls(), 1);
+}
+
+TEST_F(MetaTableManagerTest, RetrieveAddedTable) {
+  const auto mock_table = std::make_shared<MetaMockTable>();
+  Hyrise::get().meta_table_manager.add_table(mock_table);
+
+  // Check that added table can be retrieved
+  const auto mock_table2 = Hyrise::get().meta_table_manager.get_table("mock");
+  EXPECT_EQ(mock_table, std::static_pointer_cast<MetaMockTable>(mock_table2));
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {
