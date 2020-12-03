@@ -80,7 +80,6 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
-
   // Prepare root & subquery LQP
   auto stn_subquery = std::static_pointer_cast<StoredTableNode>(_stn_left->deep_copy());
   auto column_c = lqp_column_(stn_subquery, ColumnID{2});
@@ -99,7 +98,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   // Prerequisites
   ASSERT_EQ(_stn_left->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(_stn_right->pruned_column_ids(), pruned_column_set_a);
-  ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b); // differs
+  ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs
 
   apply_rule(_rule, projection_root);
 

@@ -122,7 +122,8 @@ void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<Logical
   align_pruned_column_ids(grouped_stored_table_nodes);
 }
 
-void StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Fail("Did not expect this function to be called.");
 }
 
