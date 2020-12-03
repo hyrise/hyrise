@@ -16,6 +16,18 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
+
+
+
+
+
+
+
+
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
@@ -35,8 +47,36 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   // Create table statistics and chunk pruning statistics for added table.
 
+  // std::cout << "settings stats for " << name << std::endl;
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
+
+  // resolve_data_type(table->table_statistics()->column_statistics[0]->data_type, [&](const auto data_type_t) {
+  //   using ColumnDataType = typename decltype(data_type_t)::type;
+  //   // std::cout << *std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(table->table_statistics()->column_statistics[0]) << std::endl;
+
+  //   const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(table->table_statistics()->column_statistics[0]);
+
+  //   const auto histogram = column_statistics->histogram;
+  //   if (histogram) {
+  //     std::cout << "table: " << name << " -  distinct count " << histogram->total_distinct_count() << " for table of size" << table->row_count() << std::endl;
+  //   } else {
+  //     std::cout << "table: " << name << " - size" << table->row_count() << " NO HISTOGRAM!?!?" << std::endl;
+  //   }
+  // });
+
+  // const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<uint32_t>>(
+  //             table->table_statistics()->column_statistics[ColumnID{0}]);
+  // if (column_statistics) {
+  //   const auto histogram = column_statistics->histogram;
+  //   if (histogram) {
+  //     std::cout << "table: " << name << " -  distinct count " << histogram->total_distinct_count() << " for table of size" << table->row_count() << std::endl;
+  //   } else {
+  //     std::cout << "table: " << name << " - size" << table->row_count() << " NO HISTOGRAM!?!?" << std::endl;
+  //   }
+  // } else {
+  //   std::cout << "table: " << name << " - size" << table->row_count() << " NOT EVEN COLUMN STATISTICS!?!?" << std::endl;
+  // }
 
   _tables[name] = std::move(table);
 }

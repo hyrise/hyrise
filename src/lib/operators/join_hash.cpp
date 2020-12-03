@@ -22,6 +22,15 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
+
+
+
+
+
+
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+
 namespace {
 
 // Depending on which input table became the build/probe table we have to order the columns of the output table.
@@ -72,7 +81,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+size_t JoinHash::calculate_radix_bits(const double distinctili, const size_t build_relation_size, const size_t probe_relation_size) {
   /*
     The number of bits is used to create build partitions whose hash maps have a size that can be expected to fit into
     the L2 cache. This should incorporate hardware knowledge, once available in Hyrise. As of now, we assume a L2 cache
@@ -96,7 +105,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
   // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
   const auto l2_cache_size = 1'024'000;                  // bytes
-  const auto l2_cache_max_usable = l2_cache_size * 1.2;  // use 50% of the L2 cache size
+  const auto l2_cache_max_usable = l2_cache_size * 0.9;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -106,7 +115,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   using KeyType = typename PosHashTable<T>::SmallPosList;
   const auto complete_hash_map_size =
       // number of items in map
-      static_cast<double>(build_relation_size) *
+      static_cast<double>(build_relation_size) * distinctili *
       // key + value (and one byte overhead, see link above)
       static_cast<double>(sizeof(T) + sizeof(KeyType) + 1) / 1.0;  // TODO: narf ...
 
@@ -191,10 +200,51 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
       constexpr auto NEITHER_IS_STRING =
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
+      auto distinctili = 1.0;
+
+      const auto build_side_row_count = build_input_table->row_count();
+      if (build_side_row_count > 20'000) { // 20.000
+        if (build_input_table->type() == TableType::Data) {
+          const auto table_statistics = build_input_table->table_statistics();
+          if (table_statistics) {
+            // std::cout << "data table WITH stats" << std::endl;
+            const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<BuildColumnDataType>>(table_statistics->column_statistics[build_column_id]);
+            const auto histogram = column_statistics->histogram;
+            distinctili = static_cast<double>(histogram->total_distinct_count()) / static_cast<double>(build_input_table->row_count());
+          }
+          // else {
+          //   std::cout << "data table without stats" << std::endl;
+          // }
+        } else {
+          DebugAssert(build_input_table->type() == TableType::References, "");
+          // TODO: check for chunkID
+          const auto& first_chunk = build_input_table->get_chunk(ChunkID{0});
+          const auto referencing_segment =
+            std::dynamic_pointer_cast<const ReferenceSegment>(first_chunk->get_segment(build_column_id));
+          DebugAssert(referencing_segment, "");
+          const auto actual_table = referencing_segment->referenced_table();
+          DebugAssert(actual_table, "");
+          const auto ref_table_statistics = actual_table->table_statistics();
+          
+          Assert(referencing_segment->referenced_table()->type() == TableType::Data, "");
+          if (ref_table_statistics) {
+            // std::cout << "ref table WITH stats" << std::endl;
+            const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<BuildColumnDataType>>(ref_table_statistics->column_statistics[referencing_segment->referenced_column_id()]);
+            const auto histogram = column_statistics->histogram;
+            distinctili = static_cast<double>(histogram->total_distinct_count()) / static_cast<double>(actual_table->row_count());
+          }
+          // else {
+          //   std::cout << "No stats for ref table's referenced table" << std::endl;
+          // }
+        }
+      }
+
+      // std::cout << "-------------" << *this << std::endl;
+
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
           _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+              calculate_radix_bits<BuildColumnDataType>(distinctili, build_side_row_count, probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partition does not get too large, because the

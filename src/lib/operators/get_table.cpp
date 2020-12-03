@@ -231,8 +231,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
-  return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
+  auto return_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc());
+
+  return_table->set_table_statistics(stored_table->table_statistics());
+
+  return return_table;
 }
 
 }  // namespace opossum
