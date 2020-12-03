@@ -235,8 +235,10 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     return predicate;
   }
 
-  // ToDo(Julian) Discuss: We do not want to deep copy any PQPs, because they become irrelevant after this function.
-  // Instead, we could (1) materialize the uncorrelated subqueries and (2) manually create a new predicate from it.
+  // ToDo(Julian) Discuss
+  // We do not want to deep copy any PQPs, because they become irrelevant after this function. Instead, we could
+  //  (1) materialize the uncorrelated subqueries and
+  //  (2) manually create a new predicate from it.
   auto predicate_with_materialized_subquery_results = predicate->deep_copy();
   auto arguments_count = predicate->arguments.size();
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
@@ -254,6 +256,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     });
     predicate_with_materialized_subquery_results->arguments.at(argument_idx) =
         std::make_shared<ValueExpression>(std::move(subquery_result));
+
     // Deregister, because we obtained the subquery result and no longer need its PQP.
     subquery->pqp->deregister_consumer();
   }
