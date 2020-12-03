@@ -103,9 +103,8 @@ void align_pruned_column_ids(const ColumnPruningAgnosticMultiSet& grouped_stored
 namespace opossum {
 
 /**
- * The default implementation optimizes a given LQP and all of its subqueries individually by calling TODO...
- * for each plan.
- * We override this function to align StoredTableNodes across all LQPs, including subquery plans.
+ * The default implementation of this function optimizes a given plan and all of its subquery subplans individually.
+ * However, as we do not want to align StoredTableNodes per plan, but across all plans, we override it accordingly.
  */
 void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
   // (1) Collect all plans
