@@ -18,7 +18,7 @@ class TPCDSBenchmark(AbstractBenchmark):
     return 500
 
   def max_runs(self):
-    return 100
+    return 1
 
   def scale(self):
     return 1

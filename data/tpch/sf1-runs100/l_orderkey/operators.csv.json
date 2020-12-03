@@ -59,6 +59,26 @@
             "name": "OPERATOR_IMPLEMENTATION",
             "nullable": true,
             "type": "string"
+        },
+        {
+            "name": "INPUT_COLUMN_SORTED",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "QUERY_HASH",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "INPUT_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "PREDICATE",
+            "nullable": true,
+            "type": "string"
         }
     ],
     "config": {

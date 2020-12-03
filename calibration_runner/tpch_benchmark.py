@@ -10,18 +10,18 @@ class TPCHBenchmark(AbstractBenchmark):
   def exec_path(self):
     return "build-release/hyriseCalibration"
 
-  #def result_path(self):    
+  #def result_path(self):
   #  return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpch/sf10-3d-corrected"
 
   def max_runs(self):
-    return 100
+    return 1
 
   def time(self):
     return 500
 
   def scale(self):
     return 1
-  
+
   def chunk_sizes(self):
     return [65535]
 

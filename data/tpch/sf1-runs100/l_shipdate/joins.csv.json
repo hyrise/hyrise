@@ -109,6 +109,31 @@
             "name": "PROBE_SIDE_FLIP",
             "nullable": false,
             "type": "int"
+        },
+        {
+            "name": "LEFT_INPUT_COLUMN_SORTED",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "RIGHT_INPUT_COLUMN_SORTED",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "QUERY_HASH",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "LEFT_INPUT_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_INPUT_CHUNKS",
+            "nullable": false,
+            "type": "long"
         }
     ],
     "config": {

@@ -108,8 +108,11 @@ def append_to_input_format(df, input_format):
     result = df.copy()
     diffs = np.setdiff1d(input_format.columns, df.columns)
     for diff in diffs:
+        print(f"adding column {diff}")
         result[diff] = 0
     control_diffs = np.setdiff1d(df.columns, input_format.columns)
     if len(control_diffs) > 0:
-        raise ValueError(f"Did not expect column(s) {', '.join(control_diffs)}")
+        print(f"dropping columns {', '.join(control_diffs)}")
+        result = result.drop(columns=control_diffs)
+        #raise ValueError(f"Did not expect column(s) {', '.join(control_diffs)}")
     return result
