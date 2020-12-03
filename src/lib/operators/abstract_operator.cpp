@@ -159,7 +159,7 @@ void AbstractOperator::execute() {
   }
 }
 
-const std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");

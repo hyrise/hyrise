@@ -28,7 +28,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
   /**
    * Register as a consumer for all subplans of uncorrelated subqueries
    */
-  for (auto& expression : expressions) {
+  for (const auto& expression : expressions) {
     auto pqp_subquery_expressions = collect_pqp_subquery_expressions(expression);
     for (auto& subquery_expression : pqp_subquery_expressions) {
       // We do not register for the subplans of correlated subqueries because they are templated and cannot be

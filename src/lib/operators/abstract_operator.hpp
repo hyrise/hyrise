@@ -81,7 +81,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void execute();
 
   // Returns the result of the operator
-  const std::shared_ptr<const Table> get_output() const;
+  std::shared_ptr<const Table> get_output() const;
 
   /**
    * Clears the operator's results by releasing the shared pointer to the result table. In case never_clear_output()
