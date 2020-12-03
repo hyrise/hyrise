@@ -166,9 +166,7 @@ void AbstractOperator::clear_output() {
   if (_clear_output) _output = nullptr;
 }
 
-std::string AbstractOperator::description(DescriptionMode description_mode) const {
-  return name();
-}
+std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
@@ -194,9 +192,7 @@ std::shared_ptr<const Table> AbstractOperator::right_input_table() const { retur
 
 size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
-void AbstractOperator::register_consumer() {
-  _consumer_count++;
-}
+void AbstractOperator::register_consumer() { _consumer_count++; }
 
 void AbstractOperator::deregister_consumer() {
   DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");

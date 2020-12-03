@@ -16,10 +16,9 @@ class UncorrelatedSubqueryResults;
  */
 class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
  public:
-  ExpressionEvaluatorTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                   const std::shared_ptr<const AbstractExpression>& expression,
-                                   const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults>&
-                                       uncorrelated_subquery_results);
+  ExpressionEvaluatorTableScanImpl(
+      const std::shared_ptr<const Table>& in_table, const std::shared_ptr<const AbstractExpression>& expression,
+      const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults>& uncorrelated_subquery_results);
 
   std::string description() const override;
   std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) override;
