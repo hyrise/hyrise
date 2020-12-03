@@ -26,21 +26,19 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
   /**
-   * (1) Collect and store all uncorrelated subquery expressions
-   * (2) Register as a consumer for PQPs of uncorrelated subqueries. We might be able to share results with other
-   *     subplans. Correlated subqueries contain templated PQPs which are ambiguous. They have to be copied and
-   *     parameterized before execution. Thus, it does not make sense to register as a consumer for those.
+   * Register as a consumer for all subplans of uncorrelated subqueries
    */
   for (auto& expression : expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto& pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
-        _uncorrelated_subquery_expressions.push_back(pqp_subquery_expression);
-        pqp_subquery_expression->pqp->register_consumer();
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
+    auto pqp_subquery_expressions = collect_pqp_subquery_expressions(expression);
+    for (auto& subquery_expression : pqp_subquery_expressions) {
+      // We do not register for the subplans of correlated subqueries because they are templated and cannot be
+      // executed without concrete parameters. Thus, there is option for result sharing at this point.
+      if (subquery_expression->is_correlated()) continue;
+      // Register
+      subquery_expression->pqp->register_consumer();
+      // Store a pointer for easier deregistration later on.
+      _uncorrelated_subquery_expressions.push_back(subquery_expression);
+    }
   }
 }
 

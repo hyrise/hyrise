@@ -18,7 +18,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-#include "operators/validate.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

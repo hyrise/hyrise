@@ -1,8 +1,10 @@
 #include "base_test.hpp"
 
+#include <operators/get_table.hpp>
+#include <operators/projection.hpp>
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -143,6 +145,43 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
       and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
   EXPECT_TRUE(expression_contains_correlated_parameter(
       and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, a_a)), equals_(a_c, 7))));
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsSingle) {
+  const auto pqp_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+
+  auto subqueries = collect_pqp_subquery_expressions(pqp_subquery);
+
+  EXPECT_EQ(subqueries.size(), 1);
+  EXPECT_EQ(subqueries.at(0), pqp_subquery);
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsMultiple) {
+  const auto pqp_subquery_a = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  const auto pqp_subquery_b = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_b"));
+  auto expression = add_(pqp_subquery_a, sub_(value_(1), pqp_subquery_b));
+
+  auto subqueries = collect_pqp_subquery_expressions(expression);
+
+  EXPECT_EQ(subqueries.size(), 2);
+  EXPECT_EQ(subqueries.at(0), pqp_subquery_a);
+  EXPECT_EQ(subqueries.at(1), pqp_subquery_b);
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsDeeplyNested) {
+  const auto sub_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  const auto projection = std::make_shared<Projection>(std::make_shared<GetTable>("table_b"),
+                                                       expression_vector(add_(sub_subquery, value_(1))));
+  const auto root_subquery = std::make_shared<PQPSubqueryExpression>(projection);
+  auto embedded_root_subquery = add_(root_subquery, value_(1));
+
+  // Check that the function does not return subquery expressions from subquery subplans
+  auto subqueries1 = collect_pqp_subquery_expressions(root_subquery);
+  auto subqueries2 = collect_pqp_subquery_expressions(embedded_root_subquery);
+  EXPECT_EQ(subqueries1.size(), 1);
+  EXPECT_EQ(subqueries2.size(), 1);
+  EXPECT_EQ(subqueries1.at(0), root_subquery);
+  EXPECT_EQ(subqueries2.at(0), root_subquery);
 }
 
 }  // namespace opossum

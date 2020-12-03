@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <functional>
@@ -13,9 +14,10 @@
 namespace opossum {
 
 class AbstractLQPNode;
-enum class LogicalOperator;
 class LQPColumnExpression;
 class TransactionContext;
+class PQPSubqueryExpression;
+enum class LogicalOperator;
 
 /**
  * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
@@ -163,5 +165,12 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
  *          std::nullopt for other expression types
  */
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
+
+/**
+ * Collects and returns all PQPSubqueryExpressions that are stored in @param expression.
+ * Note though, that the function does not return any subquery expressions from subplans of other subquery expressions.
+ */
+std::vector<std::shared_ptr<PQPSubqueryExpression>> collect_pqp_subquery_expressions(
+    const std::shared_ptr<AbstractExpression>& expression);
 
 }  // namespace opossum

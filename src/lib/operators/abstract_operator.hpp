@@ -83,7 +83,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Returns the result of the operator
   const std::shared_ptr<const Table> get_output() const;
 
-  // Clears this operator's results to free up space, unless never_clear_output() has been called.
+  // Clears this operator's results to free up space, unless never_clear_output() has been called before.
   void clear_output();
 
   virtual const std::string& name() const = 0;
@@ -100,8 +100,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   /**
    * Returns a new instance of the same operator with the same configuration.
-   * Recursively copies the input operators. An operator needs to implement this method in order to be cacheable.
-   * Uses @param copied_ops to deduplicate subplans.
+   * Recursively copies the input operators. An operator needs to implement this function in order to be cacheable.
+   * Subplans are deduplicated automatically using @param copied_ops.
    */
   std::shared_ptr<AbstractOperator> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops =
@@ -176,7 +176,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
-  // We track the number of consuming operators to determine when to flush results.
+  // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic<u_short> _consumer_count = 0;
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.

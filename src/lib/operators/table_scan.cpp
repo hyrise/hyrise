@@ -44,20 +44,18 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-  // Register as a consumer for all PQPSubqueryExpressions
-  for (auto& expression : _predicate->arguments) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
-        // Register as a consumer for uncorrelated subqueries, because we want to share operator results.
-        // Correlated subqueries are more difficult because they lead to multiple PQPs. We cannot easily share
-        // results and thus, do not register as a consumer.
-        pqp_subquery_expression->pqp->register_consumer();
-        _uncorrelated_subquery_expressions.push_back(pqp_subquery_expression);
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
+  /**
+   * Register as a consumer for all subplans of uncorrelated subqueries
+   */
+  auto pqp_subquery_expressions = collect_pqp_subquery_expressions(predicate);
+  for (auto& subquery_expression : pqp_subquery_expressions) {
+    // We do not register for the subplans of correlated subqueries because they are templated and cannot be
+    // executed without concrete parameters. Thus, there is option for result sharing at this point.
+    if (subquery_expression->is_correlated()) continue;
+    // Register
+    subquery_expression->pqp->register_consumer();
+    // Store a pointer for easier deregistration later on.
+    _uncorrelated_subquery_expressions.push_back(subquery_expression);
   }
 }
 
