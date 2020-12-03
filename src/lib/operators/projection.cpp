@@ -32,11 +32,11 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     auto pqp_subquery_expressions = collect_pqp_subquery_expressions(expression);
     for (auto& subquery_expression : pqp_subquery_expressions) {
       // We do not register for the subplans of correlated subqueries because they are templated and cannot be
-      // executed without concrete parameters. Thus, there is option for result sharing at this point.
+      // executed without concrete parameters. Thus, there is no option for result sharing at this point.
       if (subquery_expression->is_correlated()) continue;
-      // Register
+
+      // Register & Store a pointer for easy deregistration later on.
       subquery_expression->pqp->register_consumer();
-      // Store a pointer for easier deregistration later on.
       _uncorrelated_subquery_expressions.push_back(subquery_expression);
     }
   }

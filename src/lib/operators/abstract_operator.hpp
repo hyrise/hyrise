@@ -83,7 +83,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Returns the result of the operator
   const std::shared_ptr<const Table> get_output() const;
 
-  // Clears this operator's results to free up space, unless never_clear_output() has been called before.
+  /**
+   * Clears the operator's results by releasing the shared pointer to the result table. In case never_clear_output()
+   * has been called, nothing will happen.
+   *
+   * AUTOMATIC CLEARING
+   *  This function is called automatically by the last consuming operator on deregistration. Note, however, that
+   *  top-level operators do not have any consuming operators. Therefore, we have to call clear_output() for those
+   *  manually.
+   */
   void clear_output();
 
   virtual const std::string& name() const = 0;
