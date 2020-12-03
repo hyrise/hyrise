@@ -348,7 +348,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   }
 }
 
-void BetweenCompositionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   if (lqp_root->type == LQPNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
@@ -371,12 +371,12 @@ void BetweenCompositionRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& l
       // A chain of predicates was found. Continue rule with last input
       auto next_node = predicate_nodes.back()->left_input();
       _replace_predicates(predicate_nodes);
-      _apply_to(next_node);
+      _apply_to_plan_without_subqueries(next_node);
       return;
     }
   }
 
-  _apply_to_inputs(lqp_root);
+  _apply_to_plan_without_subqueries_inputs(lqp_root);
 }
 
 }  // namespace opossum

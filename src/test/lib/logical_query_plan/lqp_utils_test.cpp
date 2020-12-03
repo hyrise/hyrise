@@ -212,4 +212,37 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   EXPECT_NE(delete_tables.find("node_a"), delete_tables.end());
 }
 
+TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
+  // Prepare an LQP with multiple subqueries in a nested manner
+
+  // clang-format off
+  const auto nested_subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
+    node_a);
+  const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
+
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_x),
+    PredicateNode::make(greater_than_(b_x, max_a_subquery),
+      node_b));
+  const auto x_greater_than_max_a_subquery = lqp_subquery_(subquery_lqp);
+
+  const auto root_lqp =
+  ProjectionNode::make(expression_vector(add_(a_a, a_b)),
+    PredicateNode::make(in_(a_b, x_greater_than_max_a_subquery),
+      node_a));
+  // clang-format on
+
+  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_lqp);
+
+  EXPECT_EQ(subquery_expressions_by_lqp.size(), 2);
+  EXPECT_EQ(subquery_expressions_by_lqp.at(0).first, x_greater_than_max_a_subquery->lqp);
+  EXPECT_EQ(subquery_expressions_by_lqp.at(0).second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.at(0).second.at(0).lock(), x_greater_than_max_a_subquery);
+
+  EXPECT_EQ(subquery_expressions_by_lqp.at(1).first, max_a_subquery->lqp);
+  EXPECT_EQ(subquery_expressions_by_lqp.at(1).second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.at(1).second.at(0).lock(), max_a_subquery);
+}
+
 }  // namespace opossum

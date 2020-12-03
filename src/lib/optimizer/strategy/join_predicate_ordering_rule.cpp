@@ -4,15 +4,15 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/logical_expression.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-void JoinPredicateOrderingRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.
     if (node->type != LQPNodeType::Join || node->node_expressions.size() <= 1) {

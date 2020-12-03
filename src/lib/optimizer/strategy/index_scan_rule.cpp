@@ -28,7 +28,7 @@ constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 // The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
-void IndexScanRule::_apply_to(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set");
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 

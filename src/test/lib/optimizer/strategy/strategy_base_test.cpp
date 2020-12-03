@@ -23,7 +23,7 @@ std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_
   const auto cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
   rule->cost_estimator = cost_estimator;
 
-  rule->apply(root_node);
+  rule->apply_to_plan(root_node);
 
   // Remove LogicalPlanRootNode
   const auto optimized_node = root_node->left_input();
