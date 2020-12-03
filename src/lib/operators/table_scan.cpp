@@ -254,7 +254,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     predicate_with_materialized_subquery_results->arguments.at(argument_idx) =
         std::make_shared<ValueExpression>(std::move(subquery_result));
 
-    // Deregister, because we obtained the subquery result and no longer need its PQP.
+    // Deregister, because we obtained the subquery result and no longer need the subquery subplan.
     subquery->pqp->deregister_consumer();
   }
 
@@ -400,8 +400,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
   const auto& uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subqueries' PQPs.
-  for (auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+  // Deregister, because we obtained the results and no longer need the subquery subplans.
+  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
     pqp_subquery_expression->pqp->deregister_consumer();
   }
   return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
