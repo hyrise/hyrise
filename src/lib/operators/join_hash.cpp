@@ -104,20 +104,23 @@ size_t JoinHash::calculate_radix_bits(const double distinctili, const size_t bui
 
   // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
   // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
-  const auto l2_cache_size = 1'024'000;                  // bytes
-  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
+  constexpr auto l2_cache_size = 1'024'000;                  // bytes
+  constexpr auto l2_cache_max_usable = l2_cache_size * 0.75;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
   // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
   // slightly skewed data distributions and aim for a fill level of 80%.
-  using KeyType = typename PosHashTable<T>::SmallPosList;
+  // using KeyType = typename PosHashTable<T>::SmallPosList;
   const auto complete_hash_map_size =
       // number of items in map
       static_cast<double>(build_relation_size) * distinctili *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(KeyType) + 1) / 0.8;  // TODO: narf ...
+      // static_cast<double>(sizeof(T) + sizeof(KeyType) + 1) / 0.8;
+      static_cast<double>(sizeof(T) + 1) / 0.85;  // TODO: narf ...
+
+  // std::cout << "with dist of  " << distinctili << " the size of the hash map is " << complete_hash_map_size << " (build size: " << build_relation_size << " size<T>: " << sizeof(T) << " and sizeof(KeyType): " << 3 * sizeof(void*) << std::endl;
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
