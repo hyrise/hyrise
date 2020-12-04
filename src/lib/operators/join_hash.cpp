@@ -261,7 +261,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           //   std::cout << "\t" << *this << std::endl;
           // }
           _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(sqrt(distinctili), build_side_row_count, probe_input_table->row_count());
+              calculate_radix_bits<BuildColumnDataType>(std::min(1.0, sqrt(distinctili)), build_side_row_count, probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partition does not get too large, because the
