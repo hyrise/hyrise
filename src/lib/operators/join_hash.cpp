@@ -105,7 +105,7 @@ size_t JoinHash::calculate_radix_bits(const double distinctili, const size_t bui
   // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
   // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
   const auto l2_cache_size = 1'024'000;                  // bytes
-  const auto l2_cache_max_usable = l2_cache_size * 0.9;  // use 50% of the L2 cache size
+  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -117,7 +117,7 @@ size_t JoinHash::calculate_radix_bits(const double distinctili, const size_t bui
       // number of items in map
       static_cast<double>(build_relation_size) * distinctili *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(KeyType) + 1) / 1.0;  // TODO: narf ...
+      static_cast<double>(sizeof(T) + sizeof(KeyType) + 1) / 0.8;  // TODO: narf ...
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
@@ -225,13 +225,20 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           const auto actual_table = referencing_segment->referenced_table();
           DebugAssert(actual_table, "");
           const auto ref_table_statistics = actual_table->table_statistics();
-          
-          Assert(referencing_segment->referenced_table()->type() == TableType::Data, "");
+          DebugAssert(actual_table->type() == TableType::Data, "");
           if (ref_table_statistics) {
-            // std::cout << "ref table WITH stats" << std::endl;
+            // std::cout << "ref table WITH stats for col id " << referencing_segment->referenced_column_id() << std::endl;
             const auto column_statistics = std::dynamic_pointer_cast<AttributeStatistics<BuildColumnDataType>>(ref_table_statistics->column_statistics[referencing_segment->referenced_column_id()]);
             const auto histogram = column_statistics->histogram;
+            // std::cout << *column_statistics << std::endl;
+            // std::cout << "dist " << histogram->total_distinct_count() << " and rows " << actual_table->row_count() << std::endl;
             distinctili = static_cast<double>(histogram->total_distinct_count()) / static_cast<double>(actual_table->row_count());
+            // if (histogram->total_distinct_count() > static_cast<float>(actual_table->row_count())) {
+            //   std::cout << "ref table WITH stats for col id " << referencing_segment->referenced_column_id() << std::endl;
+            //   std::cout << *column_statistics << std::endl;
+            //   std::cout << "dist " << histogram->total_distinct_count() << " and rows " << actual_table->row_count() << std::endl;
+            // }
+            // Assert(static_cast<double>(histogram->total_distinct_count()) <= static_cast<double>(actual_table->row_count()), "more dist than table isze");
           }
           // else {
           //   std::cout << "No stats for ref table's referenced table" << std::endl;
@@ -243,8 +250,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
+
+          // std::cout << "$$$using distinctili of " << distinctili << std::endl;
+          // if (distinctili != 1.0) {
+          //   std::cout << "\t" << *this << std::endl;
+          // }
           _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(distinctili, build_side_row_count, probe_input_table->row_count());
+              calculate_radix_bits<BuildColumnDataType>(sqrt(distinctili), build_side_row_count, probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partition does not get too large, because the

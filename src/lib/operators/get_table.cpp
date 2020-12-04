@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -9,6 +10,41 @@
 
 #include "hyrise.hpp"
 #include "types.hpp"
+
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+
+namespace {
+
+using namespace opossum;  // NOLINT
+
+std::shared_ptr<TableStatistics> scale_table_statistics(const TableStatistics& old_statistics,
+                                                        size_t pruned_table_size) {
+  // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
+  // used for pruning can be correctly estimated. Example: For a table that has sorted values from 1 to 100 and a chunk
+  // size of 10, the predicate `x > 90` has a selectivity of 10%. However, if the ChunkPruningRule removes nine chunks
+  // out of ten, the selectivity is now 100%. Updating the statistics is important so that the predicate ordering
+  // can properly order the predicates.
+  //
+  // For the column that the predicate pruned on, we remove num_rows_pruned values that do not match the predicate
+  // from the statistics. See the pruned() implementation of the different statistics types for details.
+  // The other columns are simply scaled to reflect the reduced table size.
+  //
+  // For now, this does not take any sorting on a chunk- or table-level into account. In the future, this may be done
+  // to further improve the accuracy of the statistics.
+
+  const auto column_count = old_statistics.column_statistics.size();
+
+  std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
+
+  const auto scale = static_cast<float>(pruned_table_size) / old_statistics.row_count;
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    column_statistics[column_id] = old_statistics.column_statistics[column_id]->scaled(scale);
+  }
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), static_cast<float>(pruned_table_size));
+}
+}
 
 namespace opossum {
 
@@ -234,7 +270,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   auto return_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc());
 
-  return_table->set_table_statistics(stored_table->table_statistics());
+  const auto pruned_table_size = std::accumulate(output_chunks.cbegin(), output_chunks.cend(), 0ul, [](size_t size, const auto& chunk) { return size + chunk->size(); });
+  return_table->set_table_statistics(scale_table_statistics(*(stored_table->table_statistics()), pruned_table_size));
 
   return return_table;
 }
