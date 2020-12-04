@@ -82,6 +82,8 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const double distinctili, const size_t build_relation_size, const size_t probe_relation_size) {
+  Assert(distinctili > 0.0 && distinctili <= 1.0, "TODO: DIST WRONG");
+
   /*
     The number of bits is used to create build partitions whose hash maps have a size that can be expected to fit into
     the L2 cache. This should incorporate hardware knowledge, once available in Hyrise. As of now, we assume a L2 cache
