@@ -30,6 +30,7 @@ namespace opossum {
   protected:
     std::shared_ptr<PredicateNode> get_pruned_attribute_statistics(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<LQPColumnExpression> join_partner) const;
     std::shared_ptr<AbstractExpression> build_logical_expression(std::vector<std::shared_ptr<AbstractExpression>> expressions, long unsigned int index) const;
+    void dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
   };
 
 }  // namespace opossum
