@@ -7,16 +7,18 @@
 
 namespace opossum {
 
-ValueExpression::ValueExpression(const AllTypeVariant& init_value)
-    : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(std::nullopt) {}
-
-ValueExpression::ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_expression_id)
+ValueExpression::ValueExpression(const AllTypeVariant& init_value,
+                                 const std::optional<ValueExpressionID> init_value_expression_id)
     : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(init_value_expression_id) {}
 
 bool ValueExpression::requires_computation() const { return false; }
 
 std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
-  return std::make_shared<ValueExpression>(value, *value_expression_id);
+  if (value_expression_id) {
+    return std::make_shared<ValueExpression>(value, *value_expression_id);
+  } else {
+    return std::make_shared<ValueExpression>(value);
+  }
 }
 
 std::string ValueExpression::description(const DescriptionMode mode) const {
@@ -49,7 +51,14 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
    */
   if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) return true;
 
-  return value == value_expression.value;
+  const auto value_equality = (value == value_expression.value);
+  // Checking for value id equality would be reasonable, however SQLite QUery 285 doesn't like that
+  // SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1
+  // const auto value_id_equality = (value_expression_id && value_expression.value_expression_id)
+  //                                     ? (*value_expression_id == *value_expression.value_expression_id)
+  //                                     : true;
+  // return value_equality && value_id_equality;
+  //return value_equality;
 }
 
 size_t ValueExpression::_shallow_hash() const { return std::hash<AllTypeVariant>{}(value); }
