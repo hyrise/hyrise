@@ -49,10 +49,10 @@ class LikeMatcher {
   static PatternTokens pattern_string_to_tokens(const pmr_string& pattern);
 
   // Calculates the upper and lower bound of a given pattern. For example, with the pattern `Japan%`, the lower bound
-  // `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the lower bound the second
-  // the upper bound. if the char ASCII value before the wildcard has the max ASCII value 127, the upper and lower bound
-  // are the same.
-  static std::optional<std::pair<pmr_string, pmr_string>> get_lower_upper_bound(const pmr_string& pattern);
+  // `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the lower bound, the second
+  // the upper bound. If the char ASCII value before the wild-card has the max ASCII value 127, or the first character
+  // of the pattern is a wild-card, nullopt is returned.
+  static std::optional<std::pair<pmr_string, pmr_string>> bounds(const pmr_string& pattern);
 
   /**
    * To speed up LIKE there are special implementations available for simple, common patterns.

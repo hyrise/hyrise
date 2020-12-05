@@ -42,13 +42,19 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
   return tokens;
 }
 
-std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::get_lower_upper_bound(const pmr_string& pattern) {
-  // Calculate lower bound of the search Pattern
+// The following table shows examples of the return for some patterns:
+// test%        | %test   | test\x7F% | test            | '' (empty string)
+// {test, tesu} | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
+std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
+  if (!contains_wildcard(pattern)) {
+    const auto upper_bound = pmr_string(pattern) + static_cast<char>(0);
+    return std::pair<pmr_string, pmr_string>(pattern, upper_bound);
+  }
   const auto wildcard_pos = get_index_of_next_wildcard(pattern);
   if (wildcard_pos == 0) {
     return std::nullopt;
   }
-
+  // Calculate lower bound of the search Pattern
   const auto lower_bound = pattern.substr(0, wildcard_pos);
   const auto last_character_of_lower_bound = lower_bound.back();
 

@@ -211,7 +211,7 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
       multi_char_wildcard_pos + 1 != pattern.size()) {
     return;
   }
-  const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+  const auto bounds = LikeMatcher::bounds(pattern);
 
   // In case of an ASCII overflow
   if (!bounds) return;

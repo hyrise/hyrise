@@ -160,16 +160,15 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     case PredicateCondition::Like: {
+      // Examples for the handle of Like predicate:
+      //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
+      // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}    
+      // does_not_contain(Like) | max < test || | false   | false     | max < test ||  | max < '' ||
+      //                        | min >= tesu   |         |           | min >= test\0  | min >= '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
-        if (!LikeMatcher::contains_wildcard(value)) {
-          return value < min || value > max;
-        }
 
-        const auto bounds = LikeMatcher::get_lower_upper_bound(value);
-        // In case of an ASCII overflow or Leading wildcard
-        if (!bounds) {
-          return false;
-        }
+        const auto bounds = LikeMatcher::bounds(value);
+        if (!bounds) return false;
 
         const auto [lower_bound, upper_bound] = bounds.value();
 
@@ -179,24 +178,19 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return false;
     }
     case PredicateCondition::NotLike: {
+      // Examples for the handle of NotLike predicate:
+      //                          | test%          | %test   | test\x7F% | test            | '' (empty string)
+      // LikeMatcher::bounds()    | {test, tesu}   | nullopt | nullopt   | {test, test\0}  | {'', '\0'}    
+      // does_not_contain(NotLike)| min >= test && | false   | false     | min >= test &&  | min >= '\0' && 
+      //                          | max < tesu     |         |           | max < test\0    | max < '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
-        if (!LikeMatcher::contains_wildcard(value)) {
-          return value == min && value == max;
-        }
 
-        if (LikeMatcher::get_index_of_next_wildcard(value, 0) == 0) {
-          return true;
-        }
-
-        const auto bounds = LikeMatcher::get_lower_upper_bound(value);
-        // In case of an ASCII overflow
-        if (!bounds) {
-          return false;
-        }
+        const auto bounds = LikeMatcher::bounds(value);
+        if (!bounds) return false;
 
         const auto [lower_bound, upper_bound] = bounds.value();
 
-        return max <= upper_bound && lower_bound <= min;
+        return max < upper_bound && lower_bound <= min;
       }
 
       return false;
