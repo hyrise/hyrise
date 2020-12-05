@@ -161,7 +161,6 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     }
     case PredicateCondition::Like: {
       if constexpr (std::is_same_v<T, pmr_string>) {
-
         if (!LikeMatcher::contains_wildcard(value)) {
           return value < min || value > max;
         }
@@ -181,7 +180,6 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     }
     case PredicateCondition::NotLike: {
       if constexpr (std::is_same_v<T, pmr_string>) {
-
         if (!LikeMatcher::contains_wildcard(value)) {
           return value == min && value == max;
         }
