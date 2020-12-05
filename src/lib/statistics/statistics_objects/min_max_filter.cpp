@@ -173,7 +173,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
         const auto [lower_bound, upper_bound] = bounds.value();
 
-        return max < lower_bound || upper_bound < min;
+        return max < lower_bound || upper_bound <= min;
       }
 
       return false;
