@@ -1,6 +1,7 @@
 #pragma once
 
 #include <experimental/functional>
+#include <optional>
 #include <regex>
 #include <string>
 #include <utility>
@@ -51,7 +52,7 @@ class LikeMatcher {
   // `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the lower bound the second
   // the upper bound. if the char ASCII value before the wildcard has the max ASCII value 127, the upper and lower bound
   // are the same.
-  static std::pair<pmr_string, pmr_string> get_lower_upper_bound(const pmr_string& pattern);
+  static std::optional<std::pair<pmr_string, pmr_string>> get_lower_upper_bound(const pmr_string& pattern);
 
   /**
    * To speed up LIKE there are special implementations available for simple, common patterns.

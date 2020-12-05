@@ -1,5 +1,6 @@
 #include "like_matcher.hpp"
 
+#include <optional>
 #include <utility>
 
 #include "boost/algorithm/string/replace.hpp"
@@ -41,9 +42,13 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
   return tokens;
 }
 
-std::pair<pmr_string, pmr_string> LikeMatcher::get_lower_upper_bound(const pmr_string& pattern) {
+std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::get_lower_upper_bound(const pmr_string& pattern) {
   // Calculate lower bound of the search Pattern
   const auto wildcard_pos = get_index_of_next_wildcard(pattern);
+  if (wildcard_pos == 0) {
+    return std::nullopt;
+  }
+
   const auto lower_bound = pattern.substr(0, wildcard_pos);
   const auto last_character_of_lower_bound = lower_bound.back();
 
@@ -51,7 +56,7 @@ std::pair<pmr_string, pmr_string> LikeMatcher::get_lower_upper_bound(const pmr_s
   constexpr int MAX_ASCII_VALUE = 127;
   if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
     // current_character_value + 1 would overflow.
-    return std::pair<pmr_string, pmr_string>(lower_bound, lower_bound);
+    return std::nullopt;
   }
   const auto next_ascii_character = static_cast<char>(last_character_of_lower_bound + 1);
   const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_ascii_character;

@@ -211,12 +211,12 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
       multi_char_wildcard_pos + 1 != pattern.size()) {
     return;
   }
+  const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
 
-  const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
+  // In case of an ASCII overflow
+  if (!bounds) return;
 
-  if (lower_bound == upper_bound) {
-    return;
-  }
+  const auto [lower_bound, upper_bound] = bounds.value();
 
   if (binary_predicate->predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);

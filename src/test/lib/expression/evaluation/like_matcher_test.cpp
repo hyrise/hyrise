@@ -57,19 +57,25 @@ TEST_F(LikeMatcherTest, NotMatching) {
 
 TEST_F(LikeMatcherTest, LowerUpperBound) {
   const auto pattern = pmr_string("Japan%");
-  const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
+  const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+  const auto [lower_bound, upper_bound] = bounds.value();
   ASSERT_EQ(lower_bound, "Japan");
   ASSERT_EQ(upper_bound, "Japao");
 }
 
 TEST_F(LikeMatcherTest, ASCIIOverflow) {
-  // Check that if the char ASCII value before the wildcard has the max ASCII value 127, the upper and lower bound are
-  // the same.
+  // Check that if the char ASCII value before the wildcard has the max ASCII value 127, std::nullopt is returned.
   auto max_ascii_value = pmr_string(1, static_cast<char>(127));
   max_ascii_value.append("%");
-  const auto [lower_bound_max_ascii, upper_bound_max_ascii] = LikeMatcher::get_lower_upper_bound(max_ascii_value);
-  ASSERT_EQ(lower_bound_max_ascii, pmr_string(1, static_cast<char>(127)));
-  ASSERT_EQ(lower_bound_max_ascii, upper_bound_max_ascii);
+  const auto bounds = LikeMatcher::get_lower_upper_bound(max_ascii_value);
+  EXPECT_FALSE(bounds);
+}
+
+TEST_F(LikeMatcherTest, LeadingWildcard) {
+  // Check that if the pattern has a leading wildcard, std::nullopt is returned.
+  const auto pattern = pmr_string("%Japan");
+  const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+  EXPECT_FALSE(bounds);
 }
 
 }  // namespace opossum

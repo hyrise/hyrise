@@ -167,15 +167,13 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
           return value < min || value > max;
         }
 
-        if (LikeMatcher::get_index_of_next_wildcard(pattern, 0) == 0) {
+        const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+        // In case of an ASCII overflow or Leading wildcard
+        if (!bounds) {
           return false;
         }
 
-        const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
-
-        if (lower_bound == upper_bound) {
-          return max < lower_bound;
-        }
+        const auto [lower_bound, upper_bound] = bounds.value();
 
         return max < lower_bound || upper_bound < min;
       }
@@ -194,11 +192,13 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
           return true;
         }
 
-        const auto [lower_bound, upper_bound] = LikeMatcher::get_lower_upper_bound(pattern);
-
-        if (lower_bound == upper_bound) {
-          return max == lower_bound && lower_bound == min;
+        const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+        // In case of an ASCII overflow
+        if (!bounds) {
+          return false;
         }
+
+        const auto [lower_bound, upper_bound] = bounds.value();
 
         return max <= upper_bound && lower_bound <= min;
       }
