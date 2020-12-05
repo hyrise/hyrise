@@ -162,11 +162,10 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     case PredicateCondition::Like: {
       // Examples for the handle of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
-      // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}    
+      // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}
       // does_not_contain(Like) | max < test || | false   | false     | max < test ||  | max < '' ||
       //                        | min >= tesu   |         |           | min >= test\0  | min >= '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
-
         const auto bounds = LikeMatcher::bounds(value);
         if (!bounds) return false;
 
@@ -180,11 +179,10 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     case PredicateCondition::NotLike: {
       // Examples for the handle of NotLike predicate:
       //                          | test%          | %test   | test\x7F% | test            | '' (empty string)
-      // LikeMatcher::bounds()    | {test, tesu}   | nullopt | nullopt   | {test, test\0}  | {'', '\0'}    
-      // does_not_contain(NotLike)| min >= test && | false   | false     | min >= test &&  | min >= '\0' && 
+      // LikeMatcher::bounds()    | {test, tesu}   | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
+      // does_not_contain(NotLike)| min >= test && | false   | false     | min >= test &&  | min >= '\0' &&
       //                          | max < tesu     |         |           | max < test\0    | max < '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
-
         const auto bounds = LikeMatcher::bounds(value);
         if (!bounds) return false;
 
