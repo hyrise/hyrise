@@ -161,13 +161,12 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     }
     case PredicateCondition::Like: {
       if constexpr (std::is_same_v<T, pmr_string>) {
-        const auto pattern = boost::get<pmr_string>(variant_value);
 
-        if (!LikeMatcher::contains_wildcard(pattern)) {
+        if (!LikeMatcher::contains_wildcard(value)) {
           return value < min || value > max;
         }
 
-        const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+        const auto bounds = LikeMatcher::get_lower_upper_bound(value);
         // In case of an ASCII overflow or Leading wildcard
         if (!bounds) {
           return false;
@@ -182,17 +181,16 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     }
     case PredicateCondition::NotLike: {
       if constexpr (std::is_same_v<T, pmr_string>) {
-        const auto pattern = boost::get<pmr_string>(variant_value);
 
-        if (!LikeMatcher::contains_wildcard(pattern)) {
+        if (!LikeMatcher::contains_wildcard(value)) {
           return value == min && value == max;
         }
 
-        if (LikeMatcher::get_index_of_next_wildcard(pattern, 0) == 0) {
+        if (LikeMatcher::get_index_of_next_wildcard(value, 0) == 0) {
           return true;
         }
 
-        const auto bounds = LikeMatcher::get_lower_upper_bound(pattern);
+        const auto bounds = LikeMatcher::get_lower_upper_bound(value);
         // In case of an ASCII overflow
         if (!bounds) {
           return false;
