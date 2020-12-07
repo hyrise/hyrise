@@ -3,9 +3,10 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
+#include <bytell_hash_map.hpp>
+#include <robin_hood.h>
 #include <uninitialized_vector.hpp>
 
-#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -81,7 +82,7 @@ class PosHashTable {
   // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
   // with a partition that has more values, the partitioning algorithm is at fault.
   using Offset = uint32_t;
-  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
+  using HashTable = robin_hood::unordered_flat_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -136,7 +137,8 @@ class PosHashTable {
       }
       _hash_table.clear();
     } else {
-      _hash_table.shrink_to_fit();
+      // _hash_table.shrink_to_fit();
+      _hash_table.rehash(0);
     }
   }
 
@@ -226,7 +228,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
-  const std::hash<HashedType> hash_function;
+  const robin_hood::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
   auto radix_container = RadixContainer<T>{};
   radix_container.resize(chunk_count);
@@ -408,7 +410,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       continue;
     }
 
-    const std::hash<HashedType> hash_function;
+    const robin_hood::hash<HashedType> hash_function;
 
     const auto insert_into_hash_table = [&, partition_idx]() {
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
@@ -463,7 +465,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
            "value information");
   }
 
-  const std::hash<HashedType> hash_function;
+  const robin_hood::hash<HashedType> hash_function;
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;

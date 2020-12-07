@@ -53,3 +53,6 @@
 [submodule "third_party/jcch-dbgen"]
 	path = third_party/jcch-dbgen
 	url = https://github.com/mrks/dbgen.JCC-H.git
+[submodule "third_party/robin-hood-hashing"]
+	path = third_party/robin-hood-hashing
+	url = https://github.com/martinus/robin-hood-hashing.git
