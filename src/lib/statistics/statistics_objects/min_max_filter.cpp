@@ -160,10 +160,10 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     case PredicateCondition::Like: {
-      // Examples for the handle of Like predicate:
+      // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
       // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}
-      // does_not_contain(Like) | max < test || | false   | false     | max < test ||  | max < '' ||
+      // does_not_contain(Like) | max < test or | false   | false     | max < test or  | max < '' or
       //                        | min >= tesu   |         |           | min >= test\0  | min >= '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
@@ -177,11 +177,11 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return false;
     }
     case PredicateCondition::NotLike: {
-      // Examples for the handle of NotLike predicate:
-      //                          | test%          | %test   | test\x7F% | test            | '' (empty string)
-      // LikeMatcher::bounds()    | {test, tesu}   | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
-      // does_not_contain(NotLike)| min >= test && | false   | false     | min >= test &&  | min >= '\0' &&
-      //                          | max < tesu     |         |           | max < test\0    | max < '\0'
+      // Examples for the handling of NotLike predicate:
+      //                          | test%           | %test   | test\x7F% | test             | '' (empty string)
+      // LikeMatcher::bounds()    | {test, tesu}    | nullopt | nullopt   | {test, test\0}   | {'', '\0'}
+      // does_not_contain(NotLike)| min >= test and | false   | false     | min >= test and  | min >= '\0' and
+      //                          | max < tesu      |         |           | max < test\0     | max < '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
         if (!bounds) return false;

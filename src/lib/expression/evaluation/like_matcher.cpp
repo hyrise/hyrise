@@ -42,9 +42,6 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
   return tokens;
 }
 
-// The following table shows examples of the return for some patterns:
-// test%        | %test   | test\x7F% | test            | '' (empty string)
-// {test, tesu} | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
 std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
   if (!contains_wildcard(pattern)) {
     const auto upper_bound = pmr_string(pattern) + static_cast<char>(0);

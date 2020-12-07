@@ -52,6 +52,9 @@ class LikeMatcher {
   // `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the lower bound, the second
   // the upper bound. If the char ASCII value before the wild-card has the max ASCII value 127, or the first character
   // of the pattern is a wild-card, nullopt is returned.
+  // The following table shows examples of the return for some patterns:
+  // test%        | %test   | test\x7F% | test            | '' (empty string)
+  // {test, tesu} | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
   static std::optional<std::pair<pmr_string, pmr_string>> bounds(const pmr_string& pattern);
 
   /**

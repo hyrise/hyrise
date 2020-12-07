@@ -79,7 +79,6 @@ TEST_F(LikeMatcherTest, LeadingWildcard) {
 }
 
 TEST_F(LikeMatcherTest, NoWildcard) {
-  // Check that if the pattern has no wildcard, std::nullopt is returned.
   const auto pattern = pmr_string("Japan");
   const auto expected_upper_bound = pmr_string("Japan") + static_cast<char>(0);
   const auto bounds = LikeMatcher::bounds(pattern);
