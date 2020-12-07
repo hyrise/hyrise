@@ -183,6 +183,9 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
+
+  std::chrono::nanoseconds groupby_columns_writing_duration{};
+  std::chrono::nanoseconds aggregate_columns_writing_duration{};
 };
 
 }  // namespace opossum
