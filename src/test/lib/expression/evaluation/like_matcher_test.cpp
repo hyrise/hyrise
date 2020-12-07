@@ -80,7 +80,7 @@ TEST_F(LikeMatcherTest, LeadingWildcard) {
 
 TEST_F(LikeMatcherTest, NoWildcard) {
   const auto pattern = pmr_string("Japan");
-  const auto expected_upper_bound = pmr_string("Japan") + static_cast<char>(0);
+  const auto expected_upper_bound = pmr_string("Japan") + '\0';
   const auto bounds = LikeMatcher::bounds(pattern);
   const auto [lower_bound, upper_bound] = bounds.value();
   ASSERT_EQ(lower_bound, "Japan");
@@ -90,7 +90,7 @@ TEST_F(LikeMatcherTest, NoWildcard) {
 TEST_F(LikeMatcherTest, EmptyString) {
   // Check that if the pattern has no wildcard, std::nullopt is returned.
   const auto pattern = pmr_string("");
-  const auto expected_upper_bound = pmr_string("") + static_cast<char>(0);
+  const auto expected_upper_bound = pmr_string("") + '\0';
   const auto bounds = LikeMatcher::bounds(pattern);
   const auto [lower_bound, upper_bound] = bounds.value();
   ASSERT_EQ(lower_bound, "");

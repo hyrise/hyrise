@@ -216,7 +216,7 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   // In case of an ASCII overflow
   if (!bounds) return;
 
-  const auto [lower_bound, upper_bound] = bounds.value();
+  const auto [lower_bound, upper_bound] = *bounds;
 
   if (binary_predicate->predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);

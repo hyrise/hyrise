@@ -44,7 +44,7 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
 
 std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
   if (!contains_wildcard(pattern)) {
-    const auto upper_bound = pmr_string(pattern) + static_cast<char>(0);
+    const auto upper_bound = pmr_string(pattern) + '\0';
     return std::pair<pmr_string, pmr_string>(pattern, upper_bound);
   }
   const auto wildcard_pos = get_index_of_next_wildcard(pattern);
