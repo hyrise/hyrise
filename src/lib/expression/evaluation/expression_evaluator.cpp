@@ -1001,14 +1001,20 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
         values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
+      auto segment_contains_nulls = false;
       if (view.is_nullable()) {
         nulls.resize(_output_row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
              ++chunk_offset) {
-          nulls[chunk_offset] = view.is_null(chunk_offset);
+	  const auto is_null = view.is_null(chunk_offset);
+          nulls[chunk_offset] = is_null;
+	  segment_contains_nulls |= is_null;
         }
+      }
+      
+      if (segment_contains_nulls) {
         segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
-      } else {
+      } else { 
         segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
       }
     }
