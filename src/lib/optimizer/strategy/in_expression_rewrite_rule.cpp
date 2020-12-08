@@ -154,15 +154,17 @@ void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       Assert(!in_expression->is_negated(), "Disjunctions cannot handle NOT IN");
       rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
     } else if (strategy == Strategy::Auto) {
+      const auto join_rewrite_applicable = (left_expression->type == ExpressionType::LQPColumn);
       if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION && !in_expression->is_negated()) {
         rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
-      } else if (common_data_type && right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
+      } else if (join_rewrite_applicable && common_data_type && right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
         rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
                         in_expression->is_negated());
       } else {
         // Stick with the ExpressionEvaluator
       }
     }
+
 
     return LQPVisitation::VisitInputs;
   });

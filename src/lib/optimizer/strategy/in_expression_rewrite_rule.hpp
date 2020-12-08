@@ -23,7 +23,7 @@ class InExpressionRewriteRule : public AbstractRule {
   constexpr static auto MAX_ELEMENTS_FOR_DISJUNCTION = 3;
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
-  constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
+  constexpr static auto MIN_ELEMENTS_FOR_JOIN = 5;
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
