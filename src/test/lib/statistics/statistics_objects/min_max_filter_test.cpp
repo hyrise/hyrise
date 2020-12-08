@@ -53,15 +53,11 @@ class MinMaxFilterTestLike : public BaseTest {};
 TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   auto max_ascii_value = pmr_string(1, static_cast<char>(127));
   max_ascii_value.append("%");
-  const auto filter = std::make_unique<MinMaxFilter<pmr_string>>("b", "c");
-  const auto filter_with_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(pmr_string(1, static_cast<char>(126)),
-                                                                                pmr_string(1, static_cast<char>(127)));
-  const auto filter_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(pmr_string(1, static_cast<char>(127)),
-                                                                           pmr_string(1, static_cast<char>(127)));
-  const auto filter_equal_values = std::make_unique<MinMaxFilter<pmr_string>>("a", "a");
-  // for the predicate condition of Like, we expect only values where the lower_bound is bigger then max
-  // or the upper_bound is smaller then min to be prunable
 
+  const auto filter = std::make_unique<MinMaxFilter<pmr_string>>("b", "c");
+  // For the predicate condition of Like, we expect only values where the lower_bound is bigger than the max value or
+  // the upper_bound is smaller or equal to the min value to be prunable. In the following tests `b` would be the min
+  // value and `c` the max.
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "aa%"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "aa_"));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "cc%"));
@@ -78,20 +74,29 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "c"));
-  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
+
+  // For the predicate condition of NotLike, we expect only values where the lower_bound is smaller or equal than the
+  // min value and the upper_bound is bigger to the max value to be prunable. In the following tests `b` would be the
+  // min value and `c` the max.
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "b%"));
-
-  EXPECT_TRUE(filter_equal_values->does_not_contain(PredicateCondition::NotLike, "a"));
-
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "b"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "%"));
-  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "a%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "c%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "bb%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "d%"));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "aa%"));
-  EXPECT_FALSE(filter_with_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
+
+  const auto filter_equal_values = std::make_unique<MinMaxFilter<pmr_string>>("a", "a");
+  EXPECT_TRUE(filter_equal_values->does_not_contain(PredicateCondition::NotLike, "a"));
+
+  const auto filter_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(pmr_string(1, static_cast<char>(127)),
+                                                                           pmr_string(1, static_cast<char>(127)));
+  // The following test should make sure, that if the last character of the upper bound would be an ASCII overflow,
+  // `does_not_contain` returns false.
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
 }
 
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
