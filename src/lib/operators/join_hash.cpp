@@ -46,7 +46,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
                    const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
+                           std::make_unique<PerformanceData>()),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {
@@ -178,7 +178,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
   }
 
-  auto& join_hash_performance_data = static_cast<PerformanceData&>(*performance_data);
+  auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
     resolve_data_type(probe_column_type, [&](const auto probe_data_type_t) {
