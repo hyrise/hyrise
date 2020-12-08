@@ -159,7 +159,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
     }
-    case PredicateCondition::Like: {  // NOLINTNEXTLINE - clang-tidy doesn't like the the else path of the if constexpr
+    case PredicateCondition::Like: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
       // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
       // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}
@@ -176,8 +176,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
       return false;
     }
-    case PredicateCondition::
-        NotLike: {  // NOLINTNEXTLINE - clang-tidy doesn't like the the else path of the if constexpr
+    case PredicateCondition::NotLike: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
       // Examples for the handling of NotLike predicate:
       //                          | test%           | %test   | test\x7F% | test             | '' (empty string)
       // LikeMatcher::bounds()    | {test, tesu}    | nullopt | nullopt   | {test, test\0}   | {'', '\0'}
