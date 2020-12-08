@@ -25,20 +25,17 @@ namespace opossum {
 
 void NullScanRemovalRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
-  _remove_nodes(_nodes_to_remove(root));
-}
-
-std::vector<std::shared_ptr<AbstractLQPNode>> NullScanRemovalRule::_nodes_to_remove(
-    const std::shared_ptr<AbstractLQPNode>& root) const {
+  
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
 
   auto visiter = [&](const auto& node) {
+
     if (node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
 
     const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
     const auto predicate = predicate_node->predicate();
-
     if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate)) {
+      
       if (is_null_expression->predicate_condition == PredicateCondition::IsNull) return LQPVisitation::VisitInputs;
 
       const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(is_null_expression->operand());
@@ -48,19 +45,18 @@ std::vector<std::shared_ptr<AbstractLQPNode>> NullScanRemovalRule::_nodes_to_rem
       if (!stored_table_node) return LQPVisitation::VisitInputs;
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-
       const auto original_column_id = column->original_column_id;
-
       const auto table_column_definition = table->column_definitions()[original_column_id];
-
       if (table_column_definition.nullable == false) {
         nodes_to_remove.push_back(node);
       }
     }
     return LQPVisitation::VisitInputs;
   };
+
   visit_lqp(root, visiter);
-  return nodes_to_remove;
+
+  _remove_nodes(nodes_to_remove);
 }
 
 void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) const {
