@@ -1,0 +1,1 @@
+#include "null_scan_removal_rule.hpp"
