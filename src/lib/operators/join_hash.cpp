@@ -94,8 +94,8 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
 
   // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
   // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
-  constexpr auto l2_cache_size = 1'024'000;                   // bytes
-  constexpr auto l2_cache_max_usable = l2_cache_size * 0.75;  // use 75% of the L2 cache size
+  constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
+  constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -108,7 +108,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
       // key + value (and one byte overhead, see link above)
       static_cast<double>(sizeof(T) + 1) / 0.85;
 
-  const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
+  const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
 
   return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
