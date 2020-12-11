@@ -61,33 +61,6 @@ class DipsPruningRuleTest : public StrategyBaseTest{
     ChunkEncoder::encode_all_chunks(join_target_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("join_target", join_target_table);
 
-    // auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u);
-    // ChunkEncoder::encode_all_chunks(long_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    // storage_manager.add_table("long_compressed", long_compressed_table);
-
-    // auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", 5u);
-    // ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
-    // storage_manager.add_table("run_length_compressed", run_length_compressed_table);
-
-    // auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
-    // ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    // storage_manager.add_table("string_compressed", string_compressed_table);
-
-    // auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
-    // ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
-    //                                 SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-    // storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
-
-    // auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 2u);
-    // ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
-    // storage_manager.add_table("int_float4", int_float4);
-
-    // for (const auto& [name, table] : storage_manager.tables()) {
-    //   generate_chunk_pruning_statistics(table);
-    // }
-
-    // storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", 10u));
-
     _real_rule = std::make_shared<DipsPruningRule>();
     _rule = std::make_shared<DipsPruningRuleTestClass>();
 
