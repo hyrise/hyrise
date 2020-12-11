@@ -54,6 +54,9 @@
  StoredTableNode (1) and StoredTableNode (3) semantically equal. Therefore only one GetTable operator for both nodes
  would be created and executed. Additionally, Join (2) and Join (3) would also be semantically equal and only one Join
  operator for both nodes would be created and executed.
+
+ Please note that this rule aligns columns of StoredTableNodes across a given plan and also across all of its
+ subplans, including subqueries.
 */
 
 namespace opossum {
