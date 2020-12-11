@@ -23,11 +23,11 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
 /**
  * Data structure that maps LQPs to (multiple) subquery expressions that reference them.
  *
- * PURPOSE:
- *  Mainly used by optimizer rules to optimize subquery subplans more efficiently. In concrete, it helps
- *  to optimize subquery subplans ONLY ONCE, although being referenced by a list of subquery expressions.
+ * Purpose:
+ *  Mainly used by optimizer rules to optimize subquery LQPs more efficiently. In concrete, it helps
+ *  to optimize subquery LQPs ONLY ONCE, although being referenced by a list of subquery expressions.
  *
- * WHY WEAK POINTERS FOR SUBQUERY EXPRESSIONS?
+ * Why weak pointers for subquery expressions?
  *  Referenced LQPs and subquery expressions might be objects to change after creating this data structure. Depending
  *  on the order of optimization steps, we could end up with a scenario as follows:
  *
@@ -49,17 +49,17 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA
  *
  *        (3) OptimizerRuleXY is applied to ProjectionNodeB
- *            !!! WASTED OPTIMIZATION TIME because SubqueryExpressionB and ProjectionNodeB are no longer being used,
- *                                                                                                thanks to step (2) !!!
+ *            -> Wasted optimization time because SubqueryExpressionB and ProjectionNodeB are no longer being used,
+ *               thanks to step (2).
  *
- *  With weak pointers, we are FORCED TO SKIP STEP (3) because SubqueryExpressionB and its corresponding LQP have
- *  already been removed from memory after STEP (2).
+ *  With weak pointers, we are forced to skip step (3) because SubqueryExpressionB and its
+ *  corresponding LQP have already been deleted from memory after step (2).
  *
  *  However, this optimization does not cover all cases as it is dependent on the execution order. For
  *  example, when swapping steps (2) and (3), we cannot easily skip an optimization step.
  */
 using SubqueryExpressionsByLQP =
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>>;
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
  * Returns unique LQPs from (nested) subquery expressions of @param node.

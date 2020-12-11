@@ -20,20 +20,22 @@ void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp
                     [](auto subquery_expression) { return subquery_expression.expired(); })) {
       continue;
     }
-    // (2.1) Prepare
+
+    // (2.1) Optimize subplan
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
-    // (2.2) Optimize subplan
     _apply_to_plan_without_subqueries(local_lqp_root);
-    // (2.3) Assign optimized subplan to all corresponding SubqueryExpressions
+
+    // (2.2) Assign optimized subplan to all corresponding SubqueryExpressions
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression.lock()->lqp = local_lqp_root->left_input();
     }
-    // (2.4) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
+
+    // (2.3) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
     local_lqp_root->set_left_input(nullptr);
   }
 }
 
-void AbstractRule::_apply_to_plan_without_subqueries_inputs(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
+void AbstractRule::_apply_to_plan_inputs_without_subqueries(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
   if (node->left_input()) _apply_to_plan_without_subqueries(node->left_input());
   if (node->right_input()) _apply_to_plan_without_subqueries(node->right_input());
 }

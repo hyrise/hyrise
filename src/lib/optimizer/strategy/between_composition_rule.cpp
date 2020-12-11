@@ -376,7 +376,7 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
     }
   }
 
-  _apply_to_plan_without_subqueries_inputs(lqp_root);
+  _apply_to_plan_inputs_without_subqueries(lqp_root);
 }
 
 }  // namespace opossum

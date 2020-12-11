@@ -18,8 +18,6 @@ using namespace opossum;  // NOLINT
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<opossum::StoredTableNode>& node) const {
-    DebugAssert(std::is_sorted(node->pruned_chunk_ids().cbegin(), node->pruned_chunk_ids().cend()),
-                "Expected sorted vector of ChunkIDs");
     size_t hash{0};
     boost::hash_combine(hash, node->table_name);
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
@@ -103,19 +101,19 @@ void align_pruned_column_ids(const ColumnPruningAgnosticMultiSet& grouped_stored
 namespace opossum {
 
 /**
- * The default implementation of this function optimizes a given plan and all of its subquery subplans individually.
- * However, as we do not want to align StoredTableNodes per plan, but across all plans, we override it accordingly.
+ * The default implementation of this function optimizes a given LQP and all of its subquery LQPs individually.
+ * However, as we do not want to align StoredTableNodes per plan but across all plans, we override it accordingly.
  */
 void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
   // (1) Collect all plans
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{std::static_pointer_cast<AbstractLQPNode>(root_node)};
-  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
+  const auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }
 
   // (2) Collect all StoredTableNodes and group them by their key (same table name and same set of pruned chunks).
-  auto grouped_stored_table_nodes = collect_stored_table_nodes(lqps);
+  const auto grouped_stored_table_nodes = collect_stored_table_nodes(lqps);
 
   // (3) Align grouped StoredTableNodes
   align_pruned_column_ids(grouped_stored_table_nodes);
