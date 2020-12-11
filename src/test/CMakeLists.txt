@@ -127,6 +127,7 @@ set(
     lib/optimizer/strategy/chunk_pruning_rule_test.cpp
     lib/optimizer/strategy/column_pruning_rule_test.cpp
     lib/optimizer/strategy/dependent_group_by_reduction_rule_test.cpp
+    lib/optimizer/strategy/dips_pruning_rule_test.cpp
     lib/optimizer/strategy/expression_reduction_rule_test.cpp
     lib/optimizer/strategy/in_expression_rewrite_rule_test.cpp
     lib/optimizer/strategy/index_scan_rule_test.cpp
