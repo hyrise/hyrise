@@ -297,10 +297,10 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/dips_creation_rule.cpp
-    optimizer/strategy/dips_creation_rule.hpp
     optimizer/strategy/dependent_group_by_reduction_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
+    optimizer/strategy/dips_pruning_rule.cpp
+    optimizer/strategy/dips_pruning_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/in_expression_rewrite_rule.cpp

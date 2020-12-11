@@ -16,28 +16,33 @@
 namespace opossum {
 
   class AbstractLQPNode;
-
-
   /**
   * This rule determines which chunks can be pruned from table scans based on
   * the predicates present in the LQP and stores that information in the stored
   * table nodes.
   */
-  class DipsCreationRule : public AbstractRule {
+  class DipsPruningRule : public AbstractRule {
   public:
     void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   protected:
-    std::shared_ptr<PredicateNode> get_pruned_attribute_statistics(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<LQPColumnExpression> join_partner) const;
-    std::shared_ptr<AbstractExpression> build_logical_expression(std::vector<std::shared_ptr<AbstractExpression>> expressions, long unsigned int index) const;
-    void dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id, std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
+    std::shared_ptr<PredicateNode> get_pruned_attribute_statistics(
+      const std::shared_ptr<const StoredTableNode> table_node, 
+      ColumnID column_id, 
+      std::shared_ptr<LQPColumnExpression> join_partner) const;
     
-
+    void dips_pruning(
+      const std::shared_ptr<const StoredTableNode> table_node, 
+      ColumnID column_id, 
+      std::shared_ptr<StoredTableNode> join_partner_table_node, 
+      ColumnID join_partner_column_id) const;
 
     void extend_pruned_chunks( std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const;
 
     template<typename COLUMN_TYPE>
-    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> get_not_pruned_range_statistics(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) const;
+    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> get_not_pruned_range_statistics(
+      const std::shared_ptr<const StoredTableNode> table_node, 
+      ColumnID column_id) const;
     
     template<typename COLUMN_TYPE>
     bool range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const;
