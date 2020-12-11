@@ -26,11 +26,6 @@ namespace opossum {
     void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   protected:
-    std::shared_ptr<PredicateNode> get_pruned_attribute_statistics(
-      const std::shared_ptr<const StoredTableNode> table_node, 
-      ColumnID column_id, 
-      std::shared_ptr<LQPColumnExpression> join_partner) const;
-    
     void dips_pruning(
       const std::shared_ptr<const StoredTableNode> table_node, 
       ColumnID column_id, 
