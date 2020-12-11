@@ -43,6 +43,10 @@ def initialize():
 
 
 def run_benchmark(build_dir, arguments, benchmark_name, verbose):
+    # We run tests in parallel. As binary files would be written into the --table_path, concurrent tests might
+    # interfere with each other. Thus, we disable the binary caching.
+    arguments["--dont_cache_binary_tables"] = True
+
     if "--table_path" in arguments and not os.path.isdir(arguments["--table_path"].replace("'", "")):
         print(
             "Cannot find "
