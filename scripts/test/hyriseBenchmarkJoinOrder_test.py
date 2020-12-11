@@ -41,7 +41,7 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
-    benchmark.expect_exact("Caching tables as binary files")
+    benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Retrieving the IMDB dataset.")
     benchmark.expect_exact("IMDB setup already complete, no setup action required")
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
