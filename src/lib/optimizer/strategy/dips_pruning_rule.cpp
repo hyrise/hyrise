@@ -112,9 +112,15 @@ namespace opossum {
 
   template<typename COLUMN_TYPE>
   bool DipsPruningRule::range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
-    return (range_b.first <= range_a.first && range_b.second >= range_a.second) ||
-            (range_b.first >= range_a.first && range_b.first <= range_a.second) || 
-            (range_b.second >= range_a.first && range_b.second <= range_a.second);
+    return !(
+      (
+        (range_a.first < range_b.first) && (range_a.second < range_b.first)
+      )
+      ||
+      (
+        (range_a.first > range_b.second) && (range_a.second > range_b.second)
+      )
+    );
   } 
 
 
