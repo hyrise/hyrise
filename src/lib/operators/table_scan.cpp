@@ -197,8 +197,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   auto& scan_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
-  scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
-  scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
+  scan_performance_data.num_chunks_with_early_out = _impl->num_chunks_with_early_out;
+  scan_performance_data.num_chunks_with_binary_search = _impl->num_chunks_with_binary_search;
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

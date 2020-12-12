@@ -75,8 +75,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
     auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   {
@@ -89,8 +89,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 1ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   // Check counters for sorted segment scanning (value scan)
@@ -106,8 +106,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
   }
 
   // Between scan
@@ -121,8 +121,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
   }
 }
 
