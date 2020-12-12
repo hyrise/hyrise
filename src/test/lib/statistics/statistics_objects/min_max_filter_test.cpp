@@ -97,6 +97,10 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
   EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
   EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
+
+  // The following test should make sure, that the pruning differentiate between upper and lower case characters.
+  const auto filter_max_lower_case = std::make_unique<MinMaxFilter<pmr_string>>("T", "t");
+  EXPECT_TRUE(filter_max_lower_case->does_not_contain(PredicateCondition::Like, "USA%"));
 }
 
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
