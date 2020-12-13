@@ -46,7 +46,7 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
  *
  *        (2) OptimizerRuleXY is applied to ProjectionNodeA
- *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA
+ *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA.
  *
  *        (3) OptimizerRuleXY is applied to ProjectionNodeB
  *            -> Wasted optimization time because SubqueryExpressionB and ProjectionNodeB are no longer being used,
