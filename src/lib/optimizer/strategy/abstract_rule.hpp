@@ -51,14 +51,6 @@ class AbstractRule {
    */
   virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
 
-  /**
-   * LEGACY FUNCTION (see #2276): Use visit_lqp for LQP traversal instead.
-   *
-   * Calls _apply_to_plan_without_subqueries() for each input of @param node.
-   * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
-   * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
-   */
-  void _apply_to_plan_inputs_without_subqueries(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
 };
 
 }  // namespace opossum
