@@ -24,7 +24,7 @@ class PredicateNode;
  * represent a range on one column. The highest lower bound and the lowest upper bound are substituted by a
  * corresponding (exclusive or inclusive) BetweenExpression. All obsolete BinaryPredicateConditions are removed
  * after the substitution.
-**/
+ */
 class BetweenCompositionRule : public AbstractRule {
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
@@ -58,7 +58,7 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  static void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates);
+  static void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes);
 
   static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };

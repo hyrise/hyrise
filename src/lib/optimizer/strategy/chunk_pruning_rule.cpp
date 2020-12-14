@@ -24,7 +24,7 @@ namespace opossum {
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // we only want to follow chains of predicates
   if (lqp_root->type != LQPNodeType::Predicate) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
+    _apply_to_plan_inputs_without_subqueries(lqp_root); // TODO Refactor!
     return;
   }
 

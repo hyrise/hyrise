@@ -153,16 +153,15 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
 }
 
 /**
- * _replace_predicates gets a vector of AbstractLQPNodes as input and
- * substitutes suitable BinaryPredicateExpressions with BetweenExpressions.
- * Furthermore BinaryPredicateExpressions which are obsolete after the substitution
- * are removed.
-**/
-void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) {
+ * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes and
+ * replaces them with BetweenExpressions, if possible.
+ * After the substitution, obsolete BinaryPredicateExpressions are removed.
+ */
+void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes) {
   // Store original input and output
-  auto input = predicates.back()->left_input();
-  const auto outputs = predicates.front()->outputs();
-  const auto input_sides = predicates.front()->get_input_sides();
+  auto input = adjacent_predicate_nodes.back()->left_input();
+  const auto outputs = adjacent_predicate_nodes.front()->outputs();
+  const auto input_sides = adjacent_predicate_nodes.front()->get_input_sides();
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
@@ -171,10 +170,9 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   auto id_counter = size_t{0};
 
   // Filter predicates with a boundary to the boundaries vector
-  for (const auto& predicate : predicates) {
+  for (const auto& predicate_node : adjacent_predicate_nodes) {
     // A logical expression can contain multiple binary predicate expressions
     std::vector<std::shared_ptr<BinaryPredicateExpression>> expressions;
-    const auto predicate_node = std::static_pointer_cast<PredicateNode>(predicate);
     const auto binary_predicate_expression =
         std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
     if (binary_predicate_expression) {
@@ -183,7 +181,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
       Assert(!logical_expression || logical_expression->logical_operator != LogicalOperator::And,
              "Conjunctions should already have been split up");
-      predicate_nodes.push_back(predicate);
+      predicate_nodes.push_back(predicate_node);
     }
 
     for (const auto& expression : expressions) {
@@ -202,11 +200,11 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
         }
         column_boundaries[boundary->column_expression].push_back(boundary);
       } else {
-        predicate_nodes.push_back(predicate);
+        predicate_nodes.push_back(predicate_node);
       }
     }
     // Remove node from lqp in order to rearrange the nodes soon
-    lqp_remove_node(predicate);
+    lqp_remove_node(predicate_node);
   }
 
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
@@ -349,70 +347,42 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
 }
 
 void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  std::vector<std::shared_ptr<PredicateNode>> visited_predicate_nodes;
+  std::unordered_set<std::shared_ptr<PredicateNode>> visited_predicate_nodes;
   std::vector<std::vector<std::shared_ptr<PredicateNode>>> adjacent_predicate_nodes;
 
-  // Gather adjacent PredicateNodes
+  // (1) Gather adjacent PredicateNodes
   visit_lqp(lqp_root, [&](const auto node) {
-    if (node->type == LQPNodeType::Predicate) {
+    if (node->type == LQPNodeType::Predicate &&
+        !visited_predicate_nodes.contains(static_pointer_cast<PredicateNode>(node))) {
+      std::vector<std::shared_ptr<PredicateNode>> current_adjacent_predicate_nodes;
 
-      std::vector<std::shared_ptr<PredicateNode>> adjacent_predicate_nodes;
       auto current_node = node;
       while (current_node->type == LQPNodeType::Predicate) {
+        auto current_predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
+        visited_predicate_nodes.insert(current_predicate_node);
+
         // Once a node has multiple outputs, we're not talking about a predicate chain anymore
         if (current_node->outputs().size() > 1) {
           break;
         }
-
-        adjacent_predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+        current_adjacent_predicate_nodes.emplace_back(current_predicate_node);
 
         current_node = current_node->left_input();
       }
 
-      // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
-      // the LogicalOperator::AND
-      if (!adjacent_predicate_nodes.empty()) {
-        // A chain of predicates was found. Continue rule with last input
-        auto next_node = predicate_nodes.back()->left_input();
-        _replace_predicates(predicate_nodes);
-        _apply_to_plan_without_subqueries(next_node);
-        return;
+      // We do not need a chain of PredicateNodes. Substitutions are also possible for single PredicateNodes. Think
+      // of a predicates with a LogicalExpression and LogicalOperator::AND, for example.
+      if (!current_adjacent_predicate_nodes.empty()) {
+        adjacent_predicate_nodes.emplace_back(current_adjacent_predicate_nodes);
       }
     }
+    return LQPVisitation::VisitInputs;
   });
+
+  // (2) Replace predicates, if possible
+  for (const auto& adjacent_predicate_nodes_set : adjacent_predicate_nodes) {
+    _replace_predicates(adjacent_predicate_nodes_set);
+  }
 }
-
-// --- Old ---
-
-//void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-//    if (lqp_root->type == LQPNodeType::Predicate) {
-//    std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
-//
-//    // Gather adjacent PredicateNodes
-//    auto current_node = lqp_root;
-//    while (current_node->type == LQPNodeType::Predicate) {
-//      // Once a node has multiple outputs, we're not talking about a predicate chain anymore
-//      if (current_node->outputs().size() > 1) {
-//        break;
-//      }
-//
-//      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-//
-//      current_node = current_node->left_input();
-//    }
-//
-//    // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
-//    // the LogicalOperator::AND
-//    if (!predicate_nodes.empty()) {
-//      // A chain of predicates was found. Continue rule with last input
-//      auto next_node = predicate_nodes.back()->left_input();
-//      _replace_predicates(predicate_nodes);
-//      _apply_to_plan_without_subqueries(next_node);
-//      return;
-//    }
-//  }
-//
-//  _apply_to_plan_inputs_without_subqueries(lqp_root);
-//}
 
 }  // namespace opossum
