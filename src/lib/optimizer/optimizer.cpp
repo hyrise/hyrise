@@ -155,6 +155,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
+  optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
+
   return optimizer;
 }
 
