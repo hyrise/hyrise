@@ -85,7 +85,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
   std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 
-  EXPECT_TRUE(stored_table_node->table_statistics);
+  ASSERT_TRUE(stored_table_node->table_statistics);
 
   // clang-format off
   const auto expected_histogram = GenericHistogram<int32_t>{
