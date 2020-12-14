@@ -36,14 +36,16 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   });
 
   // (2) Collect the chain of PredicateNodes on top of each StoredTableNode
-  for (auto [stored_table_node, predicate_nodes] : predicate_nodes_by_stored_table_node) {
+  for (auto& [stored_table_node, predicate_nodes] : predicate_nodes_by_stored_table_node) {
     visit_lqp_upwards(stored_table_node, [predicate_nodes = std::ref(predicate_nodes)](auto node) {
       if (node->type == LQPNodeType::Predicate) {
         predicate_nodes.get().emplace_back(std::static_pointer_cast<PredicateNode>(node));
         return LQPUpwardVisitation::VisitOutputs;
       }
-      if (node->type == LQPNodeType::Validate || _is_non_filtering_node(*node))
+      if (node->type == LQPNodeType::StoredTable || node->type == LQPNodeType::Validate
+          || _is_non_filtering_node(*node)) {
         return LQPUpwardVisitation::VisitOutputs;
+      }
 
       // Chain of PredicateNodes has ended
       return LQPUpwardVisitation::DoNotVisitOutputs;
@@ -54,7 +56,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   for (auto [stored_table_node, predicate_nodes] : predicate_nodes_by_stored_table_node) {
     if (predicate_nodes.empty()) continue;
 
-    // (3.1) Determine pruned chunks
+    // (3.1) Determine set of pruned chunks
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     std::set<ChunkID> pruned_chunk_ids;
     for (auto& predicate : predicate_nodes) {
