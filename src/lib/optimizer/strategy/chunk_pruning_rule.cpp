@@ -60,6 +60,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     std::set<ChunkID> pruned_chunk_ids;
     for (auto& predicate : predicate_nodes) {
+      // TODO(Julian) The following function cannot calculate pruned chunk ids for multiple branches (yet)
+      //              (a) Adapt computer_exclude_list
+      //              (b) Split PredicateNode-branches before going to step (3)
       auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table_node);
       pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
     }
