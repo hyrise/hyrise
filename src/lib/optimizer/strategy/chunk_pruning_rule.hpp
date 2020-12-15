@@ -46,11 +46,6 @@ class ChunkPruningRule : public AbstractRule {
   static std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                                   OperatorScanPredicate predicate,
                                                                   size_t num_rows_pruned);
-
-  void _recurse_on_inputs(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>& predicates_for_table_nodes,
-      PredicateChain predicate_nodes) const;
 };
 
 }  // namespace opossum

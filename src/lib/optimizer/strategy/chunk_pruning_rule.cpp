@@ -25,71 +25,50 @@ namespace opossum {
 // Chunk pruning may render the LQP non-cacheable.
 bool ChunkPruningRule::prevents_caching() const { return true; }
 
-void ChunkPruningRule::_recurse_on_inputs(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>& predicates_for_table_nodes,
-    PredicateChain predicate_chain) const {
-  // try to find a chain of predicate nodes that ends in a stored table leaf
-  auto current_node = node;
-  while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
-         _is_non_filtering_node(*current_node) || current_node->type == LQPNodeType::Join) {
-    // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
-    // based on the conditions found only in a single branch.
-    if (current_node->output_count() > 1) {
-      predicate_chain.clear();
-    }
-
-    if (current_node->type == LQPNodeType::Predicate) {
-      DebugAssert(current_node->input_count() == 1, "Predicate nodes should only have 1 input");
-      predicate_chain.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-    } else if (current_node->type == LQPNodeType::Join) {
-      // recurse on left and right input of a join
-      _recurse_on_inputs(current_node->left_input(), predicates_for_table_nodes, predicate_chain);
-      _recurse_on_inputs(current_node->right_input(), predicates_for_table_nodes, predicate_chain);
-      return;
-    }
-
-    current_node = current_node->left_input();
-  }
-
-  if (current_node->type != LQPNodeType::StoredTable) {
-    _apply_to_inputs(node);
-    return;
-  }
-
-  const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
-  DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
-
-  if (predicates_for_table_nodes.contains(stored_table)) {
-    predicates_for_table_nodes[stored_table].push_back(predicate_chain);
-  } else {
-    predicates_for_table_nodes[stored_table] = {predicate_chain};
-  }
-}
-
 void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  // we want to follow chains of predicates across joins
-  if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::Join) {
-    _apply_to_inputs(node);
-    return;
-  }
+  // find all StoredTableNodes
+  auto table_nodes = std::vector<std::shared_ptr<StoredTableNode>>{};
+  visit_lqp(node, [&table_nodes](const auto& node) {
+    if (node->type == LQPNodeType::StoredTable) {
+      table_nodes.push_back(std::static_pointer_cast<StoredTableNode>(node));
+      return LQPVisitation::DoNotVisitInputs;
+    }
+    return LQPVisitation::VisitInputs;
+  });
 
-  // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering, ValidateNodes and Joins.
-  // Starting from the current node, drilling down might result in multple cains of predicates ending
-  // at different or the same StoredTableNodes.
-  // predicates_for_table_nodes keeps track of the predicate chains for each stored table
+  // visit lqp upwards from leaf nodes and find predicate chains
+  // we can not use visit_lqp_upwards here, because we need to follow all paths through the lqp
   std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>> predicates_for_table_nodes{};
-  _recurse_on_inputs(node, predicates_for_table_nodes, PredicateChain{});
+  for (auto table_node : table_nodes) {
+    predicates_for_table_nodes[table_node] = std::vector<PredicateChain>{table_node->output_count()};
+    for (auto output_id = 0u; output_id < table_node->output_count(); ++output_id) {
+      auto current_node = table_node->outputs()[output_id];
+      // Currently, we collect predicates across non-filtering nodes, validate nodes, and join nodes
+      while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
+             _is_non_filtering_node(*current_node) || current_node->type == LQPNodeType::Join) {
+        if (current_node->type == LQPNodeType::Predicate) {
+          DebugAssert(current_node->input_count() == 1, "Predicate nodes should only have 1 input");
+          predicates_for_table_nodes[table_node][output_id].push_back(
+              std::static_pointer_cast<PredicateNode>(current_node));
+        }
+
+        // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
+        // based on the conditions found only in a single branch.
+        if (current_node->output_count() > 1) break;
+        current_node = current_node->outputs()[0];
+      }
+    }
+  }
 
   for (auto& [stored_table, predicate_chains] : predicates_for_table_nodes) {
     /**
-     * Chains of predicates followed by a stored table node were found.
+     * Chains of predicates ending in a stored table node were found.
      */
     auto table = Hyrise::get().storage_manager.get_table(stored_table->table_name);
 
-    for (auto& predicate_chain : predicate_chains) {
+    for (auto predicate_chain : predicate_chains) {
       std::set<ChunkID> pruned_chunk_ids;
-      for (auto& predicate : predicate_chain) {
+      for (auto predicate : predicate_chain) {
         // Predicate chains might contain predicates that are not applicable to the stored table
         // e.g. operate on coulumns that originate from a different joined table
         bool predicate_matches_table{true};
