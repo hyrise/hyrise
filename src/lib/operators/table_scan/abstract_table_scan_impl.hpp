@@ -28,6 +28,7 @@ class AbstractTableScanImpl {
   virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) = 0;
 
   std::atomic<size_t> num_chunks_with_early_out{0};
+  std::atomic<size_t> num_chunks_with_all_rows_matching{0};
   std::atomic<size_t> num_chunks_with_binary_search{0};
 
  protected:
