@@ -38,9 +38,9 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
   // visit lqp upwards from leaf nodes and find predicate chains
   // we can not use visit_lqp_upwards here, because we need to follow all paths through the lqp
-  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>> predicates_for_table_nodes{};
+  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>> predicate_chains_by_table_node{};
   for (auto table_node : table_nodes) {
-    predicates_for_table_nodes[table_node] = std::vector<PredicateChain>{table_node->output_count()};
+    predicate_chains_by_table_node[table_node] = std::vector<PredicateChain>{table_node->output_count()};
     for (auto output_id = 0u; output_id < table_node->output_count(); ++output_id) {
       auto current_node = table_node->outputs()[output_id];
       // Currently, we collect predicates across non-filtering nodes, validate nodes, and join nodes
@@ -48,7 +48,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
              _is_non_filtering_node(*current_node) || current_node->type == LQPNodeType::Join) {
         if (current_node->type == LQPNodeType::Predicate) {
           DebugAssert(current_node->input_count() == 1, "Predicate nodes should only have 1 input");
-          predicates_for_table_nodes[table_node][output_id].push_back(
+          predicate_chains_by_table_node[table_node][output_id].push_back(
               std::static_pointer_cast<PredicateNode>(current_node));
         }
 
@@ -60,7 +60,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     }
   }
 
-  for (auto& [stored_table, predicate_chains] : predicates_for_table_nodes) {
+  for (auto& [stored_table, predicate_chains] : predicate_chains_by_table_node) {
     /**
      * Chains of predicates ending in a stored table node were found.
      */
@@ -70,8 +70,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
       std::set<ChunkID> pruned_chunk_ids;
       for (auto predicate : predicate_chain) {
         // Predicate chains might contain predicates that are not applicable to the stored table
-        // e.g. operate on coulumns that originate from a different joined table
-        bool predicate_matches_table{true};
+        // e.g. operate on columns that originate from a different joined table
+        auto predicate_matches_table = true;
         auto predicate_expression = predicate->predicate();
         visit_expression(predicate_expression, [&](auto& expression_ptr) {
           if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
