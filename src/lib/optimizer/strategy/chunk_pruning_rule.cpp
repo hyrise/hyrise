@@ -22,44 +22,31 @@
 namespace opossum {
 
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<std::shared_ptr<PredicateNode>>>
-      predicate_nodes_by_stored_table_node;
+  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<std::vector<std::shared_ptr<PredicateNode>>>>
+      predicate_chains_by_stored_table_node;
 
   // (1) Collect all StoredTableNodes
   visit_lqp(lqp_root, [&](const auto node) {
     if (node->type == LQPNodeType::StoredTable) {
-      predicate_nodes_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(node),
-                                                   std::vector<std::shared_ptr<PredicateNode>>());
+      predicate_chains_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(node), {});
       return LQPVisitation::DoNotVisitInputs;
     }
     return LQPVisitation::VisitInputs;
   });
 
-  // (2) Collect the chain of PredicateNodes on top of each StoredTableNode
-  for (auto& [stored_table_node, predicate_nodes] : predicate_nodes_by_stored_table_node) {
-    visit_lqp_upwards(stored_table_node, [predicate_nodes = std::ref(predicate_nodes)](auto node) {
-      if (node->type == LQPNodeType::Predicate) {
-        predicate_nodes.get().emplace_back(std::static_pointer_cast<PredicateNode>(node));
-        return LQPUpwardVisitation::VisitOutputs;
-      }
-      if (node->type == LQPNodeType::StoredTable || node->type == LQPNodeType::Validate
-          || _is_non_filtering_node(*node)) {
-        return LQPUpwardVisitation::VisitOutputs;
-      }
-
-      // Chain of PredicateNodes has ended
-      return LQPUpwardVisitation::DoNotVisitOutputs;
-    });
+  // (2) Collect PredicateNode-chains on top of each StoredTableNode
+  for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
+    predicate_chains = find_predicate_chains_recursively(stored_table_node);
   }
 
   // (3) Set pruned chunks for each StoredTableNode
-  for (auto [stored_table_node, predicate_nodes] : predicate_nodes_by_stored_table_node) {
-    if (predicate_nodes.empty()) continue;
+  for (auto [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
+    if (predicate_chains.empty()) continue;
 
     // (3.1) Determine set of pruned chunks
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
-    for (auto& predicate : predicate_nodes) {
+    for (auto& predicate_chain : predicate_chains) {
       auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table_node);
       pruned_chunk_id_sets.emplace_back(new_exclusions);
     }
@@ -233,6 +220,41 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 
   return std::make_shared<TableStatistics>(std::move(column_statistics),
                                            old_statistics.row_count - static_cast<float>(num_rows_pruned));
+}
+
+std::vector<std::vector<std::shared_ptr<PredicateNode>>> find_predicate_chains_recursively
+    (std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
+  std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_chains;
+
+  visit_lqp_upwards(node, [&](auto& current_node) {
+    if (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
+        current_node->type == LQPNodeType::StoredTable || _is_non_filtering_node(*current_node)) {
+
+      // Add to current predicate chain
+      if (current_node->type == LQPNodeType::Predicate) {
+        current_predicate_chain.emplace_back(std::static_pointer_cast<PredicateNode>(node));
+      }
+
+      // Check whether predicate chain branches
+      if (current_node->outputs.size() > 1) {
+        for (auto& output_node : current_node->outputs) {
+          auto continued_predicate_chains = find_predicate_chains_recursively(node, current_predicate_chain);
+          predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
+                                  continued_predicate_chains.end());
+        }
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
+
+      // Predicate chain does not branch.
+      return LQPUpwardVisitation::VisitOutputs;
+    }
+
+    // Predicate chain has ended
+    if (!current_predicate_chain.empty()) predicate_chains.emplace_back(current_predicate_chain);
+    return LQPUpwardVisitation::DoNotVisitOutputs;
+  });
+
+  return predicate_chains;
 }
 
 std::set<ChunkID> ChunkPruningRule::intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
