@@ -41,6 +41,9 @@ class ChunkPruningRule : public AbstractRule {
   static std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                                   OperatorScanPredicate predicate,
                                                                   size_t num_rows_pruned);
+
+  static std::set<ChunkID> intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
+
 };
 
 }  // namespace opossum

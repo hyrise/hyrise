@@ -58,19 +58,18 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
     // (3.1) Determine set of pruned chunks
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-    std::set<ChunkID> pruned_chunk_ids;
+    std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
     for (auto& predicate : predicate_nodes) {
-      // TODO(Julian) The following function cannot calculate pruned chunk ids for multiple branches (yet)
-      //              (a) Adapt computer_exclude_list
-      //              (b) Split PredicateNode-branches before going to step (3)
       auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table_node);
-      pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
+      pruned_chunk_id_sets.emplace_back(new_exclusions);
     }
+    // We need to calculate the intersect of pruned chunks ids across all predicates
+    std::set<ChunkID> pruned_chunk_ids = intersect_chunk_ids(pruned_chunk_id_sets);
     if (pruned_chunk_ids.empty()) continue;
 
     // (3.2) Set pruned chunk ids
     DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
-                "Did not expect a StoredTableNode with already set pruned chunk ids.");
+                "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
     // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted
     stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
@@ -234,6 +233,24 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 
   return std::make_shared<TableStatistics>(std::move(column_statistics),
                                            old_statistics.row_count - static_cast<float>(num_rows_pruned));
+}
+
+std::set<ChunkID> ChunkPruningRule::intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
+  if (chunk_id_sets.size() == 0 || chunk_id_sets.at(0).empty()) return {};
+  if (chunk_id_sets.size() == 1) return chunk_id_sets.at(0);
+
+  std::set<ChunkID> chunk_id_set = chunk_id_sets.at(0);
+  for (size_t set_idx = 1; set_idx < chunk_id_sets.size(); ++set_idx) {
+    auto current_chunk_id_set = chunk_id_sets.at(set_idx);
+    if (current_chunk_id_set.empty()) return {};
+
+    std::set<ChunkID> intersection;
+    std::set_intersection(chunk_id_set.begin(), chunk_id_set.end(), current_chunk_id_set.begin(),
+                          current_chunk_id_set.end(), std::inserter(intersection, intersection.end()));
+    chunk_id_set = std::move(intersection);
+  }
+
+  return chunk_id_set;
 }
 
 }  // namespace opossum
