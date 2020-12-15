@@ -7,9 +7,13 @@
 
 namespace opossum {
 
-ValueExpression::ValueExpression(const AllTypeVariant& init_value,
-                                 const std::optional<ValueExpressionID> init_value_expression_id)
-    : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(init_value_expression_id) {}
+ValueExpression::ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_expression_id)
+    : AbstractExpression(ExpressionType::Value, {}),
+      value(init_value),
+      value_expression_id(std::in_place, init_value_expression_id) {}
+
+ValueExpression::ValueExpression(const AllTypeVariant& init_value)
+    : AbstractExpression(ExpressionType::Value, {}), value(init_value), value_expression_id(std::nullopt) {}
 
 bool ValueExpression::requires_computation() const { return false; }
 
