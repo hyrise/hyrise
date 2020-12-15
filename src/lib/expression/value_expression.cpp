@@ -58,7 +58,7 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   //                                     ? (*value_expression_id == *value_expression.value_expression_id)
   //                                     : true;
   // return value_equality && value_id_equality;
-  //return value_equality;
+  return value_equality;
 }
 
 size_t ValueExpression::_shallow_hash() const { return std::hash<AllTypeVariant>{}(value); }
