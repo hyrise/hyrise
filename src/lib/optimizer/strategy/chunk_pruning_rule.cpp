@@ -25,16 +25,17 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<std::vector<std::shared_ptr<PredicateNode>>>>
       predicate_chains_by_stored_table_node;
 
-  // (1) Collect all StoredTableNodes
+  // (1) Collect StoredTableNodes
   visit_lqp(lqp_root, [&](const auto node) {
     if (node->type == LQPNodeType::StoredTable) {
-      predicate_chains_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(node), {});
+      predicate_chains_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(node),
+                                                    std::vector<std::vector<std::shared_ptr<PredicateNode>>>{});
       return LQPVisitation::DoNotVisitInputs;
     }
     return LQPVisitation::VisitInputs;
   });
 
-  // (2) Collect PredicateNode-chains on top of each StoredTableNode
+  // (2) Collect PredicateNodes on top of each StoredTableNode
   for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
     predicate_chains = find_predicate_chains_recursively(stored_table_node);
   }
@@ -43,14 +44,15 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   for (auto [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
     if (predicate_chains.empty()) continue;
 
-    // (3.1) Determine set of pruned chunks
+    // (3.1) Determine set of pruned chunks per predicate chain
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
     for (auto& predicate_chain : predicate_chains) {
-      auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table_node);
-      pruned_chunk_id_sets.emplace_back(new_exclusions);
+      auto exclusions = _compute_exclude_list(*table, predicate_chain, stored_table_node);
+      pruned_chunk_id_sets.emplace_back(exclusions);
     }
-    // We need to calculate the intersect of pruned chunks ids across all predicates
+
+    // (3.2) Calculate the intersect of pruned chunks across predicate chains
     std::set<ChunkID> pruned_chunk_ids = intersect_chunk_ids(pruned_chunk_id_sets);
     if (pruned_chunk_ids.empty()) continue;
 
@@ -62,92 +64,115 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, const AbstractExpression& predicate,
-                                                          const std::shared_ptr<StoredTableNode>& stored_table_node) {
-  // Hacky:
-  // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
-  // `stored_table_node`.
-  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics
-  // in `table->table_statistics()`, we create a clone of `stored_table_node` without the pruning info.
-  auto stored_table_node_without_column_pruning =
-      std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
-  stored_table_node_without_column_pruning->set_pruned_column_ids({});
-  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
-      predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
-                                                                          *stored_table_node_without_column_pruning);
-  // End of hacky
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
+                                                const std::vector<std::shared_ptr<PredicateNode>>& predicate_chain,
+                                                const std::shared_ptr<StoredTableNode>& stored_table_node) const {
+  std::set<ChunkID> global_excluded_chunk_ids;
+  for (auto predicate_node : predicate_chain) {
+    /**
+     * Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
+     */
+    std::set<ChunkID> local_excluded_chunk_ids;
 
-  if (!operator_predicates) return {};
-
-  std::set<ChunkID> result;
-
-  for (const auto& operator_predicate : *operator_predicates) {
-    // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
-    if (!is_variant(operator_predicate.value)) {
+    auto excluded_chunk_ids_iter = _excluded_chunk_ids_by_predicate_node.find(predicate_node);
+    if (excluded_chunk_ids_iter != _excluded_chunk_ids_by_predicate_node.end()) {
+      // Shortcut: The given PredicateNode is part of multiple predicate chains and the set of excluded chunks
+      //           has already been calculated.
+      local_excluded_chunk_ids = excluded_chunk_ids_iter->second;
+      global_excluded_chunk_ids.insert(local_excluded_chunk_ids.begin(), local_excluded_chunk_ids.end());
       continue;
     }
 
-    const auto column_data_type =
-        stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
+    auto& predicate = *predicate_node->predicate();
 
-    // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
-    // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
-    auto value = lossless_variant_cast(boost::get<AllTypeVariant>(operator_predicate.value), column_data_type);
-    if (!value) {
-      continue;
-    }
+    // Hacky:
+    // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
+    // `stored_table_node`.
+    // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics
+    // in `table->table_statistics()`, we create a clone of `stored_table_node` without the pruning info.
+    auto stored_table_node_without_column_pruning =
+        std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
+    stored_table_node_without_column_pruning->set_pruned_column_ids({});
+    const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
+        predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
+                                                                            *stored_table_node_without_column_pruning);
+    // End of hacky
 
-    auto value2 = std::optional<AllTypeVariant>{};
-    if (operator_predicate.value2) {
+    if (!operator_predicates) return {};
+
+    for (const auto& operator_predicate : *operator_predicates) {
       // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
-      if (!is_variant(*operator_predicate.value2)) {
+      if (!is_variant(operator_predicate.value)) {
         continue;
       }
 
-      // If `value2` cannot be converted losslessly to the column data type, we rather skip pruning than running into
+      const auto column_data_type =
+          stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
+
+      // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
       // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
-      value2 = lossless_variant_cast(boost::get<AllTypeVariant>(*operator_predicate.value2), column_data_type);
-      if (!value2) {
+      auto value = lossless_variant_cast(boost::get<AllTypeVariant>(operator_predicate.value), column_data_type);
+      if (!value) {
         continue;
       }
-    }
 
-    auto condition = operator_predicate.predicate_condition;
-
-    const auto chunk_count = table.chunk_count();
-    auto num_rows_pruned = size_t{0};
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = table.get_chunk(chunk_id);
-      if (!chunk) continue;
-
-      const auto pruning_statistics = chunk->pruning_statistics();
-      if (!pruning_statistics) continue;
-
-      const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
-      if (_can_prune(*segment_statistics, condition, *value, value2)) {
-        const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-        if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
-            already_pruned_chunk_ids.end()) {
-          // Chunk was not yet marked as pruned - update statistics
-          num_rows_pruned += chunk->size();
-        } else {
-          // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
-          // we do not over-prune the statistics.
+      auto value2 = std::optional<AllTypeVariant>{};
+      if (operator_predicate.value2) {
+        // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
+        if (!is_variant(*operator_predicate.value2)) {
+          continue;
         }
-        result.insert(chunk_id);
+
+        // If `value2` cannot be converted losslessly to the column data type, we rather skip pruning than running into
+        // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
+        value2 = lossless_variant_cast(boost::get<AllTypeVariant>(*operator_predicate.value2), column_data_type);
+        if (!value2) {
+          continue;
+        }
+      }
+
+      auto condition = operator_predicate.predicate_condition;
+
+      const auto chunk_count = table.chunk_count();
+      auto num_rows_pruned = size_t{0};
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table.get_chunk(chunk_id);
+        if (!chunk) continue;
+
+        const auto pruning_statistics = chunk->pruning_statistics();
+        if (!pruning_statistics) continue;
+
+        const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
+        if (_can_prune(*segment_statistics, condition, *value, value2)) {
+          const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+          if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
+              already_pruned_chunk_ids.end()) {
+            // Chunk was not yet marked as pruned - update statistics
+            num_rows_pruned += chunk->size();
+          } else {
+            // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
+            // we do not over-prune the statistics.
+          }
+          local_excluded_chunk_ids.insert(chunk_id);
+        }
+      }
+
+      if (num_rows_pruned > size_t{0}) {
+        const auto& old_statistics =
+            stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
+        const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
+        stored_table_node->table_statistics = pruned_statistics;
       }
     }
 
-    if (num_rows_pruned > size_t{0}) {
-      const auto& old_statistics =
-          stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
-      const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
-      stored_table_node->table_statistics = pruned_statistics;
-    }
+    // Cache result
+    _excluded_chunk_ids_by_predicate_node.emplace(predicate_node, local_excluded_chunk_ids);
+    // Add to global excluded list because we collect excluded chunks for the whole predicate chain
+    global_excluded_chunk_ids.insert(local_excluded_chunk_ids.begin(), local_excluded_chunk_ids.end());
   }
 
-  return result;
+  return global_excluded_chunk_ids;
 }
 
 bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
@@ -222,23 +247,23 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
                                            old_statistics.row_count - static_cast<float>(num_rows_pruned));
 }
 
-std::vector<std::vector<std::shared_ptr<PredicateNode>>> find_predicate_chains_recursively
+std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_predicate_chains_recursively
     (std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
   std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_chains;
 
   visit_lqp_upwards(node, [&](auto& current_node) {
     if (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
-        current_node->type == LQPNodeType::StoredTable || _is_non_filtering_node(*current_node)) {
+        current_node->type == LQPNodeType::StoredTable || ChunkPruningRule::_is_non_filtering_node(*current_node)) {
 
       // Add to current predicate chain
       if (current_node->type == LQPNodeType::Predicate) {
-        current_predicate_chain.emplace_back(std::static_pointer_cast<PredicateNode>(node));
+        current_predicate_chain.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
       }
 
       // Check whether predicate chain branches
-      if (current_node->outputs.size() > 1) {
-        for (auto& output_node : current_node->outputs) {
-          auto continued_predicate_chains = find_predicate_chains_recursively(node, current_predicate_chain);
+      if (current_node->outputs().size() > 1) {
+        for (auto& output_node : current_node->outputs()) {
+          auto continued_predicate_chains = find_predicate_chains_recursively(output_node, current_predicate_chain);
           predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
                                   continued_predicate_chains.end());
         }
