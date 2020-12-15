@@ -33,7 +33,7 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(NullScanRemovalRuleTest, LQPNodeTypeIsNotPredicate) {
-  // The rule can't apply on a node that is not from type Predicate.
+  // The rule can't apply on a node that is not of type Predicate.
   const auto actual_lqp = apply_rule(rule, mock_node);
   const auto expected_lqp = mock_node->deep_copy();
 
@@ -41,7 +41,7 @@ TEST_F(NullScanRemovalRuleTest, LQPNodeTypeIsNotPredicate) {
 }
 
 TEST_F(NullScanRemovalRuleTest, PredicateIsNotNullExpression) {
-  // The rule can't apply on a predicate that in not a `null expression`.
+  // The rule can't apply on a predicate that is not a `null expression`.
   const auto input_lqp = PredicateNode::make(equals_(mock_node_column, 42), mock_node);
   const auto actual_lqp = apply_rule(rule, input_lqp);
   const auto expected_lqp = input_lqp->deep_copy();
