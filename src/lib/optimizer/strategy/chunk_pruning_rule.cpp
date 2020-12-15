@@ -49,7 +49,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
         if (current_node->type == LQPNodeType::Predicate) {
           DebugAssert(current_node->input_count() == 1, "Predicate nodes should only have 1 input");
           predicate_chains_by_table_node[table_node][output_id].push_back(
-              std::static_pointer_cast<PredicateNode>(current_node));
+              std::static_pointer_cast<PredicateNode>(current_node)->predicate());
         }
 
         // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
@@ -68,11 +68,10 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
     for (auto predicate_chain : predicate_chains) {
       std::set<ChunkID> pruned_chunk_ids;
-      for (auto predicate : predicate_chain) {
+      for (auto predicate_expression : predicate_chain) {
         // Predicate chains might contain predicates that are not applicable to the stored table
         // e.g. operate on columns that originate from a different joined table
         auto predicate_matches_table = true;
-        auto predicate_expression = predicate->predicate();
         visit_expression(predicate_expression, [&](auto& expression_ptr) {
           if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
 
@@ -88,7 +87,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
         });
 
         if (predicate_matches_table) {
-          auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table);
+          auto new_exclusions = _compute_exclude_list(*table, *predicate_expression, stored_table);
           pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
         }
       }

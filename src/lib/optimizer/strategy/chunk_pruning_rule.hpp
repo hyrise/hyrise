@@ -19,7 +19,7 @@ class StoredTableNode;
 class PredicateNode;
 class Table;
 
-using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+using PredicateChain = std::vector<std::shared_ptr<AbstractExpression>>;
 
 /**
  * This rule determines which chunks can be pruned from table scans based on
