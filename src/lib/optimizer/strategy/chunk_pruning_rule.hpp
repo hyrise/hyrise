@@ -47,7 +47,8 @@ class ChunkPruningRule : public AbstractRule {
   static std::set<ChunkID> intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
 
   static std::vector<std::vector<std::shared_ptr<PredicateNode>>> find_predicate_chains_recursively(
-      std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
+      std::shared_ptr<StoredTableNode> stored_table_node, std::shared_ptr<AbstractLQPNode> node,
+      std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
 
  private:
   // Caches intermediate results

@@ -37,7 +37,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   // (2) Collect PredicateNodes on top of each StoredTableNode
   for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
-    predicate_chains = find_predicate_chains_recursively(stored_table_node);
+    predicate_chains = find_predicate_chains_recursively(stored_table_node, stored_table_node);
   }
 
   // (3) Set pruned chunks for each StoredTableNode
@@ -248,21 +248,43 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 }
 
 std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_predicate_chains_recursively(
-    std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
+    std::shared_ptr<StoredTableNode> stored_table_node, std::shared_ptr<AbstractLQPNode> node,
+    std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
   std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_chains;
 
   visit_lqp_upwards(node, [&](auto& current_node) {
     if (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
-        current_node->type == LQPNodeType::StoredTable || ChunkPruningRule::_is_non_filtering_node(*current_node)) {
-      // Add to current predicate chain
+        current_node->type == LQPNodeType::StoredTable || current_node->type == LQPNodeType::Join ||
+        ChunkPruningRule::_is_non_filtering_node(*current_node)) {
       if (current_node->type == LQPNodeType::Predicate) {
-        current_predicate_chain.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+        auto predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
+
+        // Check if predicate can be applied to the StoredTableNode
+        auto predicate_expression = predicate_node->predicate();
+        auto predicate_matches_table = true;
+        visit_expression(predicate_expression, [&stored_table_node, &predicate_matches_table](auto& expression_ptr) {
+          if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
+          Assert(lqp_column_expression_ptr,
+                 "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+          if (lqp_column_expression_ptr->original_node.lock() != stored_table_node) {
+            predicate_matches_table = false;
+          }
+          return ExpressionVisitation::DoNotVisitArguments;
+        });
+
+        // Add to current predicate chain
+        if (predicate_matches_table) {
+          current_predicate_chain.emplace_back(predicate_node);
+        }
       }
 
       // Check whether predicate chain branches
       if (current_node->outputs().size() > 1) {
         for (auto& output_node : current_node->outputs()) {
-          auto continued_predicate_chains = find_predicate_chains_recursively(output_node, current_predicate_chain);
+          auto continued_predicate_chains =
+              find_predicate_chains_recursively(stored_table_node, output_node, current_predicate_chain);
+
           predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
                                   continued_predicate_chains.end());
         }
@@ -274,7 +296,7 @@ std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_
     }
 
     // Predicate chain has ended
-    if (!current_predicate_chain.empty()) predicate_chains.emplace_back(current_predicate_chain);
+    predicate_chains.emplace_back(current_predicate_chain);
     return LQPUpwardVisitation::DoNotVisitOutputs;
   });
 

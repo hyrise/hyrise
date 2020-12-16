@@ -167,7 +167,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 
   StrategyBaseTest::apply_rule(_rule, lqp);
   auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{2}};
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
@@ -394,6 +394,36 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
   std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
   std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
+  auto stored_table_node_1 = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node_2 = std::make_shared<StoredTableNode>("int_float4");
+
+  const auto table_1_a = stored_table_node_1->get_column("a");
+  const auto table_2_a = stored_table_node_2->get_column("a");
+  const auto table_2_b = stored_table_node_2->get_column("b");
+
+  // clang-format off
+  auto input_lqp =
+  PredicateNode::make(less_than_(table_2_a, 10000), // prune chunk 0 and 1 on table 2
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1), // prune chunk 0 on table 1
+      PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2))); // prune chunk 3 on table 2
+
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_EQ(actual_lqp, input_lqp);
+
+  std::vector<ChunkID> expected_chunk_ids_table_1 = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids_table_1 = stored_table_node_1->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids_table_1, expected_chunk_ids_table_1);
+
+  std::vector<ChunkID> expected_chunk_ids_table_2 = {ChunkID{0}, ChunkID{1}, ChunkID{3}};
+  std::vector<ChunkID> pruned_chunk_ids_table_2 = stored_table_node_2->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids_table_2, expected_chunk_ids_table_2);
 }
 
 TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
