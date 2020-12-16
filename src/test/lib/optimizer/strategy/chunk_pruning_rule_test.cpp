@@ -154,14 +154,14 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 
   // clang-format off
   auto common =
-    PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+    PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2
       stored_table_node);
   auto lqp =
     UnionNode::make(SetOperationMode::All,
-      PredicateNode::make(greater_than_(b, 700),    // would allow for pruning of chunk 0
-        PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+      PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2
+        PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3
           common)),
-      PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+      PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2
         common));
   // clang-format on
 
