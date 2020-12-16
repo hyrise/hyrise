@@ -353,7 +353,7 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
   // (1) Gather adjacent PredicateNodes
   visit_lqp(lqp_root, [&](const auto node) {
     if (node->type == LQPNodeType::Predicate &&
-        !visited_predicate_nodes.contains(static_pointer_cast<PredicateNode>(node))) {
+        !visited_predicate_nodes.contains(std::static_pointer_cast<PredicateNode>(node))) {
       std::vector<std::shared_ptr<PredicateNode>> current_adjacent_predicate_nodes;
 
       auto current_node = node;
