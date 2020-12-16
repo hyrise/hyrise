@@ -26,7 +26,7 @@ class Table;
  */
 class ChunkPruningRule : public AbstractRule {
  public:
-  static bool _is_non_filtering_node(const AbstractLQPNode& node); // TODO outsource to LQPUtils?
+  static bool _is_non_filtering_node(const AbstractLQPNode& node);  // TODO outsource to LQPUtils?
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
@@ -46,8 +46,8 @@ class ChunkPruningRule : public AbstractRule {
 
   static std::set<ChunkID> intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
 
-  static std::vector<std::vector<std::shared_ptr<PredicateNode>>> find_predicate_chains_recursively
-      (std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
+  static std::vector<std::vector<std::shared_ptr<PredicateNode>>> find_predicate_chains_recursively(
+      std::shared_ptr<AbstractLQPNode> node, std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
 
  private:
   // Caches intermediate results
