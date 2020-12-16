@@ -57,8 +57,8 @@ class TableScan : public AbstractReadOnlyOperator {
       OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>::output_to_stream(stream, description_mode);
 
       const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-      stream << separator << "Chunks: " << num_chunks_with_early_out.load() << " skipped, ";
-      stream << separator << num_chunks_with_all_rows_matching.load() << " matched all rows,";
+      stream << separator << "Chunks: " << num_chunks_with_early_out.load() << " skipped with no results, ";
+      stream << separator << num_chunks_with_all_rows_matching.load() << " skipped with all matching,";
       stream << num_chunks_with_binary_search.load() << " scanned using binary search.";
     }
   };
