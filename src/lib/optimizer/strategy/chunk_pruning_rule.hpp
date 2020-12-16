@@ -26,7 +26,7 @@ class Table;
  */
 class ChunkPruningRule : public AbstractRule {
  public:
-  static bool _is_non_filtering_node(const AbstractLQPNode& node);  // TODO outsource to LQPUtils?
+  static bool _is_non_filtering_node(const AbstractLQPNode& node);  // TODO(Julian) outsource to LQPUtils?
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

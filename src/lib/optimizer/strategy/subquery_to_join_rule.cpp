@@ -558,7 +558,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
    */
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp_root);
   if (!predicate_node) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);  // TODO Refactor!
+    _apply_to_plan_inputs_without_subqueries(lqp_root);  // TODO(Julian) Refactor!
     return;
   }
 
