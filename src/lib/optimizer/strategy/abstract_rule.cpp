@@ -35,4 +35,9 @@ void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp
   }
 }
 
+void AbstractRule::_apply_to_plan_inputs_without_subqueries(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
+  if (node->left_input()) _apply_to_plan_without_subqueries(node->left_input());
+  if (node->right_input()) _apply_to_plan_without_subqueries(node->right_input());
+}
+
 }  // namespace opossum
