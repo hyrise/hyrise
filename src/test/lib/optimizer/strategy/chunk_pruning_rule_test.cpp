@@ -144,30 +144,6 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
-TEST_F(ChunkPruningRuleTest, MultipleOutputs2_compute_exclude_list) {
-  // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore
-
-  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
-
-  const auto a = lqp_column_(stored_table_node, ColumnID{0});
-  const auto b = lqp_column_(stored_table_node, ColumnID{1});
-
-  // clang-format off
-  auto common =
-  PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
-    stored_table_node);
-
-  auto lqp =
-  PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
-    common);
-  // clang-format on
-
-  StrategyBaseTest::apply_rule(_rule, lqp);
-  auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}, ChunkID{2}};
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
-}
-
 TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
   // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore
 
@@ -178,20 +154,20 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 
   // clang-format off
   auto common =
-    PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+    PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2
       stored_table_node);
   auto lqp =
     UnionNode::make(SetOperationMode::All,
-      PredicateNode::make(greater_than_(b, 700),    // would allow for pruning of chunk 0
-        PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+      PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2
+        PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3
           common)),
-      PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+      PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2
         common));
   // clang-format on
 
   StrategyBaseTest::apply_rule(_rule, lqp);
   auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{2}};
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
