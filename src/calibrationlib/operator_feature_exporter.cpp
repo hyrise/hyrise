@@ -328,8 +328,8 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   }
 
   const auto& performance_data = static_cast<TableScan::PerformanceData&>(*(op->performance_data));
-  const size_t skipped_scans = performance_data.chunk_scans_skipped;
-  const size_t sorted_scans = performance_data.chunk_scans_sorted;
+  const size_t skipped_scans = performance_data.num_chunks_with_early_out;
+  const size_t sorted_scans = performance_data.num_chunks_with_binary_search;
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
