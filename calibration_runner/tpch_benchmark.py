@@ -14,10 +14,10 @@ class TPCHBenchmark(AbstractBenchmark):
   #  return "/home/Alexander.Loeser/hyrise/benchmark_results/final/tpch/sf10-3d-corrected"
 
   def max_runs(self):
-    return 1
+    return 100
 
   def time(self):
-    return 500
+    return 5000
 
   def scale(self):
     return 1
@@ -28,12 +28,12 @@ class TPCHBenchmark(AbstractBenchmark):
   def sort_orders(self):
 
     return {
+      'l_shipdate': {
+        'lineitem': [['l_shipdate', 2]]
+      },
       'l_orderkey': {
         'lineitem': [['l_orderkey', 2]]
       },
-      'l_shipdate': {
-        'lineitem': [['l_shipdate', 2]]
-      }
     }
 
 

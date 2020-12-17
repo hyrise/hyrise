@@ -157,7 +157,7 @@ def import_data(path):
         "ESTIMATED_INPUT_ROWS_RIGHT",
         "ESTIMATED_CARDINALITY",
     ]
-    data_general = import_operator_data(path, "operators.csv")
+    data_general = import_operator_data(path, "scans.csv")
     data_joins = import_operator_data(path, "joins.csv")
     data_joins = data_joins.drop(labels=["JOIN_ID"], axis=1)
     data_general = data_general.drop(labels=drop_columns_general, axis=1)
@@ -267,10 +267,13 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
     scores = dict()
     model_train_data = train_data.loc[
         (train_data["OPERATOR_NAME"] == "TableScan") & (train_data["OPERATOR_IMPLEMENTATION"] == implementation)
-    ]
+    ].copy()
     model_test_data = test_data.loc[
         (test_data["OPERATOR_NAME"] == "TableScan") & (test_data["OPERATOR_IMPLEMENTATION"] == implementation)
-    ]
+    ].copy()
+
+    model_train_data["UNSKIPPED_CHUNK_RATIO"] = np.where(model_train_data.INPUT_CHUNKS != 0, (model_train_data.INPUT_CHUNKS - model_train_data.SCANS_SKIPPED) / model_train_data.INPUT_CHUNKS, 1)
+    model_test_data["UNSKIPPED_CHUNK_RATIO"] = np.where(model_test_data.INPUT_CHUNKS != 0, (model_test_data.INPUT_CHUNKS - model_test_data.SCANS_SKIPPED) / model_test_data.INPUT_CHUNKS, 1)
 
     keep_labels = [
         "INPUT_ROWS",
@@ -281,6 +284,7 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
         "INPUT_CHUNKS",
         "PREDICATE",
         "RUNTIME_NS",
+        "UNSKIPPED_CHUNK_RATIO"
     ]
 
     model_train_data = model_train_data[keep_labels]

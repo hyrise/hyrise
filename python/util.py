@@ -115,4 +115,4 @@ def append_to_input_format(df, input_format):
         print(f"dropping columns {', '.join(control_diffs)}")
         result = result.drop(columns=control_diffs)
         #raise ValueError(f"Did not expect column(s) {', '.join(control_diffs)}")
-    return result
+    return result[input_format.columns]

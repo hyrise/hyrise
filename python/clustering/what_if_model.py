@@ -7,7 +7,7 @@ import util
 
 class WhatIfModel(DisjointClustersModel):
     
-    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation, model_dir='cost_model_output/models/', model_type='boost'):
+    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation, model_dir='unfair_training/models/', model_type='boost'):
         super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation)
         self.models = util.load_models(model_dir)
         self.model_formats = util.load_model_input_formats(model_dir)
