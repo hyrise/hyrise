@@ -60,6 +60,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({1});
   table->append({2});
   table->append({2});
+  table->append({2});
+  table->append({2});
   table->append({3});
 
   table->last_chunk()->finalize();
@@ -76,6 +78,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
@@ -89,13 +92,15 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   // Check counters for sorted segment scanning (value scan)
   table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
+  table->get_chunk(ChunkID{2})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   {
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -107,7 +112,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 3ul);
   }
 
   // Between scan
@@ -116,13 +122,63 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_wrapper->execute();
 
     const auto table_scan = std::make_shared<TableScan>(
-        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 2));
+        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
+    table_scan->execute();
+
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    /*
+     * TODO(anyone) actually, there could be 3 chunks with all rows matching, and none with binary search.
+     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between.
+     * Consequently, the first chunk must be scanned
+     */
+    EXPECT_GT(performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 1ul);
+  }
+
+  // Test that nullable columns do not contribute all-rows-matching shortcuts
+  const TableColumnDefinitions nullable_column_definition = {{"a", DataType::Int, true}};
+  table = std::make_shared<Table>(nullable_column_definition, TableType::Data, 2);
+  table->append({1});
+  table->append({2});
+  table->append({2});
+  table->append({2});
+  table->append({2});
+  table->append({3});
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table);
+
+  // ColumnVsValue scan
+  {
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    const auto table_scan =
+        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+  }
+
+  // Between scan
+  {
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    const auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
+    table_scan->execute();
+
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 }
 
