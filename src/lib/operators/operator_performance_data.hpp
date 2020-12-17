@@ -63,6 +63,16 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
       return;
     }
 
+    // Check that the cumulative step runtimes are not larger than the operator's runtime.
+    if constexpr (HYRISE_DEBUG) {
+      auto cumulative_step_runtime = size_t{0};
+      for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
+        cumulative_step_runtime += step_runtimes[step_index].count();
+      }
+      Assert(static_cast<size_t>(walltime.count()) >= cumulative_step_runtime,
+             "Cumulative step runtimes larger than operator runtime.");
+    }
+
     static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
     stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n")
            << "Operator step runtimes:" << (description_mode == DescriptionMode::SingleLine ? "" : "\n");
