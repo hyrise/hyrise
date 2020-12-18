@@ -8,6 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
@@ -32,7 +33,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
                                                   std::vector<std::vector<std::shared_ptr<PredicateNode>>>{});
   }
 
-  // (2) Collect PredicateNodes on top of each StoredTableNode
+  // (2) Collect chains of PredicateNodes on top of each StoredTableNode
   for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
     predicate_chains = find_predicate_chains_recursively(stored_table_node, stored_table_node);
   }
@@ -204,10 +205,6 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
   return can_prune;
 }
 
-bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) {
-  return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
-}
-
 std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
                                                                            OperatorScanPredicate predicate,
                                                                            size_t num_rows_pruned) {
@@ -245,56 +242,84 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 }
 
 std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_predicate_chains_recursively(
-    std::shared_ptr<StoredTableNode> stored_table_node, std::shared_ptr<AbstractLQPNode> node,
+    const std::shared_ptr<StoredTableNode>& stored_table_node, const std::shared_ptr<AbstractLQPNode>& node,
     std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
   std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_chains;
 
-  visit_lqp_upwards(node, [&](auto& current_node) {
-    if (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
-        current_node->type == LQPNodeType::StoredTable || current_node->type == LQPNodeType::Join ||
-        ChunkPruningRule::_is_non_filtering_node(*current_node)) {
-      if (current_node->type == LQPNodeType::Predicate) {
-        auto predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
+  visit_lqp_upwards(node, [&](const auto& current_node) {
+    /**
+     * In the following switch-statement, we
+     *  (1) add PredicateNodes to the current predicate chain, if applicable, and
+     *  (2) check whether we should finalize it.
+     */
+    auto predicate_chain_continues = true;
+    switch (current_node->type) {
+      // clang-format off
+      case LQPNodeType::Alias:        break;
+      case LQPNodeType::Sort:         break;
+      case LQPNodeType::StoredTable:  break;
+      case LQPNodeType::Validate:     break;
+      case LQPNodeType::Projection:   break;
+      case LQPNodeType::Predicate: {
+        const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
 
-        // Check if predicate can be applied to the StoredTableNode
-        auto predicate_expression = predicate_node->predicate();
-        auto predicate_matches_table = true;
-        visit_expression(predicate_expression, [&stored_table_node, &predicate_matches_table](auto& expression_ptr) {
-          if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
-          const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
-          Assert(lqp_column_expression_ptr,
-                 "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
-          if (lqp_column_expression_ptr->original_node.lock() != stored_table_node) {
-            predicate_matches_table = false;
+        // PredicateNode might not belong to the current predicate chain, e.g. when it follows a JoinNode.
+        auto belongs_to_predicate_chain = false;
+        const auto& predicate_expression = predicate_node->predicate();
+        visit_expression(predicate_expression, [&](const auto& expression) {
+          if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
+          if (column_expression->original_node.lock() == stored_table_node) {
+            // PredicateNode filters stored_table_node. Therefore, we want to add it to the current predicate chain.
+            belongs_to_predicate_chain = true;
           }
           return ExpressionVisitation::DoNotVisitArguments;
         });
+        if (belongs_to_predicate_chain) current_predicate_chain.emplace_back(predicate_node);
+      } break;
+      case LQPNodeType::Join: {
+        auto join_node = std::static_pointer_cast<JoinNode>(current_node);
+        if (join_node->join_mode != JoinMode::Semi) break;
 
-        // Add to current predicate chain
-        if (predicate_matches_table) {
-          current_predicate_chain.emplace_back(predicate_node);
+        // Check whether the predicate chain continues after the semi join
+        predicate_chain_continues = false;
+        for (const auto& expression : join_node->output_expressions()) {
+          if (expression->type != ExpressionType::LQPColumn) continue;
+          const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
+          if (column_expression->original_node.lock() == stored_table_node) {
+            // At least one column expression of stored_table_node survives the semi join.
+            // Therefore, the predicate chain might continue.
+            predicate_chain_continues = true;
+            break;
+          }
         }
-      }
-
-      // Check whether predicate chain branches
-      if (current_node->outputs().size() > 1) {
-        for (auto& output_node : current_node->outputs()) {
-          auto continued_predicate_chains =
-              find_predicate_chains_recursively(stored_table_node, output_node, current_predicate_chain);
-
-          predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
-                                  continued_predicate_chains.end());
-        }
-        return LQPUpwardVisitation::DoNotVisitOutputs;
-      }
-
-      // Predicate chain does not branch.
-      return LQPUpwardVisitation::VisitOutputs;
+      } break;
+      default:
+        // For all other types of nodes, we finalize the predicate chain.
+        predicate_chain_continues = false;
+        // clang-format on
     }
 
-    // Predicate chain has ended
-    predicate_chains.emplace_back(current_predicate_chain);
-    return LQPUpwardVisitation::DoNotVisitOutputs;
+    if (!predicate_chain_continues) {
+      // We do not have to go the LQP-tree up further because the predicate chain is complete.
+      predicate_chains.emplace_back(current_predicate_chain);
+      return LQPUpwardVisitation::DoNotVisitOutputs;
+    }
+
+    // Use recursion, in case the predicate chain branches.
+    if (current_node->outputs().size() > 1) {
+      for (auto& output_node : current_node->outputs()) {
+        auto continued_predicate_chains =
+            find_predicate_chains_recursively(stored_table_node, output_node, current_predicate_chain);
+
+        predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
+                                continued_predicate_chains.end());
+      }
+      return LQPUpwardVisitation::DoNotVisitOutputs;
+    }
+
+    // Continue without recursion
+    return LQPUpwardVisitation::VisitOutputs;
   });
 
   return predicate_chains;

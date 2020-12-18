@@ -199,7 +199,7 @@ TEST_F(LQPUtilsTest, LQPFindLeafs) {
       dummy_table_node));
   // clang-format on
 
-  { // Check whether we find all leaf nodes
+  {  // Check whether we find all leaf nodes
     const auto leaf_nodes = lqp_find_leafs(lqp);
     ASSERT_EQ(leaf_nodes.size(), 3);
     EXPECT_EQ(leaf_nodes.at(0), node_b);
@@ -207,7 +207,7 @@ TEST_F(LQPUtilsTest, LQPFindLeafs) {
     EXPECT_EQ(leaf_nodes.at(2), node_a);
   }
 
-  { // Check whether we can filter by specific node types
+  {  // Check whether we can filter by specific node types
     const auto mock_nodes = lqp_find_leafs<MockNode>(lqp);
     const auto dummy_table_nodes = lqp_find_leafs<DummyTableNode>(lqp);
     ASSERT_EQ(mock_nodes.size(), 2);
@@ -217,7 +217,7 @@ TEST_F(LQPUtilsTest, LQPFindLeafs) {
     EXPECT_EQ(dummy_table_nodes.at(0), dummy_table_node);
   }
 
-  { // Check whether we return leafs only
+  {  // Check whether we return leafs only
     const auto predicate_nodes = lqp_find_leafs<PredicateNode>(lqp);
     EXPECT_TRUE(predicate_nodes.empty());
   }
