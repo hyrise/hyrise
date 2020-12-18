@@ -209,6 +209,12 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
+ * ToDo(Julian) Doc
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                             const std::optional<LQPNodeType> type = {});
+
+/**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
  *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
  *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.

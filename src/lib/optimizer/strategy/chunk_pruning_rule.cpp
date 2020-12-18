@@ -26,14 +26,11 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       predicate_chains_by_stored_table_node;
 
   // (1) Collect StoredTableNodes
-  visit_lqp(lqp_root, [&](const auto node) {
-    if (node->type == LQPNodeType::StoredTable) {
-      predicate_chains_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(node),
-                                                    std::vector<std::vector<std::shared_ptr<PredicateNode>>>{});
-      return LQPVisitation::DoNotVisitInputs;
-    }
-    return LQPVisitation::VisitInputs;
-  });
+  const auto leaf_nodes = lqp_find_leafs(lqp_root, LQPNodeType::StoredTable);
+  for (const auto& leaf_node : leaf_nodes) {
+    predicate_chains_by_stored_table_node.emplace(std::static_pointer_cast<StoredTableNode>(leaf_node),
+                                                  std::vector<std::vector<std::shared_ptr<PredicateNode>>>{});
+  }
 
   // (2) Collect PredicateNodes on top of each StoredTableNode
   for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {

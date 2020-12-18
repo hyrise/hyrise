@@ -372,7 +372,7 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
       }
 
       // We do not need a chain of PredicateNodes. Substitutions are also possible for single PredicateNodes. Think
-      // of a predicates with a LogicalExpression and LogicalOperator::AND, for example.
+      // of predicates with LogicalExpression and LogicalOperator::AND, for example.
       if (!current_adjacent_predicate_nodes.empty()) {
         adjacent_predicate_nodes.emplace_back(current_adjacent_predicate_nodes);
       }
