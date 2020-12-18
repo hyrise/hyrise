@@ -128,8 +128,9 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     /*
      * TODO(anyone) actually, there could be 3 chunks with all rows matching, and none with binary search.
-     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between.
-     * Consequently, the first chunk must be scanned
+     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between
+     * when checking for the all-match-shortcut, and an inclusive between when checking for the no-match-shortcut.
+     * This is not wrong, so it should not break anything, but it may lead to unnecessary sorted scans.
      */
     EXPECT_GT(performance_data.walltime.count(), 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
@@ -165,7 +166,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
-  // Between scan
+  // Between scan on nullable columns
   {
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
