@@ -210,9 +210,30 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 /**
  * ToDo(Julian) Doc
+ * @tparam LQPNode
+ * @param lqp
+ * @return
  */
-std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                             const std::optional<LQPNodeType> type = {});
+template <class LQPNode = AbstractLQPNode>
+std::vector<std::shared_ptr<LQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  static_assert(std::is_same<LQPNode, AbstractLQPNode>::value || std::is_base_of<AbstractLQPNode, LQPNode>::value,
+                "The given type LQPNode must be derived from AbstractLQPNode");
+  std::vector<std::shared_ptr<LQPNode>> leaf_nodes;
+
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->input_count() > 0) return LQPVisitation::VisitInputs;
+
+    if constexpr (std::is_same<LQPNode, AbstractLQPNode>::value) {
+      leaf_nodes.emplace_back(node);
+    } else {
+      auto casted_node = std::dynamic_pointer_cast<LQPNode>(node);
+      if (casted_node) leaf_nodes.emplace_back(casted_node);
+    }
+    return LQPVisitation::DoNotVisitInputs;
+  });
+
+  return leaf_nodes;
+}
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
