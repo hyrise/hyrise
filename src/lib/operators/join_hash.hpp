@@ -21,6 +21,10 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);
+  // Evaluate the expression immediately if it contains less than `JOB_SPAWN_THRESHOLD` rows, otherwise wrap
+  // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
+  // still needs to be re-evaluated over time to find the value which gives the best performance.
+  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,

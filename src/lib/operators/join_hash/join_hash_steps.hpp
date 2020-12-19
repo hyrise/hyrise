@@ -7,6 +7,7 @@
 
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -407,16 +408,17 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     if (radix_container[partition_idx].elements.empty()) {
       continue;
     }
-
     const std::hash<HashedType> hash_function;
 
-    const auto insert_into_hash_table = [&, partition_idx]() {
+    const auto& elements = radix_container[partition_idx].elements;
+    const auto elements_count = elements.size();
+
+    const auto insert_into_hash_table = [&, partition_idx, elements_count]() {
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
-      const auto& elements = radix_container[partition_idx].elements;
 
       auto& hash_table = hash_tables[hash_table_idx];
       if (radix_bits > 0) {
-        hash_table = PosHashTable<HashedType>(mode, elements.size());
+        hash_table = PosHashTable<HashedType>(mode, elements_count);
       }
       for (const auto& element : elements) {
         DebugAssert(!(element.row_id == NULL_ROW_ID), "No NULL_ROW_IDs should make it to this point");
@@ -435,9 +437,11 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       }
     };
 
-    if (radix_bits == 0) {
+    if (radix_bits == 0 || JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       // Without radix partitioning, only a single hash table will be written. Parallelizing this would require a
       // concurrent hash table, which is likely more expensive.
+      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
+      // likely more expensive.
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
@@ -582,9 +586,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       continue;
     }
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, partition_idx]() {
-      const auto& partition = probe_radix_container[partition_idx];
-      const auto& elements = partition.elements;
+    const auto& partition = probe_radix_container[partition_idx];
+    const auto& elements = partition.elements;
+    const auto elements_count = elements.size();
+
+    const auto probe_partition = [&, partition_idx, elements_count]() {
       const auto& null_values = partition.null_values;
 
       RowIDPosList pos_list_build_side_local;
@@ -612,7 +618,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
 
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
+        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
           const auto& probe_column_element = elements[partition_offset];
 
           if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
@@ -688,10 +694,10 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           // Since we did not find a hash table, we know that there is no match in the build column for this partition.
           // Hence we are going to write NULL values for each row.
 
-          pos_list_build_side_local.reserve(elements.size());
-          pos_list_probe_side_local.reserve(elements.size());
+          pos_list_build_side_local.reserve(elements_count);
+          pos_list_probe_side_local.reserve(elements_count);
 
-          for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
+          for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
             const auto& element = elements[partition_offset];
             pos_list_build_side_local.emplace_back(NULL_ROW_ID);
             pos_list_probe_side_local.emplace_back(element.row_id);
@@ -701,7 +707,15 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
       pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
       pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
-    }));
+    };
+
+    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
+      // likely more expensive.
+      probe_partition();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+    }
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -721,10 +735,12 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       continue;
     }
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, partition_idx]() {
+    const auto& partition = probe_radix_container[partition_idx];
+    const auto& elements = partition.elements;
+    const auto elements_count = elements.size();
+
+    const auto probe_partition = [&, partition_idx, elements_count]() {
       // Get information from work queue
-      const auto& partition = probe_radix_container[partition_idx];
-      const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
       RowIDPosList pos_list_local;
@@ -738,7 +754,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
                                                                    secondary_join_predicates);
 
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
+        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
           const auto& probe_column_element = elements[partition_offset];
 
           if constexpr (mode == JoinMode::Semi) {
@@ -790,7 +806,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
+        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
@@ -798,8 +814,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;
-        pos_list_local.reserve(elements.size());
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
+        pos_list_local.reserve(elements_count);
+        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
           auto& probe_column_element = elements[partition_offset];
           // A NULL on the probe side never gets emitted, except when the build table is empty.
           // This is because `NULL NOT IN <empty list>` is actually true
@@ -811,7 +827,15 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       }
 
       pos_lists[partition_idx] = std::move(pos_list_local);
-    }));
+    };
+
+    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
+      // likely more expensive.
+      probe_partition();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+    }
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
