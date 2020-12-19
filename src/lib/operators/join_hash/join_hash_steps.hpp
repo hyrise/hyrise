@@ -516,10 +516,13 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   jobs.reserve(input_partition_count);
 
   for (ChunkID input_partition_idx{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, input_partition_idx]() {
-      const auto& input_partition = radix_container[input_partition_idx];
-      for (auto input_idx = size_t{0}; input_idx < input_partition.elements.size(); ++input_idx) {
-        const auto& element = input_partition.elements[input_idx];
+    const auto& input_partition = radix_container[input_partition_idx];
+    const auto& elements = input_partition.elements;
+    const auto elements_count = elements.size();
+
+    const auto perform_partition = [&, input_partition_idx, elements_count]() {
+      for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
+        const auto& element = elements[input_idx];
 
         if constexpr (!keep_null_values) {
           DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
@@ -544,7 +547,14 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
         ++output_idx;
       }
-    }));
+    };
+    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
+      // likely more expensive.
+      perform_partition();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+    }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   jobs.clear();
