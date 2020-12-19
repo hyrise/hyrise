@@ -160,9 +160,9 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     case PredicateCondition::Like: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
-      // We do not handle the case of outlier min/max values. For example `USA%` is not pruned whenever just a single
-      // value with a lower case exists, because the default ASCII-based sorting places all upper case values before
-      // lower case values.
+      // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
+      // upper case letters. This can lead to a situation, where the USA% (e.g., JOB query XXXXX) is not pruned
+      // whenever just a single value starts with a lower case letter.
       // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
       // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}

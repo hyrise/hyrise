@@ -98,7 +98,8 @@ TEST_F(MinMaxFilterTestLike, CanPruneLike) {
   EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
   EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
 
-  // We do not handle the case of outlier min/max values.
+  // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
+  // upper case letters. In this test USA% is not pruned since t is a lower case value.
   const auto filter_max_lower_case = std::make_unique<MinMaxFilter<pmr_string>>("T", "t");
   EXPECT_FALSE(filter_max_lower_case->does_not_contain(PredicateCondition::Like, "USA%"));
 }
