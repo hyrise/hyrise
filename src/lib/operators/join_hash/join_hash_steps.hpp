@@ -253,7 +253,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     if (!in_table->get_chunk(chunk_id)) continue;
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
+    const auto num_rows = in_table->get_chunk(chunk_id)->size();
+
+    const auto materialize = [&, in_table, chunk_id, num_rows]() {
       auto local_output_bloom_filter = BloomFilter{};
       std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
       if (Hyrise::get().is_multi_threaded()) {
@@ -270,7 +272,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto& elements = radix_container[chunk_id].elements;
       auto& null_values = radix_container[chunk_id].null_values;
 
-      const auto num_rows = chunk_in->size();
       elements.resize(num_rows);
       if constexpr (keep_null_values) {
         null_values.resize(num_rows);
@@ -365,7 +366,14 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         std::lock_guard<std::mutex> lock{output_bloom_filter_mutex};
         output_bloom_filter |= local_output_bloom_filter;
       }
-    }));
+    };
+    if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
+      // If the chunk size (number of rows) of the partition lies under the threshold, the execution in parallel is
+      // likely more expensive.
+      materialize();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(materialize));
+    }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
