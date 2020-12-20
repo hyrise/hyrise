@@ -28,6 +28,12 @@ class TPCHBenchmark(AbstractBenchmark):
   def sort_orders(self):
 
     return {
+      'l_receiptdate': {
+        'lineitem': [['l_receiptdate', 2]]
+      }
+    }
+
+    return {
       'l_shipdate': {
         'lineitem': [['l_shipdate', 2]]
       },

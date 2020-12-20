@@ -81,12 +81,22 @@
             "type": "string"
         },
         {
-            "name": "SCANS_SKIPPED",
+            "name": "SHORTCUT_ALL_MATCH",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "SHORTCUT_NONE_MATCH",
             "nullable": false,
             "type": "long"
         },
         {
             "name": "SCANS_SORTED",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "SEGMENTS_SCANNED",
             "nullable": false,
             "type": "long"
         }

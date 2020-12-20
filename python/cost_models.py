@@ -157,35 +157,40 @@ def import_data(path):
         "ESTIMATED_INPUT_ROWS_RIGHT",
         "ESTIMATED_CARDINALITY",
     ]
-    data_general = import_operator_data(path, "scans.csv")
+    data_general = import_operator_data(path, "operators.csv")
+    data_scans = import_operator_data(path, "scans.csv")
     data_joins = import_operator_data(path, "joins.csv")
     data_joins = data_joins.drop(labels=["JOIN_ID"], axis=1)
     data_general = data_general.drop(labels=drop_columns_general, axis=1)
+    data_scans = data_scans.drop(labels=drop_columns_general, axis=1)
     data_joins = data_joins.drop(labels=drop_columns_join, axis=1)
-    return data_general, preprocess_joins(data_joins)
+    return data_general, data_scans, preprocess_joins(data_joins)
 
 
 def import_train_test_data(train_path, test_path):
-    train_general, train_joins = import_data(train_path)
-    test_general, test_joins = import_data(test_path)
+    train_general, train_scans, train_joins = import_data(train_path)
+    test_general, train_scans, test_joins = import_data(test_path)
 
     # check whether training and test data have the same format
-    for test, train in zip([test_general, test_joins], [train_general, train_joins]):
+    for test, train in zip([test_general, test_scans, test_joins], [train_general, train_scans, train_joins]):
         if test.columns.all() != train.columns.all():
             warnings.warn(
                 "Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!"
             )
 
     general_inter = train_general.columns.intersection(test_general.columns)
+    scan_inter = train_scans.columns.intersection(test_scans.columns)
     join_inter = train_joins.columns.intersection(test_joins.columns)
     test_general = test_general[general_inter.tolist()]
     train_general = train_general[general_inter.tolist()]
+    test_scans = test_scans[scan_inter.tolist()]
+    train_scans = train_scans[scan_inter.tolist()]
     test_joins = test_joins[join_inter.tolist()]
     train_joins = train_joins[join_inter.tolist()]
 
     return (
-        {"general": train_general, "join": train_joins},
-        {"general": test_general, "join": test_joins},
+        {"general": train_general, "scan": train_scans, "join": train_joins},
+        {"general": test_general, "scan": test_scans, "join": test_joins},
     )
 
 
@@ -272,8 +277,24 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
         (test_data["OPERATOR_NAME"] == "TableScan") & (test_data["OPERATOR_IMPLEMENTATION"] == implementation)
     ].copy()
 
-    model_train_data["UNSKIPPED_CHUNK_RATIO"] = np.where(model_train_data.INPUT_CHUNKS != 0, (model_train_data.INPUT_CHUNKS - model_train_data.SCANS_SKIPPED) / model_train_data.INPUT_CHUNKS, 1)
-    model_test_data["UNSKIPPED_CHUNK_RATIO"] = np.where(model_test_data.INPUT_CHUNKS != 0, (model_test_data.INPUT_CHUNKS - model_test_data.SCANS_SKIPPED) / model_test_data.INPUT_CHUNKS, 1)
+    model_train_data["NONE_MATCH_RATIO"] = np.where(model_train_data.SEGMENTS_SCANNED != 0, model_train_data.SHORTCUT_NONE_MATCH / model_train_data.SEGMENTS_SCANNED, 0)
+    model_train_data["ALL_MATCH_RATIO"] = np.where(model_train_data.SEGMENTS_SCANNED != 0, model_train_data.SHORTCUT_ALL_MATCH / model_train_data.SEGMENTS_SCANNED, 0)
+    model_test_data["NONE_MATCH_RATIO"] = np.where(model_test_data.SEGMENTS_SCANNED != 0, model_test_data.SHORTCUT_NONE_MATCH / model_test_data.SEGMENTS_SCANNED, 0)
+    model_test_data["ALL_MATCH_RATIO"] = np.where(model_test_data.SEGMENTS_SCANNED != 0, model_test_data.SHORTCUT_ALL_MATCH / model_test_data.SEGMENTS_SCANNED, 0)
+
+    if len(model_train_data["NONE_MATCH_RATIO"].unique()) > 0:
+        assert model_train_data["NONE_MATCH_RATIO"].min() >= 0
+        assert model_train_data["NONE_MATCH_RATIO"].max() <= 1
+    if len(model_train_data["ALL_MATCH_RATIO"].unique()) > 0:
+        assert model_train_data["ALL_MATCH_RATIO"].min() >= 0
+        assert model_train_data["ALL_MATCH_RATIO"].max() <= 1
+
+    if len(model_test_data["NONE_MATCH_RATIO"].unique()) > 0:
+        assert model_test_data["NONE_MATCH_RATIO"].min() >= 0
+        assert model_test_data["NONE_MATCH_RATIO"].max() <= 1
+    if len(model_test_data["ALL_MATCH_RATIO"].unique()) > 0:
+        assert model_test_data["ALL_MATCH_RATIO"].min() >= 0
+        assert model_test_data["ALL_MATCH_RATIO"].max() <= 1
 
     keep_labels = [
         "INPUT_ROWS",
@@ -284,7 +305,8 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
         "INPUT_CHUNKS",
         "PREDICATE",
         "RUNTIME_NS",
-        "UNSKIPPED_CHUNK_RATIO"
+        "NONE_MATCH_RATIO",
+        "ALL_MATCH_RATIO"
     ]
 
     model_train_data = model_train_data[keep_labels]
@@ -426,11 +448,12 @@ def equalize_data(abc):
 def load_all_directories(directories):
     data = None
     for directory in directories:
-        operators, joins = import_data(directory)
+        operators, scans, joins = import_data(directory)
         if data is None:
-            data = {"general": operators, "join": joins}
+            data = {"general": operators, "scan": scans, "join": joins}
         else:
             data["general"] = pd.concat([data["general"], operators], ignore_index=True)
+            data["scan"] = pd.concat([data["scan"], scans], ignore_index=True)
             data["join"] = pd.concat([data["join"], joins], ignore_index=True)
     return data
 
@@ -443,9 +466,10 @@ def main(args):
         random_state = 42 if args.set_random_state else randrange(2 ** 32)
         shared_data = load_all_directories(args.train)
         general_train, general_test = train_test_split(shared_data["general"], random_state=random_state, test_size=0.2)
+        scan_train, scan_test = train_test_split(shared_data["scan"], random_state=random_state, test_size=0.2)
         join_train, join_test = train_test_split(shared_data["join"], random_state=random_state, test_size=0.2)
-        test_data = {"general": general_test.copy(), "join": join_test.copy()}
-        train_data = {"general": general_train.copy(), "join": join_train.copy()}
+        test_data = {"general": general_test.copy(), "scan": scan_test.copy(),  "join": join_test.copy()}
+        train_data = {"general": general_train.copy(), "scan": scan_train.copy(), "join": join_train.copy()}
 
     test_data = equalize_data(test_data)
     train_data = equalize_data(train_data)
