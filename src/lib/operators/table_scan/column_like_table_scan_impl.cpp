@@ -31,6 +31,7 @@ std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; 
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
+  ++dictionary_segment_accesses;
   // For dictionary segments where the number of unique values is not higher than the number of (potentially filtered)
   // input rows, use an optimized implementation.
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);

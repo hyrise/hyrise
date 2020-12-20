@@ -30,6 +30,7 @@ class AbstractTableScanImpl {
   std::atomic<size_t> num_chunks_with_early_out{0};
   std::atomic<size_t> num_chunks_with_all_rows_matching{0};
   std::atomic<size_t> num_chunks_with_binary_search{0};
+  std::atomic<size_t> dictionary_segment_accesses{0};
 
  protected:
   /**

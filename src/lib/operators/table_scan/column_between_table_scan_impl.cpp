@@ -37,6 +37,7 @@ std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetw
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
+  ++dictionary_segment_accesses;
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
 
   // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on

@@ -114,8 +114,10 @@ class OperatorFeatureExporter {
                                                      {"QUERY_HASH", DataType::String, true},
                                                      {"INPUT_CHUNKS", DataType::Long, false},
                                                      {"PREDICATE", DataType::String, true},
-                                                     {"SCANS_SKIPPED", DataType::Long, false},
-                                                     {"SCANS_SORTED", DataType::Long, false}
+                                                     {"SHORTCUT_NONE_MATCH", DataType::Long, false},
+                                                     {"SHORTCUT_ALL_MATCH", DataType::Long, false},
+                                                     {"SCANS_SORTED", DataType::Long, false},
+                                                     {"SEGMENTS_SCANNED", DataType::Long, false}
 
                                                    }, TableType::Data);
 

@@ -200,6 +200,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   scan_performance_data.num_chunks_with_early_out = _impl->num_chunks_with_early_out.load();
   scan_performance_data.num_chunks_with_all_rows_matching = _impl->num_chunks_with_all_rows_matching.load();
   scan_performance_data.num_chunks_with_binary_search = _impl->num_chunks_with_binary_search.load();
+  scan_performance_data.dictionary_segment_accesses = _impl->dictionary_segment_accesses.load();
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

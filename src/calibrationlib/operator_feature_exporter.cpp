@@ -328,8 +328,10 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   }
 
   const auto& performance_data = static_cast<TableScan::PerformanceData&>(*(op->performance_data));
-  const size_t skipped_scans = performance_data.num_chunks_with_early_out;
+  const size_t scans_early_out = performance_data.num_chunks_with_early_out;
+  const size_t scans_all_match = performance_data.num_chunks_with_all_rows_matching;
   const size_t sorted_scans = performance_data.num_chunks_with_binary_search;
+  const size_t segments_scanned = performance_data.dictionary_segment_accesses;
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
@@ -352,7 +354,8 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           input_sorted,
                                                           _current_query_hash,
                                                           operator_info.left_input_chunks, predicate_str,
-                                                          static_cast<int64_t>(skipped_scans), static_cast<int64_t>(sorted_scans)};
+                                                          static_cast<int64_t>(scans_early_out), static_cast<int64_t>(scans_all_match),
+                                                          static_cast<int64_t>(sorted_scans), static_cast<int64_t>(segments_scanned)};
       _scan_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
