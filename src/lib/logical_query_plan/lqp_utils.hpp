@@ -28,7 +28,7 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *  to optimize subquery LQPs ONLY ONCE, although being referenced by a list of subquery expressions.
  *
  * Why weak pointers for subquery expressions?
- *  Referenced LQPs and subquery expressions might be objects to change after creating this data structure. Depending
+ *  Referenced LQPs and subquery expressions might be subject to change after creating this data structure. Depending
  *  on the order of optimization steps, we could end up with a scenario as follows:
  *
  *      [ProjectionNodeRoot(..., SubqueryExpressionA)]
@@ -46,14 +46,14 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
  *
  *        (2) OptimizerRuleXY is applied to ProjectionNodeA
- *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA
+ *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA.
  *
  *        (3) OptimizerRuleXY is applied to ProjectionNodeB
  *            -> Wasted optimization time because SubqueryExpressionB and ProjectionNodeB are no longer being used,
  *               thanks to step (2).
  *
- *  With weak pointers, we are forced to skip step (3) because SubqueryExpressionB and its
- *  corresponding LQP have already been deleted from memory after step (2).
+ *  With weak pointers, we are forced to skip step (3) because SubqueryExpressionB and its corresponding LQP have
+ *  already been deleted after step (2).
  *
  *  However, this optimization does not cover all cases as it is dependent on the execution order. For
  *  example, when swapping steps (2) and (3), we cannot easily skip an optimization step.

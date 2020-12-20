@@ -234,16 +234,17 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   // clang-format on
 
   auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_lqp);
-  auto subquery_expressions_by_lqp_iter = subquery_expressions_by_lqp.begin();
   EXPECT_EQ(subquery_expressions_by_lqp.size(), 2);
 
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->first, x_greater_than_max_a_subquery->lqp);
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->second.size(), 1);
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->second.at(0).lock(), x_greater_than_max_a_subquery);
-  subquery_expressions_by_lqp_iter++;
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->first, max_a_subquery->lqp);
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->second.size(), 1);
-  EXPECT_EQ(subquery_expressions_by_lqp_iter->second.at(0).lock(), max_a_subquery);
+  ASSERT_TRUE(subquery_expressions_by_lqp.contains(x_greater_than_max_a_subquery->lqp));
+  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.at(0).lock(),
+            x_greater_than_max_a_subquery);
+
+  ASSERT_TRUE(subquery_expressions_by_lqp.contains(max_a_subquery->lqp));
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
 }
 
 }  // namespace opossum
