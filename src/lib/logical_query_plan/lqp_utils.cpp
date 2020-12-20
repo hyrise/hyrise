@@ -93,7 +93,7 @@ void recursively_collect_subquery_expressions_by_lqp(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
       if (!subquery_expression) return ExpressionVisitation::VisitArguments;
 
-      for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
         if (*lqp == *subquery_expression->lqp) {
           subquery_expressions.emplace_back(subquery_expression);
           return ExpressionVisitation::DoNotVisitArguments;
