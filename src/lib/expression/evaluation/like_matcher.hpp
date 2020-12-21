@@ -1,8 +1,10 @@
 #pragma once
 
 #include <experimental/functional>
+#include <optional>
 #include <regex>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -45,6 +47,15 @@ class LikeMatcher {
    * PatternWildcard::AnyChars, "ld"}
    */
   static PatternTokens pattern_string_to_tokens(const pmr_string& pattern);
+
+  // Calculates the upper and lower bound of a given pattern. For example, with the pattern `Japan%`, the lower bound
+  // `Japan` and upper bound `Japao` is returned. The first value of the returned pair is the lower bound, the second
+  // the upper bound. If the char ASCII value before the wild-card has the max ASCII value 127, or the first character
+  // of the pattern is a wild-card, nullopt is returned.
+  // The following table shows examples of the return for some patterns:
+  // test%        | %test   | test\x7F% | test            | '' (empty string)
+  // {test, tesu} | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
+  static std::optional<std::pair<pmr_string, pmr_string>> bounds(const pmr_string& pattern);
 
   /**
    * To speed up LIKE there are special implementations available for simple, common patterns.
