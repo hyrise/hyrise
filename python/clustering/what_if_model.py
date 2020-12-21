@@ -37,7 +37,7 @@ class WhatIfModel(DisjointClustersModel):
         # Assumption: for range queries on clustered columns, pruning yields a range where all chunks (except the two bounding chunks) match completely
         scans['ALL_MATCH_RATIO'] = scans.apply(lambda x: 1 if x['COLUMN_NAME'] in clustering_columns and self.is_range_predicate(x['PREDICATE']) else 0, axis=1)
 
-        # Pruning - Step 1: change first scan's input size
+        # Pruning
         scans_per_query = scans.sort_values(['INPUT_ROWS'], ascending=False).groupby(['QUERY_HASH', 'GET_TABLE_HASH'])
         for _, query_scans in scans_per_query:
 
@@ -45,15 +45,21 @@ class WhatIfModel(DisjointClustersModel):
             unprunable_part = unprunable_parts.product()
             assert unprunable_part > 0, "no unprunable part"
 
+            # Pruning: Set input size of first scan to reflect pruned chunks
             estimated_pruned_table_size = min(self.table_size, self.round_up_to_next_multiple(unprunable_part * self.table_size, self.target_chunksize))
-
-            #print(query_scans.iloc[0].name)
-            #print(f"before: {scans['INPUT_ROWS'].loc[query_scans.iloc[0].name]}")
             scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] = np.int64(estimated_pruned_table_size)
 
-            #first_scan_segment_type =
-            #print(f"after : {scans['INPUT_ROWS'].loc[query_scans.iloc[0].name]}")
-            #print()
+            # Pruning: if there are multiple scans and the first occurs on a clustering column, the scan is likely moved up in the PQP (i.e., executed later)
+            # Consequence: Currently first scan will be performed on a reference segment, currently second scan on currently first scan's segment type
+            first_scan_column_name = scans.loc[query_scans.iloc[0].name, 'COLUMN_NAME']
+            if len(query_scans) > 1 and first_scan_column_name in clustering_columns:
+                first_scan_segment_type = scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS']
+                scans.loc[query_scans.iloc[1].name, 'COLUMN_TYPE'] = first_scan_segment_type
+                scans.loc[query_scans.iloc[0].name, 'COLUMN_TYPE'] = "REFERENCE"
+
+                # The originally first scan will be executed last, so its input size will be reduced by the other scans
+                for i in range(1, len(query_scans)):
+                    scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= scans.loc[query_scans.iloc[i].name, 'SELECTIVITY_LEFT']
 
         return scans
 
