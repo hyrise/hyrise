@@ -15,6 +15,7 @@
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
