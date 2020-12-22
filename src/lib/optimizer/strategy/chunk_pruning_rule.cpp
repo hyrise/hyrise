@@ -15,7 +15,6 @@
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -250,7 +249,7 @@ std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_
     /**
      * In the following switch-statement, we
      *  (1) add PredicateNodes to the current predicate chain, if applicable, and
-     *  (2) check whether we should finalize it.
+     *  (2) check whether the predicate chain continues or ends with current_node.
      */
     auto predicate_chain_continues = true;
     switch (current_node->type) {
@@ -263,15 +262,16 @@ std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_
       case LQPNodeType::Predicate: {
         const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
 
-        // PredicateNode might not belong to the current predicate chain, e.g. when it follows a JoinNode.
-        auto belongs_to_predicate_chain = false;
+        // PredicateNode might not belong to the current predicate chain,
+        // e.g. when it follows a JoinNode and contains LQPColumnExpressions from other StoredTableNodes.
+        auto belongs_to_predicate_chain = true;
         const auto& predicate_expression = predicate_node->predicate();
         visit_expression(predicate_expression, [&](const auto& expression) {
           if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
           const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
-          if (column_expression->original_node.lock() == stored_table_node) {
+          if (column_expression->original_node.lock() != stored_table_node) {
             // PredicateNode filters stored_table_node. Therefore, we want to add it to the current predicate chain.
-            belongs_to_predicate_chain = true;
+            belongs_to_predicate_chain = false;
           }
           return ExpressionVisitation::DoNotVisitArguments;
         });
