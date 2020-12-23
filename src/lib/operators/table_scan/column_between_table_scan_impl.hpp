@@ -44,8 +44,7 @@ class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImp
                                 const std::shared_ptr<const AbstractPosList>& position_filter);
 
   void _scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                            const std::shared_ptr<const AbstractPosList>& position_filter,
-                            const SortMode sort_mode) const;
+                            const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sort_mode);
 
  private:
   const bool _column_is_nullable;

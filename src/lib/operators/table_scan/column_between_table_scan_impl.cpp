@@ -49,7 +49,6 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++chunk_scans_sorted;
         return;
       }
     }
@@ -121,6 +120,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
       });
     } else {
       // No NULLs, all entries match.
+      ++num_chunks_with_all_rows_matching;
       const auto output_size = position_filter ? position_filter->size() : segment.size();
       const auto output_start_offset = matches.size();
       matches.resize(matches.size() + output_size);
@@ -145,7 +145,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
    * Early out: No entries match
    */
   if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
-    ++chunk_scans_skipped;
+    ++num_chunks_with_early_out;
     return;
   }
 
@@ -176,7 +176,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                      const SortMode sort_mode) const {
+                                                      const SortMode sort_mode) {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -193,6 +193,14 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
         });
+
+        if (sorted_segment_search.no_rows_matching) {
+          ++num_chunks_with_early_out;
+        } else if (sorted_segment_search.all_rows_matching) {
+          ++num_chunks_with_all_rows_matching;
+        } else {
+          ++num_chunks_with_binary_search;
+        }
       });
     }
   });
