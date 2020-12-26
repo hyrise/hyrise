@@ -188,6 +188,9 @@ class AggregateHash : public AbstractAggregateOperator {
 
   mutable AggregateKeyEntry _min{0};
   mutable AggregateKeyEntry _max{0};
+
+  std::chrono::nanoseconds groupby_columns_writing_duration{};
+  std::chrono::nanoseconds aggregate_columns_writing_duration{};
 };
 
 }  // namespace opossum

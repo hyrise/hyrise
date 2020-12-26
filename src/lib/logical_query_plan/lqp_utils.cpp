@@ -1,12 +1,10 @@
 #include "lqp_utils.hpp"
 
-#include <set>
-
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -84,9 +82,49 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
+void recursively_collect_subquery_expressions_by_lqp(
+    SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  if (!node) return;
+  if (!visited_nodes.emplace(node).second) return;
+
+  for (const auto& expression : node->node_expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+
+      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+        if (*lqp == *subquery_expression->lqp) {
+          subquery_expressions.emplace_back(subquery_expression);
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+      }
+      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
+
+      // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
+      recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
+                                                      visited_nodes);
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    });
+  }
+
+  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
+  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+}
+
 }  // namespace
 
 namespace opossum {
+
+SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
+  auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
+  recursively_collect_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+
+  return subqueries_by_lqp;
+}
 
 LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& lhs,
                                        const std::shared_ptr<AbstractLQPNode>& rhs) {

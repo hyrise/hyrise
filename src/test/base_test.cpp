@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"

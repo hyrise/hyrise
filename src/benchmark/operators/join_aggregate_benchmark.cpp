@@ -43,6 +43,8 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
+  std::sort(values.begin(), values.end());
+
   return values;
 }
 
@@ -82,6 +84,8 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
+  std::sort(values.begin(), values.end());
+
   return values;
 }
 
@@ -120,8 +124,8 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = zip_table->get_chunk(chunk_index);
     chunk->finalize();
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+    chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
+                                       SortColumnDefinition(ColumnID{1}, SortMode::Ascending)});
   }
 
   return std::make_shared<TableWrapper>(zip_table);

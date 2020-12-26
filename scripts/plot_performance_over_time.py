@@ -114,7 +114,7 @@ for is_detailed in [False, True]:
                 )
 
         # Plot rolling average for successful runs, use a window size of 2% of the entire benchmark
-        rolling = filtered_df[filtered_df["success"] is True].copy()
+        rolling = filtered_df[filtered_df["success"]].copy()
         window_size = max(1, int(len(rolling) * 0.02))
         rolling["rolling"] = rolling.duration.rolling(window_size).mean()
         rolling.plot(ax=ax, x="begin", y="rolling", c=color)

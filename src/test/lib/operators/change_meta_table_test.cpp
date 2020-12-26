@@ -29,7 +29,7 @@ class ChangeMetaTableTest : public BaseTest {
     right_input->execute();
 
     meta_mock_table = std::make_shared<MetaMockTable>();
-    Hyrise::get().meta_table_manager._add(meta_mock_table);
+    Hyrise::get().meta_table_manager.add_table(meta_mock_table);
 
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
