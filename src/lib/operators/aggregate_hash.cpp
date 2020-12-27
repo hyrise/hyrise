@@ -62,13 +62,13 @@ typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& resul
     // become larger than the maximum size of a table, which is 2^31 * 2^31 == 2^62.
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
                   "Expected AggregateKeyEntry to be unsigned 64-bit value");
-    constexpr auto mask = AggregateKeyEntry{1} << 63;
+    constexpr auto MASK = AggregateKeyEntry{1} << 63u;
 
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
-      if (*first_key_entry & mask) {
+      if (*first_key_entry & MASK) {
         // The most significant bit is a 1, remove it by xoring the mask gives us the index into the results vector.
-        const auto result_id = *first_key_entry ^ mask;
+        const auto result_id = *first_key_entry ^ MASK;
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
@@ -89,7 +89,7 @@ typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& resul
       result_id = it->second;
       if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-        *first_key_entry = mask | result_id;
+        *first_key_entry = MASK | result_id;
       }
       return results[result_id];
     }
@@ -101,7 +101,7 @@ typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& resul
 
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-      *first_key_entry = mask | result_id;
+      *first_key_entry = MASK | result_id;
     }
 
     return results[result_id];
