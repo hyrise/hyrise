@@ -35,7 +35,7 @@ using namespace opossum;  // NOLINT
 // aggregate function. By setting CacheResultIds to true_type, we can store the result of the lookup in the
 // AggregateKey. Following aggregate functions can then retrieve the index from the AggregateKey.
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& result_ids, Results& results,
+typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
                                               AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     // The aggregation uses no GROUP BY. To avoid special handling, get_or_add_result is still called, however, we
@@ -80,13 +80,11 @@ typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& resul
       }
     }
 
-    // Lookup the key in the result_ids map and insert a new entry if it does not yet exist.
-    auto result_id = results.size();
-    auto [it, inserted] = result_ids.emplace(key, result_id);
-
-    if (!inserted) {
+    // Lookup the key in the result_ids map
+    auto it = result_ids.find(key);
+    if (it != result_ids.end()) {
       // We have already seen this group and need to return a reference to the group's result.
-      result_id = it->second;
+      const auto result_id = it->second;
       if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
         *first_key_entry = MASK | result_id;
@@ -96,6 +94,9 @@ typename Results::reference get_or_add_result(CacheResultIds _, ResultIds& resul
 
     // We are seeing this group (i.e., this AggregateKey) for the first time, so we need to add it to the list of
     // results and set the row_id needed for restoring the GroupBy column(s).
+    const auto result_id = results.size();
+    result_ids.emplace_hint(it, key, result_id);
+
     results.emplace_back();
     results[result_id].row_id = row_id;
 
