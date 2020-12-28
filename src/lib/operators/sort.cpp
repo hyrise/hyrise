@@ -1,5 +1,5 @@
 #include "sort.hpp"
-
+#include <boost/sort/sort.hpp>
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
 
@@ -280,7 +280,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
 
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
+      previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(_sort_definitions.size() - 1));
 
       total_materialization_time += sort_impl.materialization_time;
       total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
@@ -367,7 +367,8 @@ class Sort::SortImpl {
   // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
+  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list,
+                    const bool is_first_column) {
     Timer timer;
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
@@ -375,8 +376,13 @@ class Sort::SortImpl {
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
+      if (is_first_column) {
+        boost::sort::pdqsort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
+                             [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
+      } else {
+        std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
+                         [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
+      }
     };
     if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});
