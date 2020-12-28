@@ -11,6 +11,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -22,7 +23,7 @@
 
 namespace opossum {
 
-void NullScanRemovalRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
 
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
@@ -74,6 +75,10 @@ void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<Abstra
   for (const auto& node : nodes) {
     lqp_remove_node(node);
   }
+}
+
+void NullScanRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Fail("Did not expect this function to be called.");
 }
 
 }  // namespace opossum
