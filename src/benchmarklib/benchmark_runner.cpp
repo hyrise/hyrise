@@ -1,12 +1,12 @@
 #include "benchmark_runner.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <random>
-#include <chrono>
 
 #include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
@@ -276,13 +276,12 @@ void BenchmarkRunner::_benchmark_ordered() {
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(entry.duration);
       acc(static_cast<double>(duration.count()));
     }
-
-    auto mean_ms = boost::accumulators::mean(acc);
-    auto mean_s = mean_ms / 1000;
+    auto mean_in_milliseconds = boost::accumulators::mean(acc);
+    auto mean_in_seconds = mean_in_milliseconds / 1000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << mean_s << " s/iter)" << std::endl;
+                << items_per_second << " iter/s, " << mean_in_seconds << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
