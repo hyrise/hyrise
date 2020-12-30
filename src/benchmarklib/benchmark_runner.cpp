@@ -280,8 +280,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     auto mean_in_seconds = mean_in_milliseconds / 1000;
 
     if (!_config.verify && !_config.enable_visualization) {
-      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << mean_in_seconds << " s/iter)" << std::endl;
+      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds (Latency: "
+                << mean_in_seconds << " s/iter, Throughput: " << items_per_second << " iter/s)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
