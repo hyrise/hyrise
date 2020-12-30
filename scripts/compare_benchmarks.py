@@ -169,8 +169,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype=np.float64)
     old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype=np.float64)
     new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype=np.float64)
-    old_avg_successful_duration = np.mean(old_successful_durations)  # defaults to np.float64 for int input
-    new_avg_successful_duration = np.mean(new_successful_durations)
+    old_avg_successful_duration = np.mean(old_successful_durations) / 1000  # defaults to np.float64 for int input
+    new_avg_successful_duration = np.mean(new_successful_durations) / 1000
 
     total_runtime_old += old_avg_successful_duration if not math.isnan(old_avg_successful_duration) else 0.0
     total_runtime_new += new_avg_successful_duration if not math.isnan(new_avg_successful_duration) else 0.0
@@ -210,8 +210,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     table_data.append(
         [
             name,
-            f"{(old_avg_successful_duration / 1e6):>7.1f}" if old_avg_successful_duration else "nan",
-            f"{(new_avg_successful_duration / 1e6):>7.1f}" if new_avg_successful_duration else "nan",
+            f"{(old_avg_successful_duration / 1e6):>3.4f}" if old_avg_successful_duration else "nan",
+            f"{(new_avg_successful_duration / 1e6):>3.4f}" if new_avg_successful_duration else "nan",
             diff_duration_formatted + note if not math.isnan(diff_duration) else "",
             f'{old["items_per_second"]:>8.2f}',
             f'{new["items_per_second"]:>8.2f}',
@@ -243,10 +243,10 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
 
         unsuccessful_info = [
             "   unsucc.:",
-            f"{(old_avg_unsuccessful_duration / 1e6):>7.1f}"
+            f"{(old_avg_unsuccessful_duration / 1e6):>3.4f}"
             if not math.isnan(old_avg_unsuccessful_duration)
             else "nan",
-            f"{(new_avg_unsuccessful_duration / 1e6):>7.1f}"
+            f"{(new_avg_unsuccessful_duration / 1e6):>3.4f}"
             if not math.isnan(new_avg_unsuccessful_duration)
             else "nan",
             format_diff(diff_duration_unsuccessful) + " " if not math.isnan(diff_duration_unsuccessful) else " ",
@@ -263,8 +263,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
 table_data.append(
     [
         "Sum",
-        f"{(total_runtime_old / 1e6):>7.1f}",
-        f"{(total_runtime_new / 1e6):>7.1f}",
+        f"{(total_runtime_old / 1e6):>3.4f}",
+        f"{(total_runtime_new / 1e6):>3.4f}",
         color_diff(total_runtime_new / total_runtime_old, True) + " ",
     ]
 )
@@ -289,7 +289,7 @@ lines = double_vertical_separators(lines, [1, 4])
 # holder with the actual full descriptions.
 for (placeholder, final) in [
     ("$thrghpt", "Throughput (iter/s)"),
-    ("$latency", "Latency (ms/iter)"),
+    ("$latency", "Latency (s/iter)"),
 ]:
     header_strings = lines[1].split("|")
     for column_id, text in enumerate(header_strings):
