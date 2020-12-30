@@ -3,6 +3,7 @@
 #include <fstream>
 #include <random>
 #include <chrono>
+#include <iostream>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
@@ -267,27 +268,25 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     // Compute geometric mean with splitting exponent and mantissa
+    // This should prevent underflow or overflow in the accumulated product with large set of successful runs
     double m = 1.0;
     long long ex = 0;
     double invN = 1.0 / result.successful_runs.size();
 
     for (auto entry : result.successful_runs) {
-      double duration = std::chrono::duration_cast<std::chrono::seconds>(entry.duration)
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(entry.duration);
       int i;
-      double f1 = std::frexp(x,&i);
+      auto f1 = std::frexp(duration.count(),&i);
       m*=f1;
       ex+=i;
     }
 
     auto geo_mean = std::pow( std::numeric_limits<double>::radix,ex * invN) * std::pow(m,invN);
-
-    const auto num_successful_runs = result.successful_runs.size();
-    // const auto duration_per_item =
-    //     num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
+    auto geo_mean_s = geo_mean / 1000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << geo_mean << " s/iter)" << std::endl;
+                << items_per_second << " iter/s, " << geo_mean_s << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
