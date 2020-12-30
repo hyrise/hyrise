@@ -3,7 +3,10 @@
 #include <fstream>
 #include <random>
 #include <chrono>
-#include <iostream>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
@@ -267,26 +270,19 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
-    // Compute geometric mean with splitting exponent and mantissa
-    // This should prevent underflow or overflow in the accumulated product with large set of successful runs
-    double m = 1.0;
-    long long ex = 0;
-    double invN = 1.0 / result.successful_runs.size();
-
+    // Compute mean by using accumulators
+    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>> acc;
     for (auto entry : result.successful_runs) {
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(entry.duration);
-      int i;
-      auto f1 = std::frexp(duration.count(),&i);
-      m*=f1;
-      ex+=i;
+      acc(static_cast<double>(duration.count()));
     }
 
-    auto geo_mean = std::pow( std::numeric_limits<double>::radix,ex * invN) * std::pow(m,invN);
-    auto geo_mean_s = geo_mean / 1000;
+    auto mean_ms = boost::accumulators::mean(acc);
+    auto mean_s = mean_ms / 1000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << geo_mean_s << " s/iter)" << std::endl;
+                << items_per_second << " iter/s, " << mean_s << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
