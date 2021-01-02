@@ -55,4 +55,4 @@
 	url = https://github.com/mrks/dbgen.JCC-H.git
 [submodule "third_party/FastPFor"]
 	path = third_party/FastPFor
-	url = https://github.com/lemire/FastPFor.git
+	url = https://github.com/benrobby/FastPFor.git
