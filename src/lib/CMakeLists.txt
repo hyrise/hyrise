@@ -513,10 +513,10 @@ set(
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
-    storage/SIMDCAI_frame_of_reference_segment.cpp
-    storage/SIMDCAI_frame_of_reference_segment.hpp
-    storage/SIMDCAI_frame_of_reference_segment/SIMDCAI_frame_of_reference_encoder.hpp
-    storage/SIMDCAI_frame_of_reference_segment/SIMDCAI_frame_of_reference_segment_iterable.hpp
+    storage/FastPFOR_segment.cpp
+    storage/FastPFOR_segment.hpp
+    storage/FastPFOR_segment/FastPFOR_encoder.hpp
+    storage/FastPFOR_segment/FastPFOR_segment_iterable.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
