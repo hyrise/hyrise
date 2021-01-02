@@ -438,6 +438,10 @@ set(
     storage/dictionary_segment/dictionary_segment_iterable.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
+    storage/FastPFOR_segment.cpp
+    storage/FastPFOR_segment.hpp
+    storage/FastPFOR_segment/FastPFOR_encoder.hpp
+    storage/FastPFOR_segment/FastPFOR_segment_iterable.hpp
     storage/fixed_string_dictionary_segment.cpp
     storage/fixed_string_dictionary_segment.hpp
     storage/fixed_string_dictionary_segment/fixed_string.cpp
@@ -513,10 +517,6 @@ set(
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
-    storage/FastPFOR_segment.cpp
-    storage/FastPFOR_segment.hpp
-    storage/FastPFOR_segment/FastPFOR_encoder.hpp
-    storage/FastPFOR_segment/FastPFOR_segment_iterable.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
