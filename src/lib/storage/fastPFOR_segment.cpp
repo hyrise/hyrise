@@ -1,4 +1,4 @@
-#include "FastPFOR_segment.hpp"
+#include "fastPFOR_segment.hpp"
 
 #include <algorithm>
 

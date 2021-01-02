@@ -5,7 +5,7 @@
 #include "storage/base_segment_encoder.hpp"
 #include "headers/codecfactory.h"
 
-#include "storage/FastPFOR_segment.hpp"
+#include "storage/fastPFOR_segment.hpp"
 
 namespace opossum {
 

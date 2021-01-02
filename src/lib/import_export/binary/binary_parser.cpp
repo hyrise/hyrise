@@ -161,6 +161,8 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FastPFOR:
+      return _import_fastPFOR_segment<ColumnDataType>(file, row_count);
   }
 
   Fail("Invalid EncodingType");
@@ -213,6 +215,16 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
   const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
+}
+
+template <typename T>
+std::shared_ptr<FastPFORSegment<T>> BinaryParser::_import_fastPFOR_segment(std::ifstream& file,
+    ChunkOffset row_count) {
+  const auto size = _read_value<uint32_t>(file);
+  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
+  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
+
+  return std::make_shared<FastPFORSegment<T>>(values, null_values);
 }
 
 template <typename T>

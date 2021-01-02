@@ -232,6 +232,10 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
         segment_type += "LZ4";
         break;
       }
+      case EncodingType::FastPFOR: {
+        segment_type += "FastPFOR";
+        break;
+      }
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
