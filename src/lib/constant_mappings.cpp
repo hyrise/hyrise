@@ -40,6 +40,7 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::FrameOfReference, "FrameOfReference"},
     {EncodingType::LZ4, "LZ4"},
     {EncodingType::Unencoded, "Unencoded"},
+    {EncodingType::FastPFOR, "FastPFOR"},
 });
 
 const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(

@@ -10,6 +10,7 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/fastPFOR_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -153,6 +154,23 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+                             std::ofstream& ofstream);
+
+  /**
+   * FastPFORSegments are dumped with the following layout:
+   *
+   * Description                 | Type                                | Size in bytes
+   * --------------------------------------------------------------------------------------------------------
+   * Encoding Type               | EncodingType                        | 1
+   * Run count                   | uint32_t                            | 4
+   * Values                      | T (int, float, double, long)        | Run count * sizeof(T)
+   * NULL values                 | vector<bool> (BoolAsByteType)       | Run count * 1
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   */
+  template <typename T>
+  static void _write_segment(const FastPFORSegment<T>& fastPFOR_segment, bool column_is_nullable,
                              std::ofstream& ofstream);
 
   /**
