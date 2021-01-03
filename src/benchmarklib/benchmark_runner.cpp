@@ -271,17 +271,19 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators
-    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>> acc;
-    for (auto entry : result.successful_runs) {
+    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
+        accumulator;
+    for (const auto& entry : result.successful_runs) {
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(entry.duration);
-      acc(static_cast<double>(duration.count()));
+      accumulator(static_cast<double>(duration.count()));
     }
-    auto mean_in_milliseconds = boost::accumulators::mean(acc);
+    auto mean_in_milliseconds = boost::accumulators::mean(accumulator);
     auto mean_in_seconds = mean_in_milliseconds / 1000;
 
     if (!_config.verify && !_config.enable_visualization) {
-      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds (Latency: "
-                << mean_in_seconds << " s/iter, Throughput: " << items_per_second << " iter/s)" << std::endl;
+      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
+                << " seconds (Latency: " << mean_in_seconds << " s/iter, Throughput: " << items_per_second << " iter/s)"
+                << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
