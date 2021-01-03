@@ -277,8 +277,8 @@ void BenchmarkRunner::_benchmark_ordered() {
       auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
       accumulator(static_cast<double>(duration.count()));
     }
-    auto mean_in_milliseconds = boost::accumulators::mean(accumulator);
-    auto mean_in_seconds = mean_in_milliseconds / 1'000'000'000;
+    auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
+    auto mean_in_seconds = mean_in_nanoseconds / 1'000'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
