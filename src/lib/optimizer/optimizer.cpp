@@ -38,7 +38,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
-  
+
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the

@@ -42,7 +42,7 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
 
     const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
     const auto predicate = predicate_node->predicate();
-    
+
     // Checks for condition 2
     const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate);
     if (!is_null_expression) return LQPVisitation::VisitInputs;
@@ -63,7 +63,7 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
     const auto table_column_definition = table->column_definitions()[original_column_id];
     // Checks for condition 6
     if (table_column_definition.nullable == true) return LQPVisitation::VisitInputs;
-    
+
     nodes_to_remove.push_back(node);
     return LQPVisitation::VisitInputs;
   };
