@@ -11,6 +11,7 @@ namespace opossum {
 class AbstractLQPNode;
 class PredicateNode;
 
+// This rule removes null scans on columns that are not nullable.
 class NullScanRemovalRule : public AbstractRule {
  public:
   void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const override;
