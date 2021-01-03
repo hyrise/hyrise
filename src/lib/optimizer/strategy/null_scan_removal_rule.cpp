@@ -30,13 +30,13 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
 
   // To determine if the rule applies to a node it must meet all of the following conditions:
   // 1. The node must be of type Predicate
-  // 2. The predicate must be a `null expression`
-  // 3. The predicate condition must be `is not null`
-  // 4. The predicate operand needs to be an `LQP Column expression`
-  // 5. The original node of the `LQP Column expression` needs to be a not defective `storage table node`
-  // 6. The column (referenced by the `LQP Column expression`) is not nullable
-  // All nodes where the conditions apply are removed from the LQP Tree.
-  auto visiter = [&](const auto& node) {
+  // 2. The predicate must be a null expression
+  // 3. The predicate condition must be is not null
+  // 4. The predicate operand needs to be an LQP Column expression
+  // 5. The original node of the LQP Column expression needs to be a storage table node
+  // 6. The column (referenced by the LQP Column expression) is not nullable
+  // All nodes where the conditions apply are removed from the LQP.
+  auto visitor = [&](const auto& node) {
     // Checks condition 1
     if (node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
 
@@ -66,7 +66,7 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
     return LQPVisitation::VisitInputs;
   };
 
-  visit_lqp(root, visiter);
+  visit_lqp(root, visitor);
 
   _remove_nodes(nodes_to_remove);
 }
