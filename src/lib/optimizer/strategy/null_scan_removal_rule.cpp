@@ -42,27 +42,29 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
 
     const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
     const auto predicate = predicate_node->predicate();
+    
     // Checks for condition 2
-    if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate)) {
-      // Checks for condition 3
-      if (is_null_expression->predicate_condition == PredicateCondition::IsNull) return LQPVisitation::VisitInputs;
+    const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate);
+    if (!is_null_expression) return LQPVisitation::VisitInputs;
 
-      const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(is_null_expression->operand());
-      // Checks for condition 4
-      if (!column) return LQPVisitation::VisitInputs;
+    // Checks for condition 3
+    if (is_null_expression->predicate_condition == PredicateCondition::IsNull) return LQPVisitation::VisitInputs;
 
-      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
-      // Checks for condition 5
-      if (!stored_table_node) return LQPVisitation::VisitInputs;
+    const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(is_null_expression->operand());
+    // Checks for condition 4
+    if (!column) return LQPVisitation::VisitInputs;
 
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      const auto original_column_id = column->original_column_id;
-      const auto table_column_definition = table->column_definitions()[original_column_id];
-      // Checks for condition 6
-      if (table_column_definition.nullable == false) {
-        nodes_to_remove.push_back(node);
-      }
-    }
+    const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
+    // Checks for condition 5
+    if (!stored_table_node) return LQPVisitation::VisitInputs;
+
+    const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+    const auto original_column_id = column->original_column_id;
+    const auto table_column_definition = table->column_definitions()[original_column_id];
+    // Checks for condition 6
+    if (table_column_definition.nullable == true) return LQPVisitation::VisitInputs;
+    
+    nodes_to_remove.push_back(node);
     return LQPVisitation::VisitInputs;
   };
 
