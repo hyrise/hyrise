@@ -48,6 +48,62 @@ class MinMaxFilterTest<pmr_string> : public BaseTest {
   pmr_string _before_range, _min_value, _max_value, _after_range, _in_between, _in_between2;
 };
 
+class MinMaxFilterTestLike : public BaseTest {};
+
+TEST_F(MinMaxFilterTestLike, CanPruneLike) {
+  auto max_ascii_value = pmr_string(1, static_cast<char>(127));
+  max_ascii_value.append("%");
+
+  const auto filter = std::make_unique<MinMaxFilter<pmr_string>>("b", "c");
+  // For the predicate condition of Like, we expect only values where the lower_bound is bigger than the max value or
+  // the upper_bound is smaller or equal to the min value to be prunable. In the following tests `b` would be the min
+  // value and `c` the max.
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "aa%"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "aa_"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "cc%"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "cc_"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "a"));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Like, "a%"));
+
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, max_ascii_value));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "bbbb%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "c%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "_%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "b"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, "c"));
+
+  // For the predicate condition of NotLike, we expect only values where the lower_bound is smaller or equal than the
+  // min value and the upper_bound is bigger to the max value to be prunable. In the following tests `b` would be the
+  // min value and `c` the max.
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "b%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "b"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "a%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "c%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "bb%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "d%"));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, "aa%"));
+
+  const auto filter_equal_values = std::make_unique<MinMaxFilter<pmr_string>>("a", "a");
+  EXPECT_TRUE(filter_equal_values->does_not_contain(PredicateCondition::NotLike, "a"));
+
+  const auto filter_max_ascii = std::make_unique<MinMaxFilter<pmr_string>>(pmr_string(1, static_cast<char>(127)),
+                                                                           pmr_string(1, static_cast<char>(127)));
+  // The following test should make sure, that if the last character of the upper bound would be an ASCII overflow,
+  // `does_not_contain` returns false.
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::Like, max_ascii_value));
+  EXPECT_FALSE(filter_max_ascii->does_not_contain(PredicateCondition::NotLike, max_ascii_value));
+
+  // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
+  // upper case letters. In this test USA% is not pruned since t is a lower case value.
+  const auto filter_max_lower_case = std::make_unique<MinMaxFilter<pmr_string>>("T", "t");
+  EXPECT_FALSE(filter_max_lower_case->does_not_contain(PredicateCondition::Like, "USA%"));
+}
+
 using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
 TYPED_TEST_SUITE(MinMaxFilterTest, MixMaxFilterTypes, );  // NOLINT(whitespace/parens)
 

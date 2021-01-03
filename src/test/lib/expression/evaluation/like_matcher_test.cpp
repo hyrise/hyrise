@@ -1,4 +1,5 @@
 #include <string>
+#include <utility>
 
 #include "base_test.hpp"
 
@@ -52,6 +53,48 @@ TEST_F(LikeMatcherTest, NotMatching) {
   EXPECT_FALSE(match("hello", "Hello"));
   EXPECT_FALSE(match("Hello", "Hello_"));
   EXPECT_FALSE(match("Hello", "He_o"));
+}
+
+TEST_F(LikeMatcherTest, LowerUpperBound) {
+  const auto pattern = pmr_string("Japan%");
+  const auto bounds = LikeMatcher::bounds(pattern);
+  const auto [lower_bound, upper_bound] = bounds.value();
+  ASSERT_EQ(lower_bound, "Japan");
+  ASSERT_EQ(upper_bound, "Japao");
+}
+
+TEST_F(LikeMatcherTest, ASCIIOverflow) {
+  // Check that if the char ASCII value before the wildcard has the max ASCII value 127, std::nullopt is returned.
+  auto max_ascii_value = pmr_string(1, static_cast<char>(127));
+  max_ascii_value.append("%");
+  const auto bounds = LikeMatcher::bounds(max_ascii_value);
+  EXPECT_FALSE(bounds);
+}
+
+TEST_F(LikeMatcherTest, LeadingWildcard) {
+  // Check that if the pattern has a leading wildcard, std::nullopt is returned.
+  const auto pattern = pmr_string("%Japan");
+  const auto bounds = LikeMatcher::bounds(pattern);
+  EXPECT_FALSE(bounds);
+}
+
+TEST_F(LikeMatcherTest, NoWildcard) {
+  const auto pattern = pmr_string("Japan");
+  const auto expected_upper_bound = pmr_string("Japan") + '\0';
+  const auto bounds = LikeMatcher::bounds(pattern);
+  const auto [lower_bound, upper_bound] = bounds.value();
+  ASSERT_EQ(lower_bound, "Japan");
+  ASSERT_EQ(upper_bound, expected_upper_bound);
+}
+
+TEST_F(LikeMatcherTest, EmptyString) {
+  // Check that if the pattern has no wildcard, std::nullopt is returned.
+  const auto pattern = pmr_string("");
+  const auto expected_upper_bound = pmr_string("") + '\0';
+  const auto bounds = LikeMatcher::bounds(pattern);
+  const auto [lower_bound, upper_bound] = bounds.value();
+  ASSERT_EQ(lower_bound, "");
+  ASSERT_EQ(upper_bound, expected_upper_bound);
 }
 
 }  // namespace opossum

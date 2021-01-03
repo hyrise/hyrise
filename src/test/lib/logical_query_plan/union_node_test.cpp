@@ -2,11 +2,12 @@
 
 #include "base_test.hpp"
 
-#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/validate_node.hpp"
 
 namespace opossum {
 

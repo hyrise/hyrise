@@ -122,7 +122,8 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::shared_ptr<AbstractLQPNode>& node,
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+ protected:
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum
