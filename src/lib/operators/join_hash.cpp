@@ -429,7 +429,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     Timer timer_hash_map_building;
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
