@@ -437,6 +437,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
+    radix_build_column.clear();
+
     /**
      * Short cut for AntiNullAsTrue:
      *   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted anyway (as
@@ -512,9 +514,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
-    // After probing, the partitioned columns are not needed anymore.
-    radix_build_column.clear();
     radix_probe_column.clear();
+    hash_tables.clear();
 
     /**
      * 5. Write output Table

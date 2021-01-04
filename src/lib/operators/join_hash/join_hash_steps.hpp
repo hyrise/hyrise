@@ -16,7 +16,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
-#include "utils/polymorphic_no_free_allocator.hpp"  // TODO add to cmake
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -92,7 +91,7 @@ class PosHashTable {
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicNoFreeAllocator<RowID>>;
+  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
 
   // After finalize() is called, the UnifiedPosList holds the concatenation of all SmallPosLists. The SmallPosList at
   // position n can be found at the half-open range [ pos_list[offsets[n]], pos_list[offsets[n+1]] ).
