@@ -16,6 +16,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
+#include "utils/polymorphic_no_free_allocator.hpp"  // TODO add to cmake
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -91,7 +92,7 @@ class PosHashTable {
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
+  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicNoFreeAllocator<RowID>>;
 
   // After finalize() is called, the UnifiedPosList holds the concatenation of all SmallPosLists. The SmallPosList at
   // position n can be found at the half-open range [ pos_list[offsets[n]], pos_list[offsets[n+1]] ).
@@ -152,10 +153,7 @@ class PosHashTable {
         offset += _small_pos_lists[i].size();
       }
 
-      // Reset the vector of SmallPosLists without calling the destructor. We do not want the SmallPosLists to be
-      // deallocated, because it is cheaper to throw away the entire monotonic_buffer_resource. There is a good chance
-      // that this is slightly illegal, but I cannot see how it could go wrong.
-      std::memset(&_small_pos_lists, 0, sizeof(_small_pos_lists));
+      _small_pos_lists = {};
       _memory_pool = {};
       _monotonic_buffer = {};
     }
@@ -194,7 +192,7 @@ class PosHashTable {
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own (non-thread-safe) pool, which is discarded once finalize() is called
   std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();  // TODO(md) increase in mem consumption?
+      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();  // TODO(md) increase in mem consumption? preallocate?
   std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
