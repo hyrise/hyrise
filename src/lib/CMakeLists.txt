@@ -647,7 +647,7 @@ set(
 
 set(
     LIBRARIES
-    SIMDCompressionAndIntersection
+    custom_SIMDCompressionAndIntersection
     lz4
     sqlparser
     uninitialized_vector
