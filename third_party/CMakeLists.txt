@@ -107,6 +107,7 @@ externalproject_add(
 
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SIMDCompressionAndIntersection
         BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/SIMDCompressionAndIntersection
+        CONFIGURE_COMMAND ""
         BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
         INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
         STEP_TARGETS build
