@@ -194,7 +194,7 @@ class PosHashTable {
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own (non-thread-safe) pool, which is discarded once finalize() is called
   std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();  // TODO check increase in mem consumption
+      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();  // TODO(md) increase in mem consumption?
   std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 

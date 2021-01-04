@@ -175,7 +175,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   // EXPECT_EQ(
   //     this->get_row_count(hash_map_without_nulls.at(0).value().begin(), hash_map_without_nulls.at(0).value().end()),
   //     table_without_nulls_scanned->get_output()->row_count());
-  // TODO
+  // TODO(md)
 }
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
