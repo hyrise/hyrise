@@ -278,12 +278,12 @@ void BenchmarkRunner::_benchmark_ordered() {
       accumulator(static_cast<double>(duration.count()));
     }
     auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
-    auto mean_in_seconds = mean_in_nanoseconds / 1'000'000'000;
+    auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
-                << " seconds (Latency: " << mean_in_seconds << " s/iter, Throughput: " << items_per_second << " iter/s)"
-                << std::endl;
+                << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
+                << " iter/s)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
