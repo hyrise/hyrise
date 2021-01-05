@@ -4,6 +4,7 @@
 #include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
 #include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
+#include "storage/simdCAI_segment/simdCAI_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
@@ -42,6 +43,20 @@ auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return RunLengthSegmentIterable<T>{segment};
+  }
+#endif
+}
+
+template <typename T, typename Enabled, bool EraseSegmentType>
+auto create_iterable_from_segment(const SIMDCAISegment<T, Enabled>& segment) {
+#ifdef HYRISE_ERASE_SIMDCAI
+  PerformanceWarning("SIMDCAISegmentIterable erased by compile-time setting");
+ return AnySegmentIterable<T>(SIMDCAISegmentIterable<T>(segment));
+#else
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return SIMDCAISegmentIterable<T>{segment};
   }
 #endif
 }

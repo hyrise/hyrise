@@ -161,6 +161,13 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
+    case EncodingType::SIMDCAI:
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::SIMDCAI>,
+                                                hana::type_c<ColumnDataType>)) {
+        return _import_SIMDCAI_segment<ColumnDataType>(file, row_count);
+      } else {
+        Fail("Unsupported data type for SIMDCAI encoding");
+      }
   }
 
   Fail("Invalid EncodingType");
@@ -213,6 +220,24 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
   const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
+}
+
+template <typename T>
+std::shared_ptr<FastPFORSegment<T>> BinaryParser::_import_SIMDCAI_segment(std::ifstream& file,
+                                                                           ChunkOffset row_count) {
+
+  const auto size = _read_value<uint32_t>(file);
+  const auto encoded_values = std::make_shared<pmr_vector<uint32_t>>(_read_values<uint32_t>(file, size));
+
+  const auto null_values_stored = _read_value<BoolAsByteType>(file);
+  std::optional<pmr_vector<bool>> null_values;
+  if (null_values_stored) {
+    null_values = pmr_vector<bool>(_read_values<bool>(file, row_count));
+  }
+
+  const auto codec_id = _read_value<uint8_t>(file);
+
+  return std::make_shared<SIMDCAISegment<T>>(encoded_values, null_values, codec_id);
 }
 
 template <typename T>
