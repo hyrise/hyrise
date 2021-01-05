@@ -6,7 +6,7 @@
 #include "include/intersection.h"
 
 #include "storage/segment_iterables.hpp"
-#include "storage/simdCAISegment.hpp"
+#include "storage/simdCAI_segment.hpp"
 
 #include "utils/performance_warning.hpp"
 
