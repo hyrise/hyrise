@@ -72,7 +72,7 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
   _remove_nodes(nodes_to_remove);
 }
 
-void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) const {
+void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) {
   for (const auto& node : nodes) {
     lqp_remove_node(node);
   }
