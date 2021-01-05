@@ -61,8 +61,8 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
                         ChunkOffset chunk_offset)
           : _encoded_values{encoded_values},
             _null_values{null_values},
-            _chunk_offset{chunk_offset},
-            _codec_id{codec_id} {
+            _codec_id{codec_id},
+            _chunk_offset{chunk_offset} {
 
         _decoded_values = std::vector<uint32_t>((*_null_values)->size());
         size_t recovered_size = _decoded_values.size();
@@ -122,16 +122,14 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
                                  const std::optional<const pmr_vector<bool>>* null_values,
                                  uint8_t codec_id,
                                  const PosListIteratorType position_filter_begin,
-                                 PosListIteratorType&& position_filter_it)
-        : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
-          PosListIteratorType>{std::move(position_filter_begin),
-          std::move(position_filter_it)},
-    _encoded_values{encoded_values},
+                                 PosListIteratorType&& position_filter_it):
+           AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, PosListIteratorType>
+               {std::move(position_filter_begin),std::move(position_filter_it)},
+        _encoded_values{encoded_values},
         _null_values{null_values},
         _codec_id{codec_id} {
 
       _decoded_values = std::vector<uint32_t>((*_null_values)->size());
-      size_t recovered_size = _decoded_values.size();
       SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
       _codec = &codec;
     }
