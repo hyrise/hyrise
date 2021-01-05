@@ -139,17 +139,18 @@ class PosHashTable {
       _unified_pos_list = UnifiedPosList{};
       _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
       auto total_size = size_t{};
-      for (auto i = size_t{0}; i < _offset_hash_table.size(); ++i) {
-        _unified_pos_list->offsets[i] = total_size;
-        total_size += _small_pos_lists[i].size();
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+        _unified_pos_list->offsets[hash_table_idx] = total_size;
+        total_size += _small_pos_lists[hash_table_idx].size();
       }
       _unified_pos_list->offsets.back() = total_size;
 
       _unified_pos_list->pos_list.resize(total_size);
       auto offset = size_t{};
-      for (auto i = size_t{0}; i < _offset_hash_table.size(); ++i) {
-        std::copy(_small_pos_lists[i].begin(), _small_pos_lists[i].end(), _unified_pos_list->pos_list.begin() + offset);
-        offset += _small_pos_lists[i].size();
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+        std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
+                  _unified_pos_list->pos_list.begin() + offset);
+        offset += _small_pos_lists[hash_table_idx].size();
       }
 
       _small_pos_lists = {};
