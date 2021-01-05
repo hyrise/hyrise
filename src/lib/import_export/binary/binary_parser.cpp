@@ -223,7 +223,7 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
 }
 
 template <typename T>
-std::shared_ptr<FastPFORSegment<T>> BinaryParser::_import_SIMDCAI_segment(std::ifstream& file,
+std::shared_ptr<SIMDCAISegment<T>> BinaryParser::_import_SIMDCAI_segment(std::ifstream& file,
                                                                            ChunkOffset row_count) {
 
   const auto size = _read_value<uint32_t>(file);
