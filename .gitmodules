@@ -53,3 +53,6 @@
 [submodule "third_party/jcch-dbgen"]
 	path = third_party/jcch-dbgen
 	url = https://github.com/mrks/dbgen.JCC-H.git
+[submodule "third_party/SIMDCompressionAndIntersection"]
+	path = third_party/SIMDCompressionAndIntersection
+	url = git@github.com:benrobby/SIMDCompressionAndIntersection.git
