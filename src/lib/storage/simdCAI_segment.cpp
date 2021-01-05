@@ -28,7 +28,7 @@ const std::optional<const pmr_vector<bool>>& SIMDCAISegment<T, U>::null_values()
 }
 
 template <typename T, typename U>
-const uint8_t SIMDCAISegment<T, U>::codec_id() const {
+uint8_t SIMDCAISegment<T, U>::codec_id() const {
   return _codec_id;
 }
 
