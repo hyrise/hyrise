@@ -27,28 +27,28 @@
 namespace {
 using namespace opossum;  // NOLINT
 
-// For a given AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this returns a reference
-// to the AggregateResult for the group defined by the AggregateKey. If GroupBy is used, this includes a lookup in the
-// result_ids hashmap, which stores the AggregateKey->Results[i] mapping.
-//
-// If the operator calculates multiple aggregate functions, we only need to perform this lookup as part of the first
-// aggregate function. By setting CacheResultIds to true_type, we can store the result of the lookup in the
-// AggregateKey. Following aggregate functions can then retrieve the index from the AggregateKey.
+// `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
+// been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
+// stored in `Results` so that we can later use it to reconstruct the values in the group-by columns. If the operator
+// calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
+// By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
+// aggregate functions can then retrieve the index from the AggregateKey.
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
                                               AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-    // The aggregation uses no GROUP BY. To avoid special handling, get_or_add_result is still called, however, we
-    // always return the same result.
+    // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
+    // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result
+    // reference.
     if (results.empty()) {
       results.emplace_back();
       results[0].row_id = row_id;
     }
     return results[0];
   } else {
-    // As described above, we may store the index into the results vector in the AggregateKey. As the AggregateKey may
-    // contain multiple entries, we always use its first entry and store a (non-owning, raw) pointer to that entry in
-    // first_key_entry.
+    // As described above, we may store the index into the results vector in the AggregateKey. If the AggregateKey
+    // contains multiple entries, we use the first one. As such, we store a (non-owning, raw) pointer to either the only
+    // or the first entry in first_key_entry. We need a raw pointer as a reference cannot be null or reset.
     AggregateKeyEntry* first_key_entry;
     if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
       first_key_entry = &key;
@@ -59,7 +59,8 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // If we store the result of the hashmap lookup (i.e., the index into results) in the AggregateKeyEntry, we do this
     // by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
     // marker that the AggregateKeyEntry now contains a cached result. We can do this because AggregateKeyEntry can not
-    // become larger than the maximum size of a table, which is 2^31 * 2^31 == 2^62.
+    // become larger than the maximum size of a table (i.e., the maximum representable RowID), which is 2^31 * 2^31 ==
+    // 2^62.
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
                   "Expected AggregateKeyEntry to be unsigned 64-bit value");
     constexpr auto MASK = AggregateKeyEntry{1} << 63u;
@@ -67,7 +68,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       if (*first_key_entry & MASK) {
-        // The most significant bit is a 1, remove it by xoring the mask gives us the index into the results vector.
+        // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
         const auto result_id = *first_key_entry ^ MASK;
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
