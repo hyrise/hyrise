@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import glob
+# import glob
 import json
 import os
 import sys
@@ -98,9 +98,9 @@ def main():
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
 
-    #if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
-    #    print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
-    #    return_error = True
+    # if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
+    #     print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
+    #     return_error = True
 
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
