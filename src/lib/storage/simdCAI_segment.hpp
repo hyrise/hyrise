@@ -41,7 +41,7 @@ class SIMDCAISegment : public AbstractEncodedSegment {
 
   const std::shared_ptr<const pmr_vector<uint32_t>> encoded_values() const;
   const std::optional<const pmr_vector<bool>>& null_values() const;
-  const uint8_t codec_id() const;
+  uint8_t codec_id() const;
 
   /**
    * @defgroup AbstractSegment interface

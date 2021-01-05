@@ -28,6 +28,11 @@ const std::optional<const pmr_vector<bool>>& SIMDCAISegment<T, U>::null_values()
 }
 
 template <typename T, typename U>
+const uint8_t SIMDCAISegment<T, U>::codec_id() const {
+  return _codec_id;
+}
+
+template <typename T, typename U>
 AllTypeVariant SIMDCAISegment<T,U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   const auto typed_value = get_typed_value(chunk_offset);
