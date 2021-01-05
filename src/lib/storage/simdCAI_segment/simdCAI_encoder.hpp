@@ -3,7 +3,8 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
-#include "include/codecfactory.h" // todo
+#include "include/codecfactory.h"
+#include "include/intersection.h"
 
 #include "storage/simdCAI_segment.hpp"
 
@@ -36,8 +37,7 @@ class SIMDCAIEncoder : public SegmentEncoder<SIMDCAIEncoder> {
     values.shrink_to_fit();
     null_values->shrink_to_fit();
 
-    // todo
-    FastPForLib::IntegerCODEC &codec = *FastPForLib::CODECFactory::getFromName("simdbinarypacking");
+    SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
 
     auto encodedValues = std::make_shared<pmr_vector<uint32_t>>(allocator);
     encodedValues->resize(2 * values.size() + 1024);
