@@ -96,7 +96,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
     }
 
     SegmentPosition<T> dereference() const {
-      const auto is_null = _null_values ? _null_values[_chunk_offset] : false;
+      const auto is_null = _null_values ? (*_null_values)[_chunk_offset] : false;
       const auto value = static_cast<T>(_decoded_values[_chunk_offset]);
       return SegmentPosition<T>{value, is_null, _chunk_offset};
     }
@@ -143,7 +143,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
       const auto& chunk_offsets = this->chunk_offsets();
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
-      const auto is_null = _null_values ? _null_values[_chunk_offset] : false;
+      const auto is_null = _null_values ? (*_null_values)[_chunk_offset] : false;
       const auto value = static_cast<T>(_codec.select(_encoded_values->data, current_offset));
 
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
