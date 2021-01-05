@@ -133,7 +133,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
       _decoded_values = std::vector<uint32_t>(_null_values->size());
       size_t recovered_size = _decoded_values.size();
       SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
-      _codec = codec;
+      _codec = &codec;
     }
 
     private:
@@ -144,7 +144,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = _null_values ? (*_null_values)[current_offset] : false;
-      const auto value = static_cast<T>(_codec.select(_encoded_values->data, current_offset));
+      const auto value = static_cast<T>(_codec->select(_encoded_values->data, current_offset));
 
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
@@ -154,7 +154,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
     const std::optional<const pmr_vector<bool>> _null_values;
     const uint8_t _codec_id;
     std::vector<uint32_t> _decoded_values;
-    SIMDCompressionLib::IntegerCODEC _codec;
+    SIMDCompressionLib::IntegerCODEC *_codec;
   };
 };
 
