@@ -278,6 +278,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       accumulator(static_cast<double>(duration.count()));
     }
     auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
+    // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
     auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
