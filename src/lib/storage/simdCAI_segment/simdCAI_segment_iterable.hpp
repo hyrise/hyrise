@@ -144,7 +144,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = _null_values ? (*_null_values)[current_offset] : false;
-      const auto value = static_cast<T>(_codec->select(_encoded_values->data, current_offset));
+      const auto value = static_cast<T>(_codec->select(_encoded_values->data(), current_offset));
 
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
