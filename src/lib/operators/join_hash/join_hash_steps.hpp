@@ -183,15 +183,11 @@ class PosHashTable {
     return _offset_hash_table.find(casted_value) != _offset_hash_table.end();
   }
 
-  // const RowIDPosList::const_iterator begin() const { return _small_pos_lists.begin(); }
-
-  // const RowIDPosList::const_iterator end() const { return _small_pos_lists.end(); }
-
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own (non-thread-safe) pool, which is discarded once finalize() is called
   std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();  // TODO(md) increase in mem consumption? preallocate?
+      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
   std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 

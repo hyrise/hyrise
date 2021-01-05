@@ -124,7 +124,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   for (const auto& partition : materialized_without_nulls) {
     materialized_without_nulls_size += partition.elements.size();
   }
-  EXPECT_LE(materialized_without_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
+  EXPECT_LT(materialized_without_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
 
   // Check for values being properly set
   EXPECT_EQ(materialized_without_nulls[0].elements.at(6).value, 9);
@@ -152,30 +152,6 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
       });
     });
   }
-
-  // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
-  // and using bitwise negation (~x).
-  auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
-
-  // Build phase: NULLs should be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
-  auto hash_map_without_nulls =
-      build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
-
-  // With 0 radix bits, only a single hash map should be built
-  EXPECT_EQ(hash_map_with_nulls.size(), 1);
-  EXPECT_EQ(hash_map_without_nulls.size(), 1);
-
-  // Get count of non-NULL values in table
-  auto table_without_nulls_scanned =
-      create_table_scan(_table_with_nulls_and_zeros, ColumnID{0}, PredicateCondition::IsNotNull, 0);
-  table_without_nulls_scanned->execute();
-
-  // now that build removed the unneeded init values, map sizes should differ
-  // EXPECT_EQ(
-  //     this->get_row_count(hash_map_without_nulls.at(0).value().begin(), hash_map_without_nulls.at(0).value().end()),
-  //     table_without_nulls_scanned->get_output()->row_count());
-  // TODO(md)
 }
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {

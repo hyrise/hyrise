@@ -437,8 +437,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
-    radix_build_column.clear();
-
     /**
      * Short cut for AntiNullAsTrue:
      *   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted anyway (as
@@ -458,6 +456,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
     }
+
+    radix_build_column.clear();
 
     /**
      * 4. Probe step
