@@ -10,6 +10,7 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/simdCAI_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
