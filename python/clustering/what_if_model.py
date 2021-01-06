@@ -53,7 +53,7 @@ class WhatIfModel(DisjointClustersModel):
             # Consequence: Currently first scan will be performed on a reference segment, currently second scan on currently first scan's segment type
             first_scan_column_name = scans.loc[query_scans.iloc[0].name, 'COLUMN_NAME']
             if len(query_scans) > 1 and first_scan_column_name in clustering_columns:
-                first_scan_segment_type = scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS']
+                first_scan_segment_type = scans.loc[query_scans.iloc[0].name, 'COLUMN_TYPE']
                 scans.loc[query_scans.iloc[1].name, 'COLUMN_TYPE'] = first_scan_segment_type
                 scans.loc[query_scans.iloc[0].name, 'COLUMN_TYPE'] = "REFERENCE"
 

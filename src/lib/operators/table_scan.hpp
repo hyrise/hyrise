@@ -60,7 +60,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
       const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
       stream << separator << "Chunks: " << num_chunks_with_early_out.load() << " skipped with no results, ";
-      stream << separator << num_chunks_with_all_rows_matching.load() << " skipped with all matching,";
+      stream << separator << num_chunks_with_all_rows_matching.load() << " skipped with all matching, ";
       stream << num_chunks_with_binary_search.load() << " scanned using binary search.";
     }
   };
