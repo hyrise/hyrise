@@ -37,11 +37,13 @@ class SIMDCAISegment : public AbstractEncodedSegment {
  public:
   explicit SIMDCAISegment(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
                            std::optional<pmr_vector<bool>> null_values,
-                           const uint8_t codec_id);
+                           uint8_t codec_id,
+                           ChunkOffset size);
 
   const std::shared_ptr<const pmr_vector<uint32_t>> encoded_values() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
   uint8_t codec_id() const;
+  ChunkOffset size() const final;
 
   /**
    * @defgroup AbstractSegment interface
@@ -57,15 +59,13 @@ class SIMDCAISegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    auto decoded_values = std::vector<uint32_t>(_null_values->size());
+    auto decoded_values = std::vector<uint32_t>(_size);
     size_t recovered_size = decoded_values.size();
 
     SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
 
     return static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
   }
-
-  ChunkOffset size() const final;
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -86,7 +86,8 @@ class SIMDCAISegment : public AbstractEncodedSegment {
  protected:
   const std::shared_ptr<const pmr_vector<uint32_t>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
-  const uint8_t _codec_id;
+  uint8_t _codec_id;
+  ChunkOffset _size;
 };
 
 }  // namespace opossum

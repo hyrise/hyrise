@@ -11,11 +11,13 @@ namespace opossum {
 template <typename T, typename U>
 SIMDCAISegment<T, U>::SIMDCAISegment(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
                                        std::optional<pmr_vector<bool>> null_values,
-                                       const uint8_t codec_id)
+                                       uint8_t codec_id,
+                                       ChunkOffset size)
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
       _null_values{null_values},
-      _codec_id{codec_id} {}
+      _codec_id{codec_id},
+      _size{size} {}
 
 template <typename T, typename U>
 const std::shared_ptr<const pmr_vector<uint32_t>> SIMDCAISegment<T, U>::encoded_values() const {
@@ -44,7 +46,7 @@ AllTypeVariant SIMDCAISegment<T,U>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T, typename U>
 ChunkOffset SIMDCAISegment<T,U>::size() const {
-  return _null_values->size();
+  return _size;
 }
 
 template <typename T, typename U>
@@ -56,7 +58,7 @@ std::shared_ptr<AbstractSegment> SIMDCAISegment<T,U>::copy_using_allocator(
   if (_null_values) {
     new_null_values = pmr_vector<bool>(*_null_values, alloc);
   }
-  auto copy = std::make_shared<SIMDCAISegment<T,U>>(new_encoded_values, std::move(new_null_values), _codec_id);
+  auto copy = std::make_shared<SIMDCAISegment<T,U>>(new_encoded_values, std::move(new_null_values), _codec_id, _size);
 
   copy->access_counter = access_counter;
 
@@ -69,7 +71,9 @@ size_t SIMDCAISegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCalcu
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
   }
-  segment_size += _encoded_values->capacity() * sizeof(uint32_t) + 1;
+  segment_size += _encoded_values->capacity() * sizeof(uint32_t);
+  segment_size += 1; // codec_id
+  segment_size += 4; // size
   return segment_size;
 }
 

@@ -237,7 +237,7 @@ std::shared_ptr<SIMDCAISegment<T>> BinaryParser::_import_SIMDCAI_segment(std::if
 
   const auto codec_id = _read_value<uint8_t>(file);
 
-  return std::make_shared<SIMDCAISegment<T>>(encoded_values, null_values, codec_id);
+  return std::make_shared<SIMDCAISegment<T>>(encoded_values, null_values, codec_id, row_count);
 }
 
 template <typename T>

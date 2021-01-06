@@ -58,9 +58,9 @@ class SIMDCAIEncoder : public SegmentEncoder<SIMDCAIEncoder> {
     encodedValues->shrink_to_fit();
 
     if (segment_contains_null_values) {
-      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::move(null_values), codec_id);
+      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::move(null_values), codec_id, values.size());
     } else {
-      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::nullopt, codec_id);
+      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::nullopt, codec_id, values.size());
     }
   }
 };
