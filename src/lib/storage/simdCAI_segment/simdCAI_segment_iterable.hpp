@@ -56,7 +56,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
 
     public:
       explicit Iterator(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
-                        const std::optional<const pmr_vector<bool>>* null_values,
+                        const std::optional<pmr_vector<bool>>* null_values,
                         uint8_t codec_id,
                         ChunkOffset chunk_offset)
           : _encoded_values{encoded_values},
@@ -103,7 +103,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
 
       private:
       std::shared_ptr<const pmr_vector<uint32_t>> _encoded_values;
-      const std::optional<const pmr_vector<bool>>* _null_values;
+      const std::optional<pmr_vector<bool>>* _null_values;
       uint8_t _codec_id;
       std::vector<uint32_t> _decoded_values;
 
@@ -119,7 +119,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
     using IterableType = SIMDCAISegmentIterable<T>;
 
     explicit PointAccessIterator(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
-                                 const std::optional<const pmr_vector<bool>>* null_values,
+                                 const std::optional<pmr_vector<bool>>* null_values,
                                  uint8_t codec_id,
                                  const PosListIteratorType position_filter_begin,
                                  PosListIteratorType&& position_filter_it):
@@ -149,7 +149,7 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
 
     private:
     std::shared_ptr<const pmr_vector<uint32_t>> _encoded_values;
-    const std::optional<const pmr_vector<bool>>* _null_values;
+    const std::optional<pmr_vector<bool>>* _null_values;
     uint8_t _codec_id;
     std::vector<uint32_t> _decoded_values;
     SIMDCompressionLib::IntegerCODEC *_codec;

@@ -36,11 +36,11 @@ template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
 class SIMDCAISegment : public AbstractEncodedSegment {
  public:
   explicit SIMDCAISegment(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
-                           std::optional<const pmr_vector<bool>> null_values,
+                           std::optional<pmr_vector<bool>> null_values,
                            const uint8_t codec_id);
 
   const std::shared_ptr<const pmr_vector<uint32_t>> encoded_values() const;
-  const std::optional<const pmr_vector<bool>>& null_values() const;
+  const std::optional<pmr_vector<bool>>& null_values() const;
   uint8_t codec_id() const;
 
   /**
@@ -85,7 +85,7 @@ class SIMDCAISegment : public AbstractEncodedSegment {
 
  protected:
   const std::shared_ptr<const pmr_vector<uint32_t>> _encoded_values;
-  const std::optional<const pmr_vector<bool>> _null_values;
+  const std::optional<pmr_vector<bool>> _null_values;
   const uint8_t _codec_id;
 };
 

@@ -10,7 +10,7 @@ namespace opossum {
 
 template <typename T, typename U>
 SIMDCAISegment<T, U>::SIMDCAISegment(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
-                                       std::optional<const pmr_vector<bool>> null_values,
+                                       std::optional<pmr_vector<bool>> null_values,
                                        const uint8_t codec_id)
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
@@ -23,7 +23,7 @@ const std::shared_ptr<const pmr_vector<uint32_t>> SIMDCAISegment<T, U>::encoded_
 }
 
 template <typename T, typename U>
-const std::optional<const pmr_vector<bool>>& SIMDCAISegment<T, U>::null_values() const {
+const std::optional<pmr_vector<bool>>& SIMDCAISegment<T, U>::null_values() const {
   return _null_values;
 }
 

@@ -7,6 +7,7 @@
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
 #include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
+#include "storage/simdCAI_segment/simdCAI_encoder.hpp"
 
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
@@ -25,7 +26,8 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegment
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
     {EncodingType::FixedStringDictionary, std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>()},
     {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()},
-    {EncodingType::LZ4, std::make_shared<LZ4Encoder>()}};
+    {EncodingType::LZ4, std::make_shared<LZ4Encoder>()},
+    {EncodingType::SIMDCAI, std::make_shared<SIMDCAIEncoder>()}};
 
 }  // namespace
 
