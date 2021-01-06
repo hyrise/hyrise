@@ -60,7 +60,10 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
     // marker that the AggregateKeyEntry now contains a cached result. We can do this because AggregateKeyEntry can not
     // become larger than the maximum size of a table (i.e., the maximum representable RowID), which is 2^31 * 2^31 ==
-    // 2^62.
+    // 2^62. This avoids making the AggregateKey bigger: Adding another 64-bit value (for an index of 2^62 values) for
+    // the cached value would double the size of the AggregateKey in the case of a single group-by column, thus halving
+    // the utilization of the CPU cache. Same for a discriminating union, where the data structure alignment would also
+    // result in another 8 bytes being used.
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
                   "Expected AggregateKeyEntry to be unsigned 64-bit value");
     constexpr auto MASK = AggregateKeyEntry{1} << 63u;
