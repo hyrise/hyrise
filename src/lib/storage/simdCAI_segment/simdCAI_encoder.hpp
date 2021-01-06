@@ -5,6 +5,7 @@
 #include "storage/base_segment_encoder.hpp"
 #include "include/codecfactory.h"
 #include "include/intersection.h"
+#include "include/frameofreference.h"
 
 #include "storage/simdCAI_segment.hpp"
 

@@ -9,6 +9,7 @@
 
 #include "include/codecfactory.h"
 #include "include/intersection.h"
+#include "include/frameofreference.h"
 
 #include "abstract_encoded_segment.hpp"
 #include "types.hpp"
@@ -62,9 +63,13 @@ class SIMDCAISegment : public AbstractEncodedSegment {
     auto decoded_values = std::vector<uint32_t>(_size);
     size_t recovered_size = decoded_values.size();
 
+    // SIMDCompressionLib::FrameOfReference codec;
     SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
 
-    return static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
+    codec.decodeArray(_encoded_values->data(), _encoded_values->size(), decoded_values.data(), recovered_size);
+
+    return static_cast<T>(decoded_values[chunk_offset]);
+    //return static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
   }
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
