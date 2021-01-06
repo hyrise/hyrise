@@ -60,14 +60,19 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
     new_sum = clustered_joins.apply(lambda x: x[measured_column] * frequencies[x['QUERY_HASH']], axis=1).sum()
         
     if side is not None and sided:
-        clustered_joins = clustered_joins[clustered_joins[f"{side}_TABLE"] == table_name]
+        clustered_joins = clustered_joins[clustered_joins[f"{side}_TABLE"] == m.table_name]
         print(f"{len(clustered_joins)} joins with {table_name} as the {side} side")
+    elif step == "ALL" and sided:
+        probe_side_joins = clustered_joins[f"PROBE_TABLE"] == m.table_name
+        build_side_joins = clustered_joins[f"BUILD_TABLE"] == m.table_name
+        clustered_joins = clustered_joins[probe_side_joins | build_side_joins]
+        print(f"{len(clustered_joins)} joins with {m.table_name} as probe or build side")
     
     m.join_estimates.sort_values(['QUERY_HASH', 'DESCRIPTION'], inplace=True)
     estimates = m.join_estimates.loc[clustered_joins.index]
     assert len(estimates) == len(clustered_joins), "lengths do not match"
 
-    if side is not None and sided:
+    if (side is not None or step == "ALL") and sided:
         current_sum = m.joins.loc[clustered_joins.index].apply(lambda x: x[measured_column] * frequencies[x['QUERY_HASH']], axis=1).sum()
         estimate_sum = int(estimates.apply(lambda x: x[estimate_column] * frequencies[x['QUERY_HASH']], axis=1).sum())
         new_sum = clustered_joins.apply(lambda x: x[measured_column] * frequencies[x['QUERY_HASH']], axis=1).sum()
@@ -75,6 +80,10 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
     result = pd.DataFrame()
     if side is not None and sided:
         result['COLUMN_NAME'] = np.array(clustered_joins[f"{side}_COLUMN"])
+    elif step == "ALL" and sided:
+        probe_build_column_name = clustered_joins.apply(lambda x: f"{x['PROBE_COLUMN']}/{x['BUILD_COLUMN']}", axis=1)
+        result['COLUMN_NAME'] = np.array(probe_build_column_name)
+
     result['DESCRIPTION1'] = np.array(estimates['DESCRIPTION'])
     result['DESCRIPTION2'] = np.array(clustered_joins['DESCRIPTION'])
     result['QUERY_HASH1'] = np.array(estimates['QUERY_HASH'])
