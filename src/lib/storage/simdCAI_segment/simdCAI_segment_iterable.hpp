@@ -133,9 +133,9 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
         _codec_id{codec_id} {
 
       _decoded_values = std::vector<uint32_t>(size);
-      size_t recovered_size = _decoded_values.size();
+      // size_t recovered_size = _decoded_values.size();
       SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
-      codec.decodeArray(_encoded_values->data(), _encoded_values->size(), _decoded_values.data(), recovered_size);
+      // codec.decodeArray(_encoded_values->data(), _encoded_values->size(), _decoded_values.data(), recovered_size);
       _codec = &codec;
     }
 
@@ -147,10 +147,15 @@ class SIMDCAISegmentIterable : public PointAccessibleSegmentIterable<SIMDCAISegm
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = *_null_values ? (**_null_values)[current_offset] : false;
-      //const auto value = static_cast<T>(_codec.select(_encoded_values->data(), current_offset));
-      const auto value = static_cast<T>(_decoded_values[current_offset]);
+      const auto v1 = static_cast<T>(_codec->select(_encoded_values->data(), current_offset));
+      //const auto v2 = static_cast<T>(_decoded_values[current_offset]);
 
-      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
+      // if (v1 != v2) {
+      //   const auto v3 = static_cast<T>(_codec->select(_encoded_values->data(), current_offset));
+      //   PerformanceWarning("value unequal");
+      // }
+
+      return SegmentPosition<T>{v1, is_null, chunk_offsets.offset_in_poslist};
     }
 
     private:

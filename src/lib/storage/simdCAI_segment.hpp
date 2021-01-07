@@ -60,16 +60,26 @@ class SIMDCAISegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    auto decoded_values = std::vector<uint32_t>(_size);
-    size_t recovered_size = decoded_values.size();
+    // auto decoded_values = std::vector<uint32_t>(_size);
+    // size_t recovered_size = decoded_values.size();
 
     // SIMDCompressionLib::FrameOfReference codec;
     SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
 
-    codec.decodeArray(_encoded_values->data(), _encoded_values->size(), decoded_values.data(), recovered_size);
+    // codec.decodeArray(_encoded_values->data(), _encoded_values->size(), decoded_values.data(), recovered_size);
 
-    return static_cast<T>(decoded_values[chunk_offset]);
-    //return static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
+
+    // todo: select with codec and add conditional breakpoint for when they don't equal, then run tests
+
+    //auto v1 = static_cast<T>(decoded_values[chunk_offset]);
+    auto v2 = static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
+
+    // if (v1 != v2) {
+    //     auto v3 = static_cast<T>(codec.select(_encoded_values->data(), chunk_offset));
+    //     PerformanceWarning("decoding results are not equal");
+    // }
+
+    return v2;
   }
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
