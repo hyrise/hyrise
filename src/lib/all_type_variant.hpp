@@ -107,6 +107,14 @@ static const auto NULL_VALUE = AllTypeVariant{};
  * @{
  */
 
+#define EXPLICIT_DECLARATION(r, template_class, type) extern template class template_class<type>;
+
+// Explicitly declare the given template class for all types in DATA_TYPES
+#define EXPLICITLY_DECLARE_DATA_TYPES(template_class)                   \
+  BOOST_PP_SEQ_FOR_EACH(EXPLICIT_DECLARATION, template_class, DATA_TYPES) \
+  static_assert(true, "End call of macro with a semicolon")
+
+
 #define EXPLICIT_INSTANTIATION(r, template_class, type) template class template_class<type>;
 
 // Explicitly instantiates the given template class for all types in DATA_TYPES

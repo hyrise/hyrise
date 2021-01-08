@@ -79,7 +79,14 @@ set(FLAGS_ALL "-fopenmp-simd")  # enables loop vectorization hints, but does not
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${FLAGS_ALL}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS_ALL}")
 
-set(FLAGS_RELEASE "-march=native")  # build the binary optimized for the current system, ignoring older systems
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    # Clang does not support native on ARM. ARM recomments setting mcpu for both compilers instead of march.
+    # https://community.arm.com/developer/tools-software/tools/b/tools-software-ides-blog/posts/compiler-flags-across-architectures-march-mtune-and-mcpu
+    set(FLAGS_RELEASE "-mcpu=native")  
+else()
+    set(FLAGS_RELEASE "-march=native")  # build the binary optimized for the current system, ignoring older systems
+endif()
+
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
