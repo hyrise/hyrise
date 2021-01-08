@@ -21,6 +21,8 @@ class CreateSegmentAccessor {
   static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const AbstractSegment>& segment);
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(CreateSegmentAccessor);
+
 }  // namespace detail
 
 /**
@@ -128,8 +130,5 @@ template <typename T>
 class NullAccessor final : public AbstractSegmentAccessor<T> {
   const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
 };
-
-EXPLICITLY_DECLARE_DATA_TYPES(SegmentAccessor);
-// TODO(Martin): what about CreateSegAcc and the others?
 
 }  // namespace opossum

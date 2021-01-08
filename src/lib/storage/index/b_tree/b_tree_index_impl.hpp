@@ -64,6 +64,8 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   size_t _heap_bytes_used;
 };
 
+template<> void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string&);
+
 EXPLICITLY_DECLARE_DATA_TYPES(BTreeIndexImpl);
 
 }  // namespace opossum
