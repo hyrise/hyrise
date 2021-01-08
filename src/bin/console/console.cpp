@@ -185,6 +185,9 @@ int Console::read() {
     add_history(buffer);
     // Save command to history file
     if (!_history_file.empty()) {
+      if (append_history(1, _history_file.c_str()) != 0) {
+        out("Error appending to history file: " + _history_file + "\n");
+      }
     }
   }
 
