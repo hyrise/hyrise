@@ -129,4 +129,7 @@ class NullAccessor final : public AbstractSegmentAccessor<T> {
   const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(SegmentAccessor);
+// TODO(Martin): what about CreateSegAcc and the others?
+
 }  // namespace opossum

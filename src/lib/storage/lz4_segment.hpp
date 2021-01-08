@@ -216,4 +216,6 @@ class LZ4Segment : public AbstractEncodedSegment {
                                   const size_t write_offset) const;
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(LZ4Segment);
+
 }  // namespace opossum

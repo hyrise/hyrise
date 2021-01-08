@@ -178,4 +178,6 @@ AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstrac
   return opossum::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
+EXPLICITLY_DECLARE_DATA_TYPES(AnySegmentIterable);
+
 }  // namespace opossum

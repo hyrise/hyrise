@@ -65,4 +65,6 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   }
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(RunLengthSegment);
+
 }  // namespace opossum
