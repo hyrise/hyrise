@@ -251,7 +251,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
