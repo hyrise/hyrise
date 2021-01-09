@@ -190,9 +190,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(chunk);
     };
-    // Evaluate the expression immediately if it contains less than `JOB_SPAWN_THRESHOLD` rows, otherwise wrap
-    // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
-    // still needs to be re-evaluated over time to find the value which gives the best performance.
+    // Spawn job when chunk sufficiently large. The upper bound of the chunk size, still needs to be re-evaluated over
+    // time to find the value which gives the best performance.
     constexpr auto JOB_SPAWN_THRESHOLD = ChunkOffset{500};
     if (chunk_in->size() >= JOB_SPAWN_THRESHOLD) {
       auto job_task = std::make_shared<JobTask>(perform_table_scan);

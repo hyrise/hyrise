@@ -368,8 +368,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
     };
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
-      // If the chunk size (number of rows) of the partition lies under the threshold, the execution in parallel is
-      // likely more expensive.
       materialize();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
