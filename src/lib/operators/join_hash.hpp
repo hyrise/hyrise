@@ -21,9 +21,11 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);
-  // Evaluate the expression immediately if it contains less than `JOB_SPAWN_THRESHOLD` rows, otherwise wrap
-  // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
-  // still needs to be re-evaluated over time to find the value which gives the best performance.
+
+  // The jobs that perform the actual materialize, partition by redix, build and probe are executed directly if the
+  // number of elements of the partitions lies under the `JOB_SPAWN_THRESHOLD` rows, otherwise wrap it into a task.
+  // The upper bound of the chunk size, which defines if it will be executed in parallel or not, still needs to be
+  // re-evaluated over time to find the value which gives the best performance.
   static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
