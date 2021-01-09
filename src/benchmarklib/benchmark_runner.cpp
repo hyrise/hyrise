@@ -274,12 +274,12 @@ void BenchmarkRunner::_benchmark_ordered() {
     boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
         accumulator;
     for (const auto& entry : result.successful_runs) {
-      auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
+      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
       accumulator(static_cast<double>(duration.count()));
     }
-    auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
+    const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
     // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
-    auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
+    const auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
