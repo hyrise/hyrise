@@ -251,11 +251,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    if (!in_table->get_chunk(chunk_id)) continue;
 
-    const auto num_rows = in_table->get_chunk(chunk_id)->size();
+    const auto chunk_in = in_table->get_chunk(chunk_id);
+    if (!chunk_in) continue;
 
-    const auto materialize = [&, in_table, chunk_id, num_rows]() {
+    const auto num_rows = chunk_in->size();
+
+    const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
       auto local_output_bloom_filter = BloomFilter{};
       std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
       if (Hyrise::get().is_multi_threaded()) {
@@ -263,8 +265,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
         used_output_bloom_filter = local_output_bloom_filter;
       }
-
-      const auto chunk_in = in_table->get_chunk(chunk_id);
 
       // Skip chunks that were physically deleted
       if (!chunk_in) return;
