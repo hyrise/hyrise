@@ -4,7 +4,9 @@
 #include "lib/optimizer/strategy/strategy_base_test.hpp"
 
 #include "expression/arithmetic_expression.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"

@@ -27,12 +27,13 @@ class InExpressionRewriteRule : public AbstractRule {
 
   bool prevents_caching() const override;
 
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
-
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
   // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
   enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };
   Strategy strategy{Strategy::Auto};
+
+ protected:
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

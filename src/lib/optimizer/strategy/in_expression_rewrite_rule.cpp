@@ -7,7 +7,9 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/table_statistics.hpp"
@@ -99,13 +101,14 @@ namespace opossum {
 
 bool InExpressionRewriteRule::prevents_caching() const { return true; }
 
-void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us
     return;
   }
 
-  visit_lqp(node, [&](const auto& sub_node) {
+  visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type != LQPNodeType::Predicate) {
       // This rule only rewrites IN if it is part of a predicate (not, e.g., `SELECT a IN (1, 2) AS foo`)
       return LQPVisitation::VisitInputs;

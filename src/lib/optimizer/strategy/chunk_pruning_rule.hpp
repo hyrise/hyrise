@@ -28,11 +28,11 @@ using PredicateChain = std::vector<std::shared_ptr<AbstractExpression>>;
  */
 class ChunkPruningRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
-
-  bool prevents_caching() const override;
+    bool prevents_caching() const override;
 
  protected:
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+
   static std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
                                                  const std::shared_ptr<StoredTableNode>& stored_table_node);
 

@@ -26,8 +26,8 @@ class PredicateNode;
  * after the substitution.
 **/
 class BetweenCompositionRule : public AbstractRule {
- public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+ protected:
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
   bool prevents_caching() const override;
 
