@@ -28,9 +28,9 @@ bool ChunkPruningRule::prevents_caching() const { return true; }
 void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // find all StoredTableNodes
   auto table_nodes = std::vector<std::shared_ptr<StoredTableNode>>{};
-  visit_lqp(node, [&table_nodes](const auto& node) {
-    if (node->type == LQPNodeType::StoredTable) {
-      table_nodes.push_back(std::static_pointer_cast<StoredTableNode>(node));
+  visit_lqp(node, [&table_nodes](const auto& current_node) {
+    if (current_node->type == LQPNodeType::StoredTable) {
+      table_nodes.push_back(std::static_pointer_cast<StoredTableNode>(current_node));
       return LQPVisitation::DoNotVisitInputs;
     }
     return LQPVisitation::VisitInputs;
