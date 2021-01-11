@@ -104,11 +104,11 @@ class SingleTableMdcModel(AbstractModel):
         if not row['useful_for_pruning']:
             selectivity = 1
         elif column_name in clustering_columns:
-            scan_selectivity = row['selectivity']
+            scan_selectivity = row['SELECTIVITY_LEFT'] # TODO: originally: selectivity
             split_factor = split_factors[clustering_columns.index(column_name)]
             selectivity =  self.round_up_to_next_multiple(scan_selectivity, 1 / split_factor)
         elif correlates_to_clustering_column(column_name):
-            scan_selectivity = row['selectivity']
+            scan_selectivity = row['SELECTIVITY_LEFT'] # TODO: originally: selectivity
             correlated_clustering_columns = clustering_columns_correlated_to(column_name)
 
             # ToDo this is hacky, but for now assume there is just one correlated column

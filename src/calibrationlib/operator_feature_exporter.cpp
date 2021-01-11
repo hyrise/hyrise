@@ -24,6 +24,7 @@ namespace opossum {
 OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
     : _path_to_dir(path_to_dir),
       _output_path(path_to_dir + "/operators.csv"),
+      _scan_output_path(path_to_dir + "/scans.csv"),
       _join_output_path(_path_to_dir + "/joins.csv"),
       _join_stages_output_path(path_to_dir + "/join_stages.csv"),
       _query_output_path(path_to_dir + "/queries.csv") {}
@@ -65,6 +66,7 @@ void OperatorFeatureExporter::_export_to_csv(const std::shared_ptr<const Abstrac
 void OperatorFeatureExporter::flush() {
   std::lock_guard<std::mutex> lock(_mutex);
   CsvWriter::write(*_general_output_table, _output_path);
+  CsvWriter::write(*_scan_output_table, _scan_output_path);
   CsvWriter::write(*_join_output_table, _join_output_path);
   CsvWriter::write(*_join_stages_table, _join_stages_output_path);
   CsvWriter::write(*_query_table, _query_output_path);
@@ -334,7 +336,10 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   }
 
   const auto& performance_data = static_cast<TableScan::PerformanceData&>(*(op->performance_data));
-  const auto skipped_chunks = static_cast<int64_t>(performance_data.chunk_scans_skipped);
+  const size_t scans_early_out = performance_data.num_chunks_with_early_out;
+  const size_t scans_all_match = performance_data.num_chunks_with_all_rows_matching;
+  const size_t sorted_scans = performance_data.num_chunks_with_binary_search;
+  const size_t segments_scanned = performance_data.dictionary_segment_accesses;
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
@@ -356,10 +361,10 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           implementation,
                                                           input_sorted,
                                                           _current_query_hash,
-                                                          operator_info.left_input_chunks,
-                                                          predicate_str,
-                                                          skipped_chunks};
-      _general_output_table->append(output_row);
+                                                          operator_info.left_input_chunks, predicate_str,
+                                                          static_cast<int64_t>(scans_early_out), static_cast<int64_t>(scans_all_match),
+                                                          static_cast<int64_t>(sorted_scans), static_cast<int64_t>(segments_scanned)};
+      _scan_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
   });

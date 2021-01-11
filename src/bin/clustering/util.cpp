@@ -139,7 +139,7 @@ const nlohmann::json _compute_skipped_chunks_per_table() {
             dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
 
         for (size_t run{0}; run < *frequency; run++) {
-          skipped_chunks_per_table[table_name].push_back(table_scan_performance_data.chunk_scans_skipped);
+          skipped_chunks_per_table[table_name].push_back(table_scan_performance_data.num_chunks_with_early_out);
         }
       }
     }

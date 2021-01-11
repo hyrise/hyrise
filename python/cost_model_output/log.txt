@@ -1,7 +1,8 @@
-boost_TableScan_ColumnVsValue_model: {'RMSE': '5503436.530', 'R2': '0.286', 'LNQ': '1.000', 'MAPE': '111.520'} 
-boost_TableScan_ColumnBetween_model: {'RMSE': '3182469.332', 'R2': '0.687', 'LNQ': '1.000', 'MAPE': '69.569'} 
-boost_TableScan_ColumnVsColumn_model: {'RMSE': '48722749.398', 'R2': '-0.102', 'LNQ': '1.000', 'MAPE': '118.827'} 
-boost_TableScan_ColumnLike_model: {'RMSE': '28018539.231', 'R2': '0.641', 'LNQ': '1.000', 'MAPE': '68.221'} 
-boost_Aggregate_AggregateHash_model: {'RMSE': '296025124.491', 'R2': '0.182', 'LNQ': '1.000', 'MAPE': '101.376'} 
-boost_Join_JoinHash_REFERENCE_REFERENCE_model: {'RMSE': '43157330.259', 'R2': '-0.724', 'LNQ': '1.000', 'MAPE': '64.300'} 
-boost_Join_JoinHash_REFERENCE_DATA_model: {'RMSE': '8543651.866', 'R2': '0.959', 'LNQ': '1.000', 'MAPE': '57.609'} 
+boost_Aggregate_AggregateHash_model: {'RMSE': '13073996.788', 'R2': '0.998', 'LNQ': '1.000', 'MAPE': '15.605'} 
+boost_TableScan_ColumnVsValue_model: {'RMSE': '4121525.797', 'R2': '0.322', 'LNQ': '1.000', 'MAPE': '24.660'} 
+boost_TableScan_ColumnLike_model: {'RMSE': '1400492.571', 'R2': '0.999', 'LNQ': '1.000', 'MAPE': '5.751'} 
+boost_TableScan_ColumnVsColumn_model: {'RMSE': '21298728.470', 'R2': '0.834', 'LNQ': '1.000', 'MAPE': '27.280'} 
+boost_TableScan_ColumnBetween_model: {'RMSE': '2315236.463', 'R2': '-3.007', 'LNQ': '1.000', 'MAPE': '37.893'} 
+boost_TableScan_ExpressionEvaluator_model: {'RMSE': '258503.930', 'R2': '0.996', 'LNQ': '1.000', 'MAPE': '4.902'} 
+boost_Join_JoinHash_REFERENCE_REFERENCE_model: {'RMSE': '14973386.565', 'R2': '0.869', 'LNQ': '1.000', 'MAPE': '22.489'} 
+boost_Join_JoinHash_REFERENCE_DATA_model: {'RMSE': '25606242.996', 'R2': '0.733', 'LNQ': '1.000', 'MAPE': '24.791'} 
