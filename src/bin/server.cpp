@@ -52,8 +52,9 @@ int main(int argc, char* argv[]) {
     boost::replace_all(benchmark_data_arg, "-", "");
     boost::to_lower(benchmark_data_arg);
     boost::split(bechmark_data_config, benchmark_data_arg, boost::is_any_of(":"), boost::token_compress_on);
-    Assert(bechmark_data_config.size() < 3, "Malformed input for benchmark data generation. Expecting a benchmark "
-                                            "name and a sizing factor.");
+    Assert(bechmark_data_config.size() < 3,
+           "Malformed input for benchmark data generation. Expecting a benchmark "
+           "name and a sizing factor.");
 
     const auto benchmark_name = bechmark_data_config[0];
     const auto sizing_factor = boost::lexical_cast<float, std::string>(bechmark_data_config[1]);
