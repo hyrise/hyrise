@@ -18,9 +18,9 @@ cxxopts::Options get_server_cli_options() {
     ("help", "Display this help and exit") // NOLINT
     ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))  // NOLINT
     ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the the server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))  // NOLINT
-    ("benchmark_data", "Specify the benchmark and sizing factor to generate at server start (e.g., " // NOLINT
-                       "\"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\". supported are TPC-C, TPC-DS, and TPC-H. "
-                       "The sizing factor determines the scale factor in TPC-DS and -H, and the warehouse "
+    ("benchmark_data", "Specify the benchmark name and sizing factor to generate at server start (e.g., " // NOLINT
+                       "\"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). supported are TPC-C, TPC-DS, and TPC-H. "
+                       "The sizing factor determines the scale factor in TPC-DS and TPC-H, and the warehouse "
                        "count in TPC-C.", cxxopts::value<std::string>()) // NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ;  // NOLINT
