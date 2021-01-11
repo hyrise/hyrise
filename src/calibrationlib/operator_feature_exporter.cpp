@@ -36,12 +36,16 @@ void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const Abstract
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op,
                                             const std::string& query) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::vector<std::string> query_parts;
+  boost::algorithm::split(query_parts, query, boost::algorithm::is_any_of(";"));
+  auto trimmed_query =
+      boost::algorithm::join(std::vector<std::string>(query_parts.begin(), query_parts.end() - 1), ";");
   std::stringstream query_hex_hash;
-  query_hex_hash << std::hex << std::hash<std::string>{}(query);
-  auto query_single_line{query};
+  query_hex_hash << std::hex << std::hash<std::string>{}(trimmed_query);
+  auto query_single_line{trimmed_query};
   query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),
                           query_single_line.end());
+  std::lock_guard<std::mutex> lock(_mutex);
   _current_query_hash = pmr_string{query_hex_hash.str()};
   _query_table->append({_current_query_hash, pmr_string{query_single_line}});
   _export_to_csv(op);
@@ -119,7 +123,8 @@ void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<con
                                                         column_type,
                                                         table_name,
                                                         column_name,
-                                                        ""};
+                                                        "",
+                                                        int64_t{0}};
     _general_output_table->append(output_row);
   }
 }
@@ -153,7 +158,8 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                           input_sorted,
                                                           _current_query_hash,
                                                           operator_info.left_input_chunks,
-                                                          ""};
+                                                          "",
+                                                          int64_t{0}};
       _general_output_table->append(output_row);
     }
   }
@@ -306,7 +312,9 @@ void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetT
                                                       "",
                                                       "",
                                                       _current_query_hash,
-                                                      operator_info.left_input_chunks, ""};
+                                                      operator_info.left_input_chunks,
+                                                      "",
+                                                      int64_t{0}};
 
   _general_output_table->append(output_row);
 }
@@ -324,6 +332,9 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   if (const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate)) {
     predicate_str = pmr_string{magic_enum::enum_name(predicate_expression->predicate_condition)};
   }
+
+  const auto& performance_data = static_cast<TableScan::PerformanceData&>(*(op->performance_data));
+  const auto skipped_chunks = static_cast<int64_t>(performance_data.chunk_scans_skipped);
 
   // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
   // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
@@ -345,7 +356,9 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           implementation,
                                                           input_sorted,
                                                           _current_query_hash,
-                                                          operator_info.left_input_chunks, predicate_str};
+                                                          operator_info.left_input_chunks,
+                                                          predicate_str,
+                                                          skipped_chunks};
       _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
@@ -380,7 +393,8 @@ void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const Ind
                                                           "",
                                                           _current_query_hash,
                                                           operator_info.left_input_chunks,
-                                                          ""};
+                                                          "",
+                                                          int64_t{0}};
       _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;

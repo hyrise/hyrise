@@ -35,7 +35,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
                                                const int number_of_executions) {
   //auto subdirectory = std::string{magic_enum::enum_name(type)};
   //boost::algorithm::to_lower(subdirectory);
-  const auto path = _path_to_dir; // + "/" + subdirectory;
+  const auto path = _path_to_dir;  // + "/" + subdirectory;
   std::filesystem::create_directories(path);
   const auto feature_exporter = std::make_shared<OperatorFeatureExporter>(path);
   auto table_exporter = TableFeatureExporter(path);

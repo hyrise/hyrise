@@ -94,7 +94,8 @@ class OperatorFeatureExporter {
                                                      {"INPUT_COLUMN_SORTED", DataType::String, true},
                                                      {"QUERY_HASH", DataType::String, true},
                                                      {"INPUT_CHUNKS", DataType::Long, false},
-                                                     {"PREDICATE", DataType::String, true}},
+                                                     {"PREDICATE", DataType::String, false},
+                                                     {"SKIPPED_CHUNKS", DataType::Long, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_output_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},

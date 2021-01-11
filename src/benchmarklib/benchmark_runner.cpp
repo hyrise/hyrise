@@ -30,8 +30,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _table_generator(std::move(table_generator)),
       _context(context),
       _operator_exporter(operator_exporter) {
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  size_t cache_size = static_cast<size_t>(std::max(_config.max_runs, static_cast<int64_t>(DEFAULT_CACHE_CAPACITY)));
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>(cache_size);
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>(cache_size);
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
