@@ -131,6 +131,16 @@ class PQPInputParser(object):
     # TODO: valid atm, but feels a bit hacky to assume not benefitting from sorted segments -> not benefitting from pruning
     scans['useful_for_pruning'] = scans.apply(lambda row: not row['part_of_or_chain'] and row['benefits_from_sorting'] , axis=1)
 
+    # Add/rename fields to match the cost model schema
+    scans['OPERATOR_IMPLEMENTATION'] = scans.apply(lambda x: x['DESCRIPTION'].split("Impl: ")[1].split()[0], axis=1)
+    scans.rename(inplace=True, columns={
+        'selectivity': 'SELECTIVITY_LEFT',
+        'INPUT_ROW_COUNT': 'INPUT_ROWS',
+        'OUTPUT_ROW_COUNT': 'OUTPUT_ROWS',
+        'PREDICATE_CONDITION': 'PREDICATE',
+        'INPUT_CHUNK_COUNT': 'INPUT_CHUNKS',
+    })
+
     self.table_scans = scans.copy()
 
 
@@ -167,11 +177,18 @@ class PQPInputParser(object):
     joins['BUILD_COLUMN'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_COLUMN_NAME"] if not x['BUILD_SIDE'] == "NULL" else "NULL", axis=1)
     joins['BUILD_TABLE_ROW_COUNT'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_TABLE_ROW_COUNT"] if not x['BUILD_SIDE'] == "NULL" else "NULL", axis=1)
     validate_joins(joins)
-                                                                                           
+
+    # TODO: Ugly hack. Required because I mixed up the order of BUILD_SORTED and PROBE_SORTED columns
     tmp = joins['BUILD_SORTED'].copy()
     joins['BUILD_SORTED'] = joins['PROBE_SORTED'].copy()
     joins['PROBE_SORTED'] = tmp
-    
+
+    joins['OPERATOR_IMPLEMENTATION'] = joins.apply(lambda x: x['DESCRIPTION'].split()[0], axis=1)
+    joins['BUILD_COLUMN_TYPE'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_COLUMN_TYPE"], axis=1)
+    joins['BUILD_INPUT_CHUNKS'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_TABLE_CHUNK_COUNT"], axis=1)
+    joins['PROBE_COLUMN_TYPE'] = joins.apply(lambda x: x[x['PROBE_SIDE'] + "_COLUMN_TYPE"], axis=1)
+    joins['PROBE_INPUT_CHUNKS'] = joins.apply(lambda x: x[x['PROBE_SIDE'] + "_TABLE_CHUNK_COUNT"], axis=1)
+
     self.joins = joins.copy()
 
   """Extract interesting table names. Currently fixed to columns which are scanned or used in joins"""

@@ -138,23 +138,29 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
     
     return result
 
-def plot_scan_errors(estimation_errors, query_frequencies, save_path=None):
+def plot_scan_errors(estimation_errors, old_estimation_errors, query_frequencies, save_path=None):
   bins = [-100, 0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 50, 500]
-  plot_relative_errors(estimation_errors, query_frequencies, "scan", bins, save_path)
+  plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, "scan", bins, save_path)
 
 
-def plot_join_errors(estimation_errors, query_frequencies, save_path=None):
+def plot_join_errors(estimation_errors, old_estimation_errors, query_frequencies, save_path=None):
   bins = [-100, -50, -10, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 30, 500]
-  plot_relative_errors(estimation_errors, query_frequencies, "join", bins, save_path)
+  plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, "join", bins, save_path)
 
-def plot_relative_errors(estimation_errors, query_frequencies, operator, bins, save_path):
-  all_factors = []
-  for _, row in estimation_errors.iterrows():
-      frequency = query_frequencies[row['QUERY_HASH1']]
-      for _ in range(frequency):
-          all_factors.append(row['RELATIVE_ERROR'])
+def plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, operator, bins, save_path):
+  def compute_histogram(errors):
+    all_factors = []
+    for _, row in errors.iterrows():
+        frequency = query_frequencies[row['QUERY_HASH1']]
+        for _ in range(frequency):
+            all_factors.append(row['RELATIVE_ERROR'])
+    return histogram(all_factors, bins)
 
-  values = histogram(all_factors, bins)
+  values = compute_histogram(estimation_errors)
+  if old_estimation_errors is not None:
+    old_values = compute_histogram(old_estimation_errors)
+  else:
+    old_values = None
 
   x = np.arange(len(values))
   labels = list([f"[{low},{high})" for low, high in zip(bins, bins[1:])])
@@ -164,9 +170,12 @@ def plot_relative_errors(estimation_errors, query_frequencies, operator, bins, s
   ax.set_xticklabels(labels)
   ax.set_xlabel("Relative estimation error")
   ax.set_ylabel(f"Number of {operator}s")
-  ax.bar(x, values)
+  if old_values is not None:
+    ax.bar(x-0.20, old_values, label='old', width=0.4)
+  ax.bar(x+0.20, values, label='new', width=0.4)
   ax.get_yaxis().set_major_locator(MaxNLocator(integer=True))
   plt.xticks(rotation=90)
+  plt.legend()
 
   if save_path is not None:
     plt.savefig(save_path, bbox_inches='tight')
