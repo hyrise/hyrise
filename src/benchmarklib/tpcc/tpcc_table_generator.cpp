@@ -12,12 +12,15 @@
 #include <vector>
 
 #include "constants.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/list_directory.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -507,7 +510,28 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate() {
-  Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
+  // Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
+
+  const auto cache_directory = std::string{"tpcc_cached_tables/sf-"} + std::to_string(_num_warehouses);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
+      Timer timer;
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
+
+      BenchmarkTableInfo table_info;
+      table_info.table = BinaryParser::parse(table_file);
+      table_info.loaded_from_binary = true;
+      table_info.binary_file_path = table_file;
+      table_info_by_name[table_name] = table_info;
+
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    return table_info_by_name;
+  }
 
   std::vector<std::thread> threads;
   auto item_table = generate_item_table();
@@ -522,7 +546,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   auto order_table = generate_order_table(order_line_counts);
   auto order_line_table = generate_order_line_table(order_line_counts);
 
-  return std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
                                                               {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
                                                               {"STOCK", BenchmarkTableInfo{stock_table}},
                                                               {"DISTRICT", BenchmarkTableInfo{district_table}},
@@ -531,6 +555,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
                                                               {"ORDER", BenchmarkTableInfo{order_table}},
                                                               {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
                                                               {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
+  }
+
+  return table_info_by_name;
 }
 
 void TPCCTableGenerator::_add_constraints(

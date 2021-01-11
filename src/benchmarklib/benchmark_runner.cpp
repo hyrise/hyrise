@@ -465,9 +465,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
   const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
 
-  // TPC-C does not support binary caching
-  const auto* const default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
-
   // clang-format off
   cli_options.add_options()
     ("help", "print a summary of CLI options")
@@ -486,7 +483,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value(default_dont_cache_binary_tables)) // NOLINT
+    ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
