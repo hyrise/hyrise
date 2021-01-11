@@ -27,18 +27,28 @@ class TPCHBenchmark(AbstractBenchmark):
 
   def sort_orders(self):
 
-    return {
-      'l_receiptdate': {
-        'lineitem': [['l_receiptdate', 2]]
-      }
+    others = {
+      'orders': [['o_orderkey', 2]],
+      'part': [['p_partkey', 2]],
+      'partsupp': [['ps_partkey', 2]],
+      'supplier': [['s_suppkey', 2]],
+      'customer': [['c_custkey', 2]],
+      'region': [['r_regionkey', 2]],
+      'nation': [['n_nationkey', 2]]
     }
 
     return {
       'l_shipdate': {
-        'lineitem': [['l_shipdate', 2]]
+        'lineitem': [['l_shipdate', 2]],
+        **others
       },
       'l_orderkey': {
-        'lineitem': [['l_orderkey', 2]]
+        'lineitem': [['l_orderkey', 2]],
+        **others
+      },
+      'l_receiptdate': {
+        'lineitem': [['l_receiptdate', 2]],
+        **others
       },
     }
 

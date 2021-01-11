@@ -30,9 +30,6 @@ class TPCDSBenchmark(AbstractBenchmark):
   def sort_orders(self):
 
     return {
-      'cd_education_status': {
-        'customer_demographics': [['cd_education_status', 7]]
-      },
       'ss_ticket_number-2': {
         'store_sales': [['ss_ticket_number', 2]]
       },

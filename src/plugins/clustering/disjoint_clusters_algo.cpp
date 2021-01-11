@@ -636,7 +636,10 @@ void DisjointClustersAlgo::_perform_clustering() {
           }
           Hyrise::get().chunks_to_delete_mutex->unlock();
 
-          Assert(chunk_ids.size() > 0 || key == MERGE_CLUSTER, "chunk_ids disappeared");
+          // The assertion below is not correct anymore:
+          // When getting unfavorably chunk boundaries, the last cluster may be small enough to be merged entirely.
+          // As a result, 0 chunks may remain in that last cluster, allthouh its not the merge cluster.
+          // Assert(chunk_ids.size() > 0 || key == MERGE_CLUSTER, "chunk_ids disappeared");
         }
       }
 
