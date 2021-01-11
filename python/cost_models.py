@@ -303,7 +303,6 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
         "COLUMN_TYPE",
         "INPUT_COLUMN_SORTED",
         "INPUT_CHUNKS",
-        "PREDICATE",
         "RUNTIME_NS",
         "NONE_MATCH_RATIO",
         "ALL_MATCH_RATIO"
