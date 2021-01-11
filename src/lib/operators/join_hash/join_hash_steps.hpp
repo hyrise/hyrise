@@ -443,10 +443,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     };
 
     if (radix_bits == 0 || JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      // Without radix partitioning, only a single hash table will be written. Parallelizing this would require a
-      // concurrent hash table, which is likely more expensive.
-      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
-      // likely more expensive.
+      // Execute the insertion in the hash table sequentially when we do not radix partition (i.e., 0 radix bits) or
+      // the number of elements is too small. Without radix partitioning, only a single hash table will be written.
+      // Parallelizing this would require a concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
@@ -546,8 +545,6 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       }
     };
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
-      // likely more expensive.
       perform_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
@@ -725,8 +722,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     };
 
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
-      // likely more expensive.
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
@@ -845,8 +840,6 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     };
 
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      // If the size (number of elements) of the partition lies under the threshold, the execution in parallel is
-      // likely more expensive.
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
