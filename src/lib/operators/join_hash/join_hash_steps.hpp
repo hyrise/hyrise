@@ -250,7 +250,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
@@ -511,7 +511,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_partition_count);
 
-  for (ChunkID input_partition_idx{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
+  for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
     const auto& input_partition = radix_container[input_partition_idx];
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
