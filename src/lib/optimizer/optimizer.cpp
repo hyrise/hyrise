@@ -35,46 +35,6 @@ namespace opossum {
  * optimization costs reasonable.
  */
 
-namespace {
-
-using namespace opossum;  // NOLINT
-
-// All SubqueryExpressions referencing the same LQP
-using SubqueryExpressionsByLQP =
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
-
-// See comment at the top of file for the purpose of this.
-void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
-                                         const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) return;
-  if (!visited_nodes.emplace(node).second) return;
-
-  for (const auto& expression : node->node_expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
-
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
-        }
-      }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-  }
-
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
-}
-
-}  // namespace
-
-namespace opossum {
-
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
   // The ChunkPruningRule is like the BetweenCompositionRule, the ExpressionReductionRule and the InExpressionRewriteRule
@@ -132,9 +92,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
-  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
-  // executed after the ColumnPruningRule and ChunkPruningRule.
+  // The LQPTranslator deduplicates subplans to avoid performing the same computation twice (see
+  // LQPTranslator::translate_node). The StoredTableColumnAlignmentRule supports this effort by aligning the list of
+  // pruned column ids across nodes that could become deduplicated. For this, the ColumnPruningRule needs to have
+  // been executed.
+
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
