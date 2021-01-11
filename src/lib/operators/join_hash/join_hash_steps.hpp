@@ -75,10 +75,11 @@ using RadixContainer = std::vector<Partition<T>>;
 // some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
 // hashmap (think map<HashedType, PosList>), we store an offset - thus OffsetHashTable. This keeps the hashmap small and
 // makes it easier to cache. The PosHashTable has a separate build and probe phase. In the build phase, the
-// OffsetHashTable and the corresponding SmallPosLists are filled. After that, finalize() is called and compresses the
-// SmallPosList into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus
-// improves the cache behavior of the following probe phase. In the probe phase, the find() method returns a pair of
-// pointers to the range in the unified PosList. This is comparable to the interface of std::equal_range.
+// OffsetHashTable and the corresponding SmallPosLists (see below) are filled. If the SmallPosLists allocated heap
+// storage, it is scattered across the heap and likely to be over-allocated. By calling finalize(), we compress them
+// into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus improves the cache
+// behavior of the following probe phase. In the probe phase, the find() method returns a pair of pointers to the range
+// in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
 template <typename HashedType>
 class PosHashTable {
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
@@ -137,8 +138,10 @@ class PosHashTable {
 
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
+      // Resize so that we can store the start offset of each range as well as the final end offset.
       _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
-      auto total_size = size_t{};
+
+      auto total_size = size_t{0};
       for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
         _unified_pos_list->offsets[hash_table_idx] = total_size;
         total_size += _small_pos_lists[hash_table_idx].size();
@@ -146,13 +149,14 @@ class PosHashTable {
       _unified_pos_list->offsets.back() = total_size;
 
       _unified_pos_list->pos_list.resize(total_size);
-      auto offset = size_t{};
+      auto offset = size_t{0};
       for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
         std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
                   _unified_pos_list->pos_list.begin() + offset);
         offset += _small_pos_lists[hash_table_idx].size();
       }
 
+      // The SmallPosLists are no longer needed. Delete both the lists and the associated memory resources.
       _small_pos_lists = {};
       _memory_pool = {};
       _monotonic_buffer = {};
@@ -173,6 +177,8 @@ class PosHashTable {
       return {_unified_pos_list->pos_list.end(), _unified_pos_list->pos_list.end()};
     }
 
+    // Return two iterators that define a half open range, starting at the first value that corresponds to the search
+    // value and ending at the first value of the next value. This is what we added `total_size` to the offset list for.
     return {_unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second],
             _unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second + 1]};
   }
@@ -186,7 +192,10 @@ class PosHashTable {
 
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
-  // we create our own (non-thread-safe) pool, which is discarded once finalize() is called
+  // we create our own pool, which is discarded once finalize() is called. The pool is unsynchronized (i.e., non-thread-
+  // safe) by design. This way, we can quickly perform a high number of allocations without having to synchronize with
+  // other threads for each allocation. Instead, we synchronize only when we refill the underlying
+  // monotonic_buffer_resource. This works because each PosHashTable is used by exactly one thread.
   std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
       std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
   std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
