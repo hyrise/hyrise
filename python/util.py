@@ -45,7 +45,7 @@ def preprocess_data(data):
         "COLUMN_TYPE",
         "DATA_TYPE",
         "ENCODING",
-        #"OPERATOR_IMPLEMENTATION",
+        # "OPERATOR_IMPLEMENTATION",
         "COMPRESSION_TYPE",
         "SORTED",
         "JOIN_IMPLEMENTATION",
@@ -114,5 +114,5 @@ def append_to_input_format(df, input_format):
     if len(control_diffs) > 0:
         print(f"dropping columns {', '.join(control_diffs)}")
         result = result.drop(columns=control_diffs)
-        #raise ValueError(f"Did not expect column(s) {', '.join(control_diffs)}")
+        # raise ValueError(f"Did not expect column(s) {', '.join(control_diffs)}")
     return result[input_format.columns]

@@ -361,9 +361,12 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           implementation,
                                                           input_sorted,
                                                           _current_query_hash,
-                                                          operator_info.left_input_chunks, predicate_str,
-                                                          static_cast<int64_t>(scans_early_out), static_cast<int64_t>(scans_all_match),
-                                                          static_cast<int64_t>(sorted_scans), static_cast<int64_t>(segments_scanned)};
+                                                          operator_info.left_input_chunks,
+                                                          predicate_str,
+                                                          static_cast<int64_t>(scans_early_out),
+                                                          static_cast<int64_t>(scans_all_match),
+                                                          static_cast<int64_t>(sorted_scans),
+                                                          static_cast<int64_t>(segments_scanned)};
       _scan_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;

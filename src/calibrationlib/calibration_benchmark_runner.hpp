@@ -6,7 +6,7 @@
 #include "table_feature_exporter.hpp"
 
 namespace opossum {
-enum BenchmarkType { TPC_H, TPC_C, TPC_DS, JOB, JCC_H };
+enum BenchmarkType { TPC_H, TPC_C, TPC_DS, JOB, JCC_H, Calibration };
 
 class CalibrationBenchmarkRunner {
  public:
