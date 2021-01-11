@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
@@ -22,10 +24,11 @@
 */
 namespace opossum {
 
+// For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode { AllPositions, SinglePosition };
+enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
@@ -68,38 +71,49 @@ struct Partition {
 template <typename T>
 using RadixContainer = std::vector<Partition<T>>;
 
-// Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it
-// has some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
-// hashmap (think map<HashedType, PosList>), we store an offset. This keeps the hashmap small and makes it easier to
-// cache.
+// Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it has
+// some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
+// hashmap (think map<HashedType, PosList>), we store an offset - thus OffsetHashTable. This keeps the hashmap small and
+// makes it easier to cache. The PosHashTable has a separate build and probe phase. In the build phase, the
+// OffsetHashTable and the corresponding SmallPosLists (see below) are filled. If the SmallPosLists allocated heap
+// storage, it is scattered across the heap and likely to be over-allocated. By calling finalize(), we compress them
+// into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus improves the cache
+// behavior of the following probe phase. In the probe phase, the find() method returns a pair of pointers to the range
+// in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
 template <typename HashedType>
 class PosHashTable {
+  // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
+  using Offset = uint32_t;
+
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-  //
-  // The hash table stores the relative offset of a SmallPosList (see below) in the vector of SmallPosLists. The range
-  // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
-  // with a partition that has more values, the partitioning algorithm is at fault.
-  using Offset = uint32_t;
-  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
+  using OffsetHashTable = ska::bytell_hash_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1>;
+  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
+
+  // After finalize() is called, the UnifiedPosList holds the concatenation of all SmallPosLists. The SmallPosList at
+  // position n can be found at the half-open range [ pos_list[offsets[n]], pos_list[offsets[n+1]] ).
+  struct UnifiedPosList {
+    RowIDPosList pos_list;
+    std::vector<size_t> offsets;
+  };
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {
-    // _pos_lists is initialized with an additional element to make the enforcement of the assertions easier.
-    _hash_table.reserve(max_size);
+      : _mode(mode),
+        _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
+                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {
+    // _small_pos_lists is initialized with an additional element to make the enforcement of the assertions easier. For
+    // _JoinHashBuildMode::ExistenceOnly, we do not store positions and thus do not initialize _small_pos_lists.
+    _offset_hash_table.reserve(max_size);
   }
 
   // For a value seen on the build side, add the value to the hash map.
-  // The row id is only added in the AllPositions mode. For SinglePosition, as used e.g., by semi joins, the actual
-  // row id is irrelevant and is not stored. As such, while find() would return an iterator, the row ids retrieved
-  // by dereferencing that iterator are incomplete. To keep people from accidentally dereferencing that iterator, we
-  // prohibit find() and require the use of contains() in the SinglePosition mode.
+  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi joins, the actual
+  // row id is irrelevant and is not stored.
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
     const auto casted_value = static_cast<HashedType>(value);
@@ -107,80 +121,91 @@ class PosHashTable {
     // If casted_value is already present in the hash table, this returns an iterator to the existing value. If not, it
     // inserts a mapping from casted_value to the index into _values, which is defined by the previously inserted
     // number of values.
-    const auto it = _hash_table.emplace(casted_value, _hash_table.size());
+    const auto it = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
     if (_mode == JoinHashBuildMode::AllPositions) {
-      auto& pos_list = _pos_lists[it.first->second];
+      auto& pos_list = _small_pos_lists[it.first->second];
       pos_list.emplace_back(row_id);
 
-      DebugAssert(_hash_table.size() < _pos_lists.size(), "Hash table too big for pre-allocated data structures");
-      DebugAssert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
+      DebugAssert(_offset_hash_table.size() < _small_pos_lists.size(),
+                  "Hash table too big for pre-allocated data structures");
+      DebugAssert(_offset_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
     }
   }
 
-  void shrink_to_fit() {
-    _pos_lists.resize(_hash_table.size());
-    _pos_lists.shrink_to_fit();
-    for (auto& pos_list : _pos_lists) {
-      pos_list.shrink_to_fit();
-    }
+  // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
+  void finalize() {
+    _offset_hash_table.shrink_to_fit();
 
-    // For very small hash tables, a linear search performs better. In that case, replace the hash table with a vector
-    // of value/offset pairs.  The boundary was determined experimentally and chosen conservatively.
-    if (_hash_table.size() <= 10) {
-      Assert(!_values, "shrink_to_fit called twice");
+    if (_mode == JoinHashBuildMode::AllPositions) {
+      _unified_pos_list = UnifiedPosList{};
+      // Resize so that we can store the start offset of each range as well as the final end offset.
+      _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
 
-      _values = std::vector<std::pair<HashedType, Offset>>{};
-      _values->reserve(_hash_table.size());
-      for (const auto& [value, offset] : _hash_table) {
-        _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
+      auto total_size = size_t{0};
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+        _unified_pos_list->offsets[hash_table_idx] = total_size;
+        total_size += _small_pos_lists[hash_table_idx].size();
       }
-      _hash_table.clear();
-    } else {
-      _hash_table.shrink_to_fit();
+      _unified_pos_list->offsets.back() = total_size;
+
+      _unified_pos_list->pos_list.resize(total_size);
+      auto offset = size_t{0};
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+        std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
+                  _unified_pos_list->pos_list.begin() + offset);
+        offset += _small_pos_lists[hash_table_idx].size();
+      }
+
+      // The SmallPosLists are no longer needed. Delete both the lists and the associated memory resources.
+      _small_pos_lists = {};
+      _memory_pool = {};
+      _monotonic_buffer = {};
     }
   }
 
-  // For a value seen on the probe side, return an iterator into the matching positions on the build side
+  // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
-  const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
-    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for SinglePosition mode, use contains");
+  const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for ExistenceOnly mode, use contains");
+    DebugAssert(_unified_pos_list, "_unified_pos_list not set - was finalize called?");
 
     const auto casted_value = static_cast<HashedType>(value);
-    if (!_values) {
-      const auto hash_table_iter = _hash_table.find(casted_value);
-      if (hash_table_iter == _hash_table.end()) return end();
-      return _pos_lists.begin() + hash_table_iter->second;
-    } else {
-      const auto values_iter =
-          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
-      if (values_iter == _values->end()) return end();
-      return _pos_lists.begin() + values_iter->second;
+    const auto hash_table_iter = _offset_hash_table.find(casted_value);
+
+    if (hash_table_iter == _offset_hash_table.end()) {
+      // Not found, return an empty range
+      return {_unified_pos_list->pos_list.end(), _unified_pos_list->pos_list.end()};
     }
+
+    // Return two iterators that define a half open range, starting at the first value that corresponds to the search
+    // value and ending at the first value of the next value. This is what we added `total_size` to the offset list for.
+    return {_unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second],
+            _unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second + 1]};
   }
 
   // For a value seen on the probe side, return whether it has been seen on the build side
   template <typename InputType>
   bool contains(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);
-
-    if (!_values) {
-      return _hash_table.find(casted_value) != _hash_table.end();
-    } else {
-      const auto values_iter =
-          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
-      return values_iter != _values->end();
-    }
+    return _offset_hash_table.find(casted_value) != _offset_hash_table.end();
   }
 
-  const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
-
-  const std::vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
-
  private:
-  HashTable _hash_table;
-  std::vector<SmallPosList> _pos_lists;
-  JoinHashBuildMode _mode;
-  std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
+  // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
+  // we create our own pool, which is discarded once finalize() is called. The pool is unsynchronized (i.e., non-thread-
+  // safe) by design. This way, we can quickly perform a high number of allocations without having to synchronize with
+  // other threads for each allocation. Instead, we synchronize only when we refill the underlying
+  // monotonic_buffer_resource. This works because each PosHashTable is used by exactly one thread.
+  std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
+      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
+  std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
+      std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
+
+  JoinHashBuildMode _mode{};
+  OffsetHashTable _offset_hash_table{};
+  std::vector<SmallPosList> _small_pos_lists{};
+
+  std::optional<UnifiedPosList> _unified_pos_list{};
 };
 
 // The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
@@ -394,7 +419,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
       total_size += radix_container[partition_idx].elements.size();
     }
-    hash_tables = {PosHashTable<HashedType>(mode, total_size)};
+    hash_tables.resize(1);
+    hash_tables[0] = PosHashTable<HashedType>(mode, total_size);
   } else {
     hash_tables.resize(radix_container.size());
   }
@@ -431,7 +457,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
       if (radix_bits > 0) {
         // In case only a single hash table is built, shrink to fit is called outside of the loop.
-        hash_table->shrink_to_fit();
+        hash_table->finalize();
       }
     };
 
@@ -445,8 +471,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  // If radix partitioning is used, shrink_to_fit is called above.
-  if (radix_bits == 0) hash_tables[0]->shrink_to_fit();
+  // If radix partitioning is used, finalize is called above.
+  if (radix_bits == 0) hash_tables[0]->finalize();
 
   return hash_tables;
 }
@@ -621,10 +647,10 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             continue;
           }
 
-          const auto& primary_predicate_matching_rows =
+          auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
               hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (primary_predicate_matching_rows != hash_table.end()) {
+          if (primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end) {
             // Key exists, thus we have at least one hit for the primary predicate
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
@@ -645,13 +671,17 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
             // lists.
             if (!multi_predicate_join_evaluator) {
-              for (const auto& row_id : *primary_predicate_matching_rows) {
+              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                   ++primary_predicate_matching_rows_iter) {
+                const auto row_id = *primary_predicate_matching_rows_iter;
                 pos_list_build_side_local.emplace_back(row_id);
                 pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
               }
             } else {
               auto match_found = false;
-              for (const auto& row_id : *primary_predicate_matching_rows) {
+              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                   ++primary_predicate_matching_rows_iter) {
+                const auto row_id = *primary_predicate_matching_rows_iter;
                 if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                   pos_list_build_side_local.emplace_back(row_id);
                   pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
@@ -767,15 +797,15 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           if (secondary_join_predicates.empty()) {
             any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
           } else {
-            const auto primary_predicate_matching_rows =
+            auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
                 hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-            if (primary_predicate_matching_rows != hash_table.end()) {
-              for (const auto& row_id : *primary_predicate_matching_rows) {
-                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                  any_build_column_value_matches = true;
-                  break;
-                }
+            for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                 ++primary_predicate_matching_rows_iter) {
+              const auto row_id = *primary_predicate_matching_rows_iter;
+              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+                any_build_column_value_matches = true;
+                break;
               }
             }
           }
