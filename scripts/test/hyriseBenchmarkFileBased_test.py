@@ -66,10 +66,6 @@ def main():
 
     CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename_1, output_filename_2).run()
 
-    if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
-        print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
-        return_error = True
-
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     if not os.path.isfile(arguments["--output"].replace("'", "")):
