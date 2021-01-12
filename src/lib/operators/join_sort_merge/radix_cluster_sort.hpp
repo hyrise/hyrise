@@ -52,8 +52,9 @@ class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, size_t cluster_count)
-      : _left_input_table{left},
+                   const bool materialize_null_right, size_t cluster_count, OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+      : _performance{performance_data},
+        _left_input_table{left},
         _right_input_table{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
@@ -85,6 +86,8 @@ class RadixClusterSort {
   * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
   * be able to appropriately reserve space for the clustering output.
   **/
+  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
+
   struct ChunkInformation {
     explicit ChunkInformation(size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
