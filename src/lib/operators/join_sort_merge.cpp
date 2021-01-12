@@ -43,7 +43,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const OperatorJoinPredicate& primary_predicate,
                              const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {}
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates, std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,

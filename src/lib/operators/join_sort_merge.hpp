@@ -33,6 +33,14 @@ class JoinSortMerge : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
+  enum class OperatorSteps : uint8_t {
+    LeftSideMaterializing,
+    RightSideMaterializing,
+    Clustering,
+    Merging,
+    OutputWriting
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
