@@ -10,7 +10,7 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/simdCAI_segment.hpp"
+#include "storage/turboPFOR_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -172,7 +172,7 @@ class BinaryWriter {
     * The type of the column can be found in the global header of the file.
     */
   template <typename T>
-  static void _write_segment(const SIMDCAISegment<T>& simdCAI_segment, bool column_is_nullable,
+  static void _write_segment(const TurboPFORSegment<T>& turboPFOR_segment, bool column_is_nullable,
                              std::ofstream& ofstream);
 
   /**

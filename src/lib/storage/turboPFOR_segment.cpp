@@ -1,4 +1,4 @@
-#include "simdCAI_segment.hpp"
+#include "turboPFOR_segment.hpp"
 
 #include <algorithm>
 
@@ -9,33 +9,26 @@
 namespace opossum {
 
 template <typename T, typename U>
-SIMDCAISegment<T, U>::SIMDCAISegment(const std::shared_ptr<const pmr_vector<uint32_t>>& encoded_values,
+TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<const pmr_vector<unsigned char>>& encoded_values,
                                        std::optional<pmr_vector<bool>> null_values,
-                                       uint8_t codec_id,
                                        ChunkOffset size)
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
       _null_values{null_values},
-      _codec_id{codec_id},
       _size{size} {}
 
 template <typename T, typename U>
-const std::shared_ptr<const pmr_vector<uint32_t>> SIMDCAISegment<T, U>::encoded_values() const {
+const std::shared_ptr<const pmr_vector<unsigned char>> TurboPFORSegment<T, U>::encoded_values() const {
   return _encoded_values;
 }
 
 template <typename T, typename U>
-const std::optional<pmr_vector<bool>>& SIMDCAISegment<T, U>::null_values() const {
+const std::optional<pmr_vector<bool>>& TurboPFORSegment<T, U>::null_values() const {
   return _null_values;
 }
 
 template <typename T, typename U>
-uint8_t SIMDCAISegment<T, U>::codec_id() const {
-  return _codec_id;
-}
-
-template <typename T, typename U>
-AllTypeVariant SIMDCAISegment<T,U>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant TurboPFORSegment<T,U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
@@ -45,20 +38,20 @@ AllTypeVariant SIMDCAISegment<T,U>::operator[](const ChunkOffset chunk_offset) c
 }
 
 template <typename T, typename U>
-ChunkOffset SIMDCAISegment<T,U>::size() const {
+ChunkOffset TurboPFORSegment<T,U>::size() const {
   return _size;
 }
 
 template <typename T, typename U>
-std::shared_ptr<AbstractSegment> SIMDCAISegment<T,U>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> TurboPFORSegment<T,U>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_encoded_values = std::make_shared<pmr_vector<uint32_t>>(*_encoded_values, alloc);
+  auto new_encoded_values = std::make_shared<pmr_vector<unsigned char>>(*_encoded_values, alloc);
 
   std::optional<pmr_vector<bool>> new_null_values;
   if (_null_values) {
     new_null_values = pmr_vector<bool>(*_null_values, alloc);
   }
-  auto copy = std::make_shared<SIMDCAISegment<T,U>>(new_encoded_values, std::move(new_null_values), _codec_id, _size);
+  auto copy = std::make_shared<TurboPFORSegment<T,U>>(new_encoded_values, std::move(new_null_values), _size);
 
   copy->access_counter = access_counter;
 
@@ -66,28 +59,27 @@ std::shared_ptr<AbstractSegment> SIMDCAISegment<T,U>::copy_using_allocator(
 }
 
 template <typename T, typename U>
-size_t SIMDCAISegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+size_t TurboPFORSegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   size_t segment_size = sizeof(*this);
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
   }
   segment_size += _encoded_values->capacity() * sizeof(uint32_t);
-  segment_size += 1; // codec_id
   segment_size += 4; // size
   return segment_size;
 }
 
 template <typename T, typename U>
-EncodingType SIMDCAISegment<T,U>::encoding_type() const {
-  return EncodingType::SIMDCAI;
+EncodingType TurboPFORSegment<T,U>::encoding_type() const {
+  return EncodingType::TurboPFOR;
 }
 
 template <typename T, typename U>
-std::optional<CompressedVectorType> SIMDCAISegment<T,U>::compressed_vector_type() const {
+std::optional<CompressedVectorType> TurboPFORSegment<T,U>::compressed_vector_type() const {
   return std::nullopt;
 }
 
-template class SIMDCAISegment<int32_t>;
+template class TurboPFORSegment<int32_t>;
 // int64_t disabled for now, todo enable
 // template class FrameOfReferenceSegment<int64_t>;
 

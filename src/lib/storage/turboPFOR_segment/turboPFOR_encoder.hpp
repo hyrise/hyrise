@@ -3,18 +3,15 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
-#include "include/codecfactory.h"
-#include "include/intersection.h"
-#include "include/frameofreference.h"
-
-#include "storage/simdCAI_segment.hpp"
+#include "storage/turboPFOR_segment.hpp"
+#include "vp4.h"
 
 namespace opossum {
 
-class SIMDCAIEncoder : public SegmentEncoder<SIMDCAIEncoder> {
+class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
 
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::SIMDCAI>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::TurboPFOR>;
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
@@ -46,22 +43,15 @@ class SIMDCAIEncoder : public SegmentEncoder<SIMDCAIEncoder> {
     values.shrink_to_fit();
     null_values.shrink_to_fit();
 
-    SIMDCompressionLib::IntegerCODEC &codec = *SIMDCompressionLib::CODECFactory::getFromName("simdframeofreference");
-    const uint8_t codec_id = 0; // todo map to name
-
-    auto encodedValues = std::make_shared<pmr_vector<uint32_t>>(allocator);
-    encodedValues->resize(2 * values.size() + 1024);
-
-    auto encodedValuesSize = encodedValues->size();
-    codec.encodeArray(values.data(), values.size(), encodedValues->data(), encodedValuesSize);
-
-    encodedValues->resize(encodedValuesSize);
-    encodedValues->shrink_to_fit();
+    auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
+    outBuffer->resize(2*values.size() + 1024);
+    p4encx32(values.data(), static_cast<uint32_t>(values.size()), outBuffer->data());
+    outBuffer->shrink_to_fit();
 
     if (segment_contains_null_values) {
-      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::move(null_values), codec_id, values.size());
+      return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::move(null_values), values.size());
     } else {
-      return std::make_shared<SIMDCAISegment<T>>(encodedValues, std::nullopt, codec_id, values.size());
+      return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::nullopt, values.size());
     }
   }
 };

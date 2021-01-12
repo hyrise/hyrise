@@ -232,8 +232,8 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
         segment_type += "LZ4";
         break;
       }
-      case EncodingType::SIMDCAI: {
-        segment_type += "SIMDCAI";
+      case EncodingType::TurboPFOR: {
+        segment_type += "TurboPFOR";
         break;
       }
     }

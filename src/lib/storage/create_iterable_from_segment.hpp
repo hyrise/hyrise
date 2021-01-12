@@ -23,7 +23,7 @@ template <typename T>
 class LZ4Segment;
 
 template <typename T, typename>
-class SIMDCAISegment;
+class TurboPFORSegment;
 
 class ReferenceSegment;
 template <typename T, EraseReferencedSegmentType>
@@ -77,11 +77,11 @@ template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
 auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 template <typename T, typename Enabled, bool EraseSegmentType = HYRISE_DEBUG> // todo erase?
-auto create_iterable_from_segment(const SIMDCAISegment<T, Enabled>& segment);
+auto create_iterable_from_segment(const TurboPFORSegment<T, Enabled>& segment);
 
 // Fix template deduction so that we can call `create_iterable_from_segment<T, false>` on FrameOfReferenceSegments todo: do we need this?
 template <typename T, bool EraseSegmentType, typename Enabled>
-auto create_iterable_from_segment(const SIMDCAISegment<T, Enabled>& segment) {
+auto create_iterable_from_segment(const TurboPFORSegment<T, Enabled>& segment) {
   return create_iterable_from_segment<T, Enabled, EraseSegmentType>(segment);
 }
 

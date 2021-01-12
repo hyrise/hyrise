@@ -248,23 +248,20 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const SIMDCAISegment<T>& simdCAI_segment, bool column_is_nullable,
+void BinaryWriter::_write_segment(const TurboPFORSegment<T>& turboPFOR_segment, bool column_is_nullable,
                                   std::ofstream& ofstream) {
-  export_value(ofstream, EncodingType::SIMDCAI);
+  export_value(ofstream, EncodingType::TurboPFOR);
 
   // Write size and values
-  export_value(ofstream, static_cast<uint32_t>(simdCAI_segment.encoded_values()->size()));
-  export_values(ofstream, *simdCAI_segment.encoded_values());
+  export_value(ofstream, static_cast<uint32_t>(turboPFOR_segment.encoded_values()->size()));
+  export_values(ofstream, *turboPFOR_segment.encoded_values());
 
   // Write flag if optional NULL value vector is written
-  export_value(ofstream, static_cast<BoolAsByteType>(simdCAI_segment.null_values().has_value()));
-  if (simdCAI_segment.null_values()) {
+  export_value(ofstream, static_cast<BoolAsByteType>(turboPFOR_segment.null_values().has_value()));
+  if (turboPFOR_segment.null_values()) {
     // Write NULL values
-    export_values(ofstream, *simdCAI_segment.null_values());
+    export_values(ofstream, *turboPFOR_segment.null_values());
   }
-
-  // Write Codec id (to be mapped to actual codec name)
-  export_value(ofstream, simdCAI_segment.codec_id());
 }
 
 template <>

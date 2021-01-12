@@ -440,10 +440,10 @@ set(
     storage/dictionary_segment/dictionary_segment_iterable.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
-    storage/simdCAI_segment.cpp
-    storage/simdCAI_segment.hpp
-    storage/simdCAI_segment/simdCAI_encoder.hpp
-    storage/simdCAI_segment/simdCAI_segment_iterable.hpp
+    storage/turboPFOR_segment.cpp
+    storage/turboPFOR_segment.hpp
+    storage/turboPFOR_segment/turboPFOR_encoder.hpp
+    storage/turboPFOR_segment/turboPFOR_segment_iterable.hpp
     storage/fixed_string_dictionary_segment.cpp
     storage/fixed_string_dictionary_segment.hpp
     storage/fixed_string_dictionary_segment/fixed_string.cpp
@@ -651,7 +651,7 @@ set(
 
 set(
     LIBRARIES
-    custom_SIMDCompressionAndIntersection
+    turboPFOR
     lz4
     sqlparser
     uninitialized_vector
