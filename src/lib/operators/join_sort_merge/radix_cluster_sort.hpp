@@ -346,6 +346,8 @@ class RadixClusterSort {
     // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
+    Timer timer_clustering;
+
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
       output.clusters_right = _concatenate_chunks(materialized_right_segments);
@@ -357,14 +359,16 @@ class RadixClusterSort {
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer_materialization.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer_clustering.lap());
+
+    Timer timer_sorting;
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
 
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer_materialization.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer_sorting.lap());
 
     return output;
   }
