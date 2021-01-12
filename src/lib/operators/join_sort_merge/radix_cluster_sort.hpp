@@ -53,7 +53,8 @@ class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, size_t cluster_count, OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+                   const bool materialize_null_right, size_t cluster_count,
+                   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _performance{performance_data},
         _left_input_table{left},
         _right_input_table{right},

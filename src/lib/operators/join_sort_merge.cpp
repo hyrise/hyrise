@@ -43,7 +43,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const OperatorJoinPredicate& primary_predicate,
                              const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates, std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -71,7 +72,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
     using ColumnDataType = typename decltype(type)::type;
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
         *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-        _primary_predicate.predicate_condition, _mode, _secondary_predicates,  dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates,
+        dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
 
   return _impl->_on_execute();
@@ -108,7 +110,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
  protected:
   JoinSortMerge& _sort_merge_join;
-  
+
   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
   // Contains the materialized sorted input tables
