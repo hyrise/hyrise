@@ -71,7 +71,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
     using ColumnDataType = typename decltype(type)::type;
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
         *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-        _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates,  dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
 
   return _impl->_on_execute();
@@ -92,8 +92,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
-                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates)
+                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                       OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
+        _performance{performance_data},
         _primary_left_column_id{left_column_id},
         _primary_right_column_id{right_column_id},
         _primary_predicate_condition{op},
@@ -106,6 +108,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
  protected:
   JoinSortMerge& _sort_merge_join;
+  
+  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
