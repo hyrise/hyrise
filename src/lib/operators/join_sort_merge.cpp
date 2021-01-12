@@ -896,6 +896,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
+    Timer timer_materialization;
+
     _perform_join();
 
     if (include_null_left || include_null_right) {
@@ -925,6 +927,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _output_pos_lists_right.push_back(null_output_right);
       }
     }
+
+    _performance.set_step_runtime(OperatorSteps::Merging, timer_materialization.lap());
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
@@ -975,7 +979,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // Wait for all chunk creation tasks to finish
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
     }
-
+    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_materialization.lap());
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
         std::remove_if(output_chunks.begin(), output_chunks.end(),

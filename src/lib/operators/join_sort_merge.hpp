@@ -9,6 +9,7 @@
 #include "abstract_join_operator.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -37,6 +38,7 @@ class JoinSortMerge : public AbstractJoinOperator {
     LeftSideMaterializing,
     RightSideMaterializing,
     Clustering,
+    Sorting,
     Merging,
     OutputWriting
   };
