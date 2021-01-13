@@ -10,6 +10,46 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
+namespace {
+
+void generate_benchmark_data(std::string argument_string) {
+  std::vector<std::string> benchmark_data_config;
+
+  // Remove unnecessary white spaces
+  boost::trim_if(argument_string, boost::is_any_of(":"));
+
+  // Remove dashes and convert to lower case to unify different writings of benchmarks ("TPC-H", "tpch", or "tpc-h")
+  boost::replace_all(argument_string, "-", "");
+  boost::to_lower(argument_string);
+
+  // Split benchmark name and sizing factor
+  boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
+  Assert(benchmark_data_config.size() < 3,
+         "Malformed input for benchmark data generation. Expecting a benchmark "
+         "name and a sizing factor.");
+
+  const auto benchmark_name = benchmark_data_config[0];
+  const auto sizing_factor = boost::lexical_cast<float, std::string>(benchmark_data_config[1]);
+
+  Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
+         "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
+
+  auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+  config->cache_binary_tables = true;
+  if (benchmark_name == "tpcc") {
+    config->cache_binary_tables = false;  // Not yet supported for TPC-C
+    opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+  } else if (benchmark_name == "tpcds") {
+    opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+  } else if (benchmark_name == "tpch") {
+    opossum::TPCHTableGenerator{sizing_factor, config}.generate_and_store();
+  } else {
+    Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
+  }
+}
+
+}  // namespace
+
 cxxopts::Options get_server_cli_options() {
   cxxopts::Options cli_options("./hyriseServer", "Starts Hyrise server in order to accept network requests.");
 
@@ -40,48 +80,15 @@ int main(int argc, char* argv[]) {
   }
 
   /**
-    * The following code handles the parameter `benchmark_data` which allows users to generate benchmark data when
-    * starting the hyrise server. This is not an ideal solution, but due to several users requests and our goal to
-    * facilitate easy evaluation of hyrise, we decided to integrate the data generation in to the server nonetheless.
+    * The optional parameter `benchmark_data` allows users to generate benchmark data when starting the hyrise server.
+    * This is not an ideal solution, but due to several users requests and our goal to facilitate easy evaluation of
+    * Hyrise, we decided to integrate the data generation into the server nonetheless.
     *
     * We do not plan on exposing other parameters, such as the encoding or the chunk size via this facility. You can
     * change the modify the config object as needed.
     */
   if (parsed_options.count("benchmark_data")) {
-    auto benchmark_data_arg = parsed_options["benchmark_data"].as<std::string>();
-    std::vector<std::string> benchmark_data_config;
-
-    // Remove unnecessary white spaces
-    boost::trim_if(benchmark_data_arg, boost::is_any_of(":"));
-
-    // Remove dashes and convert to lower case to unify different writings of benchmarks ("TPC-H", "tpch", or "tpc-h")
-    boost::replace_all(benchmark_data_arg, "-", "");
-    boost::to_lower(benchmark_data_arg);
-
-    // Split benchmark name and sizing factor
-    boost::split(benchmark_data_config, benchmark_data_arg, boost::is_any_of(":"), boost::token_compress_on);
-    Assert(benchmark_data_config.size() < 3,
-           "Malformed input for benchmark data generation. Expecting a benchmark "
-           "name and a sizing factor.");
-
-    const auto benchmark_name = benchmark_data_config[0];
-    const auto sizing_factor = boost::lexical_cast<float, std::string>(benchmark_data_config[1]);
-
-    Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
-           "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
-
-    auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
-    config->cache_binary_tables = true;
-    if (benchmark_name == "tpcc") {
-      config->cache_binary_tables = false;  // Not yet supported for TPC-C
-      opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
-    } else if (benchmark_name == "tpcds") {
-      opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
-    } else if (benchmark_name == "tpch") {
-      opossum::TPCHTableGenerator{sizing_factor, config}.generate_and_store();
-    } else {
-      Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
-    }
+    generate_benchmark_data(parsed_options["benchmark_data"].as<std::string>());
   }
 
   const auto execution_info = parsed_options["execution_info"].as<bool>();
