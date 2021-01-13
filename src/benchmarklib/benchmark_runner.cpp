@@ -7,6 +7,7 @@
 #include <boost/range/adaptors.hpp>
 #include "cxxopts.hpp"
 
+#include "operators/print.hpp"
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
@@ -127,6 +128,11 @@ void BenchmarkRunner::run() {
       break;
     }
   }
+
+  const auto table = SQLPipelineBuilder{"SELECT * FROM meta_segments_accurate"}
+                        .create_pipeline()
+                        .get_result_table().second;
+  Print::print(table);
 
   auto benchmark_end = std::chrono::system_clock::now();
   _total_run_duration = benchmark_end - _benchmark_start;
