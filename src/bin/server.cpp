@@ -18,10 +18,10 @@ cxxopts::Options get_server_cli_options() {
     ("help", "Display this help and exit") // NOLINT
     ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))  // NOLINT
     ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the the server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))  // NOLINT
-    ("benchmark_data", "Specify the benchmark name and sizing factor to generate at server start (e.g., " // NOLINT
-                       "\"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). supported are TPC-C, TPC-DS, and TPC-H. "
-                       "The sizing factor determines the scale factor in TPC-DS and TPC-H, and the warehouse "
-                       "count in TPC-C.", cxxopts::value<std::string>()) // NOLINT
+    ("benchmark_data", "Optional for benchmarking purposes: specify the benchmark name and sizing factor to generate "
+                       "at server start (e.g., \"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). Supported are TPC-C, "
+                       "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
+                       "warehouse count in TPC-C.", cxxopts::value<std::string>()) // NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ;  // NOLINT
   // clang-format on
@@ -43,21 +43,29 @@ int main(int argc, char* argv[]) {
     * The following code handles the parameter `benchmark_data` which allows users to generate benchmark data when
     * starting the hyrise server. This is not an ideal solution, but due to several users requests and our goal to
     * facilitate easy evaluation of hyrise, we decided to integrate the data generation in to the server nonetheless.
+    *
+    * We do not plan on exposing other parameters, such as the encoding or the chunk size via this facility. You can
+    * change the modify the config object as needed.
     */
   if (parsed_options.count("benchmark_data")) {
     auto benchmark_data_arg = parsed_options["benchmark_data"].as<std::string>();
-    std::vector<std::string> bechmark_data_config;
+    std::vector<std::string> benchmark_data_config;
 
+    // Remove unnecessary white spaces
     boost::trim_if(benchmark_data_arg, boost::is_any_of(":"));
+
+    // Remove dashes and convert to lower case to unify different writings of benchmarks ("TPC-H", "tpch", or "tpc-h")
     boost::replace_all(benchmark_data_arg, "-", "");
     boost::to_lower(benchmark_data_arg);
-    boost::split(bechmark_data_config, benchmark_data_arg, boost::is_any_of(":"), boost::token_compress_on);
-    Assert(bechmark_data_config.size() < 3,
+
+    // Split benchmark name and sizing factor
+    boost::split(benchmark_data_config, benchmark_data_arg, boost::is_any_of(":"), boost::token_compress_on);
+    Assert(benchmark_data_config.size() < 3,
            "Malformed input for benchmark data generation. Expecting a benchmark "
            "name and a sizing factor.");
 
-    const auto benchmark_name = bechmark_data_config[0];
-    const auto sizing_factor = boost::lexical_cast<float, std::string>(bechmark_data_config[1]);
+    const auto benchmark_name = benchmark_data_config[0];
+    const auto sizing_factor = boost::lexical_cast<float, std::string>(benchmark_data_config[1]);
 
     Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
            "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
