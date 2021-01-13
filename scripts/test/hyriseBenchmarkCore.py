@@ -62,7 +62,7 @@ def run_benchmark(build_dir, arguments, benchmark_name, verbose):
     concat_arguments = " ".join(["=".join(map(str, x)) for x in arguments.items()])
 
     benchmark = pexpect.spawn(
-        build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=1000, dimensions=(200, 64),
+        build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=1000, dimensions=(200, 64)
     )
     if verbose:
         benchmark.logfile = sys.stdout.buffer
