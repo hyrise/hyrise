@@ -22,15 +22,17 @@
 
 namespace opossum {
 
+using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<std::vector<std::shared_ptr<PredicateNode>>>>
+  std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicateChain>>
       predicate_chains_by_stored_table_node;
 
   // (1) Collect StoredTableNodes
   const auto stored_table_nodes = lqp_find_leafs<StoredTableNode>(lqp_root);
   for (const auto& stored_table_node : stored_table_nodes) {
     predicate_chains_by_stored_table_node.emplace(stored_table_node,
-                                                  std::vector<std::vector<std::shared_ptr<PredicateNode>>>{});
+                                                  std::vector<PredicateChain>{});
   }
 
   // (2) Collect chains of PredicateNodes on top of each StoredTableNode
@@ -63,7 +65,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const Table& table, const std::vector<std::shared_ptr<PredicateNode>>& predicate_chain,
+    const Table& table, const PredicateChain& predicate_chain,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   std::set<ChunkID> global_excluded_chunk_ids;
   for (auto predicate_node : predicate_chain) {
@@ -241,10 +243,10 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
                                            old_statistics.row_count - static_cast<float>(num_rows_pruned));
 }
 
-std::vector<std::vector<std::shared_ptr<PredicateNode>>> ChunkPruningRule::find_predicate_chains_recursively(
+std::vector<PredicateChain> ChunkPruningRule::find_predicate_chains_recursively(
     const std::shared_ptr<StoredTableNode>& stored_table_node, const std::shared_ptr<AbstractLQPNode>& node,
-    std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain) {
-  std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_chains;
+    PredicateChain current_predicate_chain) {
+  std::vector<PredicateChain> predicate_chains;
 
   visit_lqp_upwards(node, [&](const auto& current_node) {
     /**
