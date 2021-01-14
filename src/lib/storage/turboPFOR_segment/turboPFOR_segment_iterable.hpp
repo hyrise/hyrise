@@ -65,7 +65,8 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
             _null_values{null_values},
             _chunk_offset{chunk_offset} {
 
-        _decoded_values = std::vector<uint32_t>(size);
+        _decoded_values = std::vector<uint32_t>();
+        _decoded_values.reserve(size);
         p4dec32(const_cast<unsigned char*>(_encoded_values->data()), size, _decoded_values.data());
       }
 
