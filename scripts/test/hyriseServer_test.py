@@ -13,9 +13,9 @@ def main():
 
     benchmark = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01", timeout=10)
 
-    benchmark.expect_exact("Loading/Generating tables", timeout=2)
-    benchmark.expect_exact("Encoding 'lineitem'", timeout=10)
-    benchmark.expect_exact("Server started at 0.0.0.0 and port 5432", timeout=10)
+    benchmark.expect_exact("Loading/Generating tables", timeout=120)
+    benchmark.expect_exact("Encoding 'lineitem'", timeout=120)
+    benchmark.expect_exact("Server started at 0.0.0.0 and port 5432", timeout=120)
 
     client = pexpect.spawn("psql -h localhost -p 5432", timeout=10)
 

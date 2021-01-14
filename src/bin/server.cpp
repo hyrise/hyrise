@@ -13,8 +13,6 @@
 namespace {
 
 void generate_benchmark_data(std::string argument_string) {
-  std::vector<std::string> benchmark_data_config;
-
   // Remove unnecessary white spaces
   boost::trim_if(argument_string, boost::is_any_of(":"));
 
@@ -22,11 +20,11 @@ void generate_benchmark_data(std::string argument_string) {
   boost::replace_all(argument_string, "-", "");
   boost::to_lower(argument_string);
 
+  auto benchmark_data_config = std::vector<std::string>{};
   // Split benchmark name and sizing factor
   boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
-  Assert(benchmark_data_config.size() < 3,
-         "Malformed input for benchmark data generation. Expecting a benchmark "
-         "name and a sizing factor.");
+  Assert(benchmark_data_config.size() == 2,
+         "Malformed input for benchmark data generation. Expecting a benchmark name and a sizing factor.");
 
   const auto benchmark_name = benchmark_data_config[0];
   const auto sizing_factor = boost::lexical_cast<float, std::string>(benchmark_data_config[1]);
@@ -81,7 +79,7 @@ int main(int argc, char* argv[]) {
 
   /**
     * The optional parameter `benchmark_data` allows users to generate benchmark data when starting the hyrise server.
-    * This is not an ideal solution, but due to several users requests and our goal to facilitate easy evaluation of
+    * This is not an ideal solution, but due to several users' requests and our goal to facilitate easy evaluation of
     * Hyrise, we decided to integrate the data generation into the server nonetheless.
     *
     * We do not plan on exposing other parameters, such as the encoding or the chunk size via this facility. You can
