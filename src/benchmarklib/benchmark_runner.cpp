@@ -264,6 +264,11 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
+    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+    std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    Hyrise::get().scheduler()->wait_for_all_tasks();
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
@@ -274,7 +279,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
         accumulator;
     for (const auto& entry : result.successful_runs) {
-      const duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
+      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
       accumulator(static_cast<double>(duration.count()));
     }
     const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
@@ -289,10 +294,6 @@ void BenchmarkRunner::_benchmark_ordered() {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
-
-    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
     // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
     // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
