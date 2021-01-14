@@ -265,7 +265,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _state.set_done();
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    if (_currently_running_clients > 0) std::cout << "  -> Waiting for clients that are still running" << std::endl;
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
