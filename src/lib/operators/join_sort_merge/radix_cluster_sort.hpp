@@ -336,12 +336,12 @@ class RadixClusterSort {
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
+    output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer_materialization.lap());
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer_materialization.lap());
-    output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer_materialization.lap());
 
     // Append right samples to left samples and sort (reserve not necessary when insert can
     // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
@@ -362,14 +362,12 @@ class RadixClusterSort {
     }
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer_clustering.lap());
 
-    Timer timer_sorting;
-
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
 
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer_sorting.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer_clustering.lap());
 
     return output;
   }

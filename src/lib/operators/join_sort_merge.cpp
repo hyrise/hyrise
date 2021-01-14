@@ -938,7 +938,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Threshold of expected rows per partition over which parallel output jobs are spawned.
     constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
 
-    Timer timer_output_writing;
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
     const auto first_output_size = _output_pos_lists_left[0]->size();
@@ -982,7 +981,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // Wait for all chunk creation tasks to finish
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
     }
-    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_merging.lap());
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
         std::remove_if(output_chunks.begin(), output_chunks.end(),
