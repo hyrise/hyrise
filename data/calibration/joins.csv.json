@@ -134,6 +134,26 @@
             "name": "RIGHT_INPUT_CHUNKS",
             "nullable": false,
             "type": "long"
+        },
+        {
+            "name": "LEFT_TABLE_PRUNED_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_TABLE_PRUNED_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "LEFT_TABLE_ROW_COUNT",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_TABLE_ROW_COUNT",
+            "nullable": false,
+            "type": "long"
         }
     ],
     "config": {

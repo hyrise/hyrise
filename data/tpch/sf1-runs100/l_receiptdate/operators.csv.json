@@ -77,8 +77,13 @@
         },
         {
             "name": "PREDICATE",
-            "nullable": true,
+            "nullable": false,
             "type": "string"
+        },
+        {
+            "name": "SKIPPED_CHUNKS",
+            "nullable": false,
+            "type": "long"
         }
     ],
     "config": {

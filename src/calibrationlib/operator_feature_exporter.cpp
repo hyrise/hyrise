@@ -245,6 +245,13 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
        mode == JoinMode::Semi ||
        (mode == JoinMode::Inner && operator_info.left_input_rows > operator_info.right_input_rows)));
 
+
+  const auto pruned_chunks_left_input = _get_pruned_chunk_count(op->left_input(), std::string{left_table_name});
+  const auto pruned_chunks_right_input = _get_pruned_chunk_count(op->right_input(), std::string{right_table_name});
+
+  const int64_t row_count_left = (left_table_name == "") ? 0 : Hyrise::get().storage_manager.get_table(std::string{left_table_name})->row_count();
+  const int64_t row_count_right = (right_table_name == "") ? 0 : Hyrise::get().storage_manager.get_table(std::string{right_table_name})->row_count();
+
   auto output_row = std::vector<AllTypeVariant>{_current_join_id,
                                                 operator_info.name,
                                                 join_mode,
@@ -271,7 +278,11 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                 right_column_sorted,
                                                 _current_query_hash,
                                                 operator_info.left_input_chunks,
-                                                operator_info.right_input_chunks};
+                                                operator_info.right_input_chunks,
+                                                static_cast<int64_t>(pruned_chunks_left_input),
+                                                static_cast<int64_t>(pruned_chunks_right_input),
+                                                row_count_left,
+                                                row_count_right};
 
   // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
   // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that
@@ -291,10 +302,37 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     output_row[23] = left_column_sorted;
     output_row[25] = operator_info.right_input_chunks;
     output_row[26] = operator_info.left_input_chunks;
+    output_row[27] = static_cast<int64_t>(pruned_chunks_right_input);
+    output_row[28] = static_cast<int64_t>(pruned_chunks_left_input);
+    output_row[29] = row_count_right;
+    output_row[30] = row_count_left;
   }
 
   _join_output_table->append(output_row);
   ++_current_join_id;
+}
+
+size_t OperatorFeatureExporter::_get_pruned_chunk_count(std::shared_ptr<const AbstractOperator> op, const std::string& table_name) {
+  while (op->type() != OperatorType::GetTable) {
+    if (op->right_input()) {
+      // two inputs, and we do not know where our GetTable is - so go both paths
+      const auto left_count = _get_pruned_chunk_count(op->left_input(), table_name);
+      const auto right_count = _get_pruned_chunk_count(op->right_input(), table_name);
+      return std::min(left_count, right_count);
+    } else {
+      // one input - simply go left
+      op = op->left_input();
+    }
+  }
+
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(op);
+  Assert(op, "Cast failed");
+  if (get_table->table_name() == table_name) {
+    std::cout << "found table " << table_name << " with " << get_table->pruned_chunk_ids().size() << " pruned chunks" << std::endl;
+    return get_table->pruned_chunk_ids().size();
+  }
+
+  return std::numeric_limits<size_t>::max() - 1;
 }
 
 void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetTable>& op) {

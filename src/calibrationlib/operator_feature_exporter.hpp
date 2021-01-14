@@ -59,6 +59,7 @@ class OperatorFeatureExporter {
   void _export_general_operator(const std::shared_ptr<const AbstractOperator>& op);
   void _export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op);
   void _export_join(const std::shared_ptr<const AbstractJoinOperator>& op);
+  size_t _get_pruned_chunk_count(std::shared_ptr<const AbstractOperator> op, const std::string& table_name);
   void _export_get_table(const std::shared_ptr<const GetTable>& op);
   void _export_table_scan(const std::shared_ptr<const TableScan>& op);
   void _export_index_scan(const std::shared_ptr<const IndexScan>& op);
@@ -148,7 +149,12 @@ class OperatorFeatureExporter {
                                                      {"RIGHT_INPUT_COLUMN_SORTED", DataType::String, true},
                                                      {"QUERY_HASH", DataType::String, true},
                                                      {"LEFT_INPUT_CHUNKS", DataType::Long, false},
-                                                     {"RIGHT_INPUT_CHUNKS", DataType::Long, false}},
+                                                     {"RIGHT_INPUT_CHUNKS", DataType::Long, false},
+                                                     {"LEFT_TABLE_PRUNED_CHUNKS", DataType::Long, false},
+                                                     {"RIGHT_TABLE_PRUNED_CHUNKS",  DataType::Long, false},
+                                                     {"LEFT_TABLE_ROW_COUNT", DataType::Long, false},
+                                                     {"RIGHT_TABLE_ROW_COUNT", DataType::Long, false}
+                                                   },
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},
