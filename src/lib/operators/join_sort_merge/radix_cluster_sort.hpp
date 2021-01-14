@@ -343,8 +343,8 @@ class RadixClusterSort {
     output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);
 
-    // Append right samples to left samples and sort (reserve not necessarity when insert can
-    // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
+    // Append right samples to left samples and sort (reserve not necessary when insert can
+    // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     Timer timer_clustering;
