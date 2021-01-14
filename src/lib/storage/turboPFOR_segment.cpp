@@ -15,7 +15,10 @@ TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<const pmr_vector<
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
       _null_values{null_values},
-      _size{size} {}
+      _size{size} {
+          in = const_cast<unsigned char*>(_encoded_values->data());
+          p4ini(&init_values, &in, size, &b);
+      }
 
 template <typename T, typename U>
 const std::shared_ptr<const pmr_vector<unsigned char>> TurboPFORSegment<T, U>::encoded_values() const {
@@ -64,8 +67,11 @@ size_t TurboPFORSegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCal
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
   }
-  segment_size += _encoded_values->capacity() * sizeof(uint32_t);
+  segment_size += _encoded_values->capacity() * sizeof(unsigned char);
   segment_size += 4; // size
+  segment_size += 4; // b
+  segment_size += 58; //vp4
+
   return segment_size;
 }
 

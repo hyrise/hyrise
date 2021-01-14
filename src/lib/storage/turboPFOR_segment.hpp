@@ -1,5 +1,7 @@
 #pragma once
 
+#define TURBOPFOR_DAC
+
 #include <memory>
 #include <type_traits>
 
@@ -9,6 +11,9 @@
 
 #include "abstract_encoded_segment.hpp"
 #include "types.hpp"
+
+#include "bitpack.h"
+#include "vp4.h"
 
 namespace opossum {
 
@@ -54,7 +59,8 @@ class TurboPFORSegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    return std::nullopt;
+    T value = static_cast<T>(p4getx32(const_cast<p4*>(&init_values), in, chunk_offset, b));
+    return value;
   }
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
@@ -77,6 +83,11 @@ class TurboPFORSegment : public AbstractEncodedSegment {
   const std::shared_ptr<const pmr_vector<unsigned char>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
   ChunkOffset _size;
+
+  // TURBOPFOR Specific
+  p4 init_values;
+  unsigned int b;
+  unsigned char* in;
 };
 
 }  // namespace opossum

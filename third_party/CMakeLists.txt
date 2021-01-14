@@ -101,7 +101,7 @@ target_include_directories(
 
 target_compile_options(lz4 PRIVATE -fPIC)
 
-## Build TurboPFOR
+## Build TurboPFOR (https://stackoverflow.com/questions/31274577/custom-target-as-a-target-library-in-cmake)
 SET(TURBOPFOR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/TurboPFor-Integer-Compression/libic.a)
 SET(TURBOPFOR_HEADER_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/TurboPFor-Integer-Compression)
 

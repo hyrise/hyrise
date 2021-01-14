@@ -1,11 +1,16 @@
 #pragma once
 
+#define TURBOPFOR_DAC
+
 #include <algorithm>
 
 #include "storage/segment_iterables.hpp"
 #include "storage/turboPFOR_segment.hpp"
 
 #include "utils/performance_warning.hpp"
+
+#include "bitpack.h"
+#include "vp4.h"
 
 namespace opossum {
 
@@ -61,6 +66,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
             _chunk_offset{chunk_offset} {
 
         _decoded_values = std::vector<uint32_t>(size);
+        p4dec32(const_cast<unsigned char*>(_encoded_values->data()), size, _decoded_values.data());
       }
 
     private:
@@ -119,8 +125,8 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
                {std::move(position_filter_begin),std::move(position_filter_it)},
         _encoded_values{encoded_values},
         _null_values{null_values} {
-
-      _decoded_values = std::vector<uint32_t>(size);
+          in = const_cast<unsigned char*>(_encoded_values->data());
+          p4ini(&init_values, &in, size, &b);
     }
 
     private:
@@ -131,14 +137,18 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = *_null_values ? (**_null_values)[current_offset] : false;
-
-      return SegmentPosition<T>{0, is_null, chunk_offsets.offset_in_poslist};
+      const auto value = p4getx32(const_cast<p4*>(&init_values), in, current_offset, b);
+      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
     private:
     std::shared_ptr<const pmr_vector<unsigned char>> _encoded_values;
     const std::optional<pmr_vector<bool>>* _null_values;
-    std::vector<uint32_t> _decoded_values;
+
+    // TURBOPFOR Specific
+    p4 init_values;
+    unsigned int b;
+    unsigned char* in;
   };
 };
 
