@@ -7,6 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 import warnings
+import math
 
 from random import randrange
 from sklearn.ensemble import GradientBoostingRegressor
@@ -196,6 +197,18 @@ def import_train_test_data(train_path, test_path):
 
 def get_join_scores(model_types, train_data, test_data, implementation, ohe_candidates, out):
     scores = dict()
+
+    train_data = train_data.copy()
+    train_data = train_data.dropna()
+    test_data = test_data.copy()
+    test_data = test_data.dropna()
+
+    CHUNK_SIZE = 65535
+    train_data["PROBE_TABLE_PRUNED_CHUNK_RATIO"] = train_data.apply(lambda x: x['PROBE_TABLE_PRUNED_CHUNKS'] / (math.ceil(x['PROBE_TABLE_ROW_COUNT'] / CHUNK_SIZE)), axis=1)
+    train_data["BUILD_TABLE_PRUNED_CHUNK_RATIO"] = train_data.apply(lambda x: x['BUILD_TABLE_PRUNED_CHUNKS'] / (math.ceil(x['BUILD_TABLE_ROW_COUNT'] / CHUNK_SIZE)), axis=1)
+    test_data["PROBE_TABLE_PRUNED_CHUNK_RATIO"] = test_data.apply(lambda x: x['PROBE_TABLE_PRUNED_CHUNKS'] / (math.ceil(x['PROBE_TABLE_ROW_COUNT'] / CHUNK_SIZE)), axis=1)
+    test_data["BUILD_TABLE_PRUNED_CHUNK_RATIO"] = test_data.apply(lambda x: x['BUILD_TABLE_PRUNED_CHUNKS'] / (math.ceil(x['BUILD_TABLE_ROW_COUNT'] / CHUNK_SIZE)), axis=1)
+
     for build_column_type in train_data["BUILD_COLUMN_TYPE"].unique():
         for probe_column_type in train_data["PROBE_COLUMN_TYPE"].unique():
             print(" ", build_column_type, probe_column_type)
@@ -227,12 +240,12 @@ def get_join_scores(model_types, train_data, test_data, implementation, ohe_cand
                 "BUILD_INPUT_CHUNKS",
                 "RUNTIME_NS",
                 "JOIN_MODE",
+                "PROBE_TABLE_PRUNED_CHUNK_RATIO",
+                "BUILD_TABLE_PRUNED_CHUNK_RATIO",
             ]
 
             model_train_data = model_train_data[keep_labels]
             model_test_data = model_test_data[keep_labels]
-            model_train_data.dropna()
-            model_test_data.dropna()
 
             dummy_columns = np.concatenate(
                 [[label for label in model_train_data.columns if keyword in label] for keyword in ohe_candidates]
@@ -409,7 +422,6 @@ def train_cost_models(train_data, test_data, args):
         "COMPRESSION_TYPE",
         "SORTED",
         "JOIN_MODE",
-        "PREDICATE",
     ]
 
     # make separate models for different operators

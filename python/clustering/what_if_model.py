@@ -82,7 +82,7 @@ class WhatIfModel(DisjointClustersModel):
 
         scans = self.table_scans.copy()
         scans = self.adapt_scans_to_clustering(scans, clustering_columns, sorting_column, dimension_cardinalities)
-        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_SORTED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
+        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'PREDICATE', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_SORTED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
         
         scans_by_implementation = scans.groupby(['OPERATOR_IMPLEMENTATION'])
         for operator_implementation, df in scans_by_implementation:
@@ -112,6 +112,19 @@ class WhatIfModel(DisjointClustersModel):
 
         joins['BUILD_SORTED'] = joins.apply(set_sortedness, args=("BUILD", ), axis=1)
         joins['PROBE_SORTED'] = joins.apply(set_sortedness, args=("PROBE", ), axis=1)
+
+        joins['BUILD_TABLE_PRUNED_CHUNK_RATIO'] = 0
+        joins['PROBE_TABLE_PRUNED_CHUNK_RATIO'] = 0
+
+
+        scans_per_query = self.table_scans.groupby(['QUERY_HASH', 'GET_TABLE_HASH'])
+        for (query_hash, _), query_scans in scans_per_query:
+            unprunable_parts = query_scans.apply(self.compute_unprunable_parts, axis=1, args=(clustering_columns, dimension_cardinalities,))
+            unprunable_part = unprunable_parts.product()
+            assert unprunable_part >= 0 and unprunable_part <= 1, "unprunable part: " + str(unprunable_part)
+
+            joins.loc[((joins['QUERY_HASH'] == query_hash) & (joins['BUILD_TABLE'] == self.table_name)), 'BUILD_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
+            joins.loc[((joins['QUERY_HASH'] == query_hash) & (joins['PROBE_TABLE'] == self.table_name)), 'PROBE_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
 
         return joins
         
