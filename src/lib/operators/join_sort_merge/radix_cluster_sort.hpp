@@ -330,24 +330,22 @@ class RadixClusterSort {
   RadixClusterOutput<T> execute() {
     RadixClusterOutput<T> output;
 
-    Timer timer_materialization;
+    Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer_materialization.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer_materialization.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
 
     // Append right samples to left samples and sort (reserve not necessary when insert can
     // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
-
-    Timer timer_clustering;
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
@@ -360,14 +358,14 @@ class RadixClusterSort {
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer_clustering.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer.lap());
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
 
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer_clustering.lap());
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer.lap());
 
     return output;
   }
