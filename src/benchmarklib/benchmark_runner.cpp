@@ -273,8 +273,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     // Compute mean by using accumulators
     boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
         accumulator;
-    for (auto entry : result.successful_runs) {
-      auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
+    for (const auto& entry : result.successful_runs) {
+      const duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
       accumulator(static_cast<double>(duration.count()));
     }
     const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
