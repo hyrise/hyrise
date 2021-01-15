@@ -178,11 +178,6 @@ class PQPInputParser(object):
     joins['BUILD_TABLE_ROW_COUNT'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_TABLE_ROW_COUNT"] if not x['BUILD_SIDE'] == "NULL" else "NULL", axis=1)
     validate_joins(joins)
 
-    # TODO: Ugly hack. Required because I mixed up the order of BUILD_SORTED and PROBE_SORTED columns
-    tmp = joins['BUILD_SORTED'].copy()
-    joins['BUILD_SORTED'] = joins['PROBE_SORTED'].copy()
-    joins['PROBE_SORTED'] = tmp
-
     joins['OPERATOR_IMPLEMENTATION'] = joins.apply(lambda x: x['DESCRIPTION'].split()[0], axis=1)
     joins['BUILD_COLUMN_TYPE'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_COLUMN_TYPE"], axis=1)
     joins['BUILD_INPUT_CHUNKS'] = joins.apply(lambda x: x[x['BUILD_SIDE'] + "_TABLE_CHUNK_COUNT"], axis=1)

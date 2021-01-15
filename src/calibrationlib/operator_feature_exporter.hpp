@@ -7,6 +7,7 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/table_scan.hpp"
@@ -50,10 +51,10 @@ class OperatorFeatureExporter {
 
   void export_to_csv(const std::shared_ptr<const AbstractOperator> op);
   void export_to_csv(const std::shared_ptr<const AbstractOperator> op, const std::string& query);
-
   void flush();
 
  protected:
+  bool _data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op, const std::string& table_name) const;
   void _export_to_csv(const std::shared_ptr<const AbstractOperator>& op);
   void _export_operator(const std::shared_ptr<const AbstractOperator>& op);
   void _export_general_operator(const std::shared_ptr<const AbstractOperator>& op);

@@ -10,6 +10,7 @@
 #include "hyrise.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -20,6 +21,53 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+// Assumption: just one GetTable per table
+bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op, const std::string& table_name) const {
+  const auto& type = op->type();
+  if (type == OperatorType::Aggregate) {
+    return false;
+  } else if (type == OperatorType::GetTable) {
+    const auto get_table = dynamic_pointer_cast<const GetTable>(op);
+    Assert(get_table, "Not a GetTable");
+    return get_table->table_name() == table_name;
+  } else if (op->right_input()) {
+    // Two inputs
+    if (type == OperatorType::JoinHash) {
+      const auto hash_join = dynamic_pointer_cast<const JoinHash>(op);
+      Assert(hash_join, "Not a JoinHash");
+      const auto mode = hash_join->mode();
+      const auto& perf_data = dynamic_cast<const JoinHash::PerformanceData&>(*hash_join->performance_data);
+      if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
+        if (perf_data.radix_bits == 0) {
+          if (perf_data.right_input_is_build_side) {
+            return _data_arrives_ordered(op->left_input(), table_name);
+          } else {
+            return _data_arrives_ordered(op->right_input(), table_name);
+          }
+        } else {
+          // TODO: only if there is a join with > 0 radix bits on another column
+          return false;
+        }
+      } else {
+        // TODO: if probe side, this may be unaffected instead
+        return false;
+      }
+    } else if (type == OperatorType::JoinSortMerge) {
+      // A SortMergeJoin might produce clustered data, but the original clustering does not exist anymore.
+      // TODO: If used for a benchmark where the sort merge join is more common than in TPC-H/DS, it may be worth to incorporate this knowledge
+      return false;
+    } else {
+      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll, "unhandled operator type: " + op->description());
+      return _data_arrives_ordered(op->left_input(), table_name);
+    }
+  } else {
+    // One input, but neither Aggregate nor GetTable
+    // This leaves TableScan, Validate, more?
+    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection, "unconsidered operator type: " + op->description());
+    return _data_arrives_ordered(op->left_input(), table_name);
+  }
+}
 
 OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
     : _path_to_dir(path_to_dir),
