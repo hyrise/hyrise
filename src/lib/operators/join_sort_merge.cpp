@@ -929,7 +929,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _output_pos_lists_right.push_back(null_output_right);
       }
     }
-
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
@@ -982,6 +981,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
         std::remove_if(output_chunks.begin(), output_chunks.end(),

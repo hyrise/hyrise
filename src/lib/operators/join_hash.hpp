@@ -5,7 +5,6 @@
 #include "abstract_join_operator.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
