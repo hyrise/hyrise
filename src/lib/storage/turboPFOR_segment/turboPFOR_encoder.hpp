@@ -44,9 +44,9 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
     null_values.shrink_to_fit();
 
     auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
-    outBuffer->reserve(8 * values.size() + 1024);
+    outBuffer->resize(8 * values.size());
     p4encx32(values.data(), values.size(), outBuffer->data());
-    outBuffer->shrink_to_fit();
+    //outBuffer->shrink_to_fit();
 
     if (segment_contains_null_values) {
       return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::move(null_values), values.size());

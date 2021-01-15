@@ -57,7 +57,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
       using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
     public:
-      explicit Iterator(const std::shared_ptr<const pmr_vector<unsigned char>>& encoded_values,
+      explicit Iterator(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
                         const std::optional<pmr_vector<bool>>* null_values,
                         ChunkOffset size,
                         ChunkOffset chunk_offset)
@@ -66,8 +66,8 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
             _chunk_offset{chunk_offset} {
 
         _decoded_values = std::vector<uint32_t>();
-        _decoded_values.reserve(size);
-        p4dec32(const_cast<unsigned char*>(_encoded_values->data()), size, _decoded_values.data());
+        _decoded_values.resize(size);
+        p4dec32(encoded_values->data(), size, _decoded_values.data());
       }
 
     private:
@@ -117,7 +117,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
     using ValueType = T;
     using IterableType = TurboPFORSegmentIterable<T>;
 
-    explicit PointAccessIterator(const std::shared_ptr<const pmr_vector<unsigned char>>& encoded_values,
+    explicit PointAccessIterator(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
                                  const std::optional<pmr_vector<bool>>* null_values,
                                  ChunkOffset size,
                                  const PosListIteratorType position_filter_begin,
@@ -126,8 +126,10 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
                {std::move(position_filter_begin),std::move(position_filter_it)},
         _encoded_values{encoded_values},
         _null_values{null_values} {
-          in = const_cast<unsigned char*>(_encoded_values->data());
-          p4ini(&init_values, &in, size, &b);
+          in = encoded_values->data();
+          if (size != 0) {
+            p4ini(&init_values, &in, size, &b);
+          }
     }
 
     private:
@@ -143,7 +145,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
     }
 
     private:
-    std::shared_ptr<const pmr_vector<unsigned char>> _encoded_values;
+    std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
     const std::optional<pmr_vector<bool>>* _null_values;
 
     // TURBOPFOR Specific

@@ -37,11 +37,11 @@ template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
     enum_c<EncodingType, EncodingType::TurboPFOR>, hana::type_c<T>)>>
 class TurboPFORSegment : public AbstractEncodedSegment {
  public:
-  explicit TurboPFORSegment(const std::shared_ptr<const pmr_vector<unsigned char>>& encoded_values,
+  explicit TurboPFORSegment(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
                            std::optional<pmr_vector<bool>> null_values,
                            ChunkOffset size);
 
-  const std::shared_ptr<const pmr_vector<unsigned char>> encoded_values() const;
+  const std::shared_ptr<pmr_vector<unsigned char>> encoded_values() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
   ChunkOffset size() const final;
 
@@ -80,7 +80,7 @@ class TurboPFORSegment : public AbstractEncodedSegment {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const pmr_vector<unsigned char>> _encoded_values;
+  const std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
   ChunkOffset _size;
 

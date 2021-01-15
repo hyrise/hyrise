@@ -9,19 +9,21 @@
 namespace opossum {
 
 template <typename T, typename U>
-TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<const pmr_vector<unsigned char>>& encoded_values,
+TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
                                        std::optional<pmr_vector<bool>> null_values,
                                        ChunkOffset size)
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
       _null_values{null_values},
       _size{size} {
-          in = const_cast<unsigned char*>(_encoded_values->data());
-          p4ini(&init_values, &in, size, &b);
+          in = encoded_values->data();
+          if (size != 0) {
+            p4ini(&init_values, &in, size, &b);
+          }
       }
 
 template <typename T, typename U>
-const std::shared_ptr<const pmr_vector<unsigned char>> TurboPFORSegment<T, U>::encoded_values() const {
+const std::shared_ptr<pmr_vector<unsigned char>> TurboPFORSegment<T, U>::encoded_values() const {
   return _encoded_values;
 }
 
