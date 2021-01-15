@@ -44,7 +44,7 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
     null_values.shrink_to_fit();
 
     auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
-    outBuffer->resize(8 * values.size());
+    outBuffer->resize(16 * values.size());
     p4encx32(values.data(), values.size(), outBuffer->data());
     //outBuffer->shrink_to_fit();
 
