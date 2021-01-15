@@ -35,19 +35,79 @@ namespace opossum {
   * the predicates present in the LQP and stores that information in the stored
   * table nodes.
   */
+
+  class DipsJoinGraphEdge;
+  class DipsJoinGraphNode;
+  class DipsJoinGraph;
+  
+  class DipsJoinGraphEdge {
+    public:
+      std::shared_ptr<DipsJoinGraphNode> partner_node;
+      std::vector<std::shared_ptr<AbstractExpression>> predicates;
+
+      DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> partner_node) {     
+        this->partner_node = partner_node;
+        this->predicates = std::vector<std::shared_ptr<AbstractExpression>>();
+      }
+      
+  };
+
+  class DipsJoinGraphNode {
+    public:
+      std::vector<std::shared_ptr<DipsJoinGraphNode>> children = std::vector<std::shared_ptr<DipsJoinGraphNode>>();
+      std::shared_ptr<DipsJoinGraphNode> parent;
+      std::shared_ptr<StoredTableNode> table_node;
+      std::vector<std::shared_ptr<DipsJoinGraphEdge>> edges;
+
+      DipsJoinGraphNode(std::shared_ptr<StoredTableNode> table_node) {     
+        this->table_node = table_node;
+      }
+
+      std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> table_node){
+        for(auto edge : edges){
+          if (edge->partner_node == table_node){
+            return edge;
+          }
+        }
+        std::shared_ptr<DipsJoinGraphEdge> edge = std::make_shared<DipsJoinGraphEdge>(table_node);
+        edges.push_back(edge);
+        return edge;
+      }
+  };
+
+  class DipsJoinGraph {
+    public:
+      std::shared_ptr<DipsJoinGraphNode> get_node_for_table(std::shared_ptr<StoredTableNode> table_node){
+        for(auto graph_node : nodes){
+          if (graph_node->table_node == table_node){
+            return graph_node;
+          }
+        }
+        std::shared_ptr<DipsJoinGraphNode> graph_node = std::make_shared<DipsJoinGraphNode>(table_node);
+        nodes.push_back(graph_node);
+        return graph_node;
+      }
+      std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
+  };
+
+
+  std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
+
   class DipsPruningRule : public AbstractRule {
   public:
     void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+    
 
   protected:
+    
     void dips_pruning(
       const std::shared_ptr<const StoredTableNode> table_node, 
       ColumnID column_id, 
       std::shared_ptr<StoredTableNode> join_partner_table_node, 
       ColumnID join_partner_column_id) const;
 
+    void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const;
     void extend_pruned_chunks( std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const;
-
 
     template<typename COLUMN_TYPE>
     std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>

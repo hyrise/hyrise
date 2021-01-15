@@ -18,9 +18,27 @@
 #include "hyrise.hpp"
 #include <iostream>
 
+
 namespace opossum {
 
+
   void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+      
+      // 1. bau den JoinGraph (Baum traversieren)
+      // (1.1) Verhindere Zyklen
+      // 2. Waehle Wurzel
+      // 3. Child-Parent Pointers setzen
+      // 4. Baum von unten nach oben durchgehen (Paper)
+      // 5. Baum von oben nach unten durchgehen (Paper)
+
+    // _clear_join_graph();
+
+    std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+    _build_join_graph(node, join_graph);
+    
+    std::cout << *join_graph << '\n';
+
+    /*
     _apply_to_inputs(node);
 
     if (node->type == LQPNodeType::Join) {
@@ -62,6 +80,47 @@ namespace opossum {
       
       }
     }
+    */
+  }
+
+  void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const {
+    if (node->left_input()) _build_join_graph(node->left_input(), join_graph);
+    if (node->right_input()) _build_join_graph(node->right_input(), join_graph);
+
+    if (node->type == LQPNodeType::Join) {
+      const auto& join_node = static_cast<JoinNode&>(*node);
+      const auto join_predicates = join_node.join_predicates();
+
+      for (auto predicate : join_predicates) {
+
+        std::shared_ptr<BinaryPredicateExpression> binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+        auto left_operand = binary_predicate->left_operand();
+        auto right_operand = binary_predicate->right_operand();
+
+        auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+        auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+
+        if (!left_lqp || !right_lqp) {
+          continue;
+        }
+
+        std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+        std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+
+        // access join graph nodes
+        auto left_join_graph_node = join_graph->get_node_for_table(left_stored_table_node);
+        auto right_join_graph_node = join_graph->get_node_for_table(right_stored_table_node);
+        
+        // access edges
+        auto left_right_edge = left_join_graph_node->get_edge_for_table(right_join_graph_node);
+        auto right_left_edge = right_join_graph_node->get_edge_for_table(left_join_graph_node);
+
+        // append predicates
+        left_right_edge->predicates.push_back(predicate);
+        right_left_edge->predicates.push_back(predicate);
+        
+      }
+    }
   }
 
   void DipsPruningRule::extend_pruned_chunks( std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const
@@ -92,5 +151,28 @@ namespace opossum {
       extend_pruned_chunks(join_partner_table_node, pruned_chunks);
     });
   } 
+
+  std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
+      stream << "==== Vertices ====" << std::endl;
+    if (join_graph.nodes.empty()) {
+      stream << "<none>" << std::endl;
+    } else {
+      for (const auto node : join_graph.nodes) {
+        stream << node->table_node->description() << std::endl;
+        stream << "      ==== Edges ====" << std::endl;
+        for (const auto edge : node->edges) {
+          stream << "      " << edge->partner_node->table_node->description() << std::endl;
+          stream << "            ==== Predicates ====" << std::endl;
+          for (auto predicate : edge->predicates) {
+            stream << "            " << predicate->description() << std::endl;
+          }
+        }
+      }
+    }
+
+    return stream;
+  }
+
+
 
 }
