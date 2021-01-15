@@ -220,9 +220,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                 << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-      fn_stream << "/";
-      fn_stream << *abstract_operator.performance_data;
-      fn_stream << ")";
+      fn_stream << "/" << *abstract_operator.performance_data << ")";
     }
   };
 
