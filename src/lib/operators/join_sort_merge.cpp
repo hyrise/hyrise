@@ -212,12 +212,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * A run is a series of rows in a cluster with the same value.
   **/
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result,
-                  std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
-    size_t cluster_number = left_run.start.cluster;
+                  std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                  size_t cluster_number,
+                  std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks, std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks) {
+    // size_t cluster_number = left_run.start.cluster;
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
-          _emit_qualified_combinations(cluster_number, left_run, right_run, multi_predicate_join_evaluator);
+          _emit_qualified_combinations(cluster_number, left_run, right_run, multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         } else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
             _emit_right_primary_null_combinations(cluster_number, left_run);
@@ -231,45 +233,45 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::NotEquals:
         if (compare_result == CompareResult::Greater) {
           _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run,
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         } else if (compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run,
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
           _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table),
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         } else if (compare_result == CompareResult::Less) {
           _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table),
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         }
         break;
       case PredicateCondition::GreaterThan:
         if (compare_result == CompareResult::Greater) {
           _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run,
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         } else if (compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run,
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         }
         break;
       case PredicateCondition::GreaterThanEquals:
         if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run,
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         }
         break;
       case PredicateCondition::LessThan:
         if (compare_result == CompareResult::Less) {
           _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table),
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         } else if (compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table),
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         }
         break;
       case PredicateCondition::LessThanEquals:
         if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table),
-                                       multi_predicate_join_evaluator);
+                                       multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
         }
         break;
       default:
@@ -290,20 +292,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     * where also the secondary predicates are satisfied.
     **/
   void _emit_qualified_combinations(size_t output_cluster, TableRange left_range, TableRange right_range,
-                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
+                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                    std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks, std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks) {
     if (multi_predicate_join_evaluator) {
       if (_mode == JoinMode::Inner) {
         _emit_combinations_multi_predicated_inner(output_cluster, left_range, right_range,
                                                   *multi_predicate_join_evaluator);
       } else if (_mode == JoinMode::Left) {
         _emit_combinations_multi_predicated_left_outer(output_cluster, left_range, right_range,
-                                                       *multi_predicate_join_evaluator);
+                                                       *multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks);
       } else if (_mode == JoinMode::Right) {
         _emit_combinations_multi_predicated_right_outer(output_cluster, left_range, right_range,
-                                                        *multi_predicate_join_evaluator);
+                                                        *multi_predicate_join_evaluator, right_row_ids_emitted_per_chunks);
       } else if (_mode == JoinMode::FullOuter) {
         _emit_combinations_multi_predicated_full_outer(output_cluster, left_range, right_range,
-                                                       *multi_predicate_join_evaluator);
+                                                       *multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
       }
     } else {
       // no secondary join predicates
@@ -339,7 +342,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _emit_combinations_multi_predicated_left_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range,
-                                                      MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+                                                      MultiPredicateJoinEvaluator& multi_predicate_join_evaluator,
+                                                      std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
@@ -356,11 +360,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _left_row_ids_emitted.emplace(left_row_id, false);
+        left_row_ids_emitted_per_chunks[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted[left_row_id] = true;
+            left_row_ids_emitted_per_chunks[output_cluster][left_row_id] = true;
           }
         });
       });
@@ -375,7 +379,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     **/
   void _emit_combinations_multi_predicated_right_outer(size_t output_cluster, TableRange left_range,
                                                        TableRange right_range,
-                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator,
+                                                       std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         bool right_row_id_matched = false;
@@ -392,11 +397,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _right_row_ids_emitted.emplace(right_row_id, false);
+        right_row_ids_emitted_per_chunks[output_cluster].emplace(right_row_id, false);
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _right_row_ids_emitted[right_row_id] = true;
+            right_row_ids_emitted_per_chunks[output_cluster][right_row_id] = true;
           }
         });
       });
@@ -412,7 +417,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     **/
   void _emit_combinations_multi_predicated_full_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range,
-                                                      MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+                                                      MultiPredicateJoinEvaluator& multi_predicate_join_evaluator,
+                                                      std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks, std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       std::set<RowID> matched_right_row_ids;
 
@@ -439,14 +445,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         // If left_row_id not yet in _left_row_ids_emitted, this initializes it to false
-        _left_row_ids_emitted[left_row_id];
+        left_row_ids_emitted_per_chunks[output_cluster][left_row_id];
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           // If right_row_id not yet in _right_row_id_has_match, this initializes it to false
-          _right_row_ids_emitted[right_row_id];
+          right_row_ids_emitted_per_chunks[output_cluster][right_row_id];
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted[left_row_id] = true;
-            _right_row_ids_emitted[right_row_id] = true;
+            left_row_ids_emitted_per_chunks[output_cluster][left_row_id] = true;
+            right_row_ids_emitted_per_chunks[output_cluster][right_row_id] = true;
           }
         });
       });
@@ -505,7 +511,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number,
-                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
+                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks, std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks) {
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
@@ -526,7 +532,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
-      _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
+      _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_number, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
 
       // Advance to the next run on the smaller side or both if equal
       if (compare_result == CompareResult::Equal) {
@@ -550,9 +556,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto right_rest = TableRange(cluster_number, right_run_start, right_size);
     auto left_rest = TableRange(cluster_number, left_run_start, left_size);
     if (left_run_start < left_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator);
+      _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_number, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
     } else if (right_run_start < right_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator);
+      _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_number, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
     }
   }
 
@@ -767,10 +773,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-
+    std::vector<std::map<RowID, bool>> left_row_ids_emitted_per_chunks;
+    std::vector<std::map<RowID, bool>> right_row_ids_emitted_per_chunks;
+    left_row_ids_emitted_per_chunks.resize(_cluster_count);
+    right_row_ids_emitted_per_chunks.resize(_cluster_count);
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
+
       _output_pos_lists_left[cluster_number] = std::make_shared<RowIDPosList>();
       _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
 
@@ -781,7 +791,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+      left_row_ids_emitted_per_chunks[cluster_number] = std::map<RowID, bool> {};
+      right_row_ids_emitted_per_chunks[cluster_number] = std::map<RowID, bool> {};
+
+      jobs.push_back(std::make_shared<JobTask>([this, cluster_number, &left_row_ids_emitted_per_chunks, &right_row_ids_emitted_per_chunks] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -790,7 +803,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                  _secondary_join_predicates);
         }
 
-        this->_join_cluster(cluster_number, multi_predicate_join_evaluator);
+        this->_join_cluster(cluster_number, multi_predicate_join_evaluator, left_row_ids_emitted_per_chunks, right_row_ids_emitted_per_chunks);
       }));
     }
 
@@ -800,10 +813,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
+      // Merge maps into multi-set to not override values. For example true with false or the other way around.
+      for (auto const& map : left_row_ids_emitted_per_chunks){
+        for (auto const& submap : map) {
+          _left_row_ids_emitted[submap.first] =  _left_row_ids_emitted[submap.first] || submap.second;
+        }
+      }
       _left_outer_non_equi_join();
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
+      for (auto const& map : right_row_ids_emitted_per_chunks){
+        for (auto const& submap : map) {
+          _right_row_ids_emitted[submap.first] =  _right_row_ids_emitted[submap.first] || submap.second;
+        }
+      }
       _right_outer_non_equi_join();
     }
   }
