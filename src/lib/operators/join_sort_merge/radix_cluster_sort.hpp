@@ -333,11 +333,12 @@ class RadixClusterSort {
     Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
+
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);
