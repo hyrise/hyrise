@@ -82,7 +82,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS_ALL}")
 # Build the binary optimized for the current system, ignoring older systems. For x86 systems, we use -march=native.
 # Clang does not support -march=native on ARM. ARM recommends setting -mcpu for both GCC and Clang instead of march:
 # https://community.arm.com/developer/tools-software/tools/b/tools-software-ides-blog/posts/compiler-flags-across-architectures-march-mtune-and-mcpu
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+message(${CMAKE_SYSTEM_PROCESSOR}) 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
     set(FLAGS_RELEASE "-mcpu=native")
 else()
     set(FLAGS_RELEASE "-march=native")  
