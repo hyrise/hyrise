@@ -51,7 +51,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionLeft) {
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -68,7 +68,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -86,7 +86,7 @@ TEST_F(BetweenCompositionTest, NoColumnRange) {
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
     PredicateNode::make(greater_than_equals_(_a_a, 200),
-      _node_a));
+      _node_a->deep_copy()));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -103,7 +103,7 @@ TEST_F(BetweenCompositionTest, EmptyColumnRange) {
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 300, 200),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -134,7 +134,7 @@ TEST_F(BetweenCompositionTest, PredicateChain) {
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -153,7 +153,7 @@ TEST_F(BetweenCompositionTest, LongPredicateChain) {
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
     PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-      _node_a));
+      _node_a->deep_copy()));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -170,7 +170,7 @@ TEST_F(BetweenCompositionTest, LeftExclusive) {
 
   const auto expected_lqp =
   PredicateNode::make(between_lower_exclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -187,7 +187,7 @@ TEST_F(BetweenCompositionTest, RightExclusive) {
 
   const auto expected_lqp =
   PredicateNode::make(between_upper_exclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -204,7 +204,7 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
 
   const auto expected_lqp =
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -226,7 +226,7 @@ TEST_F(BetweenCompositionTest, TwoChains) {
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
       ValidateNode::make(
         PredicateNode::make(between_exclusive_(_a_b, 500, 600),
-          _node_a)));
+          _node_a->deep_copy())));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -276,7 +276,7 @@ TEST_F(BetweenCompositionTest, TwoColumnsNoMatch) {
 
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_a, _a_b),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -295,7 +295,7 @@ TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-   _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -314,7 +314,7 @@ TEST_F(BetweenCompositionTest, FindOptimalExclusiveBetween) {
 
   const auto expected_lqp =
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
-    _node_a);
+    _node_a->deep_copy());
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -333,7 +333,7 @@ TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
     PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-      _node_a));
+      _node_a->deep_copy()));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -357,7 +357,7 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
   PredicateNode::make(less_than_equals_(_a_c, 200),
     PredicateNode::make(between_inclusive_(_a_a, 230, 250),
       PredicateNode::make(between_inclusive_(_a_b, 150, 200),
-        _node_a)));
+        _node_a->deep_copy())));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -376,7 +376,7 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   const auto expected_lqp =
   PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
     PredicateNode::make(between_exclusive_(_a_a, 100, 200),
-      _node_a));
+      _node_a->deep_copy()));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
