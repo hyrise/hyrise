@@ -151,10 +151,14 @@ ExpressionEvaluator::ExpressionEvaluator(
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expression_to_result(
     const AbstractExpression& expression) {
+
+  // std::cout << "================" << std::endl;
+  // std::cout << "at hand is: " << expression << std::endl;
   // First, look in the cache
   const auto expression_ptr = expression.shared_from_this();
   const auto cached_result_iter = _cached_expression_results.find(expression_ptr);
   if (cached_result_iter != _cached_expression_results.end()) {
+    // std::cout << "cache hit for: " << expression << std::endl;
     return std::static_pointer_cast<ExpressionResult<Result>>(cached_result_iter->second);
   }
 
@@ -229,8 +233,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
           "without instantiating it first?");
   }
 
+  // std::cout << "storing in cache. size before: " << _cached_expression_results.size();
   // Store the result in the cache
   _cached_expression_results.insert(cached_result_iter, {expression_ptr, result});
+  // std::cout << "after before: " << _cached_expression_results.size() << std::endl;
 
   return std::static_pointer_cast<ExpressionResult<Result>>(result);
 }
@@ -620,6 +626,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_
 
   const auto& segment = *_chunk->get_segment(column_expression.column_id);
   Assert(segment.data_type() == data_type_from_type<Result>(), "Can't evaluate segment to different type");
+
+  // std::cout << "materializing " << column_expression << "(colid:" << column_expression.column_id << ")" << std::endl;
 
   _materialize_segment_if_not_yet_materialized(column_expression.column_id);
   return std::static_pointer_cast<ExpressionResult<Result>>(_segment_materializations[column_expression.column_id]);

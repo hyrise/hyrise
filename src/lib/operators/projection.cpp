@@ -118,6 +118,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+
+    // std::cout << "\n\n\n" << std::endl;
+
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -127,11 +130,23 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
+
+
+      std::stringstream ss;
+      ss << *expression;
+      auto str = ss.str();
+      if (str.find("l_extendedprice") != std::string::npos) {
+        all_segments_forwarded = false;
+        continue;
+      }
+
+
       if (expression->type != ExpressionType::PQPColumn) {
         all_segments_forwarded = false;
         continue;
       }
       // Forward input segment if possible
+      // std::cout << "PROJ: forwarding " << *expression << std::endl;
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
       output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
       column_is_nullable[column_id] = input_table.column_is_nullable(pqp_column_expression.column_id);
@@ -151,7 +166,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
-        if (expression->type != ExpressionType::PQPColumn) {
+
+        std::stringstream ss;
+        ss << *expression;
+        auto str = ss.str();
+        if (expression->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) {
+          // std::cout << "PROJ: evaluating " << *expression << std::endl;
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
           column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
@@ -190,7 +210,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                                   expressions[column_id]->data_type(), column_is_nullable[column_id]};
     output_column_definitions.emplace_back(definition);
 
-    if (expressions[column_id]->type != ExpressionType::PQPColumn && output_table_type == TableType::References) {
+    std::stringstream ss;
+    ss << *expressions[column_id];
+    auto str = ss.str();
+    if ((expressions[column_id]->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) && output_table_type == TableType::References) {
       projection_result_column_definitions.emplace_back(definition);
     }
   }
@@ -226,7 +249,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_chunk->size());
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // Turn newly generated ValueSegments into ReferenceSegments, if needed
-      if (expressions[column_id]->type != ExpressionType::PQPColumn && output_table_type == TableType::References) {
+      std::stringstream ss;
+      ss << *expressions[column_id];
+      auto str = ss.str();
+      if ((expressions[column_id]->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) && output_table_type == TableType::References) {
         projection_result_segments.emplace_back(output_segments_by_chunk[chunk_id][column_id]);
 
         const auto projection_result_column_id =
