@@ -42,10 +42,11 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
     #assert len(m.join_estimates[m.join_estimates['ESTIMATE_OUTPUT_WRITING'] < 0]) == 0, "not all runtimes computed"
     
     assert len(m.join_estimates[m.join_estimates['RUNTIME_ESTIMATE'] == -1]) == 0, "not all runtimes computed"
-    num_negative_runtime_joins = len(m.join_estimates[m.join_estimates['RUNTIME_ESTIMATE'] < 0])
-    if num_negative_runtime_joins > 0:
-      print(f"There are {num_negative_runtime_joins} with estimated negative run time. This is bad.")
-      print(m.join_estimates[m.join_estimates['RUNTIME_ESTIMATE'] < 0])
+    negative_estimates = m.join_estimates[m.join_estimates['RUNTIME_ESTIMATE'] < 0]
+    if len(negative_estimates) > 0:
+      print(f"There are {len(negative_estimates)} joins with estimated negative run time. This is bad.")
+      print(negative_estimates)
+      m.join_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 0
 
     clustered_stats_parser = PQPInputParser("tpch", ground_truth_path)
     clustered_stats_parser.load_statistics()
@@ -107,8 +108,13 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
 
 def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
     m.estimate_total_runtime(clustering_columns, sorting_column, dimension_cardinalities)
-    unestimated_scans = m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] < 0]
-    assert len(unestimated_scans) == 0, "not all runtimes computed: " + str(unestimated_scans)
+
+    assert len(m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] == -1]) == 0, "not all runtimes computed"
+    negative_estimates = m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] < 0]
+    if len(negative_estimates) > 0:
+      print(f"There are: {len(negative_estimates)} negative scan estimates. This is bad.")
+      print(negative_estimates)
+      m.scan_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 0
     
     path = f"{ground_truth_path}/table_scans.csv"
     clustered_scans = pd.read_csv(path, sep='|')
