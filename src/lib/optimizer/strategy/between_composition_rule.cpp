@@ -368,7 +368,7 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
     //  - the LQP branches or
     //  - a chain of adjacent PredicateNodes ends.
     visit_lqp_upwards(node, [&](const auto& current_node) {
-      Assert(!visited_nodes.contains(current_node), "Did not expect to see nodes twice.");
+      if (visited_nodes.contains(current_node)) return LQPUpwardVisitation::DoNotVisitOutputs;
       visited_nodes.insert(current_node);
 
       // Check whether LQP branches
