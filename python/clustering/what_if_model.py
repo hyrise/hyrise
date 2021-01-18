@@ -7,11 +7,12 @@ import util
 
 class WhatIfModel(DisjointClustersModel):
     
-    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation, model_dir='cost_model_output/models/', model_type='boost'):
+    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation, model_dir='cost_model_output/models/', scan_model_type='boost', join_model_type='boost'):
         super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation)
         self.models = util.load_models(model_dir)
         self.model_formats = util.load_model_input_formats(model_dir)
-        self.model_type = model_type
+        self.scan_model_type = scan_model_type
+        self.join_model_type = join_model_type
         self.table_scans = self.table_scans.copy()
         self.joins = self.joins.copy()
     
@@ -88,7 +89,7 @@ class WhatIfModel(DisjointClustersModel):
         scans_by_implementation = scans.groupby(['OPERATOR_IMPLEMENTATION'])
         for operator_implementation, df in scans_by_implementation:
             print(f"## Estimating {operator_implementation} scans")
-            model_name = util.get_table_scan_model_name(self.model_type, operator_implementation)
+            model_name = util.get_table_scan_model_name(self.scan_model_type, operator_implementation)
             model = self.models[model_name]
             
             df = df.copy()
@@ -108,9 +109,9 @@ class WhatIfModel(DisjointClustersModel):
         # Set sortedness information
         def set_sortedness(row, side):
             if self.table_name != row[f"{side}_TABLE"]:
-                return str(row[f"{side}_SORTED"])
+                return str(row[f"{side}_SORTED"]) == "1" and row[f"{side}_COLUMN"] in self.sorted_columns_during_creation[row[f"{side}_TABLE"]]
             else:
-                return "1" if int(row[f"{side}_SORTED"]) == 1 and row[f"{side}_COLUMN"] == sorting_column else "0"
+                return True if int(row[f"{side}_SORTED"]) == 1 and row[f"{side}_COLUMN"] == sorting_column else False
 
         joins['BUILD_SORTED'] = joins.apply(set_sortedness, args=("BUILD", ), axis=1)
         joins['PROBE_SORTED'] = joins.apply(set_sortedness, args=("PROBE", ), axis=1)
@@ -154,20 +155,20 @@ class WhatIfModel(DisjointClustersModel):
         joins_by_implementation = joins.groupby(['OPERATOR_IMPLEMENTATION', 'BUILD_COLUMN_TYPE', 'PROBE_COLUMN_TYPE'])
         for (implementation, build_type, probe_type), df in joins_by_implementation:
             print(f"## Estimating {build_type} {probe_type} joins")
-            model_name = util.get_join_model_name(self.model_type, implementation, build_type, probe_type)
+            model_name = util.get_join_model_name(self.join_model_type, implementation, build_type, probe_type)
             model = self.models[model_name]
-            
+
             df = df.copy()
-            df = df.drop(columns=['OPERATOR_IMPLEMENTATION', 'PREDICATE_COUNT', 'PRIMARY_PREDICATE'])            
+            df = df.drop(columns=['OPERATOR_IMPLEMENTATION', 'PREDICATE_COUNT', 'PRIMARY_PREDICATE'])
             df = util.preprocess_data(df)
             df = df.rename(columns={
                 'PROBE_TABLE_ROW_COUNT': 'PROBE_INPUT_ROWS',
                 'BUILD_TABLE_ROW_COUNT': 'BUILD_INPUT_ROWS',
                 'OUTPUT_ROW_COUNT': 'OUTPUT_ROWS',
-                'BUILD_SORTED_0': 'BUILD_INPUT_COLUMN_SORTED_No',
-                'BUILD_SORTED_1': 'BUILD_INPUT_COLUMN_SORTED_Ascending',
-                'PROBE_SORTED_0': 'PROBE_INPUT_COLUMN_SORTED_No',
-                'PROBE_SORTED_1': 'PROBE_INPUT_COLUMN_SORTED_Ascending'
+                'BUILD_SORTED_False': 'BUILD_INPUT_COLUMN_SORTED_No',
+                'BUILD_SORTED_True': 'BUILD_INPUT_COLUMN_SORTED_Ascending',
+                'PROBE_SORTED_False': 'PROBE_INPUT_COLUMN_SORTED_No',
+                'PROBE_SORTED_True': 'PROBE_INPUT_COLUMN_SORTED_Ascending'
             })
 
             df = df.drop(columns=['BUILDING_NS', 'BUILD_COLUMN', 'BUILD_SIDE', 'BUILD_SIDE_MATERIALIZING_NS', 'BUILD_TABLE', 'CLUSTERING_NS', 'DESCRIPTION', 'IS_FLIPPED', 'LEFT_COLUMN_NAME', 'LEFT_COLUMN_TYPE_DATA', 'LEFT_COLUMN_TYPE_REFERENCE', 'LEFT_INPUT_OPERATOR_HASH', 'LEFT_TABLE_CHUNK_COUNT', 'LEFT_TABLE_NAME', 'LEFT_TABLE_ROW_COUNT', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'PROBE_COLUMN', 'PROBE_SIDE', 'PROBE_SIDE_MATERIALIZING_NS', 'PROBE_TABLE', 'PROBING_NS', 'QUERY_HASH', 'RADIX_BITS', 'RIGHT_COLUMN_NAME', 'RIGHT_COLUMN_TYPE_REFERENCE', 'RIGHT_INPUT_OPERATOR_HASH', 'RIGHT_TABLE_CHUNK_COUNT', 'RIGHT_TABLE_NAME', 'RIGHT_TABLE_ROW_COUNT', 'RUNTIME_NS'], errors="ignore")
