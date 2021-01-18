@@ -358,18 +358,20 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
   for (const auto& leaf_node : lqp_find_leafs(lqp_root)) {
     node_queue.push(leaf_node);
   }
-  // (1.2) Visit the LQP from the bottom up
+  // (1.2) Visit the LQP bottom-up from the leaf nodes
   while (!node_queue.empty()) {
     auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>();
     auto node = node_queue.front();
     node_queue.pop();
 
-    // Visit LQP upwards until it branches or a chain of adjacent PredicateNodes ends.
+    // Follow nodes upwards until
+    //  - the LQP branches or
+    //  - a chain of adjacent PredicateNodes ends.
     visit_lqp_upwards(node, [&](const auto& current_node) {
       Assert(!visited_nodes.contains(current_node), "Did not expect to see nodes twice.");
       visited_nodes.insert(current_node);
 
-      // Add to node_queue if LQP branches
+      // Check whether LQP branches
       if (current_node->outputs().size() > 1) {
         for (const auto& output_node : current_node->outputs()) {
           if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
@@ -398,8 +400,8 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
   }
 
   // (2) Replace predicates, if possible
-  for (const auto& adjacent_predicate_nodes_set : grouped_predicate_nodes) {
-    _replace_predicates(adjacent_predicate_nodes_set);
+  for (const auto& predicate_nodes : grouped_predicate_nodes) {
+    _replace_predicates(predicate_nodes);
   }
 }
 
