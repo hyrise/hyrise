@@ -118,35 +118,27 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //
   //
 
-
-  // Not using shard_ptr<abst expr> here since SUM(price) and price are not equal, which we need.
-  // auto pqp_column_id_occurences = std::vector<size_t>(expression_count);
-  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-  //   const auto& expression = expressions[column_id];
-  //   // std::cout << *expression << " ..." << std::endl;
-  //   visit_expression(expression, [&](const auto& sub_expression) {
-  //     // std::cout << *sub_expression << std::endl;
-  //     if (sub_expression->type == ExpressionType::PQPColumn) {
-  //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-  //       const auto pqp_column_id = pqp_column.column_id;
-  //       // std::cout << *sub_expression << " has column id: " << pqp_column.column_id << std::endl;
-  //       if (pqp_column.column_id != INVALID_COLUMN_ID) {
-  //         ++pqp_column_id_occurences[pqp_column_id];
-  //       }
-  //     }
-  //     return ExpressionVisitation::VisitArguments;
-  //   });
-  // }
+  auto pqp_column_id_occurences = std::vector<size_t>(expression_count);
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto& expression = expressions[column_id];
+    // std::cout << *expression << " ..." << std::endl;
+    visit_expression(expression, [&](const auto& sub_expression) {
+      // std::cout << *sub_expression << std::endl;
+      if (sub_expression->type == ExpressionType::PQPColumn) {
+        const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
+        const auto pqp_column_id = pqp_column.column_id;
+        // std::cout << *sub_expression << " has column id: " << pqp_column.column_id << std::endl;
+        if (pqp_column.column_id != INVALID_COLUMN_ID) {
+          ++pqp_column_id_occurences[pqp_column_id];
+        }
+      }
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
 
   constexpr auto THRESHOLD = 2;
 
   auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    if (pqp_column_id_occurences[column_id] > THRESHOLD) {
-      pqp_columns_to_evaluate[column_id] = true;
-    }
-  }
-
   for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
     const auto& expression = expressions[column_id];
     if (expression->type == ExpressionType::PQPColumn) {
@@ -185,11 +177,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //   });
   // }
 
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    std::cout << *expression << ": ";
-    std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
-  }
+  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+  //   const auto& expression = expressions[column_id];
+  //   std::cout << *expression << ": ";
+  //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
+  // }
 
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
@@ -197,9 +189,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-
-    // std::cout << "\n\n\n" << std::endl;
-
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
