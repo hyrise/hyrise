@@ -810,7 +810,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      // Merge maps into multi-set to not override values. For example true with false or the other way around.
       for (auto const& map : _left_row_ids_emitted_per_chunks){
         for (auto const& submap : map) {
           _left_row_ids_emitted[submap.first] =  _left_row_ids_emitted[submap.first] || submap.second;
