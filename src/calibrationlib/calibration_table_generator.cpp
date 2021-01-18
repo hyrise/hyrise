@@ -35,20 +35,18 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
   auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
   table_wrappers.reserve(_config->chunk_sizes.size() * _config->row_counts.size());
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
-  int max_distinct_values{0};
-  std::for_each(_column_data_distributions.begin(), _column_data_distributions.end(),
-                [&max_distinct_values](auto& column_distribution) {
-                  const auto value_range =
-                      static_cast<int>(column_distribution.max_value - column_distribution.min_value);
-                  if (value_range > max_distinct_values) max_distinct_values = value_range;
-                });
 
   for (const auto chunk_size : _config->chunk_sizes) {
     for (const auto row_count : _config->row_counts) {
-      const auto table = table_generator->generate_table(_column_specs, row_count, chunk_size, UseMvcc::Yes);
-
       const std::string table_name = std::to_string(chunk_size) + "_" + std::to_string(row_count);
+      auto local_column_specs = std::vector<ColumnSpecification>();
+      for (auto column_spec : _column_specs) {
+        std::string column_name = table_name + "_" + *column_spec.name;
+        local_column_specs.emplace_back(ColumnSpecification(column_spec.data_distribution, column_spec.data_type,
+                                                         column_spec.segment_encoding_spec, column_name));
+      }
 
+      const auto table = table_generator->generate_table(local_column_specs, row_count, chunk_size, UseMvcc::Yes);
       const auto calibration_table_wrapper =
           std::make_shared<const CalibrationTableWrapper>(table, table_name, _column_data_distributions);
       // table_wrappers.emplace_back(calibration_table_wrapper);
