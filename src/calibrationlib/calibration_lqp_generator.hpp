@@ -14,6 +14,7 @@ class CalibrationLQPGenerator {
  public:
   CalibrationLQPGenerator();
   void generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table);
+  void generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables);
   const std::vector<std::shared_ptr<AbstractLQPNode>>& lqps();
 
  private:
@@ -22,6 +23,14 @@ class CalibrationLQPGenerator {
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const;
+  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_build_table() const;
+  void _generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
+                            const std::shared_ptr<const CalibrationTableWrapper>& right);
+
+  template <typename ColumnDataType>
+  std::shared_ptr<PredicateNode> _get_predicate_node_based_on(const std::shared_ptr<LQPColumnExpression>& column,
+                                                              const ColumnDataType& lower_bound,
+                                                              const std::shared_ptr<AbstractLQPNode>& base);
 
   std::vector<std::shared_ptr<AbstractLQPNode>> _generated_lqps;
   const std::shared_ptr<Optimizer> _optimizer = std::make_shared<Optimizer>();

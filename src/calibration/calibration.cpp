@@ -76,7 +76,7 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
 
   std::cout << " - Generating tables" << std::endl;
   auto table_generator = CalibrationTableGenerator(table_config);
-  const auto tables = table_generator.generate();
+  auto tables = table_generator.generate();
 
   std::cout << " - Generating LQPS" << std::endl;
   auto feature_exporter = OperatorFeatureExporter(data_path);
@@ -86,12 +86,15 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
     lqp_generator.generate(OperatorType::TableScan, table);
   }
+
+  lqp_generator.generate_joins(tables);
   const auto lqps = lqp_generator.lqps();
   const auto lqp_count = lqps.size();
 
   std::cout << " - Running " << lqps.size() << " LQPs" << std::endl << "   ";
   size_t latest_percentage = 0;
   size_t current_lqp = 1;
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
 
   for (size_t i{0}; i < 50; ++i) {
     std::cout << "-";
@@ -100,6 +103,7 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
 
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
+    pqp->set_transaction_context_recursively(transaction_context);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
