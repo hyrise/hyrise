@@ -120,28 +120,41 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
 
   // Not using shard_ptr<abst expr> here since SUM(price) and price are not equal, which we need.
-  auto pqp_column_counts = std::unordered_map<ColumnID, size_t>{};
+  // auto pqp_column_id_occurences = std::vector<size_t>(expression_count);
+  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+  //   const auto& expression = expressions[column_id];
+  //   // std::cout << *expression << " ..." << std::endl;
+  //   visit_expression(expression, [&](const auto& sub_expression) {
+  //     // std::cout << *sub_expression << std::endl;
+  //     if (sub_expression->type == ExpressionType::PQPColumn) {
+  //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
+  //       const auto pqp_column_id = pqp_column.column_id;
+  //       // std::cout << *sub_expression << " has column id: " << pqp_column.column_id << std::endl;
+  //       if (pqp_column.column_id != INVALID_COLUMN_ID) {
+  //         ++pqp_column_id_occurences[pqp_column_id];
+  //       }
+  //     }
+  //     return ExpressionVisitation::VisitArguments;
+  //   });
+  // }
+
+  constexpr auto THRESHOLD = 2;
+
+  auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
   for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    // std::cout << *expression << " ..." << std::endl;
-    visit_expression(expression, [&](const auto& sub_expression) {
-      // std::cout << *sub_expression << std::endl;
-      if (sub_expression->type == ExpressionType::PQPColumn) {
-        const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-        const auto pqp_column_id = pqp_column.column_id;
-        // std::cout << *sub_expression << " has column id: " << pqp_column.column_id << std::endl;
-        if (pqp_column.column_id != INVALID_COLUMN_ID) {
-          ++pqp_column_counts[pqp_column_id];
-        }
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
+    if (pqp_column_id_occurences[column_id] > THRESHOLD) {
+      pqp_columns_to_evaluate[column_id] = true;
+    }
   }
 
-  auto recurring_expression_column_ids = std::vector<ColumnID>{};
-  for (const auto& [a,b] : pqp_column_counts) {
-    if (b > 1) {
-      recurring_expression_column_ids.emplace_back(b);
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto& expression = expressions[column_id];
+    if (expression->type == ExpressionType::PQPColumn) {
+      const auto& pqp_column = static_cast<PQPColumnExpression&>(*expression);
+      const auto pqp_column_id = pqp_column.column_id;
+      if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
+        pqp_columns_to_evaluate[column_id] = true;
+      }
     }
   }
   //
@@ -153,30 +166,30 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //
   //
 
-  auto columns_ids_first_occurences = std::unordered_map<ColumnID, size_t>{};
-  auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    visit_expression(expression, [&](const auto& sub_expression) {
-      if (sub_expression->type == ExpressionType::PQPColumn) {
-        const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-        const auto pqp_column_id = pqp_column.column_id;
-        if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
-          pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
-          pqp_columns_to_evaluate[column_id] = true;
-        } else {
-          columns_ids_first_occurences[pqp_column_id] = column_id;
-        }
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
-  }
-
+  // auto columns_ids_first_occurences = std::unordered_map<ColumnID, size_t>{};
+  // auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
   // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
   //   const auto& expression = expressions[column_id];
-  //   std::cout << *expression << ": ";
-  //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
+  //   visit_expression(expression, [&](const auto& sub_expression) {
+  //     if (sub_expression->type == ExpressionType::PQPColumn) {
+  //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
+  //       const auto pqp_column_id = pqp_column.column_id;
+  //       if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
+  //         pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
+  //         pqp_columns_to_evaluate[column_id] = true;
+  //       } else {
+  //         columns_ids_first_occurences[pqp_column_id] = column_id;
+  //       }
+  //     }
+  //     return ExpressionVisitation::VisitArguments;
+  //   });
   // }
+
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto& expression = expressions[column_id];
+    std::cout << *expression << ": ";
+    std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
+  }
 
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
