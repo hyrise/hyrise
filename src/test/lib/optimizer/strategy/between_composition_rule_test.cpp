@@ -268,6 +268,32 @@ TEST_F(BetweenCompositionTest, NoPullPastJoin) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
+TEST_F(BetweenCompositionTest, TwoChainsBeforeJoin) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_a, _b_a),
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(less_than_equals_(_a_a, 230),
+        PredicateNode::make(greater_than_equals_(_a_a, 200),
+          _node_a)),
+      PredicateNode::make(greater_than_equals_(_b_a, 400),
+        PredicateNode::make(less_than_equals_(_b_a, 500),
+          _node_b))));
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  const auto expected_lqp =
+  PredicateNode::make(equals_(_a_a, _b_a),
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(between_inclusive_(_a_a, 200, 230),
+        _node_a),
+      PredicateNode::make(between_inclusive_(_b_a, 400, 500),
+        _node_b)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
 TEST_F(BetweenCompositionTest, TwoColumnsNoMatch) {
   // clang-format off
   const auto input_lqp =
