@@ -50,7 +50,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
                    const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
+                           std::make_unique<PerformanceData>()),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {
@@ -86,41 +86,41 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
   /*
-    Setting number of bits for radix clustering:
-    The number of bits is used to create probe partitions with a size that can
-    be expected to fit into the L2 cache.
-    This should incorporate hardware knowledge, once available in Hyrise.
-    As of now, we assume a L2 cache size of 1024 KB (L2 cache size of recent
-    Intel Xeon CPUs), of which we use 50%.
+    The number of radix bits is used to determine the number of build partitions whose hash maps have a size that can
+    be expected to fit into the L2 cache. This should incorporate hardware knowledge, once available in Hyrise. As of
+    now, we assume a L2 cache size of 1024 KB, of which we use 75 %.
+
     We estimate the size the following way:
       - we assume each key appears once (that is an overestimation space-wise, but we
       aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-      - each entry in the hash map is a uint32_t offset (see hash_join_steps.hpp)
+      - each entry in the hash map is a pair of the actual hash key and the SmallPosList storing uint32_t offsets (see
+        hash_join_steps.hpp)
   */
   if (build_relation_size > probe_relation_size) {
     /*
-      Hash joins perform best when the build relation is small. In case the
-      optimizer selects the hash join due to such a situation, but neglects that the
-      input will be switched (e.g., due to the join mode), the user will be warned.
+      Hash joins perform best when the build relation is small. In case the inputs are switched (e.g., due to the join
+      mode) making the build partition larger than the probe partition, the user will be warned.
     */
     PerformanceWarning("Build relation larger than probe relation in hash join");
   }
 
-  const auto l2_cache_size = 1'024'000;                  // bytes
-  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
+  // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
+  // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
+  constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
+  constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
+  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
   // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
       static_cast<double>(build_relation_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(uint32_t)) / 0.8;
+      static_cast<double>(sizeof(T) + 1) / 0.85;
 
-  auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
+  const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
 
   return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
@@ -190,6 +190,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
   }
 
+  auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
     resolve_data_type(probe_column_type, [&](const auto probe_data_type_t) {
@@ -218,13 +219,16 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            dynamic_cast<OperatorPerformanceData<JoinHash::OperatorSteps>&>(*performance_data),
-            std::move(adjusted_secondary_predicates));
+            join_hash_performance_data, std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
     });
   });
+
+  DebugAssert(_radix_bits, "Radix bits are not set.");
+  join_hash_performance_data.radix_bits = *_radix_bits;
+  join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
   return _impl->_on_execute();
 }
@@ -238,7 +242,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               OperatorPerformanceData<JoinHash::OperatorSteps>& performance_data,
+               JoinHash::PerformanceData& performance_data,
                std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
@@ -257,7 +261,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  OperatorPerformanceData<JoinHash::OperatorSteps>& _performance;
+  JoinHash::PerformanceData& _performance;
+
 
   OutputColumnOrder _output_column_order;
 
@@ -651,5 +656,15 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     return _join_hash._build_output_table(std::move(output_chunks));
   }
 };
+
+void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
+
+  const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  stream << separator << "Radix bits:" << separator << radix_bits;
+  if (!left_input_is_build_side) {
+    stream << "." << separator <<  "Input sides have been flipped.";
+  }
+}
 
 }  // namespace opossum

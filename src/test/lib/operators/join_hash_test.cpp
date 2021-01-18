@@ -109,12 +109,13 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
 }
 
 TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
-  // Simple cases: handle minimal inputs and very large inputs
-  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 1), 0ul);
-  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(0, 1), 0ul);
-  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 0), 0ul);
-  EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(std::numeric_limits<size_t>::max(),
-                                                  std::numeric_limits<size_t>::max()) > 0ul);
+  // Simpe tests to check that side switching and zero-sizes workk.
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(1, 0), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(0, 1), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(0, 0), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(1, 1), 0ul);
+  EXPECT_TRUE(JoinHash::calculate_radix_bits<int32_t>(std::numeric_limits<size_t>::max(),
+                                                       std::numeric_limits<size_t>::max()) > 0ul);
 }
 
 }  // namespace opossum

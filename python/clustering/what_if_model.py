@@ -104,6 +104,7 @@ class WhatIfModel(DisjointClustersModel):
         return runtime
 
     def adapt_joins_to_clustering(self, joins, clustering_columns, sorting_column, dimension_cardinalities):
+        # Set sortedness information
         def set_sortedness(row, side):
             if self.table_name != row[f"{side}_TABLE"]:
                 return str(row[f"{side}_SORTED"])
@@ -113,18 +114,33 @@ class WhatIfModel(DisjointClustersModel):
         joins['BUILD_SORTED'] = joins.apply(set_sortedness, args=("BUILD", ), axis=1)
         joins['PROBE_SORTED'] = joins.apply(set_sortedness, args=("PROBE", ), axis=1)
 
+        # Estimate ratio of chunks pruned by the respective GetTable operators
         joins['BUILD_TABLE_PRUNED_CHUNK_RATIO'] = 0
         joins['PROBE_TABLE_PRUNED_CHUNK_RATIO'] = 0
-
-
         scans_per_query = self.table_scans.groupby(['QUERY_HASH', 'GET_TABLE_HASH'])
         for (query_hash, _), query_scans in scans_per_query:
             unprunable_parts = query_scans.apply(self.compute_unprunable_parts, axis=1, args=(clustering_columns, dimension_cardinalities,))
             unprunable_part = unprunable_parts.product()
             assert unprunable_part >= 0 and unprunable_part <= 1, "unprunable part: " + str(unprunable_part)
 
-            joins.loc[((joins['QUERY_HASH'] == query_hash) & (joins['BUILD_TABLE'] == self.table_name)), 'BUILD_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
-            joins.loc[((joins['QUERY_HASH'] == query_hash) & (joins['PROBE_TABLE'] == self.table_name)), 'PROBE_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
+            build_side_joins = joins['BUILD_TABLE'] == self.table_name
+            probe_side_joins = joins['PROBE_TABLE'] == self.table_name
+            query_joins = joins['QUERY_HASH'] == query_hash
+
+            joins.loc[query_joins & build_side_joins, 'BUILD_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
+            joins.loc[query_joins & probe_side_joins, 'PROBE_TABLE_PRUNED_CHUNK_RATIO'] = 1 - unprunable_part
+
+            # Apply pruning to joins (in some cases, scans are executed above semi joins
+            # TODO: correlations?
+            if unprunable_part < 1:
+                clustered_scans = query_scans.apply(lambda x: x['COLUMN_NAME'] in clustering_columns, axis=1)
+                clustered_scan_operator_ids = query_scans[clustered_scans]['OPERATOR_ID'].unique()
+
+                min_clustered_scan_id = min(clustered_scan_operator_ids) if clustered_scans.any() else 0
+                joins_before_clustered_scans = joins['OPERATOR_ID'] < min_clustered_scan_id
+
+                joins.loc[query_joins & build_side_joins & joins_before_clustered_scans, 'BUILD_TABLE_ROW_COUNT'] *= unprunable_part
+                joins.loc[query_joins & probe_side_joins & joins_before_clustered_scans, 'PROBE_TABLE_ROW_COUNT'] *= unprunable_part
 
         return joins
         
