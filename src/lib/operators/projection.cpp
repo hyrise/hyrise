@@ -164,16 +164,19 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
           pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
           pqp_columns_to_evaluate[column_id] = true;
+        } else {
+          columns_ids_first_occurences[pqp_column_id] = column_id;
         }
       }
       return ExpressionVisitation::VisitArguments;
     });
   }
 
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    std::cout << *expression << ": " << pqp_columns_to_evaluate[column_id] << std::endl;
-  }
+  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+  //   const auto& expression = expressions[column_id];
+  //   std::cout << *expression << ": ";
+  //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
+  // }
 
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
@@ -195,16 +198,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       const auto& expression = expressions[column_id];
 
 
-      std::stringstream ss;
-      ss << *expression;
-      auto str = ss.str();
-      if (str.find("l_extendedprice") != std::string::npos) {
-        all_segments_forwarded = false;
-        continue;
-      }
+      // std::stringstream ss;
+      // ss << *expression;
+      // auto str = ss.str();
+      // if (str.find("l_extendedprice") != std::string::npos) {
+      //   all_segments_forwarded = false;
+      //   continue;
+      // }
 
 
-      if (expression->type != ExpressionType::PQPColumn) {
+      if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
         all_segments_forwarded = false;
         continue;
       }
@@ -224,16 +227,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
-                                          &output_segments_by_chunk, &column_is_nullable]() {
+                                          &output_segments_by_chunk, &column_is_nullable, &pqp_columns_to_evaluate]() {
       auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
 
-        std::stringstream ss;
-        ss << *expression;
-        auto str = ss.str();
-        if (expression->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) {
+        if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
           // std::cout << "PROJ: evaluating " << *expression << std::endl;
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
@@ -273,10 +273,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                                   expressions[column_id]->data_type(), column_is_nullable[column_id]};
     output_column_definitions.emplace_back(definition);
 
-    std::stringstream ss;
-    ss << *expressions[column_id];
-    auto str = ss.str();
-    if ((expressions[column_id]->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) && output_table_type == TableType::References) {
+    if ((expressions[column_id]->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) && output_table_type == TableType::References) {
       projection_result_column_definitions.emplace_back(definition);
     }
   }
@@ -312,10 +309,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_chunk->size());
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // Turn newly generated ValueSegments into ReferenceSegments, if needed
-      std::stringstream ss;
-      ss << *expressions[column_id];
-      auto str = ss.str();
-      if ((expressions[column_id]->type != ExpressionType::PQPColumn || str.find("l_extendedprice") != std::string::npos) && output_table_type == TableType::References) {
+      if ((expressions[column_id]->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) && output_table_type == TableType::References) {
         projection_result_segments.emplace_back(output_segments_by_chunk[chunk_id][column_id]);
 
         const auto projection_result_column_id =
