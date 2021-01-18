@@ -153,8 +153,8 @@ TEST_F(BetweenCompositionTest, LongPredicateChain) {
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   const auto expected_lqp =
-  PredicateNode::make(less_than_equals_(_a_b, 300),
-    PredicateNode::make(between_inclusive_(_a_a, 200, 300),
+  PredicateNode::make(between_inclusive_(_a_a, 200, 300),
+    PredicateNode::make(less_than_equals_(_a_b, 300),
       _node_a));
   // clang-format on
 
@@ -253,7 +253,7 @@ TEST_F(BetweenCompositionTest, NoPullPastAggregate) {
 TEST_F(BetweenCompositionTest, NoPullPastJoin) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_a, _b_a),
+  PredicateNode::make(less_than_equals_(_a_a, _b_a),
     PredicateNode::make(greater_than_equals_(_a_a, 200),
       JoinNode::make(JoinMode::Cross,
         PredicateNode::make(less_than_equals_(_a_a, 300),
@@ -359,8 +359,8 @@ TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   const auto expected_lqp =
-  PredicateNode::make(less_than_equals_(_a_b, 300),
-    PredicateNode::make(between_inclusive_(_a_a, 200, 300),
+  PredicateNode::make(between_inclusive_(_a_a, 200, 300),
+    PredicateNode::make(less_than_equals_(_a_b, 300),
       _node_a));
   // clang-format on
 
@@ -382,9 +382,9 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   const auto expected_lqp =
-  PredicateNode::make(less_than_equals_(_a_c, 200),
-    PredicateNode::make(between_inclusive_(_a_a, 230, 250),
-      PredicateNode::make(between_inclusive_(_a_b, 150, 200),
+  PredicateNode::make(between_inclusive_(_a_a, 230, 250),
+    PredicateNode::make(between_inclusive_(_a_b, 150, 200),
+      PredicateNode::make(less_than_equals_(_a_c, 200),
         _node_a)));
   // clang-format on
 
@@ -402,8 +402,8 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   const auto expected_lqp =
-  PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
-    PredicateNode::make(between_exclusive_(_a_a, 100, 200),
+  PredicateNode::make(between_exclusive_(_a_a, 100, 200),
+    PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
       _node_a));
   // clang-format on
 
