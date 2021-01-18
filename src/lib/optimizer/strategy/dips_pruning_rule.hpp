@@ -87,7 +87,37 @@ namespace opossum {
         nodes.push_back(graph_node);
         return graph_node;
       }
+      bool is_tree(){
+        if (nodes.size()==0){
+          return true;
+        }
+        std::shared_ptr<std::vector<std::shared_ptr<DipsJoinGraphNode>>> visited_nodes = std::make_shared<std::vector<std::shared_ptr<DipsJoinGraphNode>>>();
+        return _is_tree_dfs(nullptr, nodes[0], visited_nodes);
+      }
+
       std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
+    
+    private:
+      bool _is_tree_dfs(
+        std::shared_ptr<DipsJoinGraphNode> parent_node, 
+        std::shared_ptr<DipsJoinGraphNode> node, 
+        std::shared_ptr<std::vector<std::shared_ptr<DipsJoinGraphNode>>> visited_nodes
+      )
+      {
+        visited_nodes->push_back(node);
+        for(auto edge : node->edges){
+          if (edge->partner_node != parent_node){
+            if(std::find(visited_nodes->begin(), visited_nodes->end(), edge->partner_node) == visited_nodes->end()){
+              if(!_is_tree_dfs(node, edge->partner_node, visited_nodes)){
+                return false;
+              }
+            }else{
+              return false;
+            }
+          }
+        }
+        return true;
+      }
   };
 
 

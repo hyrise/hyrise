@@ -37,6 +37,14 @@ namespace opossum {
     _build_join_graph(node, join_graph);
     
     std::cout << *join_graph << '\n';
+    std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
+
+    if(join_graph->is_tree()){
+      // TODO: tree implementation 
+    } else {
+      // TODO: cycle implementation
+    }
+
 
     /*
     _apply_to_inputs(node);
