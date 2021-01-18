@@ -153,16 +153,16 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
 }
 
 /**
- * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes and
- * replaces them with BetweenExpressions, if possible.
+ * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes
+ * (ordered from top to bottom TODO(Julian)) and replaces them with BetweenExpressions, if possible.
  * After the substitution, obsolete BinaryPredicateExpressions are removed.
  */
 void BetweenCompositionRule::_replace_predicates(
     const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes) {
   // Store original input and output
-  auto input = adjacent_predicate_nodes.front()->left_input();
-  const auto input_sides = adjacent_predicate_nodes.back()->get_input_sides();
-  const auto outputs = adjacent_predicate_nodes.back()->outputs();
+  auto input = adjacent_predicate_nodes.back()->left_input();
+  const auto outputs = adjacent_predicate_nodes.front()->outputs();
+  const auto input_sides = adjacent_predicate_nodes.front()->get_input_sides();
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
@@ -401,8 +401,16 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
 
   // (2) Replace predicates, if possible
   for (const auto& predicate_nodes : grouped_predicate_nodes) {
-    _replace_predicates(predicate_nodes);
+    if (predicate_nodes.size() > 1) {
+      auto reversed_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>();
+      for (auto idx = static_cast<int>(predicate_nodes.size()) - 1; idx >= 0; --idx) {
+        reversed_predicate_nodes.push_back(predicate_nodes.at(idx));
+      }
+      _replace_predicates(reversed_predicate_nodes);
+    } else
+      _replace_predicates(predicate_nodes);
+    }
+
   }
-}
 
 }  // namespace opossum
