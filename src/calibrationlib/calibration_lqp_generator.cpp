@@ -1,8 +1,12 @@
 #include "calibration_lqp_generator.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
@@ -30,6 +34,111 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
 
   Fail("Not implemented yet: Only TableScans are currently supported.");
 }
+
+void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables) {
+  auto semi_join_build_table = _generate_semi_join_build_table();
+
+  for (const auto& table : tables) {
+    if (table->get_name() == std::string("65535_6000000_sorted")) {
+      _generate_semi_joins(table, semi_join_build_table);
+    }
+  }
+  tables.emplace_back(semi_join_build_table);
+}
+
+std::shared_ptr<const CalibrationTableWrapper> CalibrationLQPGenerator::_generate_semi_join_build_table() const {
+  std::set<DataType> data_types = {DataType::Int, DataType::Float};
+  auto data_distribution = ColumnDataDistribution::make_uniform_config(0.0, 1000.0);
+  auto column_count = 0;
+  std::vector<ColumnSpecification> column_specs;
+  std::vector<ColumnDataDistribution> column_data_distributions;
+
+  for (const auto data_type : data_types) {
+    std::stringstream column_name_stringstream;
+    column_name_stringstream << data_type << "_" << EncodingType::Dictionary << "_" << 300'000;
+    auto column_name = column_name_stringstream.str();
+    column_data_distributions.emplace_back(data_distribution);
+    column_specs.emplace_back(
+        ColumnSpecification(data_distribution, data_type, SegmentEncodingSpec(EncodingType::Dictionary), column_name));
+    ++column_count;
+  }
+
+  const auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  const auto table = table_generator->generate_table(column_specs, 300'000, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  const std::string table_name = std::to_string(Chunk::DEFAULT_SIZE) + "_" + std::to_string(300'000);
+  Hyrise::get().storage_manager.add_table(table_name, table);
+  return std::make_shared<const CalibrationTableWrapper>(table, table_name, column_data_distributions);
+}
+
+void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
+                                                   const std::shared_ptr<const CalibrationTableWrapper>& right) {
+  constexpr uint32_t selectivity_resolution = 100;
+  const auto left_stored_table_node = StoredTableNode::make(left->get_name());
+  const auto right_stored_table_node = StoredTableNode::make(right->get_name());
+  const auto& left_table = left->get_table();
+  const auto& right_table = right->get_table();
+
+  const auto column_count = left_table->column_count();
+  const auto column_data_types = left_table->column_data_types();
+  const std::vector<std::string> left_column_names = left_table->column_names();
+
+  for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    resolve_data_type(column_data_types[column_id], [&](const auto column_data_type) {
+      using ColumnDataType = typename decltype(column_data_type)::type;
+      if (std::is_same<ColumnDataType, int32_t>::value || std::is_same<ColumnDataType, float>::value) {
+
+      const auto left_column = left_stored_table_node->get_column(left_column_names[column_id]);
+      const auto distribution = left->get_column_data_distribution(column_id);
+      const auto step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
+
+      auto right_column_id = std::is_same<ColumnDataType, int32_t>::value ? ColumnID{0} : ColumnID{1};
+
+      const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, column_id);
+      const auto right_column_expression =
+          std::make_shared<LQPColumnExpression>(right_stored_table_node, right_column_id);
+      const auto join_predicate = std::make_shared<BinaryPredicateExpression>(
+          PredicateCondition::Equals, left_column_expression, right_column_expression);
+      const auto right_subtree = ValidateNode::make(right_stored_table_node);
+
+      if (OperatorJoinPredicate::from_expression(*join_predicate, *left_stored_table_node, *right_stored_table_node)) {
+        if (JoinHash::supports({JoinMode::Semi, PredicateCondition::Equals, left_table->column_data_type(column_id),
+                                right_table->column_data_type(right_column_id), false})) {
+          for (uint32_t selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
+            // in this for-loop we iterate up and go from 100% selectivity to 0% by increasing the lower_bound in steps
+            // for any step there
+
+            // Get value for current iteration
+            // the cursor is a int representation of where the column has to be cut in this iteration
+            const auto step_cursor = static_cast<uint32_t>(selectivity_step * step_size);
+
+            const ColumnDataType lower_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
+
+            // scan before join
+            auto left_subtree_scan = _get_predicate_node_based_on(
+                left_column, lower_bound, std::shared_ptr<AbstractLQPNode>(left_stored_table_node));
+            auto join_node =
+                JoinNode::make(JoinMode::Semi, join_predicate, JoinType::Hash, left_subtree_scan, right_subtree);
+
+            auto optimized_lqp = join_node->deep_copy();
+            optimized_lqp = _optimizer->optimize(std::move(optimized_lqp));
+            _generated_lqps.emplace_back(optimized_lqp);
+
+            //scan after join
+            auto join_node_data =
+                JoinNode::make(JoinMode::Semi, join_predicate, JoinType::Hash, left_stored_table_node, right_subtree);
+
+            auto scan_after_join = _get_predicate_node_based_on(left_column, lower_bound, join_node_data);
+            auto optimized_lqp_data_reference = scan_after_join->deep_copy();
+            optimized_lqp_data_reference = _optimizer->optimize(std::move(optimized_lqp_data_reference));
+            _generated_lqps.emplace_back(optimized_lqp_data_reference);
+          }
+        }
+      }
+    }
+    });
+  }
+}
+
 
 void CalibrationLQPGenerator::_generate_table_scans(
     const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
@@ -76,12 +185,9 @@ void CalibrationLQPGenerator::_generate_table_scans(
 
         const ColumnDataType lower_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
 
-        auto get_predicate_node_based_on = [column, lower_bound](const std::shared_ptr<AbstractLQPNode>& base) {
-          return PredicateNode::make(greater_than_(column, lower_bound), base);
-        };
-
         // Base LQP for current iteration (without any further modifications)
-        auto base_scan = get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node));
+        auto base_scan =
+            _get_predicate_node_based_on(column, lower_bound, std::shared_ptr<AbstractLQPNode>(stored_table_node));
         // _generated_lqps.emplace_back(base_scan);
         auto optimized_scan = base_scan->deep_copy();
         optimized_scan = _optimizer->optimize(std::move(optimized_scan));
@@ -96,19 +202,19 @@ void CalibrationLQPGenerator::_generate_table_scans(
           for (uint32_t step = 0; step < reference_scan_selectivity_resolution; step++) {
             const ColumnDataType upper_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(
                 static_cast<uint32_t>(step * reference_scan_step_size));
-            auto reference_scan =
-                get_predicate_node_based_on(PredicateNode::make(less_than_(column, upper_bound), stored_table_node));
+            auto reference_scan = _get_predicate_node_based_on(
+                column, lower_bound, PredicateNode::make(less_than_(column, upper_bound), stored_table_node));
             // _generated_lqps.emplace_back(reference_scan);
             auto optimized_reference_scan = reference_scan->deep_copy();
             optimized_reference_scan = _optimizer->optimize(std::move(optimized_reference_scan));
             _generated_lqps.emplace_back(optimized_reference_scan);
 
             // add reference scan with full pos list
-            _generated_lqps.emplace_back(get_predicate_node_based_on(
-                PredicateNode::make(greater_than_equals_(column, min_val), stored_table_node)));
+            _generated_lqps.emplace_back(_get_predicate_node_based_on(
+                column, lower_bound, PredicateNode::make(greater_than_equals_(column, min_val), stored_table_node)));
             // add reference scan with empty pos list
-            _generated_lqps.emplace_back(
-                get_predicate_node_based_on(PredicateNode::make(less_than_(column, min_val), stored_table_node)));
+            _generated_lqps.emplace_back(_get_predicate_node_based_on(
+                column, lower_bound, PredicateNode::make(less_than_(column, min_val), stored_table_node)));
 
             if (_enable_between_predicates) {
               auto between_scan =
@@ -194,6 +300,13 @@ void CalibrationLQPGenerator::_generate_column_vs_column_scans(
   }
 }
 
+template <typename ColumnDataType>
+std::shared_ptr<PredicateNode> CalibrationLQPGenerator::_get_predicate_node_based_on(
+    const std::shared_ptr<LQPColumnExpression>& column, const ColumnDataType& lower_bound,
+    const std::shared_ptr<AbstractLQPNode>& base) {
+  return PredicateNode::make(greater_than_(column, lower_bound), base);
+}
+
 CalibrationLQPGenerator::CalibrationLQPGenerator() {
   _generated_lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
   _optimizer->add_rule(std::move(std::make_unique<ChunkPruningRule>()));
@@ -201,3 +314,4 @@ CalibrationLQPGenerator::CalibrationLQPGenerator() {
 
 const std::vector<std::shared_ptr<AbstractLQPNode>>& CalibrationLQPGenerator::lqps() { return _generated_lqps; }
 }  // namespace opossum
+
