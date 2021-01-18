@@ -9,7 +9,6 @@
 #include "abstract_join_operator.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -57,6 +56,11 @@ class JoinSortMerge : public AbstractJoinOperator {
   friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
+
+  // Tasks are added to the scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not,
+  // the task is executed directly. This threshold needs to be re-evaluated over time to find the value which gives the
+  // best performance.
+  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 };
 
 }  // namespace opossum
