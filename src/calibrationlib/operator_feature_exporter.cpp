@@ -15,6 +15,7 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/pqp_utils.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -40,10 +41,10 @@ bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const 
       const auto& perf_data = dynamic_cast<const JoinHash::PerformanceData&>(*hash_join->performance_data);
       if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
         if (perf_data.radix_bits == 0) {
-          if (perf_data.right_input_is_build_side) {
-            return _data_arrives_ordered(op->left_input(), table_name);
-          } else {
+          if (perf_data.left_input_is_build_side) {
             return _data_arrives_ordered(op->right_input(), table_name);
+          } else {
+            return _data_arrives_ordered(op->left_input(), table_name);
           }
         } else {
           // TODO: only if there is a join with > 0 radix bits on another column
@@ -253,7 +254,14 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     left_table_name = left_table_column_information.table_name;
     left_column_name = left_table_column_information.column_name;
     left_column_type = left_table_column_information.column_type;
-    left_column_sorted = _check_column_sorted(op->left_input()->performance_data, operator_predicate.column_ids.first);
+    if (left_table_name != "" && _data_arrives_ordered(op->left_input(), std::string{left_table_name})) {
+      const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
+      auto wrapper = std::make_shared<TableWrapper>(table);
+      wrapper->execute();
+      left_column_sorted = _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{left_column_name}));
+    } else {
+      left_column_sorted = "No";
+    }
   }
 
   const auto second_predicate_expression = predicate_expression->arguments[1];
@@ -264,8 +272,15 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_table_name = right_table_column_information.table_name;
     right_column_name = right_table_column_information.column_name;
     right_column_type = right_table_column_information.column_type;
-    right_column_sorted =
-        _check_column_sorted(op->right_input()->performance_data, operator_predicate.column_ids.second);
+
+    if (right_table_name != "" && _data_arrives_ordered(op->right_input(), std::string{right_table_name})) {
+      const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
+      auto wrapper = std::make_shared<TableWrapper>(table);
+      wrapper->execute();
+      right_column_sorted = _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{right_column_name}));
+    } else {
+      right_column_sorted = "No";
+    }
   }
 
   const auto column_ids = operator_predicate.column_ids;
@@ -376,7 +391,7 @@ size_t OperatorFeatureExporter::_get_pruned_chunk_count(std::shared_ptr<const Ab
   const auto get_table = std::dynamic_pointer_cast<const GetTable>(op);
   Assert(op, "Cast failed");
   if (get_table->table_name() == table_name) {
-    std::cout << "found table " << table_name << " with " << get_table->pruned_chunk_ids().size() << " pruned chunks" << std::endl;
+    //std::cout << "found table " << table_name << " with " << get_table->pruned_chunk_ids().size() << " pruned chunks" << std::endl;
     return get_table->pruned_chunk_ids().size();
   }
 

@@ -38,6 +38,10 @@ class TPCHBenchmark(AbstractBenchmark):
     }
 
     return {
+      'l_comment': {
+        'lineitem': [['l_comment', 2]],
+        **others
+      },
       'l_shipdate': {
         'lineitem': [['l_shipdate', 2]],
         **others
