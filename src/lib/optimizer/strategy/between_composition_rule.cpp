@@ -159,10 +159,11 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  */
 void BetweenCompositionRule::_replace_predicates(
     const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes) {
-  // Store original input and output
-  auto input = adjacent_predicate_nodes.back()->left_input();
-  const auto outputs = adjacent_predicate_nodes.front()->outputs();
-  const auto input_sides = adjacent_predicate_nodes.front()->get_input_sides();
+
+  // Store input and output nodes of the predicate chain
+  auto predicate_chain_input_node = adjacent_predicate_nodes.front()->left_input();
+  auto predicate_chain_output_nodes = adjacent_predicate_nodes.back()->outputs();
+  const auto predicate_chain_output_input_sides = adjacent_predicate_nodes.back()->get_input_sides();
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
@@ -329,21 +330,22 @@ void BetweenCompositionRule::_replace_predicates(
     }
   }
 
-  // Append between nodes to predicate nodes to get the complete chain of all necessary LQP nodes
+  // Append between nodes to PredicateNodes to get the complete chain of all necessary LQP nodes
   predicate_nodes.insert(predicate_nodes.cend(), between_nodes.cbegin(), between_nodes.cend());
 
-  // Insert predicate nodes to LQP
-  // Connect last predicate to chain input
-  predicate_nodes.back()->set_left_input(input);
+  // Insert PredicateNodes into the LQP
+  //  Connect first PredicateNode to chain input
+  predicate_nodes.front()->set_left_input(predicate_chain_input_node);
 
-  // Connect predicates
-  for (size_t predicate_index = 0; predicate_index < predicate_nodes.size() - 1; predicate_index++) {
-    predicate_nodes[predicate_index]->set_left_input(predicate_nodes[predicate_index + 1]);
+  //  Connect PredicateNodes among each other
+  for (auto predicate_index = size_t{1}; predicate_index < predicate_nodes.size(); ++predicate_index) {
+    predicate_nodes[predicate_index]->set_left_input(predicate_nodes[predicate_index - 1]);
   }
 
-  // Connect first predicates to chain output
-  for (size_t output_index = 0; output_index < outputs.size(); ++output_index) {
-    outputs[output_index]->set_input(input_sides[output_index], predicate_nodes.front());
+  //  Connect last PredicateNode with all output nodes of the chain
+  for (size_t output_index = 0; output_index < predicate_chain_output_nodes.size(); ++output_index) {
+    predicate_chain_output_nodes[output_index]->set_input(predicate_chain_output_input_sides[output_index],
+                                                          predicate_nodes.back());
   }
 }
 
@@ -401,16 +403,8 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
 
   // (2) Replace predicates, if possible
   for (const auto& predicate_nodes : grouped_predicate_nodes) {
-    if (predicate_nodes.size() > 1) {
-      auto reversed_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>();
-      for (auto idx = static_cast<int>(predicate_nodes.size()) - 1; idx >= 0; --idx) {
-        reversed_predicate_nodes.push_back(predicate_nodes.at(idx));
-      }
-      _replace_predicates(reversed_predicate_nodes);
-    } else
-      _replace_predicates(predicate_nodes);
-    }
-
+    _replace_predicates(predicate_nodes);
   }
+}
 
 }  // namespace opossum
