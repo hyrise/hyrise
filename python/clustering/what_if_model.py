@@ -61,6 +61,7 @@ class WhatIfModel(DisjointClustersModel):
             # Pruning: Set input size of first scan to reflect pruned chunks
             estimated_pruned_table_size = min(self.table_size, self.round_up_to_next_multiple(unprunable_part * self.table_size, self.target_chunksize))
             scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] = np.int64(estimated_pruned_table_size)
+            scans.loc[query_scans.iloc[0].name, 'INPUT_CHUNKS'] = np.int64(estimated_pruned_table_size / self.target_chunksize)
 
             # Pruning: if there are multiple scans and the first occurs on a clustering column, the scan is likely moved up in the PQP (i.e., executed later)
             # Consequence: Currently first scan will be performed on a reference segment, currently second scan on currently first scan's segment type

@@ -107,7 +107,8 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
 
 def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
     m.estimate_total_runtime(clustering_columns, sorting_column, dimension_cardinalities)
-    assert len(m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] < 0]) == 0, "not all runtimes computed"
+    unestimated_scans = m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] < 0]
+    assert len(unestimated_scans) == 0, "not all runtimes computed: " + str(unestimated_scans)
     
     path = f"{ground_truth_path}/table_scans.csv"
     clustered_scans = pd.read_csv(path, sep='|')

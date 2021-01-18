@@ -199,8 +199,9 @@ def get_join_scores(model_types, train_data, test_data, implementation, ohe_cand
     scores = dict()
 
     train_data = train_data.copy()
-    train_data = train_data.dropna()
     test_data = test_data.copy()
+
+    train_data = train_data.dropna()
     test_data = test_data.dropna()
 
     CHUNK_SIZE = 65535
