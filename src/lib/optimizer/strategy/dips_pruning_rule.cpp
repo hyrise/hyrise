@@ -130,8 +130,11 @@ namespace opossum {
         auto right_left_edge = right_join_graph_node->get_edge_for_table(left_join_graph_node);
 
         // append predicates
-        left_right_edge->predicates.push_back(predicate);
-        right_left_edge->predicates.push_back(predicate);
+        left_right_edge->append_predicate(predicate); // TODO: visit every node in LQP only once (avoid cycles) -> use "simple" append
+        right_left_edge->append_predicate(predicate);
+
+        // left_right_edge->predicates.push_back(predicate);
+        // right_left_edge->predicates.push_back(predicate);
         
       }
     }

@@ -50,6 +50,11 @@ namespace opossum {
         this->predicates = std::vector<std::shared_ptr<AbstractExpression>>();
       }
       
+      void append_predicate(std::shared_ptr<AbstractExpression> predicate){
+        if(std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()){   // TODO: remove search when implementation "visit single node in LQP only once" is done
+          predicates.push_back(predicate);
+        }
+      }
   };
 
   class DipsJoinGraphNode {
@@ -77,6 +82,8 @@ namespace opossum {
 
   class DipsJoinGraph {
     public:
+      std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
+
       std::shared_ptr<DipsJoinGraphNode> get_node_for_table(std::shared_ptr<StoredTableNode> table_node){
         for(auto graph_node : nodes){
           if (graph_node->table_node == table_node){
@@ -99,8 +106,6 @@ namespace opossum {
       void set_root(std::shared_ptr<DipsJoinGraphNode> root){
         _set_root_dfs(nullptr, root);
       }
-
-      std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
     
     private:
       bool _is_tree_dfs(
