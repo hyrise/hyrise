@@ -40,10 +40,16 @@ namespace opossum {
     std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
 
     if(join_graph->is_tree()){
-      // TODO: tree implementation 
+      std::shared_ptr<DipsJoinGraphNode> root = join_graph->nodes[0]; // TODO: finding root implementation
+      std::cout << "==== ROOT ====" << std::endl;
+      std::cout << "    " << root << std::endl;
+      join_graph->set_root(root);
     } else {
       // TODO: cycle implementation
     }
+
+    std::cout << "\nAFTER OPERATIONS\n" << '\n';
+    std::cout << *join_graph << '\n';
 
 
     /*
@@ -167,6 +173,15 @@ namespace opossum {
     } else {
       for (const auto node : join_graph.nodes) {
         stream << node->table_node->description() << std::endl;
+        stream << "      ==== Adress ====" << std::endl;
+        stream << "          " << node << std::endl;
+        stream << "      ==== Parent ====" << std::endl;
+        stream << "          " << node->parent << std::endl;
+        stream << "      ==== Children ====" << std::endl;
+        for (auto child : node->children){
+          stream << "          " << child << std::endl;
+        }
+
         stream << "      ==== Edges ====" << std::endl;
         for (const auto edge : node->edges) {
           stream << "      " << edge->partner_node->table_node->description() << std::endl;
