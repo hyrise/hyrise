@@ -534,7 +534,7 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
 }
 
 void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  visit_lqp(lqp_root, [](const auto& node) {
+  visit_lqp(lqp_root, [&](const auto& node) {
     /**
      * Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
      *
@@ -623,7 +623,9 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     lqp_replace_node(node, join_node);
     join_node->set_right_input(pull_up_result.adapted_lqp);
 
-    return LQPVisitation::VisitInputs;
+    // TODO Comment
+    _apply_to_plan_without_subqueries(join_node);
+    return LQPVisitation::DoNotVisitInputs;
   });
 }
 
