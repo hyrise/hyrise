@@ -17,6 +17,11 @@ AbstractExpression::AbstractExpression(const ExpressionType init_type,
 
 bool AbstractExpression::requires_computation() const { return true; }
 
+std::shared_ptr<AbstractExpression> AbstractExpression::deep_copy() const {
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  return deep_copy(copied_ops);
+}
+
 bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   const auto node_column_id = lqp.find_column_id(*this);
   if (node_column_id) {
