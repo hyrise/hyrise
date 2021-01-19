@@ -348,7 +348,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       return output_table_statistics;
     } else if (logical_expression->logical_operator == LogicalOperator::And) {
-      // Estimate AND by splitting it up into two consecutive predicate nodes
+      // Estimate AND by splitting it up into two consecutive PredicateNodes
 
       const auto first_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());

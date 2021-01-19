@@ -73,7 +73,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
 }
 
 /**
- * Recursively remove correlated predicate nodes and adapt other nodes as necessary.
+ * Recursively remove correlated PredicateNodes and adapt other nodes as necessary.
  *
  * To handle nodes with more than one output (for example diamond LQPs), we cache the result for such nodes. This
  * avoids adapting the LQP twice but also adding join predicates twice. The boolean in the returned pair indicates
@@ -134,7 +134,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.adapted_lqp = PredicateNode::make(remaining_expression, left_input_adapted);
       } else {
         result.adapted_lqp = left_input_adapted;
-        DebugAssert(!node->right_input(), "Predicate nodes should not have right inputs");
+        DebugAssert(!node->right_input(), "PredicateNodes should not have right inputs");
       }
       if (!join_predicates.empty()) {
         result.pulled_predicate_node_count++;
@@ -334,7 +334,7 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   // Crawl the `lqp`, including subquery-LQPs, for usages of parameters from `parameter_mapping`
   //
-  // While counting correlated predicate nodes we don't need to consider diamond LQPs or other forms of nodes occurring
+  // While counting correlated PredicateNodes we don't need to consider diamond LQPs or other forms of nodes occurring
   // twice since visit_lqp only visits each node once. A node might appear again in a subquery (which has its own call
   // to visit_lqp) but in this case the LQP is not optimizable anyway, so we don't care about an accurate count.
 
@@ -419,7 +419,7 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
     }
 
     // Check that one side of the expression is a correlated parameter and the other an expression of the LQP
-    // below the predicate node (required for turning it into a join predicate). Also order the left/right operands by
+    // below the PredicateNode (required for turning it into a join predicate). Also order the left/right operands by
     // the subplans they originate from.
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
@@ -552,12 +552,12 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
        *       - (NOT) EXISTS predicate
        *       - comparison (<,>,<=,>=,=,<>) predicate with subquery as the right operand
        *   - If node is a (NOT) IN or a comparison, extract a base join predicate
-       *   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of predicate nodes using
-       *     them (if one is used outside of predicate nodes, we never optimize the LQP).
+       *   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of PredicateNodes using
+       *     them (if one is used outside of PredicateNodes, we never optimize the LQP).
        *   - Scan the subquery-LQP for correlated predicates that we need to pull up, and turn each into a join
        *   predicate
        *   - Check whether all correlated predicates can be pulled up (abort if not)
-       *   - Copy and adapt the subquery-LQP, removing all correlated predicate nodes and adapt nodes above them in the
+       *   - Copy and adapt the subquery-LQP, removing all correlated PredicateNodes and adapt nodes above them in the
        *     LQP, so that all columns required by the new join predicates are available at the top of the adapted
        *     subquery-LQP.
        *   - Build a join with the collected predicates
@@ -601,16 +601,19 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       }
 
       /**
-       *
+       * 4. Pull up correlated PredicateNodes
        */
       const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
       if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
-        // Not all correlated predicate nodes can be pulled up
+        // Not all correlated PredicateNodes can be pulled up
         DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
-                    "Inconsistent results from scan for correlated predicate nodes");
+                    "Inconsistent results from scan for correlated PredicateNodes");
         return LQPVisitation::VisitInputs;
       }
 
+      /**
+       * 5. Replace PredicateNodes with Joins
+       */
       auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
       join_predicates.reserve(pull_up_result.join_predicates.size() + (predicate_node_info->join_predicate ? 1 : 0));
       if (predicate_node_info->join_predicate) {

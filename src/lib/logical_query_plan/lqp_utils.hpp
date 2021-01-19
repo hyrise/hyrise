@@ -111,7 +111,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
  * 
- * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Subsequent PredicateNodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
  * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression

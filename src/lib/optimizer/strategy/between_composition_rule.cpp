@@ -297,7 +297,7 @@ void BetweenCompositionRule::_replace_predicates(
   }
 
   // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
-  // later. Therefore we create a semantically equal predicate node.
+  // later. Therefore we create a semantically equal PredicateNode.
   for (const auto& boundaries : column_boundaries_sorted) {
     for (const auto& boundary : boundaries) {
       if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==

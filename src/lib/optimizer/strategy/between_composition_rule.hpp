@@ -19,7 +19,7 @@ class PredicateNode;
  * boost. The case where x and y are columns can largely be handled by this rule as well. As no scan can handle that
  * combination yet, we still emit two separate predicates in this case.
  *
- * The BetweenCompositionRule searches for a chain of predicate nodes and within this chain substitutes
+ * The BetweenCompositionRule searches for a chain of PredicateNodes and within this chain substitutes
  * BinaryPredicateConditions with BetweenExpressions. The algorithm checks whether two or more BinaryPredicateConditions
  * represent a range on one column. The highest lower bound and the lowest upper bound are substituted by a
  * corresponding (exclusive or inclusive) BetweenExpression. All obsolete BinaryPredicateConditions are removed
@@ -44,7 +44,7 @@ class BetweenCompositionRule : public AbstractRule {
 
   /**
    * A column boundary is a normalized format that allows us to store a column and a value
-   * expression of a predicate node. The value represents a boundary for the column if the ColumnBoundaryType does not
+   * expression of a PredicateNode. The value represents a boundary for the column if the ColumnBoundaryType does not
    * equal None. To create the ColumnBoundary for the other column, if both expressions are LQPColumnExpressions, the
    * boundary_is_column_expression flag has been added.
    */

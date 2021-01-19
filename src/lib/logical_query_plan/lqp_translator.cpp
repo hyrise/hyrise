@@ -189,7 +189,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto value_variant = AllTypeVariant{NullValue{}};
   auto value2_variant = std::optional<AllTypeVariant>{};
 
-  // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
+  // Currently, we will only use IndexScans if the PredicateNode directly follows a StoredTableNode.
   // Our IndexScan implementation does not work on reference segments yet.
   Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
 
