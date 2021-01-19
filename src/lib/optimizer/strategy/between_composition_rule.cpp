@@ -159,7 +159,6 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  */
 void BetweenCompositionRule::_replace_predicates(
     const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes) {
-
   // Store input and output nodes of the predicate chain
   auto predicate_chain_input_node = adjacent_predicate_nodes.front()->left_input();
   auto predicate_chain_output_nodes = adjacent_predicate_nodes.back()->outputs();

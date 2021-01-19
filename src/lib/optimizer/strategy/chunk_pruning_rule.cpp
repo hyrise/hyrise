@@ -31,13 +31,12 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   // (1) Collect StoredTableNodes
   const auto stored_table_nodes = lqp_find_leafs<StoredTableNode>(lqp_root);
   for (const auto& stored_table_node : stored_table_nodes) {
-    predicate_chains_by_stored_table_node.emplace(stored_table_node,
-                                                  std::vector<PredicateChain>{});
+    predicate_chains_by_stored_table_node.emplace(stored_table_node, std::vector<PredicateChain>{});
   }
 
   // (2) Collect chains of PredicateNodes on top of each StoredTableNode
   for (auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
-    predicate_chains = find_predicate_chains_recursively(stored_table_node, stored_table_node);
+    predicate_chains = _find_predicate_chains_recursively(stored_table_node, stored_table_node);
   }
 
   // (3) Set pruned chunks for each StoredTableNode
@@ -53,7 +52,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     }
 
     // (3.2) Calculate the intersect of pruned chunks across predicate chains
-    std::set<ChunkID> pruned_chunk_ids = intersect_chunk_ids(pruned_chunk_id_sets);
+    std::set<ChunkID> pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
     if (pruned_chunk_ids.empty()) continue;
 
     // (3.2) Set pruned chunk ids
@@ -68,7 +67,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const Table& table, const PredicateChain& predicate_chain,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   std::set<ChunkID> global_excluded_chunk_ids;
-  for (auto predicate_node : predicate_chain) {
+  for (const auto& predicate_node : predicate_chain) {
     /**
      * Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
      */
@@ -243,7 +242,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
                                            old_statistics.row_count - static_cast<float>(num_rows_pruned));
 }
 
-std::vector<PredicateChain> ChunkPruningRule::find_predicate_chains_recursively(
+std::vector<PredicateChain> ChunkPruningRule::_find_predicate_chains_recursively(
     const std::shared_ptr<StoredTableNode>& stored_table_node, const std::shared_ptr<AbstractLQPNode>& node,
     PredicateChain current_predicate_chain) {
   std::vector<PredicateChain> predicate_chains;
@@ -257,10 +256,10 @@ std::vector<PredicateChain> ChunkPruningRule::find_predicate_chains_recursively(
     auto predicate_chain_continues = true;
     switch (current_node->type) {
       // clang-format off
-      case LQPNodeType::Alias:        break;
-      case LQPNodeType::Sort:         break;
-      case LQPNodeType::StoredTable:  break;
-      case LQPNodeType::Validate:     break;
+      case LQPNodeType::Alias:
+      case LQPNodeType::Sort:
+      case LQPNodeType::StoredTable:
+      case LQPNodeType::Validate:
       case LQPNodeType::Projection:   break;
       case LQPNodeType::Predicate: {
         const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
@@ -313,7 +312,7 @@ std::vector<PredicateChain> ChunkPruningRule::find_predicate_chains_recursively(
     if (current_node->outputs().size() > 1) {
       for (auto& output_node : current_node->outputs()) {
         auto continued_predicate_chains =
-            find_predicate_chains_recursively(stored_table_node, output_node, current_predicate_chain);
+            _find_predicate_chains_recursively(stored_table_node, output_node, current_predicate_chain);
 
         predicate_chains.insert(predicate_chains.end(), continued_predicate_chains.begin(),
                                 continued_predicate_chains.end());
@@ -328,8 +327,8 @@ std::vector<PredicateChain> ChunkPruningRule::find_predicate_chains_recursively(
   return predicate_chains;
 }
 
-std::set<ChunkID> ChunkPruningRule::intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
-  if (chunk_id_sets.size() == 0 || chunk_id_sets.at(0).empty()) return {};
+std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
+  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) return {};
   if (chunk_id_sets.size() == 1) return chunk_id_sets.at(0);
 
   std::set<ChunkID> chunk_id_set = chunk_id_sets.at(0);
