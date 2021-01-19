@@ -7,9 +7,9 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/join_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
@@ -152,10 +152,9 @@ class OperatorFeatureExporter {
                                                      {"LEFT_INPUT_CHUNKS", DataType::Long, false},
                                                      {"RIGHT_INPUT_CHUNKS", DataType::Long, false},
                                                      {"LEFT_TABLE_PRUNED_CHUNKS", DataType::Long, false},
-                                                     {"RIGHT_TABLE_PRUNED_CHUNKS",  DataType::Long, false},
+                                                     {"RIGHT_TABLE_PRUNED_CHUNKS", DataType::Long, false},
                                                      {"LEFT_TABLE_ROW_COUNT", DataType::Long, false},
-                                                     {"RIGHT_TABLE_ROW_COUNT", DataType::Long, false}
-                                                   },
+                                                     {"RIGHT_TABLE_ROW_COUNT", DataType::Long, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},

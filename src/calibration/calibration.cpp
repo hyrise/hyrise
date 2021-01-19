@@ -68,7 +68,7 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
                                                DataType::Long,   DataType::String, DataType::Null};
   const std::set<EncodingType> COLUMN_ENCODING_TYPES = {EncodingType::Dictionary};
   const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
-      ColumnDataDistribution::make_uniform_config(0.0, 1000.0)};
+      ColumnDataDistribution::make_uniform_config(0.0, 300'000.0)};
   const std::set<ChunkOffset> CHUNK_SIZES = {config->chunk_size};
   const std::set<int> ROW_COUNTS = {100'000, 6'000'000};
   const auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{

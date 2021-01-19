@@ -10,8 +10,8 @@
 #include "hyrise.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/abstract_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/pqp_utils.hpp"
@@ -24,7 +24,8 @@
 namespace opossum {
 
 // Assumption: just one GetTable per table
-bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op, const std::string& table_name) const {
+bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op,
+                                                    const std::string& table_name) const {
   const auto& type = op->type();
   if (type == OperatorType::Aggregate) {
     return false;
@@ -59,13 +60,15 @@ bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const 
       // TODO: If used for a benchmark where the sort merge join is more common than in TPC-H/DS, it may be worth to incorporate this knowledge
       return false;
     } else {
-      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll, "unhandled operator type: " + op->description());
+      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll,
+             "unhandled operator type: " + op->description());
       return _data_arrives_ordered(op->left_input(), table_name);
     }
   } else {
     // One input, but neither Aggregate nor GetTable
     // This leaves TableScan, Validate, more?
-    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection, "unconsidered operator type: " + op->description());
+    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection,
+           "unconsidered operator type: " + op->description());
     return _data_arrives_ordered(op->left_input(), table_name);
   }
 }
@@ -258,7 +261,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
-      left_column_sorted = _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{left_column_name}));
+      left_column_sorted =
+          _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{left_column_name}));
     } else {
       left_column_sorted = "No";
     }
@@ -277,7 +281,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
-      right_column_sorted = _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{right_column_name}));
+      right_column_sorted =
+          _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{right_column_name}));
     } else {
       right_column_sorted = "No";
     }
@@ -308,12 +313,14 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
        mode == JoinMode::Semi ||
        (mode == JoinMode::Inner && operator_info.left_input_rows > operator_info.right_input_rows)));
 
-
   const auto pruned_chunks_left_input = _get_pruned_chunk_count(op->left_input(), std::string{left_table_name});
   const auto pruned_chunks_right_input = _get_pruned_chunk_count(op->right_input(), std::string{right_table_name});
 
-  const int64_t row_count_left = (left_table_name == "") ? 0 : Hyrise::get().storage_manager.get_table(std::string{left_table_name})->row_count();
-  const int64_t row_count_right = (right_table_name == "") ? 0 : Hyrise::get().storage_manager.get_table(std::string{right_table_name})->row_count();
+  const int64_t row_count_left =
+      (left_table_name == "") ? 0 : Hyrise::get().storage_manager.get_table(std::string{left_table_name})->row_count();
+  const int64_t row_count_right =
+      (right_table_name == "") ? 0
+                               : Hyrise::get().storage_manager.get_table(std::string{right_table_name})->row_count();
 
   auto output_row = std::vector<AllTypeVariant>{_current_join_id,
                                                 operator_info.name,
@@ -375,7 +382,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   ++_current_join_id;
 }
 
-size_t OperatorFeatureExporter::_get_pruned_chunk_count(std::shared_ptr<const AbstractOperator> op, const std::string& table_name) {
+size_t OperatorFeatureExporter::_get_pruned_chunk_count(std::shared_ptr<const AbstractOperator> op,
+                                                        const std::string& table_name) {
   while (op->type() != OperatorType::GetTable) {
     if (op->right_input()) {
       // two inputs, and we do not know where our GetTable is - so go both paths

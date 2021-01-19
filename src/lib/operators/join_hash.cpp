@@ -218,8 +218,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            join_hash_performance_data, std::move(adjusted_secondary_predicates));
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
+            std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -262,7 +262,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   JoinHash::PerformanceData& _performance;
-
 
   OutputColumnOrder _output_column_order;
 
@@ -660,10 +659,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   stream << separator << "Radix bits:" << separator << radix_bits;
   if (!left_input_is_build_side) {
-    stream << "." << separator <<  "Input sides have been flipped.";
+    stream << "." << separator << "Input sides have been flipped.";
   }
 }
 

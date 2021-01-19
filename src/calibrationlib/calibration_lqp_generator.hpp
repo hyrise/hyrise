@@ -23,7 +23,7 @@ class CalibrationLQPGenerator {
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const;
-  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_build_table() const;
+  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_build_table(const size_t row_count) const;
   void _generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
                             const std::shared_ptr<const CalibrationTableWrapper>& right);
 

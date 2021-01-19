@@ -42,8 +42,13 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
       auto local_column_specs = std::vector<ColumnSpecification>();
       for (auto column_spec : _column_specs) {
         std::string column_name = table_name + "_" + *column_spec.name;
-        local_column_specs.emplace_back(ColumnSpecification(column_spec.data_distribution, column_spec.data_type,
-                                                         column_spec.segment_encoding_spec, column_name));
+        auto data_distribution = column_spec.data_distribution;
+        if (data_distribution.max_value - data_distribution.min_value > row_count) {
+          const auto max_value = data_distribution.min_value + static_cast<double>(row_count);
+          data_distribution = ColumnDataDistribution::make_uniform_config(data_distribution.min_value, max_value);
+        }
+        local_column_specs.emplace_back(ColumnSpecification(data_distribution, column_spec.data_type,
+                                                            column_spec.segment_encoding_spec, column_name));
       }
 
       const auto table = table_generator->generate_table(local_column_specs, row_count, chunk_size, UseMvcc::Yes);
