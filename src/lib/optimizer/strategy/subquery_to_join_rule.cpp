@@ -546,7 +546,6 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     visit_lqp(current_node, [&](const auto& node) {
       /**
        * Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
-       *
        * To do this, we
        *   - Check whether node is of a supported type:
        *       - (NOT) IN predicate with a subquery as the right operand

@@ -139,7 +139,10 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
-      visit_lqp(lqp_root, [&](const auto& node) { nodes.emplace(node); });
+      visit_lqp(lqp_root, [&](const auto& node) {
+        nodes.emplace(node);
+        return LQPVisitation::VisitInputs;
+      });
     }
 
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
