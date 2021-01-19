@@ -47,13 +47,12 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
     values.shrink_to_fit();
     null_values.shrink_to_fit();
 
-    // Encrypt
+    // Encrypt Init
     int n = values.size();
+    values.resize(ROUND_UP(n, 32));
     auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
     outBuffer->resize(P4NENC_BOUND(n));
-    values.resize(ROUND_UP(n, 32));
-    p4nenc32(values.data(), n, outBuffer->data());
-    //outBuffer->shrink_to_fit();
+    p4encx32(values.data(), n, outBuffer->data());;
 
     if (segment_contains_null_values) {
       return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::move(null_values), n);

@@ -59,7 +59,7 @@ class TurboPFORSegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    const auto value = static_cast<T>(_decoded_values[chunk_offset]);
+    const auto value = static_cast<T>(get_turbopfor_value(chunk_offset));
     return value;
   }
 
@@ -79,11 +79,16 @@ class TurboPFORSegment : public AbstractEncodedSegment {
 
   /**@}*/
 
+  uint32_t get_turbopfor_value(uint32_t i);
+
  protected:
   const std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
   ChunkOffset _size;
-  std::vector<uint32_t> _decoded_values;
+
+  p4 p4;
+  unsigned b;
+  unsigned char* in;
 };
 
 }  // namespace opossum
