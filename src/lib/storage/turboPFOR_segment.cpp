@@ -8,6 +8,8 @@
 
 namespace opossum {
 
+#define ROUND_UP(_n_, _a_) (((_n_) + ((_a_)-1)) & ~((_a_)-1))
+
 template <typename T, typename U>
 TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
                                        std::optional<pmr_vector<bool>> null_values,
@@ -16,10 +18,9 @@ TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsign
       _encoded_values{encoded_values},
       _null_values{null_values},
       _size{size} {
-          in = encoded_values->data();
-          if (size != 0) {
-            p4ini(&init_values, &in, size, &b);
-          }
+        _decoded_values = std::vector<uint32_t>(size);
+        _decoded_values.resize(ROUND_UP(32, size));
+        p4ndec32(encoded_values->data(), size, _decoded_values.data());
       }
 
 template <typename T, typename U>

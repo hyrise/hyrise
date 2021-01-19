@@ -59,7 +59,7 @@ class TurboPFORSegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    T value = static_cast<T>(p4getx32(const_cast<p4*>(&init_values), in, chunk_offset, b));
+    const auto value = static_cast<T>(_decoded_values[chunk_offset]);
     return value;
   }
 
@@ -83,11 +83,7 @@ class TurboPFORSegment : public AbstractEncodedSegment {
   const std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
   ChunkOffset _size;
-
-  // TURBOPFOR Specific
-  p4 init_values;
-  unsigned int b;
-  unsigned char* in;
+  std::vector<uint32_t> _decoded_values;
 };
 
 }  // namespace opossum
