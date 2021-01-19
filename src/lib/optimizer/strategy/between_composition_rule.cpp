@@ -153,8 +153,8 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
 }
 
 /**
- * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes
- * (ordered from top to bottom TODO(Julian)) and replaces them with BetweenExpressions, if possible.
+ * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes and
+ * replaces them with BetweenExpressions, if possible.
  * After the substitution, obsolete BinaryPredicateExpressions are removed.
  */
 void BetweenCompositionRule::_replace_predicates(

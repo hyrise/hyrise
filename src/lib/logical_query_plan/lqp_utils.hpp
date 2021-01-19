@@ -209,10 +209,9 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * ToDo(Julian) Doc
- * @tparam LQPNode
- * @param lqp
- * @return
+ * Traverses @param lqp from top to bottom to find all leaf nodes.
+ * @return By default, all leaf nodes are returned.
+ *         Optionally, the template parameter can be set to return leaf nodes of type @tparam LQPNode only.
  */
 template <class LQPNode = AbstractLQPNode>
 std::vector<std::shared_ptr<LQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp) {
