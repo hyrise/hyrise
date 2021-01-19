@@ -18,6 +18,9 @@ TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsign
       _encoded_values{encoded_values},
       _null_values{null_values},
       _size{size} {
+        _decoded_values = std::vector<uint32_t>(size);
+        _decoded_values.reserve(ROUND_UP(size, 32));
+        p4ndec32(encoded_values->data(), size, _decoded_values.data());
         in = encoded_values->data();
         p4ini(&_p4, &in, size, &b);
       }
