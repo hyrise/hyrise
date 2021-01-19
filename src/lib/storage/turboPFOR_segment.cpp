@@ -19,7 +19,7 @@ TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsign
       _null_values{null_values},
       _size{size} {
         in = encoded_values->data();
-        p4ini(&p4, &in, size, &b);
+        p4ini(&_p4, &in, size, &b);
       }
 
 template <typename T, typename U>
@@ -88,12 +88,12 @@ std::optional<CompressedVectorType> TurboPFORSegment<T,U>::compressed_vector_typ
 }
 
 template <typename T, typename U>
-uint32_t TurboPFORSegment<T,U>>::get_turbopfor_value(uint32_t i) {
+uint32_t TurboPFORSegment<T,U>::get_turbopfor_value(uint32_t i) const {
   uint32_t value;
-  if(unlikely(p4.isx)) {
-    value = p4getx32(&p4, in, index, b);
+  if(unlikely(_p4.isx)) {
+    value = p4getx32(const_cast<p4*>(&_p4), in, i, b);
   } else {
-    value = bitgetx32(in, index, b);
+    value = bitgetx32(in, i, b);
   }
   return value;
 }

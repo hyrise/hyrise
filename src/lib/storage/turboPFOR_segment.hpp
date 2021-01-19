@@ -79,14 +79,14 @@ class TurboPFORSegment : public AbstractEncodedSegment {
 
   /**@}*/
 
-  uint32_t get_turbopfor_value(uint32_t i);
+  uint32_t get_turbopfor_value(uint32_t i) const;
 
  protected:
   const std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
   const std::optional<pmr_vector<bool>> _null_values;
   ChunkOffset _size;
 
-  p4 p4;
+  p4 _p4;
   unsigned b;
   unsigned char* in;
 };
