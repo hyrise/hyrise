@@ -71,8 +71,13 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    *  - For subplan deduplication across multiple, separate, non-nested PQPSubqueryExpressions:
    *     1. Create copied_ops (see impl. of AbstractExpression::deep_copy)
    *     2. Call deep_copy(copied_ops) for each expression, with the same parameter.
+   *
+   * Notes on virtual & final keywords:
+   *  - To call ::deep_copy from derived classes without casting, we have to make it virtual.
+   *  - Since this function is not meant to be overidden, we mark it as final. Also, it may help the compiler to
+   *    optimize it through devirtualiztion.
    */
-  std::shared_ptr<AbstractExpression> deep_copy() const;
+  virtual std::shared_ptr<AbstractExpression> deep_copy() const final;
 
   /**
    * Uses @param copied_ops to deduplicate PQP subplans from (nested) PQPSubqueryExpressions.
