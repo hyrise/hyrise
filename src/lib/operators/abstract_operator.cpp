@@ -168,6 +168,11 @@ void AbstractOperator::clear_output() {
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
+std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  deep_copy(copied_ops);
+}
+
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto copied_ops_iter = copied_ops.find(this);

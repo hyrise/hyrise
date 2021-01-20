@@ -107,13 +107,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context);
 
   /**
-   * Returns a new instance of the same operator with the same configuration.
-   * Recursively copies the input operators. An operator needs to implement this function in order to be cacheable.
-   * Subplans are deduplicated automatically using @param copied_ops.
+   * @return a new instance of the same operator with the same configuration
+   *         - recursively copies the input operators. An operator needs to implement this function in order to be
+   *         cacheable.
+   *         - subplans are deduplicated automatically TODO(Julian)
    */
+  std::shared_ptr<AbstractOperator> deep_copy() const;
+
   std::shared_ptr<AbstractOperator> deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops =
-          *std::make_unique<std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>>()) const;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> left_input() const;
