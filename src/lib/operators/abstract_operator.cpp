@@ -189,7 +189,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
   if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
-  copied_ops.emplace(this, std::move(copied_op));
+  copied_ops.emplace(this, copied_op);
 
   return copied_op;
 }
