@@ -40,17 +40,13 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_left_input()) {
-    if (!left->executed()) {
       auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op);
       left_subtree_root->set_as_predecessor_of(task);
-    }
   }
 
   if (auto right = op->mutable_right_input()) {
-    if (!right->executed()) {
       auto right_subtree_root = _add_tasks_from_operator(right, tasks, task_by_op);
       right_subtree_root->set_as_predecessor_of(task);
-    }
   }
 
   // Add AFTER the inputs to establish a task order where predecessor get executed before successors

@@ -164,6 +164,7 @@ void AbstractOperator::execute() {
 std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() {
+  Assert(_executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
   if (_clear_output) _output = nullptr;
 }
@@ -243,6 +244,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  DebugAssert(!_executed, "Setting parameters on operators that have already executed is illegal.");
   if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);

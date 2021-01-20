@@ -975,11 +975,9 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     row_pqp->set_parameters(parameters);
   }
 
-  // In case of uncorrelated subqueries, there might be cached results that we can reuse.
-  if (!row_pqp->executed()) {
-    const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  }
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
   return row_pqp->get_output();
 }
 
