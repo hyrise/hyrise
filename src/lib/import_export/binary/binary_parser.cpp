@@ -16,6 +16,8 @@
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/vector_compression/simd_bp128/oversized_types.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
+#include "storage/turboPFOR_segment/turboPFOR_wrapper.hpp"
+
 
 #include "utils/assert.hpp"
 
@@ -227,7 +229,7 @@ std::shared_ptr<TurboPFORSegment<T>> BinaryParser::_import_TurboPFOR_segment(std
                                                                            ChunkOffset row_count) {
 
   const auto size = _read_value<uint32_t>(file);
-  auto encoded_values = std::make_shared<pmr_vector<unsigned char>>(_read_values<unsigned char>(file, size));
+  auto encoded_values = std::make_shared<turboPFOR::EncodedTurboPForVector>(); // WRONG
 
   const auto null_values_stored = _read_value<BoolAsByteType>(file);
   std::optional<pmr_vector<bool>> null_values;

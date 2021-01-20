@@ -59,17 +59,13 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
       using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
     public:
-      explicit Iterator(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
+      explicit Iterator(const std::shared_ptr<turboPFOR::EncodedTurboPForVector> encoded_values,
                         const std::optional<pmr_vector<bool>>* null_values,
                         ChunkOffset size,
                         ChunkOffset chunk_offset)
           : _encoded_values{encoded_values},
             _null_values{null_values},
             _chunk_offset{chunk_offset} {
-
-        _decoded_values = std::vector<uint32_t>(size);
-        _decoded_values.reserve(ROUND_UP(32, size));
-        p4ndec32(encoded_values->data(), size, _decoded_values.data());
       }
 
     private:
@@ -99,12 +95,12 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
 
       SegmentPosition<T> dereference() const {
         const auto is_null = *_null_values ? (**_null_values)[_chunk_offset] : false;
-        const auto value = static_cast<T>(_decoded_values[_chunk_offset]);
+        const auto value = static_cast<T>(turboPFOR::p4GetVectorIndex(_encoded_values.get(), _chunk_offset));
         return SegmentPosition<T>{value, is_null, _chunk_offset};
       }
 
       private:
-      std::shared_ptr<const pmr_vector<unsigned char>> _encoded_values;
+      std::shared_ptr<turboPFOR::EncodedTurboPForVector> _encoded_values;
       const std::optional<pmr_vector<bool>>* _null_values;
       std::vector<uint32_t> _decoded_values;
 
@@ -119,7 +115,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
     using ValueType = T;
     using IterableType = TurboPFORSegmentIterable<T>;
 
-    explicit PointAccessIterator(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
+    explicit PointAccessIterator(const std::shared_ptr<turboPFOR::EncodedTurboPForVector> encoded_values,
                                  const std::optional<pmr_vector<bool>>* null_values,
                                  ChunkOffset size,
                                  const PosListIteratorType position_filter_begin,
@@ -127,10 +123,9 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
            AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, PosListIteratorType>
                {std::move(position_filter_begin),std::move(position_filter_it)},
         _encoded_values{encoded_values},
-        _null_values{null_values} {
-        _decoded_values = std::vector<uint32_t>(size);
-        _decoded_values.reserve(ROUND_UP(32, size));
-        p4ndec32(encoded_values->data(), size, _decoded_values.data());
+        _null_values{null_values} 
+        {
+
     }
 
     private:
@@ -141,14 +136,13 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = *_null_values ? (**_null_values)[current_offset] : false;
-      const auto value = static_cast<T>(_decoded_values[current_offset]);
+      const auto value = turboPFOR::p4GetVectorIndex(_encoded_values.get(), current_offset);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
     private:
-    std::shared_ptr<pmr_vector<unsigned char>> _encoded_values;
+    std::shared_ptr<turboPFOR::EncodedTurboPForVector> _encoded_values;
     const std::optional<pmr_vector<bool>>* _null_values;
-    std::vector<uint32_t> _decoded_values;
   };
 };
 

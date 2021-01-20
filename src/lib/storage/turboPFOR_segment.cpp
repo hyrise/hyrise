@@ -6,27 +6,20 @@
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
 
+
 namespace opossum {
 
 #define ROUND_UP(_n_, _a_) (((_n_) + ((_a_)-1)) & ~((_a_)-1))
 
 template <typename T, typename U>
-TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<pmr_vector<unsigned char>>& encoded_values,
-                                       std::optional<pmr_vector<bool>> null_values,
-                                       ChunkOffset size)
+TurboPFORSegment<T, U>::TurboPFORSegment(const std::shared_ptr<turboPFOR::EncodedTurboPForVector> encoded_values, std::optional<pmr_vector<bool>> null_values, ChunkOffset size)
     : AbstractEncodedSegment(data_type_from_type<T>()),
       _encoded_values{encoded_values},
       _null_values{null_values},
-      _size{size} {
-        _decoded_values = std::vector<uint32_t>(size);
-        _decoded_values.reserve(ROUND_UP(size, 32));
-        p4ndec32(encoded_values->data(), size, _decoded_values.data());
-        in = encoded_values->data();
-        p4ini(&_p4, &in, size, &b);
-      }
+      _size{size} { }
 
 template <typename T, typename U>
-const std::shared_ptr<pmr_vector<unsigned char>> TurboPFORSegment<T, U>::encoded_values() const {
+const std::shared_ptr<turboPFOR::EncodedTurboPForVector> TurboPFORSegment<T, U>::encoded_values() const {
   return _encoded_values;
 }
 
@@ -53,7 +46,7 @@ ChunkOffset TurboPFORSegment<T,U>::size() const {
 template <typename T, typename U>
 std::shared_ptr<AbstractSegment> TurboPFORSegment<T,U>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_encoded_values = std::make_shared<pmr_vector<unsigned char>>(*_encoded_values, alloc);
+  auto new_encoded_values = std::make_shared<turboPFOR::EncodedTurboPForVector>(*_encoded_values);
 
   std::optional<pmr_vector<bool>> new_null_values;
   if (_null_values) {
@@ -72,7 +65,7 @@ size_t TurboPFORSegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCal
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
   }
-  segment_size += _encoded_values->capacity() * sizeof(unsigned char);
+  segment_size += 0; // WRONG
   segment_size += 4; // size
   segment_size += 4; // b
   segment_size += 58; //vp4
@@ -88,17 +81,6 @@ EncodingType TurboPFORSegment<T,U>::encoding_type() const {
 template <typename T, typename U>
 std::optional<CompressedVectorType> TurboPFORSegment<T,U>::compressed_vector_type() const {
   return std::nullopt;
-}
-
-template <typename T, typename U>
-uint32_t TurboPFORSegment<T,U>::get_turbopfor_value(uint32_t i) const {
-  uint32_t value;
-  if(unlikely(_p4.isx)) {
-    value = p4getx32(const_cast<p4*>(&_p4), in, i, b);
-  } else {
-    value = bitgetx32(in, i, b);
-  }
-  return value;
 }
 
 template class TurboPFORSegment<int32_t>;

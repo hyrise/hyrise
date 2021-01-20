@@ -4,11 +4,13 @@
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/turboPFOR_segment.hpp"
+#include "turboPFOR_wrapper.hpp"
 #include "vp4.h"
 #include <fstream>
 
-#define P4NENC_BOUND(n) ((n + 127) / 128 + (n + 32) * sizeof(uint32_t))
-#define ROUND_UP(_n_, _a_) (((_n_) + ((_a_)-1)) & ~((_a_)-1))
+ #define ROUND_UP(_n_, _a_) (((_n_) + ((_a_)-1)) & ~((_a_)-1))
+ #define ROUND_DOWN(_n_, _a_) (((_n_)) & ~((_a_)-1))
+ #define P4NENC_BOUND(n) ((n + 127) / 128 + (n + 32) * sizeof(uint32_t))
 
 namespace opossum {
 
@@ -22,7 +24,7 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
                                                      const PolymorphicAllocator<T>& allocator) {
 
-    auto values = pmr_vector<uint32_t>(allocator); // destroy it when out of scope, only used to get values in continuous mem
+    auto values = std::vector<uint32_t>(); // destroy it when out of scope, only used to get values in continuous mem
     auto null_values = pmr_vector<bool>(allocator);
 
 
@@ -52,12 +54,16 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
     values.resize(ROUND_UP(n, 32));
     auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
     outBuffer->resize(P4NENC_BOUND(n));
-    p4nenc32(values.data(), n, outBuffer->data());;
+    p4nenc32(values.data(), n, outBuffer->data());
 
+    // Encrypt Test
+    turboPFOR::EncodedTurboPForVector e = turboPFOR::p4EncodeVector(values);
+    auto as_pointer = std::make_shared<turboPFOR::EncodedTurboPForVector>(e);
+ 
     if (segment_contains_null_values) {
-      return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::move(null_values), n);
+      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::move(null_values), n);
     } else {
-      return std::make_shared<TurboPFORSegment<T>>(std::move(outBuffer), std::nullopt, n);
+      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::nullopt, n);
     }
   }
 };
