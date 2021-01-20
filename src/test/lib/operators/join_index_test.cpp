@@ -209,7 +209,6 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
 TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   auto performance_data = JoinIndex::PerformanceData{};
 
-  performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 2u;
   performance_data.output_chunk_count = 1u;

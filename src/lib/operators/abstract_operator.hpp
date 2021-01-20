@@ -80,6 +80,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
 
+  bool executed() const;
+
   // Returns the result of the operator
   std::shared_ptr<const Table> get_output() const;
 
@@ -180,6 +182,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const AbstractOperator> _left_input;
   std::shared_ptr<const AbstractOperator> _right_input;
 
+  bool _executed = false;
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
@@ -191,6 +194,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;
+
+
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

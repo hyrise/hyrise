@@ -302,11 +302,11 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
 std::vector<std::shared_ptr<PQPSubqueryExpression>> collect_pqp_subquery_expressions(
     const std::shared_ptr<AbstractExpression>& expression) {
   // Early out
-  auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression);
+  const auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression);
   if (subquery_expression) return {subquery_expression};
 
   std::vector<std::shared_ptr<PQPSubqueryExpression>> subquery_expressions;
-  for (auto& argument_expression : expression->arguments) {
+  for (const auto& argument_expression : expression->arguments) {
     visit_expression(argument_expression, [&](const auto& sub_expression) {
       const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
       if (pqp_subquery_expression) {

@@ -32,8 +32,8 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 
 AbstractOperator::~AbstractOperator() {
   if constexpr (HYRISE_DEBUG) {
-    bool left_has_executed = _left_input ? _left_input->performance_data->executed : false;
-    bool right_has_executed = _right_input ? _right_input->performance_data->executed : false;
+    bool left_has_executed = _left_input ? _left_input->executed() : false;
+    bool right_has_executed = _right_input ? _right_input->executed() : false;
 
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
     bool aborted = transaction_context ? transaction_context->aborted() : false;
@@ -43,13 +43,15 @@ AbstractOperator::~AbstractOperator() {
      *       them. We do not want to force tests to call execute() on operators when their only purpose is to test the
      *       output of, for example, the description() function.
      */
-    Assert(this->performance_data->executed || aborted || !left_has_executed || !right_has_executed ||
+    Assert(_executed || aborted || !left_has_executed || !right_has_executed ||
                _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
 }
 
 OperatorType AbstractOperator::type() const { return _type; }
+
+bool AbstractOperator::executed() const { return _executed; }
 
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
@@ -60,14 +62,14 @@ void AbstractOperator::execute() {
    *    b) _output got cleared && zero consumers    ->  Operator results are no more relevant. Probably, a subquery
    *                                                    has already executed the operator and all of its successors.
    */
-  if (performance_data->executed && (_output || _consumer_count == 0)) return;
+  if (_executed && (_output || _consumer_count == 0)) return;
   if constexpr (HYRISE_DEBUG) {
-    Assert(!_left_input || _left_input->performance_data->executed, "Left input has not yet been executed");
-    Assert(!_right_input || _right_input->performance_data->executed, "Right input has not yet been executed");
+    Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
+    Assert(!_right_input || _right_input->executed(), "Right input has not yet been executed");
     Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
 
-    Assert(!performance_data->executed, "Unexpected re-execution of an operator.");
+    Assert(!_executed, "Unexpected re-execution of an operator.");
   }
 
   Timer performance_timer;
@@ -98,7 +100,7 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  performance_data->executed = true;
+  _executed = true;
 
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
@@ -170,7 +172,7 @@ std::string AbstractOperator::description(DescriptionMode description_mode) cons
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  deep_copy(copied_ops);
+  return deep_copy(copied_ops);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
@@ -186,7 +188,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
   if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
-  copied_ops.emplace(this, copied_op);
+  copied_ops.emplace(this, std::move(copied_op));
 
   return copied_op;
 }
@@ -197,7 +199,7 @@ std::shared_ptr<const Table> AbstractOperator::right_input_table() const { retur
 
 size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
-void AbstractOperator::register_consumer() { _consumer_count++; }
+void AbstractOperator::register_consumer() { ++_consumer_count; }
 
 void AbstractOperator::deregister_consumer() {
   DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
@@ -260,7 +262,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
   };
 
   const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
-    fn_stream << op->description() << op;
+    fn_stream << op->description();
 
     // If the operator was already executed, print some info about data and performance
     const auto output = op->get_output();
@@ -270,7 +272,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
-      fn_stream << *abstract_operator.performance_data;
+      if (abstract_operator.executed()) {
+        fn_stream << "Executed. ";
+        fn_stream << *abstract_operator.performance_data;
+      } else {
+        fn_stream << "Not executed.";
+      }
       fn_stream << ")";
     }
   };

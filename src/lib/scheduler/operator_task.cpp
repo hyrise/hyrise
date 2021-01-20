@@ -31,7 +31,7 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
     std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
   // Early out: We do not want to re-run operators, if they have been executed by previous tasks.
-  if (op->performance_data->executed) return nullptr;
+  if (op->executed()) return nullptr;
 
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
@@ -40,14 +40,14 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_left_input()) {
-    if (!left->performance_data->executed) {
+    if (!left->executed()) {
       auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op);
       left_subtree_root->set_as_predecessor_of(task);
     }
   }
 
   if (auto right = op->mutable_right_input()) {
-    if (!right->performance_data->executed) {
+    if (!right->executed()) {
       auto right_subtree_root = _add_tasks_from_operator(right, tasks, task_by_op);
       right_subtree_root->set_as_predecessor_of(task);
     }
