@@ -45,15 +45,16 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
   /**
-   * Register as a consumer for all subplans of uncorrelated subqueries
+   * Register as a consumer for all uncorrelated subqueries.
+   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
+   * and managed by the ExpressionEvaluator.
    */
   auto pqp_subquery_expressions = collect_pqp_subquery_expressions(predicate);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
-    // We do not register for the subplans of correlated subqueries because they are templated and cannot be
-    // executed without concrete parameters. Thus, there is no option for result sharing at this point.
     if (subquery_expression->is_correlated()) continue;
 
-    // Register & Store a pointer for easy deregistration later on.
+    // Register as consumer and keep a pointer to the subquery so that we can deregister ourselves later without
+    // having to traverse the PQP again
     subquery_expression->pqp->register_consumer();
     _uncorrelated_subquery_expressions.push_back(subquery_expression);
   }
@@ -254,7 +255,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     predicate_with_materialized_subquery_results->arguments.at(argument_idx) =
         std::make_shared<ValueExpression>(std::move(subquery_result));
 
-    // Deregister, because we obtained the subquery result and no longer need the subquery subplan.
+    // Deregister, because we obtained the subquery result and no longer need the subquery plan.
     subquery->pqp->deregister_consumer();
   }
 
@@ -400,7 +401,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
   const auto& uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subquery subplans.
+  // Deregister, because we obtained the results and no longer need the subquery plans.
   for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
     pqp_subquery_expression->pqp->deregister_consumer();
   }

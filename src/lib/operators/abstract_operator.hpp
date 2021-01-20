@@ -91,8 +91,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    *
    * AUTOMATIC CLEARING
    *  This function is called automatically by the last consuming operator on deregistration. Note, however, that
-   *  top-level operators do not have any consuming operators. Therefore, we have to call clear_output() for those
-   *  manually.
+   *  top-level operators do not have any consuming operators. Therefore, owning instances, such as
+   *  SQLPipelineStatement, have to manually call clear_output() on top-level operators.
    */
   void clear_output();
 

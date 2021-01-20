@@ -175,7 +175,7 @@ TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsDeeplyNested) {
   const auto root_subquery = std::make_shared<PQPSubqueryExpression>(projection);
   auto embedded_root_subquery = add_(root_subquery, value_(1));
 
-  // Check that the function does not return subquery expressions from subquery subplans
+  // Check that the function does not return subquery expressions from subquery plans
   auto subqueries1 = collect_pqp_subquery_expressions(root_subquery);
   auto subqueries2 = collect_pqp_subquery_expressions(embedded_root_subquery);
   EXPECT_EQ(subqueries1.size(), 1);
