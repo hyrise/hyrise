@@ -66,6 +66,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
           : _encoded_values{encoded_values},
             _null_values{null_values},
             _chunk_offset{chunk_offset} {
+              _decoded_values = turboPFOR::p4DecodeVectorSequential(_encoded_values.get());
       }
 
     private:
@@ -95,7 +96,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
 
       SegmentPosition<T> dereference() const {
         const auto is_null = *_null_values ? (**_null_values)[_chunk_offset] : false;
-        const auto value = static_cast<T>(turboPFOR::p4GetVectorIndex(_encoded_values.get(), _chunk_offset));
+        const auto value = static_cast<T>(_decoded_values[_chunk_offset]);
         return SegmentPosition<T>{value, is_null, _chunk_offset};
       }
 

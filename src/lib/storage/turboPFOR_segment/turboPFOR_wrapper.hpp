@@ -51,7 +51,7 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
       // todo: increment out_ptr?
   }
 
-  compressedBufferVec.resize(out_ptr-compressedBufferVecPtr);
+  //compressedBufferVec.resize(out_ptr-compressedBufferVecPtr);
   EncodedTurboPForVector e;
   e.compressedBuffer = compressedBufferVec;
   e.offsets = offsets;
@@ -62,11 +62,15 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
 
 inline std::vector<uint32_t> p4DecodeVectorSequential(EncodedTurboPForVector *e) {
   size_t numElements = e->size;
+  if (e->size == 0) {
+    return std::vector<uint32_t>(0);
+  }
+
   auto decodedVector = std::vector<uint32_t>(4*P4NDEC_BOUND(numElements, 1));
   uint32_t *decoded_ptr = decodedVector.data();
 
   std::vector<uint32_t> offsets = e->offsets;
-  std::vector<unsigned char> compressedBufferVec = e->compressedBuffer;
+  std::vector<unsigned char>& compressedBufferVec = e->compressedBuffer;
   uint8_t * p;
   p = (uint8_t*) compressedBufferVec.data();
 
@@ -81,7 +85,7 @@ inline std::vector<uint32_t> p4DecodeVectorSequential(EncodedTurboPForVector *e)
 inline uint32_t p4GetVectorIndex(EncodedTurboPForVector *e, size_t idx) {
   size_t numElements = e->size;
 
-  std::vector<unsigned char> compressedBufferVec = e->compressedBuffer;
+  std::vector<unsigned char>& compressedBufferVec = e->compressedBuffer;
   uint8_t * p;
   p = (uint8_t*) compressedBufferVec.data();
   size_t offset_to_block = ROUND_DOWN(idx, P4_BLOCK_SIZE);
