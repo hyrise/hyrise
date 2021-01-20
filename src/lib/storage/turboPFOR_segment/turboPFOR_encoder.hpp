@@ -8,10 +8,6 @@
 #include "vp4.h"
 #include <fstream>
 
- #define ROUND_UP(_n_, _a_) (((_n_) + ((_a_)-1)) & ~((_a_)-1))
- #define ROUND_DOWN(_n_, _a_) (((_n_)) & ~((_a_)-1))
- #define P4NENC_BOUND(n) ((n + 127) / 128 + (n + 32) * sizeof(uint32_t))
-
 namespace opossum {
 
 class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
@@ -49,21 +45,13 @@ class TurboPFOREncoder : public SegmentEncoder<TurboPFOREncoder> {
     values.shrink_to_fit();
     null_values.shrink_to_fit();
 
-    // Encrypt Init
-    int n = values.size();
-    values.resize(ROUND_UP(n, 32));
-    auto outBuffer = std::make_shared<pmr_vector<unsigned char>>(allocator);
-    outBuffer->resize(P4NENC_BOUND(n));
-    p4nenc32(values.data(), n, outBuffer->data());
-
-    // Encrypt Test
     turboPFOR::EncodedTurboPForVector e = turboPFOR::p4EncodeVector(values);
     auto as_pointer = std::make_shared<turboPFOR::EncodedTurboPForVector>(e);
  
     if (segment_contains_null_values) {
-      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::move(null_values), n);
+      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::move(null_values), values.size());
     } else {
-      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::nullopt, n);
+      return std::make_shared<TurboPFORSegment<T>>(std::move(as_pointer), std::nullopt, values.size());
     }
   }
 };

@@ -65,7 +65,7 @@ size_t TurboPFORSegment<T,U>::memory_usage([[maybe_unused]] const MemoryUsageCal
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
   }
-  segment_size += 0; // WRONG
+  segment_size += _encoded_values->size_in_bytes();
   segment_size += 4; // size
   segment_size += 4; // b
   segment_size += 58; //vp4

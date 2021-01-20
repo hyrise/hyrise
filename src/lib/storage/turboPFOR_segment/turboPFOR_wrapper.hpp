@@ -19,6 +19,12 @@ typedef struct EncodedTurboPForVector {
     std::vector<unsigned char> compressedBuffer;
     std::vector<uint32_t> offsets;
     size_t size;
+
+    size_t size_in_bytes() {
+      return compressedBuffer.size() * sizeof(compressedBuffer[0])
+       + offsets.size() * sizeof(offsets[0])
+       + sizeof(size);
+    }
 } EncodedTurboPForVector;
 
 inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
@@ -45,6 +51,7 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
       // todo: increment out_ptr?
   }
 
+  compressedBufferVec.resize(out_ptr-compressedBufferVecPtr);
   EncodedTurboPForVector e;
   e.compressedBuffer = compressedBufferVec;
   e.offsets = offsets;
@@ -55,7 +62,7 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
 
 inline std::vector<uint32_t> p4DecodeVectorSequential(EncodedTurboPForVector *e) {
   size_t numElements = e->size;
-  auto decodedVector = std::vector<uint32_t>( P4NDEC_BOUND(numElements, 1) );
+  auto decodedVector = std::vector<uint32_t>(4*P4NDEC_BOUND(numElements, 1));
   uint32_t *decoded_ptr = decodedVector.data();
 
   std::vector<uint32_t> offsets = e->offsets;
