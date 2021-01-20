@@ -51,6 +51,12 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  return expressions_deep_copy(expressions, copied_ops);
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
