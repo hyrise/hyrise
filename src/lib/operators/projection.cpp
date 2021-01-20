@@ -50,6 +50,12 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
+  // std::cout << std::endl;
+  // std::cout << std::endl;
+  // std::cout << "EXECUTION PROJECTION" << std::endl;
+  // std::cout << std::endl;
+  // std::cout << std::endl;
+
   Timer timer;
 
   const auto& input_table = *left_input_table();
@@ -118,70 +124,89 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //
   //
 
-  auto pqp_column_id_occurences = std::vector<size_t>(expression_count);
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    // std::cout << *expression << " ..." << std::endl;
-    visit_expression(expression, [&](const auto& sub_expression) {
-      // std::cout << *sub_expression << std::endl;
-      if (sub_expression->type == ExpressionType::PQPColumn) {
-        const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-        const auto pqp_column_id = pqp_column.column_id;
-        // std::cout << *sub_expression << " has column id: " << pqp_column.column_id << std::endl;
-        if (pqp_column.column_id != INVALID_COLUMN_ID) {
-          ++pqp_column_id_occurences[pqp_column_id];
-        }
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
-  }
+  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
+  // for (auto column_id = ColumnID{0}; column_id < input_table.column_count(); ++column_id) {
+  //   std::cout << "Column id: " << column_id << " with name " << input_table.column_definitions()[column_id].name << std::endl;
+  // }
+  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
 
-  constexpr auto THRESHOLD = 2;
+  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
+  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+  //   const auto& expression = expressions[column_id];
+  //   std::cout << "column id: " << column_id << "  -  " << *expression;
+  //   if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
+  //     const auto pqp_column_id = pqp_column_expression->column_id;
+  //     std::cout << " (PQP col id: " << pqp_column_id;
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
 
   auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    const auto& expression = expressions[column_id];
-    if (expression->type == ExpressionType::PQPColumn) {
-      const auto& pqp_column = static_cast<PQPColumnExpression&>(*expression);
-      const auto pqp_column_id = pqp_column.column_id;
-      if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
-        pqp_columns_to_evaluate[column_id] = true;
+
+  if (output_table_type == TableType::References) {
+    auto pqp_column_id_occurences = std::vector<size_t>(input_table.column_count());
+    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+      const auto& expression = expressions[column_id];
+      visit_expression(expression, [&](const auto& sub_expression) {
+        if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(sub_expression)) {
+          const auto pqp_column_id = pqp_column_expression->column_id;
+          if (pqp_column_id != INVALID_COLUMN_ID) {
+            ++pqp_column_id_occurences[pqp_column_id];
+          }
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+
+    constexpr auto THRESHOLD = 2;
+
+    
+    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+      const auto& expression = expressions[column_id];
+      if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
+        const auto pqp_column_id = pqp_column_expression->column_id;
+        if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
+          pqp_columns_to_evaluate[column_id] = true;
+        }
       }
     }
+    //
+    // /V1
+    //
+
+    //
+    // V2
+    //
+    //
+
+    // auto columns_ids_first_occurences = std::unordered_map<ColumnID, size_t>{};
+    // auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
+    // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    //   const auto& expression = expressions[column_id];
+    //   visit_expression(expression, [&](const auto& sub_expression) {
+    //     if (sub_expression->type == ExpressionType::PQPColumn) {
+    //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
+    //       const auto pqp_column_id = pqp_column.column_id;
+    //       if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
+    //         pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
+    //         pqp_columns_to_evaluate[column_id] = true;
+    //       } else {
+    //         columns_ids_first_occurences[pqp_column_id] = column_id;
+    //       }
+    //     }
+    //     return ExpressionVisitation::VisitArguments;
+    //   });
+    // }
+
+    // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    //   const auto& expression = expressions[column_id];
+    //   std::cout << *expression << ": ";
+    //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
+    // }
+  } else {
+    // std::cout << "DATA" << std::endl;
   }
-  //
-  // /V1
-  //
-
-  //
-  // V2
-  //
-  //
-
-  // auto columns_ids_first_occurences = std::unordered_map<ColumnID, size_t>{};
-  // auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-  //   const auto& expression = expressions[column_id];
-  //   visit_expression(expression, [&](const auto& sub_expression) {
-  //     if (sub_expression->type == ExpressionType::PQPColumn) {
-  //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-  //       const auto pqp_column_id = pqp_column.column_id;
-  //       if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
-  //         pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
-  //         pqp_columns_to_evaluate[column_id] = true;
-  //       } else {
-  //         columns_ids_first_occurences[pqp_column_id] = column_id;
-  //       }
-  //     }
-  //     return ExpressionVisitation::VisitArguments;
-  //   });
-  // }
-
-  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-  //   const auto& expression = expressions[column_id];
-  //   std::cout << *expression << ": ";
-  //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
-  // }
 
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
@@ -200,8 +225,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       const auto& expression = expressions[column_id];
       if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
         all_segments_forwarded = false;
+        // std::cout << "Not forwarding " << *expression << std::endl;
         continue;
       }
+
+      // std::cout << "Forwarding " << *expression << std::endl;
       // Forward input segment if possible
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
       output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
@@ -213,7 +241,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
-    if (all_segments_forwarded) continue;
+    if (all_segments_forwarded) {
+      // std::cout << "Skip evaluation." << std::endl;
+      continue;
+    }
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
@@ -224,6 +255,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto& expression = expressions[column_id];
 
         if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
+          // std::cout << "Evaluating " << *expression << std::endl;
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
           column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
