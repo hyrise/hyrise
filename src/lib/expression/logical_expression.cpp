@@ -29,7 +29,7 @@ const std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() con
 
 const std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() const { return arguments[1]; }
 
-std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy(
+std::shared_ptr<AbstractExpression> LogicalExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(copied_ops),
                                              right_operand()->deep_copy(copied_ops));

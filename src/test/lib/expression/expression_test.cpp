@@ -105,14 +105,14 @@ TEST_F(ExpressionTest, DeepEquals) {
 
 TEST_F(ExpressionTest, DeepCopy) {
   const auto expr_a = sub_(mul_(add_(1, 5), add_(13.3, 14.4)), mod_(12, 5.5));
-  EXPECT_EQ(*expr_a, *expr_a->AbstractExpression::deep_copy());
+  EXPECT_EQ(*expr_a, *expr_a->deep_copy());
 
   const auto expr_b = and_(greater_than_equals_(15, 12), or_(greater_than_(5, 3), less_than_(3, 5)));
-  EXPECT_EQ(*expr_b, *expr_b->AbstractExpression::deep_copy());
+  EXPECT_EQ(*expr_b, *expr_b->deep_copy());
 
   const auto parameter_a = correlated_parameter_(ParameterID{5}, a);
   parameter_a->set_value(3);
-  const auto parameter_b = parameter_a->AbstractExpression::deep_copy();
+  const auto parameter_b = parameter_a->deep_copy();
   EXPECT_EQ(*parameter_a, *parameter_b);
   static_cast<CorrelatedParameterExpression&>(*parameter_b).set_value(4);
   EXPECT_NE(*parameter_a, *parameter_b);

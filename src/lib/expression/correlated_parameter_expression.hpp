@@ -34,7 +34,7 @@ class CorrelatedParameterExpression : public AbstractExpression {
   void set_value(const std::optional<AllTypeVariant>& value);
 
   bool requires_computation() const override;
-  std::shared_ptr<AbstractExpression> deep_copy(
+  std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

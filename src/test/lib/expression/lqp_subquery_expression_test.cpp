@@ -92,14 +92,14 @@ TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
 
 TEST_F(LQPSubqueryExpressionTest, DeepCopy) {
   const auto subquery_a_copy = std::dynamic_pointer_cast<LQPSubqueryExpression>
-      (subquery_a->AbstractExpression::deep_copy());
+      (subquery_a->deep_copy());
   EXPECT_EQ(*subquery_a, *subquery_a_copy);
 
   // Check LQP was actually duplicated
   EXPECT_NE(subquery_a->lqp, subquery_a_copy->lqp);
 
   const auto subquery_c_copy = std::dynamic_pointer_cast<LQPSubqueryExpression>
-      (subquery_c->AbstractExpression::deep_copy());
+      (subquery_c->deep_copy());
   EXPECT_EQ(*subquery_c, *subquery_c_copy);
 
   // Check LQP and parameters were actually duplicated

@@ -15,7 +15,7 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
-  std::shared_ptr<AbstractExpression> deep_copy(
+  std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   std::string description(const DescriptionMode mode) const override;

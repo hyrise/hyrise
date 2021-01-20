@@ -9,7 +9,7 @@ namespace opossum {
 CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type)
     : AbstractExpression(ExpressionType::Cast, {argument}), _data_type(data_type) {}
 
-std::shared_ptr<AbstractExpression> CastExpression::deep_copy(
+std::shared_ptr<AbstractExpression> CastExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<CastExpression>(argument()->deep_copy(copied_ops), _data_type);
 }

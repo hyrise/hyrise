@@ -83,7 +83,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   // With Parameter
   const auto _pqp_subquery_expression_with_param_copy =
       std::dynamic_pointer_cast<PQPSubqueryExpression>
-          (_pqp_subquery_expression_with_param->AbstractExpression::deep_copy());
+          (_pqp_subquery_expression_with_param->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_with_param_copy);
 
   ASSERT_EQ(_pqp_subquery_expression_with_param_copy->parameters.size(), 1u);
@@ -94,7 +94,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
 
   // Without Parameter
   const auto _pqp_subquery_expression_copy =
-      std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->AbstractExpression::deep_copy());
+      std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_copy);
 
   ASSERT_EQ(_pqp_subquery_expression_copy->parameters.size(), 0u);
@@ -112,7 +112,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesSubplanReuse) {
   ASSERT_EQ(get_table->consumer_count(), 2);
 
   const auto copied_pqp_subquery_expression =
-      std::dynamic_pointer_cast<PQPSubqueryExpression>(pqp_subquery_expression->AbstractExpression::deep_copy());
+      std::dynamic_pointer_cast<PQPSubqueryExpression>(pqp_subquery_expression->deep_copy());
   const auto copied_pqp = copied_pqp_subquery_expression->pqp;
 
   EXPECT_NE(pqp_subquery_expression->pqp, copied_pqp);

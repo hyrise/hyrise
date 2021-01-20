@@ -15,7 +15,7 @@ class CastExpression : public AbstractExpression {
  public:
   CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type);
 
-  std::shared_ptr<AbstractExpression> deep_copy(
+  std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

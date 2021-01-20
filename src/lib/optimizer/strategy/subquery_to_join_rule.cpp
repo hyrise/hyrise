@@ -292,14 +292,14 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     if (const auto left_subquery_expression =
             std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->left_operand())) {
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>
-          (left_subquery_expression->AbstractExpression::deep_copy());
+          (left_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           flip_predicate_condition(binary_predicate->predicate_condition), binary_predicate->right_operand(),
           result.subquery->lqp->output_expressions()[0]);
     } else if (const auto right_subquery_expression =
                    std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->right_operand())) {
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>
-          (right_subquery_expression->AbstractExpression::deep_copy());
+          (right_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           binary_predicate->predicate_condition, binary_predicate->left_operand(),
           result.subquery->lqp->output_expressions()[0]);

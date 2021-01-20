@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
 }
 
-std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy(
+std::shared_ptr<AbstractExpression> AggregateExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy(copied_ops));
 }

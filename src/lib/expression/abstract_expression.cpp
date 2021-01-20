@@ -22,6 +22,11 @@ std::shared_ptr<AbstractExpression> AbstractExpression::deep_copy() const {
   return deep_copy(copied_ops);
 }
 
+std::shared_ptr<AbstractExpression> AbstractExpression::deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return _on_deep_copy(copied_ops);
+}
+
 bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   const auto node_column_id = lqp.find_column_id(*this);
   if (node_column_id) {

@@ -27,7 +27,7 @@ FunctionExpression::FunctionExpression(const FunctionType init_function_type,
   }
 }
 
-std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy(
+std::shared_ptr<AbstractExpression> FunctionExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<FunctionExpression>(function_type, expressions_deep_copy(arguments, copied_ops));
 }

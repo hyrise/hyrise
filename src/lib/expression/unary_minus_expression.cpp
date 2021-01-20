@@ -13,7 +13,7 @@ UnaryMinusExpression::UnaryMinusExpression(const std::shared_ptr<AbstractExpress
 
 std::shared_ptr<AbstractExpression> UnaryMinusExpression::argument() const { return arguments[0]; }
 
-std::shared_ptr<AbstractExpression> UnaryMinusExpression::deep_copy(
+std::shared_ptr<AbstractExpression> UnaryMinusExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<UnaryMinusExpression>(argument()->deep_copy(copied_ops));
 }
