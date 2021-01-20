@@ -159,15 +159,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       });
     }
 
-    constexpr auto THRESHOLD = 2;
+    constexpr auto THRESHOLD = 1;
 
-    
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       const auto& expression = expressions[column_id];
       if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
         const auto pqp_column_id = pqp_column_expression->column_id;
         if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
           pqp_columns_to_evaluate[column_id] = true;
+          // std::cout << "Not forwarding: " << *expression << std::endl;
         }
       }
     }
