@@ -198,23 +198,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
-
-
-      // std::stringstream ss;
-      // ss << *expression;
-      // auto str = ss.str();
-      // if (str.find("l_extendedprice") != std::string::npos) {
-      //   all_segments_forwarded = false;
-      //   continue;
-      // }
-
-
       if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
         all_segments_forwarded = false;
         continue;
       }
       // Forward input segment if possible
-      // std::cout << "PROJ: forwarding " << *expression << std::endl;
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
       output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
       column_is_nullable[column_id] = input_table.column_is_nullable(pqp_column_expression.column_id);
@@ -236,7 +224,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto& expression = expressions[column_id];
 
         if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
-          // std::cout << "PROJ: evaluating " << *expression << std::endl;
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
           column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
@@ -296,8 +283,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
-      const auto& original_id = pqp_column_expression->column_id;
-      input_column_to_output_column[original_id] = expression_id;
+      if (!pqp_columns_to_evaluate[expression_id]) {
+        const auto& original_id = pqp_column_expression->column_id;
+        input_column_to_output_column[original_id] = expression_id;
+      }
     }
   }
 
