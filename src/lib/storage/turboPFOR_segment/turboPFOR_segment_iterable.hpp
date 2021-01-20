@@ -66,7 +66,12 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
           : _encoded_values{encoded_values},
             _null_values{null_values},
             _chunk_offset{chunk_offset} {
-              _decoded_values = turboPFOR::p4DecodeVectorSequential(_encoded_values.get());
+              _decoded_values = std::vector<uint32_t>(size);
+              // Using the p4DecodeVectorSequential function still leads to a Segmentation Fault
+              // in the benchmark.
+              for (int i = 0; i < size; i++) {
+                 _decoded_values[i] = turboPFOR::p4GetVectorIndex(encoded_values.get(), i);
+              }
       }
 
     private:
