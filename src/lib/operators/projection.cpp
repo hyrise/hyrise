@@ -22,7 +22,6 @@
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
-
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
@@ -51,12 +50,6 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  // std::cout << std::endl;
-  // std::cout << std::endl;
-  // std::cout << "EXECUTION PROJECTION" << std::endl;
-  // std::cout << std::endl;
-  // std::cout << std::endl;
-
   Timer timer;
 
   const auto& input_table = *left_input_table();
