@@ -69,8 +69,9 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
               _decoded_values = std::vector<uint32_t>(size);
               // Using the p4DecodeVectorSequential function still leads to a Segmentation Fault
               // in the benchmark.
+              p4_cache = turboPFOR::calculateP4Ini(*_encoded_values);
               for (int i = 0; i < size; i++) {
-                 _decoded_values[i] = turboPFOR::p4GetVectorIndex(encoded_values.get(), i);
+                 _decoded_values[i] = turboPFOR::p4GetValueNoInit(*_encoded_values, p4_cache, i);
               }
       }
 
@@ -107,6 +108,7 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
 
       private:
       std::shared_ptr<turboPFOR::EncodedTurboPForVector> _encoded_values;
+      turboPFOR::PointBasedCache p4_cache;
       const std::optional<pmr_vector<bool>>* _null_values;
       std::vector<uint32_t> _decoded_values;
 
@@ -131,8 +133,8 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
         _encoded_values{encoded_values},
         _null_values{null_values} 
         {
-
-    }
+           p4_cache = turboPFOR::calculateP4Ini(*_encoded_values);
+        }
 
     private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -142,12 +144,13 @@ class TurboPFORSegmentIterable : public PointAccessibleSegmentIterable<TurboPFOR
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto is_null = *_null_values ? (**_null_values)[current_offset] : false;
-      const auto value = turboPFOR::p4GetVectorIndex(_encoded_values.get(), current_offset);
+      const auto value = turboPFOR::p4GetValueNoInit(*_encoded_values, p4_cache, current_offset);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
     private:
     std::shared_ptr<turboPFOR::EncodedTurboPForVector> _encoded_values;
+    turboPFOR::PointBasedCache p4_cache;
     const std::optional<pmr_vector<bool>>* _null_values;
   };
 };

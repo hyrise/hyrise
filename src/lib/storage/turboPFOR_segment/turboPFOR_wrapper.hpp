@@ -27,6 +27,12 @@ typedef struct EncodedTurboPForVector {
     }
 } EncodedTurboPForVector;
 
+typedef struct PointBasedCache {
+    std::vector<p4> p4s;
+    std::vector<uint32_t> bs;
+    std::vector<unsigned char*> ins;
+} PointBasedCache;
+
 inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
   size_t numElements = vec.size();
   size_t numElementsAligned = numElements + P4_BLOCK_SIZE; // todo better bounds
@@ -51,7 +57,7 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
       // todo: increment out_ptr?
   }
 
-  //compressedBufferVec.resize(out_ptr-compressedBufferVecPtr);
+  compressedBufferVec.resize(out_ptr-compressedBufferVecPtr+P4_BLOCK_SIZE);
   EncodedTurboPForVector e;
   e.compressedBuffer = compressedBufferVec;
   e.offsets = offsets;
@@ -60,17 +66,32 @@ inline EncodedTurboPForVector p4EncodeVector(const std::vector<uint32_t>& vec) {
   return e;
 }
 
-inline std::vector<uint32_t> p4DecodeVectorSequential(EncodedTurboPForVector *e) {
-  size_t numElements = e->size;
-  if (e->size == 0) {
+inline PointBasedCache calculateP4Ini(const EncodedTurboPForVector& e) {
+  unsigned char* inPointer = const_cast<unsigned char*>(e.compressedBuffer.data());
+  PointBasedCache cache;
+  for (const auto &offset : e.offsets) {
+      p4 p4;
+      unsigned b;
+      unsigned char* offsetIn = inPointer + offset;
+      p4ini(&p4, &offsetIn, P4_BLOCK_SIZE, &b);
+      cache.p4s.push_back(p4);
+      cache.bs.push_back(b);
+      cache.ins.push_back(offsetIn);
+  }
+  return cache;
+}
+
+inline std::vector<uint32_t> p4DecodeVectorSequential(const EncodedTurboPForVector& e) {
+  size_t numElements = e.size;
+  if (e.size == 0) {
     return std::vector<uint32_t>(0);
   }
 
   auto decodedVector = std::vector<uint32_t>(4*P4NDEC_BOUND(numElements, 1));
   uint32_t *decoded_ptr = decodedVector.data();
 
-  std::vector<uint32_t> offsets = e->offsets;
-  std::vector<unsigned char>& compressedBufferVec = e->compressedBuffer;
+  std::vector<uint32_t> offsets = e.offsets;
+  const std::vector<unsigned char>& compressedBufferVec = e.compressedBuffer;
   uint8_t * p;
   p = (uint8_t*) compressedBufferVec.data();
 
@@ -82,18 +103,32 @@ inline std::vector<uint32_t> p4DecodeVectorSequential(EncodedTurboPForVector *e)
   return decodedVector;
 }
 
-inline uint32_t p4GetVectorIndex(EncodedTurboPForVector *e, size_t idx) {
-  size_t numElements = e->size;
+inline uint32_t p4GetValue(const EncodedTurboPForVector& e, size_t idx) {
+  size_t numElements = e.size;
 
-  std::vector<unsigned char>& compressedBufferVec = e->compressedBuffer;
+  const std::vector<unsigned char>& compressedBufferVec = e.compressedBuffer;
   uint8_t * p;
   p = (uint8_t*) compressedBufferVec.data();
   size_t offset_to_block = ROUND_DOWN(idx, P4_BLOCK_SIZE);
-  p += e->offsets[offset_to_block/P4_BLOCK_SIZE];
+  p += e.offsets[offset_to_block/P4_BLOCK_SIZE];
 
   p4 p4;
   unsigned b;
   p4ini(&p4, &p, P4_BLOCK_SIZE, &b);
+
+  uint32_t result = p4getx32(&p4, p, idx - offset_to_block, b);
+  return result;
+}
+
+inline uint32_t p4GetValueNoInit(const EncodedTurboPForVector& e, const PointBasedCache& cache, size_t idx) {
+
+  const std::vector<unsigned char>& compressedBufferVec = e.compressedBuffer;
+  size_t offset_to_block = ROUND_DOWN(idx, P4_BLOCK_SIZE);
+  size_t i = offset_to_block/P4_BLOCK_SIZE;
+
+  auto p4 = cache.p4s[i];
+  uint32_t b = cache.bs[i];
+  unsigned char* p = cache.ins[i];
 
   uint32_t result = p4getx32(&p4, p, idx - offset_to_block, b);
   return result;

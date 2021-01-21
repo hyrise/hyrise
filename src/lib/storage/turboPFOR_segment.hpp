@@ -62,7 +62,7 @@ class TurboPFORSegment : public AbstractEncodedSegment {
       return std::nullopt;
     }
 
-    const auto value = turboPFOR::p4GetVectorIndex(_encoded_values.get(), chunk_offset); // WRONG
+    const auto value = turboPFOR::p4GetValue(*_encoded_values, chunk_offset);
     return value;
   }
 
