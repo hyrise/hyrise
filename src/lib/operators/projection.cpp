@@ -22,6 +22,7 @@
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
+
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
@@ -119,95 +120,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto expression_count = expressions.size();
 
-  //
-  // V1 ... would need iterating twice (find doublettes, unset them in bit vector)
-  //
-  //
-
-  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
-  // for (auto column_id = ColumnID{0}; column_id < input_table.column_count(); ++column_id) {
-  //   std::cout << "Column id: " << column_id << " with name " << input_table.column_definitions()[column_id].name << std::endl;
-  // }
-  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
-
-  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
-  // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-  //   const auto& expression = expressions[column_id];
-  //   std::cout << "column id: " << column_id << "  -  " << *expression;
-  //   if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
-  //     const auto pqp_column_id = pqp_column_expression->column_id;
-  //     std::cout << " (PQP col id: " << pqp_column_id;
-  //   }
-  //   std::cout << std::endl;
-  // }
-  // std::cout << "$$$$$$$$$$$$$$$$$$" << std::endl;
-
+  // We don't know the order in which the expressions occur (PQPColumn might follow an expression that contains the same PQPColumn)
+  // Thus we first need to check the counts and afterwards disable forwarding when the PQP columns is referenced multiple times
   auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-
   if (output_table_type == TableType::References) {
-    auto pqp_column_id_occurences = std::vector<size_t>(input_table.column_count());
-    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-      const auto& expression = expressions[column_id];
-      visit_expression(expression, [&](const auto& sub_expression) {
-        if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(sub_expression)) {
-          const auto pqp_column_id = pqp_column_expression->column_id;
-          if (pqp_column_id != INVALID_COLUMN_ID) {
-            ++pqp_column_id_occurences[pqp_column_id];
-          }
-        }
-        return ExpressionVisitation::VisitArguments;
-      });
-    }
-
-    constexpr auto THRESHOLD = 1;
-
-    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-      const auto& expression = expressions[column_id];
-      if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
-        const auto pqp_column_id = pqp_column_expression->column_id;
-        if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
-          pqp_columns_to_evaluate[column_id] = true;
-          // std::cout << "Not forwarding: " << *expression << std::endl;
-        }
-      }
-    }
-    //
-    // /V1
-    //
-
-    //
-    // V2
-    //
-    //
-
-    // auto columns_ids_first_occurences = std::unordered_map<ColumnID, size_t>{};
-    // auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
-    // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    //   const auto& expression = expressions[column_id];
-    //   visit_expression(expression, [&](const auto& sub_expression) {
-    //     if (sub_expression->type == ExpressionType::PQPColumn) {
-    //       const auto& pqp_column = static_cast<PQPColumnExpression&>(*sub_expression);
-    //       const auto pqp_column_id = pqp_column.column_id;
-    //       if (pqp_column.column_id != INVALID_COLUMN_ID && columns_ids_first_occurences.contains(pqp_column_id)) {
-    //         pqp_columns_to_evaluate[columns_ids_first_occurences[pqp_column_id]] = true;
-    //         pqp_columns_to_evaluate[column_id] = true;
-    //       } else {
-    //         columns_ids_first_occurences[pqp_column_id] = column_id;
-    //       }
-    //     }
-    //     return ExpressionVisitation::VisitArguments;
-    //   });
-    // }
-
-    // for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
-    //   const auto& expression = expressions[column_id];
-    //   std::cout << *expression << ": ";
-    //   std::cout << std::boolalpha << static_cast<bool>(pqp_columns_to_evaluate[column_id]) << std::endl;
-    // }
-  } else {
-    // std::cout << "DATA" << std::endl;
+    pqp_columns_to_evaluate = _determine_pqp_columns_to_evaluate();
+    // The main saving is not having to later access a column via the poslist indirection as we already have a materialized column
+    // from the evaluations. If we have a data table, forwarding the materialized column does not hurt and might even be advantageous
+    // if it is encoded properly (having projections on data tables of the storage manager might be exotic though).
   }
-
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
   // vector stores atomic bool values. This allows parallel write operation per thread.
@@ -225,11 +146,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       const auto& expression = expressions[column_id];
       if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
         all_segments_forwarded = false;
-        // std::cout << "Not forwarding " << *expression << std::endl;
         continue;
       }
 
-      // std::cout << "Forwarding " << *expression << std::endl;
       // Forward input segment if possible
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
       output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
@@ -241,10 +160,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
-    if (all_segments_forwarded) {
-      // std::cout << "Skip evaluation." << std::endl;
-      continue;
-    }
+    if (all_segments_forwarded) continue;
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
@@ -255,7 +171,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto& expression = expressions[column_id];
 
         if (expression->type != ExpressionType::PQPColumn || pqp_columns_to_evaluate[column_id]) {
-          // std::cout << "Evaluating " << *expression << std::endl;
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
           column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
@@ -394,6 +309,41 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 std::shared_ptr<Table> Projection::dummy_table() {
   static auto shared_dummy = std::make_shared<DummyTable>();
   return shared_dummy;
+}
+
+std::vector<bool> Projection::_determine_pqp_columns_to_evaluate() const {
+  const auto expression_count = expressions.size();
+
+  auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
+  auto pqp_column_id_occurences = std::vector<size_t>(left_input_table()->column_count());
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto& expression = expressions[column_id];
+    visit_expression(expression, [&](const auto& sub_expression) {
+      if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(sub_expression)) {
+        const auto pqp_column_id = pqp_column_expression->column_id;
+        if (pqp_column_id != INVALID_COLUMN_ID) {
+          ++pqp_column_id_occurences[pqp_column_id];
+        }
+      }
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+
+  // In case a forwarded segment is dictionary encoded (e.g., TPC-H Q1), aggregate optimizations for dictionary encoding  might render this trick here
+  // disadvantegeous. Thus, we check for a given number of occurences. As of now, a threshold of 1 is fine (that's means we always discard the forwarding
+  // as soon as another occurence happens) and shows good examples. For a threshold of two, Q1 would remain the same, but we include Q8 (but runtime in super short).
+  constexpr auto THRESHOLD = 1;
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto& expression = expressions[column_id];
+    if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
+      const auto pqp_column_id = pqp_column_expression->column_id;
+      if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
+        pqp_columns_to_evaluate[column_id] = true;
+      }
+    }
+  }
+
+  return pqp_columns_to_evaluate;
 }
 
 }  // namespace opossum

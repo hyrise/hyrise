@@ -60,6 +60,8 @@ class Projection : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+
+  std::vector<bool> _determine_pqp_columns_to_evaluate() const;
 };
 
 }  // namespace opossum
