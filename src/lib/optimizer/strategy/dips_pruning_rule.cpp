@@ -188,6 +188,11 @@ namespace opossum {
       for (auto predicate : join_predicates) {
 
         std::shared_ptr<BinaryPredicateExpression> binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+
+        if (binary_predicate->predicate_condition != PredicateCondition::Equals) {
+          continue;
+        }
+
         auto left_operand = binary_predicate->left_operand();
         auto right_operand = binary_predicate->right_operand();
 
