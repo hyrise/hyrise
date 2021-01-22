@@ -113,14 +113,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto expression_count = expressions.size();
 
-  // We don't know the order in which the expressions occur (PQPColumn might follow an expression that contains the same PQPColumn)
-  // Thus we first need to check the counts and afterwards disable forwarding when the PQP columns is referenced multiple times
+  // Vector to denote whether a forwardable column should be forwarded or if it should be evaluated by the expression
+  // evaluator. See _determine_pqp_columns_to_evaluate() for more details on forwarding and evaluation.
   auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
   if (output_table_type == TableType::References) {
+    // In case of data tables, forwarding a PQPColumn can be beneficial (e.g., when the column is dictionary-encoded
+    // and the following operator can exploit dictionary encoded columns). In case a slower encoding is used, this is
+    // less likely the case. Currently, no standard benchmark in Hyrise has projections on encoded data tables.
     pqp_columns_to_evaluate = _determine_pqp_columns_to_evaluate();
-    // The main saving is not having to later access a column via the poslist indirection as we already have a materialized column
-    // from the evaluations. If we have a data table, forwarding the materialized column does not hurt and might even be advantageous
-    // if it is encoded properly (having projections on data tables of the storage manager might be exotic though).
   }
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
@@ -304,10 +304,19 @@ std::shared_ptr<Table> Projection::dummy_table() {
   return shared_dummy;
 }
 
+/**
+ *  Method to determine PQPColumn that should not be forwarded. In most cases, forwarding a column comes with almost
+ *  zero costs and should be done. However, in cases where the same PQPColumn is also accessed in the expression
+ *  evaluation, the whole column is materialized and cached anyways. In that case, returning the materialized PQPColumn
+ *  instead of forwarding it benefits the following operator which can process a fully materialized column sequentially
+ *  instead of accessing the column indirectly via a position list.
+ */
 std::vector<bool> Projection::_determine_pqp_columns_to_evaluate() const {
   const auto expression_count = expressions.size();
 
-  auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
+  // To decide which forwardable columns should be evaluated, we first need to know if they are part of an expression.
+  // As expressions that reference a PQPColumn might be place before or behind the forwardable PQPColumn, we run twice
+  // over the expressions. In a first step, we collect the number of occurences of PQPColumns.
   auto pqp_column_id_occurences = std::vector<size_t>(left_input_table()->column_count());
   for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
     const auto& expression = expressions[column_id];
@@ -322,15 +331,20 @@ std::vector<bool> Projection::_determine_pqp_columns_to_evaluate() const {
     });
   }
 
-  // In case a forwarded segment is dictionary encoded (e.g., TPC-H Q1), aggregate optimizations for dictionary encoding  might render this trick here
-  // disadvantegeous. Thus, we check for a given number of occurences. As of now, a threshold of 1 is fine (that's means we always discard the forwarding
-  // as soon as another occurence happens) and shows good examples. For a threshold of two, Q1 would remain the same, but we include Q8 (but runtime in super short).
-  constexpr auto THRESHOLD = 1;
+  // In case a forwarded segment is dictionary encoded (e.g., TPC-H Q1), aggregate optimizations for dictionary
+  // encoding could potentially render evaluation instead of forwarding here disadvantegeous. Thus, we check if the
+  // column occurs more often than the threshold. As of now, a threshold of 2 is fine (i.e., we evaluate a forwardable
+  // column as soon as it is referenced again), which worked fine for TPC-H.
+  // Depending on changes on other operators, it might be beneficial to forward dictionary columns more often. But for
+  // encodings such as LZ4, a threshold of two should be best.
+  constexpr auto THRESHOLD = 2;
+
+  auto pqp_columns_to_evaluate = std::vector<bool>(expression_count, false);
   for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
     const auto& expression = expressions[column_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       const auto pqp_column_id = pqp_column_expression->column_id;
-      if (pqp_column_id_occurences[pqp_column_id] > THRESHOLD) {
+      if (pqp_column_id_occurences[pqp_column_id] >= THRESHOLD) {
         pqp_columns_to_evaluate[column_id] = true;
       }
     }
