@@ -4,7 +4,7 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
-def jenkinsUserName = cause ? ['userId'] : null
+def jenkinsUserName = cause ? cause['userId'] : null
 echo jenkinsUserName
 
 try {
