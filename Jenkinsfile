@@ -3,15 +3,14 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
-def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
-def jenkinsUserName = cause ? cause['userId'] : null
-echo jenkinsUserName
-
 try {
   node {
     stage ("Start") {
-      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-      if (env.CHANGE_ID) {
+      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team) or the Jenkins admin user
+      def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
+      def jenkinsUserName = cause ? cause['userId'] : null
+
+      if (jenkinsUserName != "admin") {
         try {
           withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
             env.PR_CREATED_BY = pullRequest.createdBy
