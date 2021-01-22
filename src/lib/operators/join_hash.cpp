@@ -22,6 +22,13 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
+
+
+
+
+
+#include <cstdlib>
+
 namespace {
 
 // Depending on which input table became the build/probe table we have to order the columns of the output table.
@@ -72,7 +79,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size, const JoinMode mode) {
   /*
     Setting number of bits for radix clustering:
     The number of bits is used to create probe partitions with a size that can
@@ -94,8 +101,23 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
     PerformanceWarning("Build relation larger than probe relation in hash join");
   }
 
-  const auto l2_cache_size = 1'024'000;                  // bytes
-  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
+  auto cache_usage_value = 0.5;
+  if (const char* env_p = std::getenv("CACHE_USAGE")) {
+    cache_usage_value = std::atof(env_p);
+    if (HYRISE_DEBUG)
+      std::cout << "Using a cache usage factor of " << cache_usage_value << std::endl;
+  }
+  auto semi_adaption_factor = 1.0;
+  if (const char* env_p = std::getenv("SEMI_ADAPTION_FACTOR")) {
+    if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
+      semi_adaption_factor = std::atof(env_p);
+      if (HYRISE_DEBUG)
+        std::cout << "Using a semi join adaption factor of " << semi_adaption_factor << std::endl;
+    }
+  }
+
+  const auto l2_cache_size = 1'024'000;                                // bytes
+  const auto l2_cache_max_usable = l2_cache_size * cache_usage_value;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -106,7 +128,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
       // number of items in map
       static_cast<double>(build_relation_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(uint32_t)) / 0.8;
+      static_cast<double>(sizeof(uint32_t)) * semi_adaption_factor / 0.8;
 
   auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
@@ -191,7 +213,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
           _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count(), _mode);
         }
 
         // It needs to be ensured that the build partition does not get too large, because the
