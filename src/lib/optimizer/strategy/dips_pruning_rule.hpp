@@ -95,6 +95,13 @@ namespace opossum {
         return graph_node;
       }
 
+      bool is_empty(){
+        if(nodes.size()==0){
+          return true;
+        }
+        return false;
+      }
+
       bool is_tree(){
         if (nodes.size()==0){
           return true;

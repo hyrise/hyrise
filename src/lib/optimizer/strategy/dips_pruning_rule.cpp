@@ -39,6 +39,11 @@ namespace opossum {
     std::cout << *join_graph << '\n';
     std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
 
+    if(join_graph->is_empty()){
+      std::cout << "==== JOIN GRAPH IS EMPTY ====" << std::endl;
+      return;
+    }
+
     if(join_graph->is_tree()){
       std::shared_ptr<DipsJoinGraphNode> root = join_graph->nodes[0]; // TODO: finding root implementation
       std::cout << "==== ROOT ====" << std::endl;
