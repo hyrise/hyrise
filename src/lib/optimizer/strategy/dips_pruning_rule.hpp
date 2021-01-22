@@ -43,14 +43,14 @@ namespace opossum {
   class DipsJoinGraphEdge {
     public:
       std::shared_ptr<DipsJoinGraphNode> partner_node;
-      std::vector<std::shared_ptr<AbstractExpression>> predicates;
+      std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
 
       DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> partner_node) {     
         this->partner_node = partner_node;
-        this->predicates = std::vector<std::shared_ptr<AbstractExpression>>();
+        this->predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>();
       }
       
-      void append_predicate(std::shared_ptr<AbstractExpression> predicate){
+      void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate){
         if(std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()){   // TODO: remove search when implementation "visit single node in LQP only once" is done
           predicates.push_back(predicate);
         }
@@ -169,6 +169,8 @@ namespace opossum {
 
     void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const;
     void extend_pruned_chunks( std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const;
+    void top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;
+    void bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;
 
     template<typename COLUMN_TYPE>
     std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>

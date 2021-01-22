@@ -36,25 +36,27 @@ namespace opossum {
     std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
     _build_join_graph(node, join_graph);
     
-    std::cout << *join_graph << '\n';
-    std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
+    //std::cout << *join_graph << '\n';
+    //std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
 
     if(join_graph->is_empty()){
-      std::cout << "==== JOIN GRAPH IS EMPTY ====" << std::endl;
+      //std::cout << "==== JOIN GRAPH IS EMPTY ====" << std::endl;
       return;
     }
 
     if(join_graph->is_tree()){
       std::shared_ptr<DipsJoinGraphNode> root = join_graph->nodes[0]; // TODO: finding root implementation
-      std::cout << "==== ROOT ====" << std::endl;
-      std::cout << "    " << root << std::endl;
+      //std::cout << "==== ROOT ====" << std::endl;
+      //std::cout << "    " << root << std::endl;
       join_graph->set_root(root);
+      bottom_up_dip_traversal(root);
+      top_down_dip_traversal(root);
     } else {
       // TODO: cycle implementation
     }
 
-    std::cout << "\nAFTER OPERATIONS\n" << '\n';
-    std::cout << *join_graph << '\n';
+    //std::cout << "\nAFTER OPERATIONS\n" << '\n';
+    //std::cout << *join_graph << '\n';
 
 
     /*
@@ -102,6 +104,70 @@ namespace opossum {
     */
   }
 
+  void DipsPruningRule::bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const { //expects root in the first call
+    for (std::shared_ptr<DipsJoinGraphNode> child : node->children){
+      bottom_up_dip_traversal(child);
+    }
+    if(node->parent == nullptr){  //handle root
+      return;
+    }
+    auto edge = node->get_edge_for_table(node->parent);
+
+    for (auto predicate : edge->predicates){
+      auto left_operand = predicate->left_operand();
+      auto right_operand = predicate->right_operand();
+
+      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+
+      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+      
+      if (!left_stored_table_node || !right_stored_table_node) {
+          return;
+      }
+
+      // LEFT -> RIGHT
+      dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node, right_lqp->original_column_id);
+
+      // RIGHT -> LEFT
+      dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
+    } 
+  }
+
+  void DipsPruningRule::top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const { //expects root in the first call
+    if(node->parent == nullptr){  //handle root
+      return;
+    }
+    auto edge = node->get_edge_for_table(node->parent);
+
+    for (auto predicate : edge->predicates){
+      auto left_operand = predicate->left_operand();
+      auto right_operand = predicate->right_operand();
+
+      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+
+      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+      
+      if (!left_stored_table_node || !right_stored_table_node) {
+          return;
+      }
+
+      // LEFT -> RIGHT
+      dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node, right_lqp->original_column_id);
+
+      // RIGHT -> LEFT
+      dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
+    } 
+
+    for (std::shared_ptr<DipsJoinGraphNode> child : node->children){
+      bottom_up_dip_traversal(child);
+    }
+  }
+
+
   void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const {
     if (node->left_input()) _build_join_graph(node->left_input(), join_graph);
     if (node->right_input()) _build_join_graph(node->right_input(), join_graph);
@@ -122,8 +188,8 @@ namespace opossum {
         if (!left_lqp || !right_lqp) {
           continue;
         }
-
         std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+
         std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
 
         // access join graph nodes
@@ -135,8 +201,8 @@ namespace opossum {
         auto right_left_edge = right_join_graph_node->get_edge_for_table(left_join_graph_node);
 
         // append predicates
-        left_right_edge->append_predicate(predicate); // TODO: visit every node in LQP only once (avoid cycles) -> use "simple" append
-        right_left_edge->append_predicate(predicate);
+        left_right_edge->append_predicate(binary_predicate); // TODO: visit every node in LQP only once (avoid cycles) -> use "simple" append
+        right_left_edge->append_predicate(binary_predicate);
 
         // left_right_edge->predicates.push_back(predicate);
         // right_left_edge->predicates.push_back(predicate);
@@ -195,7 +261,7 @@ namespace opossum {
           stream << "      " << edge->partner_node->table_node->description() << std::endl;
           stream << "            ==== Predicates ====" << std::endl;
           for (auto predicate : edge->predicates) {
-            stream << "            " << predicate->description() << std::endl;
+            stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName) << std::endl;
           }
         }
       }
