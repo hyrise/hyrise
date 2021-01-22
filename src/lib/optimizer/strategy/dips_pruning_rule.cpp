@@ -122,7 +122,10 @@ namespace opossum {
 
       std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
       std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
-      
+      // int number_of_pruned_left = left_stored_table_node->pruned_chunk_ids().size();
+      // int number_of_pruned_right = right_stored_table_node->pruned_chunk_ids().size();
+
+
       if (!left_stored_table_node || !right_stored_table_node) {
           return;
       }
@@ -132,6 +135,9 @@ namespace opossum {
 
       // RIGHT -> LEFT
       dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
+
+      // std::cout << "Prune on " << left_stored_table_node->table_name << " Before: " << number_of_pruned_left << " After " << left_stored_table_node->pruned_chunk_ids().size() << std::endl;
+      // std::cout << "Prune on " << right_stored_table_node->table_name << " Before: " << number_of_pruned_right << " After " << right_stored_table_node->pruned_chunk_ids().size() << std::endl;
     } 
   }
 
@@ -173,6 +179,9 @@ namespace opossum {
     if (node->right_input()) _build_join_graph(node->right_input(), join_graph);
 
     if (node->type == LQPNodeType::Join) {
+      if(std::find(supported_join_types.begin(), supported_join_types.end(), std::dynamic_pointer_cast<JoinNode>(node)->join_mode) == supported_join_types.end()){
+        return;
+      }
       const auto& join_node = static_cast<JoinNode&>(*node);
       const auto join_predicates = join_node.join_predicates();
 

@@ -27,6 +27,8 @@
 #include "hyrise.hpp"
 #include <iostream>
 
+#include "types.hpp"
+
 namespace opossum {
 
   class AbstractLQPNode;
@@ -161,6 +163,8 @@ namespace opossum {
 
   protected:
     
+    std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi}; //TODO: extend if possible
+
     void dips_pruning(
       const std::shared_ptr<const StoredTableNode> table_node, 
       ColumnID column_id, 
