@@ -3,6 +3,9 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
+def userName = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?['userId']
+echo userName
+
 try {
   node {
     stage ("Start") {
