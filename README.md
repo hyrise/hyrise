@@ -4,9 +4,9 @@
 
 # Welcome to Hyrise
 
-Hyrise is a research in-memory database system that has been developed [by HPI since 2009](https://www.vldb.org/pvldb/vol4/p105-grund.pdf) and has been entirely [rewritten in 2017](https://openproceedings.org/2019/conf/edbt/EDBT19_paper_152.pdf). Our goal is to provide a clean and flexible platform for research in the area of in-memory data management. It combines a relational, columnar DBMS foundation with optional self-driving features such as automatic tiering and index selection. This architecture allows us, our students, and other researchers to conduct experiments around new data management concepts. To enable realistic experiments, Hyrise features comprehensive SQL support and performs powerful query plan optimizations. Well-known benchmarks, such as TPC-H or TPC-DS, can be executed with a single command and without any preparation.
+Hyrise is a research in-memory database system that has been developed [by HPI since 2009](https://www.vldb.org/pvldb/vol4/p105-grund.pdf) and has been entirely [rewritten in 2017](https://openproceedings.org/2019/conf/edbt/EDBT19_paper_152.pdf). Our goal is to provide a clean and flexible platform for research in the area of in-memory data management. Its architecture allows us, our students, and other researchers to conduct experiments around new data management concepts. To enable realistic experiments, Hyrise features comprehensive SQL support and performs powerful query plan optimizations. Well-known benchmarks, such as TPC-H or TPC-DS, can be executed with a single command and without any preparation.
 
-This readme focuses on the technical aspects of the repository. For more background on our research and for a list of publications, please visit the [Hyrise project page](https://hpi.de/plattner/projects/hyrise.html).
+This readme file focuses on the technical aspects of the repository. For more background on our research and for a list of publications, please visit the [Hyrise project page](https://hpi.de/plattner/projects/hyrise.html).
 
 You can still find the (archived) previous version of Hyrise on [Github](https://github.com/hyrise/hyrise-v1).
 
