@@ -11,6 +11,7 @@
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"

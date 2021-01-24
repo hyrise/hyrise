@@ -7,6 +7,7 @@
 
 #include "fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp"
 #include "simd_bp128/simd_bp128_compressor.hpp"
+#include "turboPFor_bitpacking/turboPFor_bitpacking_compressor.hpp"
 
 namespace opossum {
 
@@ -19,7 +20,8 @@ namespace {
  */
 const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
-    {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()}};
+    {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()},
+    {VectorCompressionType::TurboPForBitpacking, std::make_shared<TurboPForBitpackingCompressor>()}};
 
 std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressionType type) {
   auto it = vector_compressor_for_type.find(type);

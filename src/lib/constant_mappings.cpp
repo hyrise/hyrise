@@ -53,6 +53,7 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+        {VectorCompressionType::TurboPForBitpacking, "Bitpacking"},
     });
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
@@ -99,6 +100,10 @@ std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compre
     }
     case CompressedVectorType::SimdBp128: {
       stream << "SimdBp128";
+      break;
+    }
+    case CompressedVectorType::TurboPForBitpacking: {
+      stream << "TurboPForBitpacking";
       break;
     }
     default:
