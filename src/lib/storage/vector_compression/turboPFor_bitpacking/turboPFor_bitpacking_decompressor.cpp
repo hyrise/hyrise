@@ -5,7 +5,7 @@
 namespace opossum {
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector)
-    : _data{vector._data},
+    : _data{&vector._data},
       _size{vector._size},
       _b{vector._b} {}
 

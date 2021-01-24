@@ -12,7 +12,7 @@ std::unique_ptr<const BaseCompressedVector> TurboPForBitpackingCompressor::compr
     const UncompressedVectorInfo& meta_info) {
   
   auto data = pmr_vector<uint8_t>(alloc);
-  data.reserve(vector.size() * sizeof(uint32_t) + 1024);
+  data.resize(vector.size() * sizeof(uint32_t) + 1024);
 
   pmr_vector<uint32_t> in(vector);
 
@@ -20,7 +20,8 @@ std::unique_ptr<const BaseCompressedVector> TurboPForBitpackingCompressor::compr
   const auto b = bsr32(max_value);
 
   uint8_t * out_end = bitpack32(in.data(), in.size(), data.data(), b);
-  int bytes_written = out_end - data.data();
+  int bytes_written = (out_end) - data.data();
+
   data.resize(bytes_written);
 
   const uint8_t b_1 = static_cast<uint8_t>(b);

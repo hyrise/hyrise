@@ -229,8 +229,7 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
       {
         SegmentEncodingSpec{EncodingType::Dictionary},
         SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::TurboPForBitpacking}},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
       {
         SegmentEncodingSpec{EncodingType::Unencoded}, 
         SegmentEncodingSpec{EncodingType::Unencoded},

@@ -31,7 +31,8 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
-    return bitgetx32(_data.data(), i, _b);;
+    auto val = bitgetx32(_data->data(), i, _b);
+    return val;
 
 #pragma GCC diagnostic pop
   }
@@ -39,8 +40,8 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
   size_t size() const final { return _size; }
 
  private:
-  const pmr_vector<uint8_t>& _data;
-  const size_t _size;
+  const pmr_vector<uint8_t> *_data;
+  size_t _size;
   uint8_t _b;
 };
 

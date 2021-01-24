@@ -35,6 +35,8 @@ std::ptrdiff_t TurboPForBitpackingIterator::distance_to(const TurboPForBitpackin
   return other._absolute_index - _absolute_index;
 }
 
-uint32_t TurboPForBitpackingIterator::dereference() const { return _decompressor.get(_absolute_index); }  // NOLINT
+uint32_t TurboPForBitpackingIterator::dereference() const { 
+  return _decompressor.get(_absolute_index); 
+}  // NOLINT
 
 }  // namespace opossum
