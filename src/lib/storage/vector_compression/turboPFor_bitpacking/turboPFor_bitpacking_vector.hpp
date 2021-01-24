@@ -1,46 +1,35 @@
 #pragma once
 
-#include <memory>
+#include "storage/vector_compression/base_compressed_vector.hpp"
 
 #include "turboPFor_bitpacking_decompressor.hpp"
 #include "turboPFor_bitpacking_iterator.hpp"
 
-#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-/**
- * @brief Stores values as bitpacking in uint8_t vector
- *
- */
-class TurboPFORBitpackingVector : public CompressedVector<TurboPFORBitpackingVector> {
-
+class TurboPForBitpackingVector : public CompressedVector<TurboPForBitpackingVector> {
  public:
-  explicit TurboPFORBitpackingVector(pmr_vector<uint8_t> data, size_t size, uint8_t b) : _data{std::move(data)}, _size{size}, _b{b} {}
+  explicit TurboPForBitpackingVector(pmr_vector<uint8_t> vector, size_t size, uint8_t b);
+  ~TurboPForBitpackingVector() override = default;
 
-  const pmr_vector<uint8_t>& data() const { return _data; }
+  const pmr_vector<uint8_t>& data() const;
 
- public:
-  size_t on_size() const { return _size; }
-  size_t on_data_size() const { return sizeof(uint8_t) * _data.size(); }
+  size_t on_size() const;
+  size_t on_data_size() const;
 
-  auto on_create_base_decompressor() const {
-    return std::make_unique<TurboPForBitpackingDecompressor>(_data, _size, _b);
-  }
+  std::unique_ptr<BaseVectorDecompressor> on_create_base_decompressor() const;
+  TurboPForBitpackingDecompressor on_create_decompressor() const;
 
-  auto on_create_decompressor() const { return TurboPForBitpackingDecompressor(_data, _size, _b); }
-  
-  TurboPForBitpackingIterator on_begin() const { return TurboPForBitpackingIterator{on_create_decompressor(), 0u}; }
+  TurboPForBitpackingIterator on_begin() const;
+  TurboPForBitpackingIterator on_end() const;
 
-  TurboPForBitpackingIterator on_end() const { return TurboPForBitpackingIterator{on_create_decompressor(), _size}; }
-
-  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-    auto data_copy = pmr_vector<uint8_t>{_data, alloc};
-    return std::make_unique<TurboPFORBitpackingVector>(std::move(data_copy), _size, _b);
-  }
+  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
+  friend class TurboPForBitpackingDecompressor;
+
   const pmr_vector<uint8_t> _data;
   const size_t _size;
   const uint8_t _b;

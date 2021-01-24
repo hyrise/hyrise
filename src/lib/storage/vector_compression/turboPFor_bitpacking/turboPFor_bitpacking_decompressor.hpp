@@ -1,4 +1,5 @@
 #pragma once
+#define TURBOPFOR_DAC
 
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 
@@ -6,25 +7,22 @@
 
 #include "types.hpp"
 
+#include "turboPFor_bitpacking_vector.hpp"
+
 namespace opossum {
+
+class TurboPForBitpackingVector;
 
 class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
  public:
-  explicit TurboPForBitpackingDecompressor(const pmr_vector<uint8_t>& data, const size_t size, const uint8_t b) : _data{data}, _size{size} {
-    _b = b;
-  }
-  
-  TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor&) = default;
-  TurboPForBitpackingDecompressor(TurboPForBitpackingDecompressor&&) = default;
+  explicit TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector);
+  TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor& other);
+  TurboPForBitpackingDecompressor(TurboPForBitpackingDecompressor&& other) noexcept;
 
-  TurboPForBitpackingDecompressor& operator=(const TurboPForBitpackingDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign TurboPForBitpackingDecompressor");
-    return *this;
-  }
-  TurboPForBitpackingDecompressor& operator=(TurboPForBitpackingDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign TurboPForBitpackingDecompressor");
-    return *this;
-  }
+  TurboPForBitpackingDecompressor& operator=(const TurboPForBitpackingDecompressor& other);
+  TurboPForBitpackingDecompressor& operator=(TurboPForBitpackingDecompressor&& other) noexcept;
+
+  ~TurboPForBitpackingDecompressor() override = default;
 
   uint32_t get(size_t i) final {
     // GCC warns here: _data may be used uninitialized in this function [-Werror=maybe-uninitialized]
@@ -42,8 +40,8 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
 
  private:
   const pmr_vector<uint8_t>& _data;
-  uint8_t _b;
   const size_t _size;
+  uint8_t _b;
 };
 
 }  // namespace opossum
