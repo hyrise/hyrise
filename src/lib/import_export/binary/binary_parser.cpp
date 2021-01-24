@@ -318,6 +318,10 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
       return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
       return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    // case 5: {
+    //   auto dataSize = _read_value<size_t>(file);
+    //   return std::make_shared<TurboPForBitpackingVector>(_read_values<uint8_t>(file, dataSize), _read_value<size_t>(file), _read_value<uint8_t>(file));
+    // }
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
@@ -332,6 +336,10 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
       return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
       return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    // case 5: {
+    //   auto dataSize = _read_value<size_t>(file);
+    //   return std::make_unique<TurboPForBitpackingVector>(_read_values<uint8_t>(file, dataSize), _read_value<size_t>(file), _read_value<uint8_t>(file));
+    // }
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }

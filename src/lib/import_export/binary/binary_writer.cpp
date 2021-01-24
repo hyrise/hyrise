@@ -384,6 +384,12 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::SimdBp128:
       export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
       return;
+    // case CompressedVectorType::TurboPForBitpacking:
+    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).data().size());
+    //   export_values(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).data());
+    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).on_size());
+    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).b());
+    //   return;
     default:
       Fail("Any other type should have been caught before.");
   }

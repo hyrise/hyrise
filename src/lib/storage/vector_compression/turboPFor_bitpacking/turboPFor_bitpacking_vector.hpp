@@ -19,6 +19,8 @@ class TurboPForBitpackingVector : public CompressedVector<TurboPForBitpackingVec
   size_t on_size() const;
   size_t on_data_size() const;
 
+  uint8_t b() const;
+
   std::unique_ptr<BaseVectorDecompressor> on_create_base_decompressor() const;
   TurboPForBitpackingDecompressor on_create_decompressor() const;
 

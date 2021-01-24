@@ -9,6 +9,8 @@ const pmr_vector<uint8_t>& TurboPForBitpackingVector::data() const { return _dat
 size_t TurboPForBitpackingVector::on_size() const { return _size; }
 size_t TurboPForBitpackingVector::on_data_size() const { return sizeof(uint8_t) * _data.size(); }
 
+uint8_t TurboPForBitpackingVector::b() const { return _b; }
+
 std::unique_ptr<BaseVectorDecompressor> TurboPForBitpackingVector::on_create_base_decompressor() const {
   return std::make_unique<TurboPForBitpackingDecompressor>(*this);
 }
