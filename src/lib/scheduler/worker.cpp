@@ -90,6 +90,11 @@ void Worker::_work() {
     }
   }
 
+  const auto already_started = task->about_to_be_executed.exchange(true);
+  if (already_started) {
+    return;
+  }
+
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
@@ -114,7 +119,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
     Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
     _next_task = task;
   } else {
-    _queue->push(task, static_cast<uint32_t>(SchedulePriority::High));
+    _queue->push(task, static_cast<uint32_t>(SchedulePriority::Default));
   }
 }
 
@@ -128,17 +133,52 @@ void Worker::join() {
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
 void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  auto tasks_completed = [&tasks]() {
-    // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
-    for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
-      if (!(*it)->is_done()) {
+  // This lambda checks if all tasks from the vector have been executed. If they are, it causes _wait_for_tasks to
+  // return. If there are remaining tasks, it primarily tries to execute these. If they cannot be executed, the
+  // worker performs work for others (i.e., executes tasks from the queue).
+  auto check_own_tasks = [&]() {
+    auto all_done = true;
+    for (auto it = tasks.begin(); it != tasks.end(); ++it) {
+      const auto& task = *it;
+      if (task->is_done()) {
+        continue;
+      }
+
+      // Task is not yet done - check if it is ready for execution
+      if (!task->is_ready()) {
+        all_done = false;
+        continue;
+      }
+
+      // Give other tasks a certain chance of being executed, too. Anectotal evidence says that this is a good idea.
+      // For some reason, this keeps the memory consumption of TPC-H Q6 low even if the scheduler is overcommitted.
+      // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
+      if (std::uniform_int_distribution<int>{0, 99}(_random) <= 20) {
         return false;
       }
+
+      // Run one of our own tasks. First, let everyone know that we are about to execute it. This is necessary because
+      // the task is already in a queue and some other worker might pull it at the same time.
+      const auto already_started = task->about_to_be_executed.exchange(true);
+      if (already_started) {
+        all_done = false;
+        continue;
+      }
+
+      // Actually execute it.
+      task->execute();
+      ++_num_finished_tasks;
+
+      // Reset loop so that we re-visit tasks that may have finished in the meantime. We need to decrement `it` because
+      // it will be incremented when the loop iteration finishes.
+      all_done = true;
+      it = tasks.begin() - 1;
     }
-    return true;
+    return all_done;
   };
 
-  while (!tasks_completed()) {
+  while (!check_own_tasks()) {
+    // Do work for someone else
     _work();
   }
 }

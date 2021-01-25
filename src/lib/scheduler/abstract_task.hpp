@@ -110,6 +110,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void execute();
 
+  /**
+   * What an awful name.
+   */
+  std::atomic_bool about_to_be_executed{false};
+
  protected:
   virtual void _on_execute() = 0;
 
