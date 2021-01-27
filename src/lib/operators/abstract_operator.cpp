@@ -64,7 +64,7 @@ void AbstractOperator::execute() {
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
   if (_executed) return;
-  Assert((_consumer_count > 0 || _output), "Unexpected execution of an operator.");
+  Assert((!_output), "Unexpected re-execution of an operator.");
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
