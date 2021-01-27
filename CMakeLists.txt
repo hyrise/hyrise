@@ -80,12 +80,13 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${FLAGS_ALL}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS_ALL}")
 
 # Build the binary optimized for the current system, ignoring older systems.
-# Not all environments support march=native - check before we use it.
-set(FLAGS_RELEASE "-mcpu=native -mtune=native")
+# Not all environments support march=native - check before we use it. Otherwise use mcpu.
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if(COMPILER_SUPPORTS_MARCH_NATIVE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    set(FLAGS_RELEASE "${FLAGS_RELEASE} -march=native")
+else()
+    set(FLAGS_RELEASE "${FLAGS_RELEASE} -mcpu=native")
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_RELEASE}")
