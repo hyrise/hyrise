@@ -118,7 +118,7 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
     assert len(m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] == -1]) == 0, "not all runtimes computed"
     negative_estimates = m.scan_estimates[m.scan_estimates['RUNTIME_ESTIMATE'] < 0]
     if len(negative_estimates) > 0:
-      print(f"There are: {len(negative_estimates)} negative scan estimates. This is bad.")
+      print(f"There are {len(negative_estimates)} negative scan estimates. This is bad.")
       print(negative_estimates)
       m.scan_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
     

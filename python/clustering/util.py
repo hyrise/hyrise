@@ -103,6 +103,7 @@ def create_model(table_name, input_parser, max_dimensions=2):
     query_frequencies = input_parser.get_query_frequencies()
     distinct_values = input_parser.get_distinct_values_count()
     joins = input_parser.get_joins()
+    aggregates = input_parser.get_aggregates()
     sorted_columns_during_creation = input_parser.get_sorted_columns_during_creation()
     correlations = get_correlations(input_parser.benchmark_name)
     table_names = input_parser.get_table_names()
@@ -111,5 +112,5 @@ def create_model(table_name, input_parser, max_dimensions=2):
     table_sizes = input_parser.get_table_sizes()
     CHUNK_SIZE = 65535
 
-    model = WhatIfModel(max_dimensions, query_frequencies, table_name, single_table_scans, table_sizes, distinct_values, CHUNK_SIZE, correlations.get(table_name, {}), joins, sorted_columns_during_creation)
+    model = WhatIfModel(max_dimensions, query_frequencies, table_name, single_table_scans, table_sizes, distinct_values, CHUNK_SIZE, correlations.get(table_name, {}), joins, aggregates, sorted_columns_during_creation)
     return model

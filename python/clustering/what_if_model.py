@@ -7,12 +7,13 @@ import util
 
 class WhatIfModel(DisjointClustersModel):
     
-    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation, model_dir='cost_model_output/models/', scan_model_type='boost', join_model_type='boost'):
-        super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation)
+    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, aggregates, sorted_columns_during_creation, model_dir='cost_model_output/models/', scan_model_type='boost', join_model_type='boost', aggregate_model_type='boost'):
+        super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, aggregates, sorted_columns_during_creation)
         self.models = util.load_models(model_dir)
         self.model_formats = util.load_model_input_formats(model_dir)
         self.scan_model_type = scan_model_type
         self.join_model_type = join_model_type
+        self.aggregate_model_type = aggregate_model_type
         self.table_scans = self.table_scans.copy()
         self.joins = self.joins.copy()
     
@@ -79,7 +80,7 @@ class WhatIfModel(DisjointClustersModel):
         return scans
 
 
-    def estimate_table_scan_runtime(self, clustering_columns, sorting_column, dimension_cardinalities):        
+    def estimate_table_scan_runtime(self, clustering_columns, sorting_column, dimension_cardinalities):
         runtime = 0
 
         scans = self.table_scans.copy()
@@ -180,5 +181,36 @@ class WhatIfModel(DisjointClustersModel):
             runtime += predictions.sum()
         print()
                         
+        return runtime
+
+
+    def adapt_aggregates_to_clustering(self, aggregates, clustering_columns, sorting_column, dimension_cardinalities):
+        # TODO fix sortedness/locality, maybe add other metrics
+        aggregates['INPUT_COLUMN_SORTED'] = "No"
+        return aggregates
+
+    def estimate_aggregate_runtime(self, clustering_columns, sorting_column, dimension_cardinalities):
+        runtime = 0
+
+        aggregates = self.aggregates.copy()
+        aggregates = self.adapt_aggregates_to_clustering(aggregates, clustering_columns, sorting_column, dimension_cardinalities)
+
+        aggregates_by_implementation = aggregates.groupby(['OPERATOR_IMPLEMENTATION'])
+        for implementation, df in aggregates_by_implementation:
+            print(f"## Estimating {implementation} aggregates")
+            model_name = util.get_aggregate_model_name(self.aggregate_model_type, implementation)
+            model = self.models[model_name]
+
+            df = df.copy()
+            df = df.drop(columns=['OPERATOR_IMPLEMENTATION', 'AGGREGATE_COLUMNS_WRITING_NS', 'AGGREGATE_COLUMN_COUNT', 'AGGREGATING_NS', 'COLUMN_NAME', 'DESCRIPTION', 'GROUP_BY_COLUMNS_WRITING_NS', 'GROUP_BY_COLUMN_COUNT', 'GROUP_BY_KEY_PARTITIONING_NS', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'QUERY_HASH', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'TABLE_NAME'])
+            df = util.preprocess_data(df)
+            df = util.append_to_input_format(df, self.model_formats[model_name])
+
+            predictions = model.predict(df)
+            #self.aggregate_estimates.loc[df.index, 'RUNTIME_ESTIMATE'] = np.array(predictions, dtype=np.int64)
+
+            runtime += predictions.sum()
+        print()
+
         return runtime
     

@@ -8,8 +8,8 @@ from .single_table_model import SingleTableMdcModel
 
 class DisjointClustersModel(SingleTableMdcModel):
     
-    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation):
-        super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation)
+    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, aggregates, sorted_columns_during_creation):
+        super().__init__(max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, aggregates, sorted_columns_during_creation)
         
     # This function should only be called for the own table, not for others
     def estimate_distinct_values_per_chunk(self, column, clustering_columns, chunk_sorting_column, dimension_cardinalities):

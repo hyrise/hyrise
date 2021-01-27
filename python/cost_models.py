@@ -365,7 +365,6 @@ def get_aggregate_scores(model_types, train_data, test_data, implementation, ohe
     keep_labels = [
         "INPUT_ROWS",
         "OUTPUT_ROWS",
-        "SELECTIVITY_LEFT",
         "COLUMN_TYPE",
         "INPUT_COLUMN_SORTED",
         "INPUT_CHUNKS",

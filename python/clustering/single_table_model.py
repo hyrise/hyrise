@@ -8,7 +8,7 @@ from .abstract_model import AbstractModel
 
 class SingleTableMdcModel(AbstractModel):
     
-    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, sorted_columns_during_creation):
+    def __init__(self, max_dimensions, query_frequencies, table_name, table_scans, table_sizes, distinct_values, target_chunksize, correlations, joins, aggregates, sorted_columns_during_creation):
         super().__init__(query_frequencies, table_name, table_scans, correlations)
         self.max_dimensions = max_dimensions
         self.table_sizes = table_sizes       
@@ -16,6 +16,7 @@ class SingleTableMdcModel(AbstractModel):
         self.distinct_values = distinct_values
         self.target_chunksize = target_chunksize
         self.joins = joins
+        self.aggregates = aggregates
         self.sorted_columns_during_creation = sorted_columns_during_creation
         
         
@@ -46,6 +47,12 @@ class SingleTableMdcModel(AbstractModel):
         self.join_estimates['PROBING_NS'] = self.joins['PROBING_NS']
         self.join_estimates['OUTPUT_WRITING_NS'] = self.joins['OUTPUT_WRITING_NS']
         self.join_estimates['RUNTIME_NS'] = self.joins['RUNTIME_NS']
+
+        #self.aggregate_estimates = pd.DataFrame()
+        #self.aggregate_estimates['QUERY_HASH'] = self.aggregates['QUERY_HASH']
+        #self.aggregate_estimates['DESCRIPTION'] = self.aggregates['DESCRIPTION']
+        #self.aggregate_estimates['RUNTIME_NS'] = self.aggregates['RUNTIME_NS']
+        #self.aggregate_estimates['RUNTIME_ESTIMATE'] = np.array([-1] * len(self.aggregates))
         
     def is_join_column(self, column_name):
         return column_name in self.join_column_names
@@ -170,6 +177,9 @@ class SingleTableMdcModel(AbstractModel):
             self.scan_estimates.loc[scan_runtimes.index, 'RUNTIME_ESTIMATE'] = scan_runtimes
             runtime += scan_runtimes.sum()
         return runtime
+
+    def estimate_aggregate_runtime(effective_clustering_columns, sorting_column, effective_dimension_cardinalities):
+        raise NotImplementedError("Subclass responsibility")
 
     def estimate_chunk_count(self, scans, clustering_columns, dimension_cardinalities):
         raise NotImplementedError("Subclass responsibility")
@@ -369,6 +379,7 @@ class SingleTableMdcModel(AbstractModel):
         runtime = 0
         runtime += self.estimate_table_scan_runtime(effective_clustering_columns, sorting_column, effective_dimension_cardinalities)
         runtime += self.estimate_join_runtime(effective_clustering_columns, sorting_column, effective_dimension_cardinalities)
+        runtime += self.estimate_aggregate_runtime(effective_clustering_columns, sorting_column, effective_dimension_cardinalities)
         
         return runtime
     
