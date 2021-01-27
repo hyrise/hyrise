@@ -31,18 +31,19 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 }
 
 AbstractOperator::~AbstractOperator() {
+  /**
+   * Assert that we used or executed the operator before its disposal.
+   *
+   * Hack condition to pass some tests:
+   *  We assert for _consumer_count == 0 because some tests create operators, but do not execute them. We do not want
+   *  to force tests to call execute() on operators when their only purpose is to test, for example, the output of
+   *  the description() function.
+   */
   if constexpr (HYRISE_DEBUG) {
-    bool left_has_executed = _left_input ? _left_input->executed() : false;
-    bool right_has_executed = _right_input ? _right_input->executed() : false;
-
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
     bool aborted = transaction_context ? transaction_context->aborted() : false;
-
-    /**
-     * Hack: The condition _consumer_count == 0 is useful for some tests that create operators, but do not execute
-     *       them. We do not want to force tests to call execute() on operators when their only purpose is to test the
-     *       output of, for example, the description() function.
-     */
+    bool left_has_executed = _left_input ? _left_input->executed() : false;
+    bool right_has_executed = _right_input ? _right_input->executed() : false;
     Assert(_executed || aborted || !left_has_executed || !right_has_executed ||
                _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
