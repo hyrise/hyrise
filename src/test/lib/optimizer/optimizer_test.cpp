@@ -9,6 +9,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 
@@ -19,16 +20,21 @@ namespace opossum {
 class OptimizerTest : public BaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
     a = node_a->get_column("a");
     b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
     x = node_b->get_column("x");
     y = node_b->get_column("y");
 
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}}, "node_c");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}});
     u = node_c->get_column("u");
+
+    Hyrise::get().storage_manager.add_table("table_d", load_table("resources/test_data/tbl/int_float.tbl", 2));
+    node_d = StoredTableNode::make("table_d");
+    d_a = node_d->get_column("a");
+    d_b = node_d->get_column("b");
 
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
@@ -37,7 +43,8 @@ class OptimizerTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<LQPColumnExpression> a, b, x, y, u;
+  std::shared_ptr<StoredTableNode> node_d;
+  std::shared_ptr<LQPColumnExpression> a, b, x, y, u, d_a, d_b;
   std::shared_ptr<AbstractLQPNode> subquery_lqp_a, subquery_lqp_b;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_b;
 };
@@ -262,6 +269,59 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     EXPECT_EQ(subquery_a_a->lqp, subquery_a_b->lqp);
     EXPECT_LQP_EQ(subquery_b_a->lqp, subquery_lqp_b);
   }
+}
+
+TEST_F(OptimizerTest, NonCacheablePlans) {
+  auto optimizer = Optimizer::create_default_optimizer();
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+  auto cacheable_plan = std::make_shared<bool>(true);
+  
+  // Between composition rule should pervent caching
+  // clang-format off
+  auto reducible_between_lqp =
+    PredicateNode::make(less_than_(d_a, 6),
+    PredicateNode::make(greater_than_(d_a, 4),
+      node_d));
+  // clang-format on
+ 
+  optimizer->optimize(std::move(reducible_between_lqp), optimizer_rule_durations, cacheable_plan);
+  EXPECT_FALSE(*cacheable_plan);
+
+  *cacheable_plan = true;
+
+  // Expression reduction rule should prevent caching
+  // clang-format off
+  auto constant_expression_lqp =
+    PredicateNode::make(greater_than_(d_a, add_(3, 2)),
+      node_d);
+  // clang-format on
+
+  optimizer->optimize(std::move(constant_expression_lqp), optimizer_rule_durations, cacheable_plan);
+  EXPECT_FALSE(*cacheable_plan);
+
+  *cacheable_plan = true;
+
+  // Chunk pruning rule should prevent caching
+  // clang-format off
+  auto prunable_lqp =
+    PredicateNode::make(equals_(d_a, 1234),
+      node_d);
+  // clang-format on
+
+  optimizer->optimize(std::move(prunable_lqp), optimizer_rule_durations, cacheable_plan);
+  EXPECT_FALSE(*cacheable_plan);
+
+  *cacheable_plan = true;
+
+  // IN-Expression rewrite rule should prevent caching
+  // clang-format off
+  auto in_expression_lqp =
+    PredicateNode::make(in_(d_a, list_(0, 1, 2)), 
+      node_d);
+  // clang-format on
+
+  optimizer->optimize(std::move(in_expression_lqp), optimizer_rule_durations, cacheable_plan);
+  EXPECT_FALSE(*cacheable_plan);
 }
 
 }  // namespace opossum
