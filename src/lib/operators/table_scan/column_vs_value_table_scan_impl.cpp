@@ -39,7 +39,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++chunk_scans_sorted;
+        ++num_chunks_with_binary_search;
         return;
       }
     }
@@ -121,6 +121,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
       });
     } else {
       // No NULLs, all rows match.
+      ++num_chunks_with_all_rows_matching;
       const auto output_size = position_filter ? position_filter->size() : segment.size();
       const auto output_start_offset = matches.size();
       matches.resize(matches.size() + output_size);
@@ -142,7 +143,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
   }
 
   if (_value_matches_none(segment, search_value_id)) {
-    ++chunk_scans_skipped;
+    ++num_chunks_with_early_out;
     return;
   }
 
