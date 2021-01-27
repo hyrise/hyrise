@@ -102,7 +102,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   EXPECT_EQ(_pqp_subquery_expression_copy->pqp->type(), OperatorType::TableScan);
 }
 
-TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesSubplanReuse) {
+TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesPlanDeduplication) {
   // Prepare DIAMOND-SHAPED PQP
   auto get_table = std::make_shared<GetTable>(_table_name);
   auto scan_a = std::make_shared<TableScan>(get_table, greater_than_(_a, 5));

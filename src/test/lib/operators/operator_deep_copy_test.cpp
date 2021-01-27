@@ -249,7 +249,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   EXPECT_TABLE_EQ_UNORDERED(copied_result, expected_copied);
 }
 
-TEST_F(OperatorDeepCopyTest, SubplanDeduplicationAmongRootAndSubqueryPQPs) {
+TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
   // Uncorrelated subquery shares part of the root PQP (compare TPC-H Q11)
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);
@@ -272,7 +272,7 @@ TEST_F(OperatorDeepCopyTest, SubplanDeduplicationAmongRootAndSubqueryPQPs) {
   EXPECT_EQ(copied_get_table_a->consumer_count(), get_table_a->consumer_count());
 }
 
-TEST_F(OperatorDeepCopyTest, SubplanDeduplicationAmongSubqueries) {
+TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   // Uncorrelated subqueries share parts of their PQP among each other (compare TPC-DS Q9)
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);

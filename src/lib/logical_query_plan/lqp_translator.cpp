@@ -91,7 +91,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *
    * would result in multiple operators created from predicate_c and thus in performance drops.
    *
-   * Subplan Deduplication:
+   * Deduplication:
    * _operator_by_lqp_node compares entries by value (i.e., AbstractOperator::operator==), not by identity
    * (shared_ptr::operator==). As a result, two separate, but equal LQP nodes will be translated into a single PQP
    * node. This prevents us from executing the same operation twice.

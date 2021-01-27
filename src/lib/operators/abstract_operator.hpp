@@ -110,14 +110,14 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   /**
    * Recursively copies the input operators and
-   * @returns a new instance of the same operator with the same configuration. Deduplication of subplans will be
+   * @returns a new instance of the same operator with the same configuration. Deduplication of operator plans will be
    * preserved. See lqp_translator.cpp for more info.
    */
   std::shared_ptr<AbstractOperator> deep_copy() const;
 
   /**
-   * Implements AbstractOperator::deep_copy and uses @param copied_ops to preserve deduplication of operator subplans.
-   * See lqp_translator.cpp for more info.
+   * Implements AbstractOperator::deep_copy and uses
+   * @param copied_ops to preserve deduplication for operator plans. See lqp_translator.cpp for more info.
    */
   std::shared_ptr<AbstractOperator> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
