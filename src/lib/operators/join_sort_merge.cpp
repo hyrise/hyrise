@@ -966,75 +966,176 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
 
+    auto expected_output_chunk_count = size_t{0};
+    for (size_t partition_id = 0; partition_id < _output_pos_lists_left.size(); ++partition_id) {
+      if (!_output_pos_lists_left[partition_id]->empty() || !_output_pos_lists_right[partition_id]->empty()) {
+        ++expected_output_chunk_count;
+      }
+    }
+
+    std::vector<std::shared_ptr<Chunk>> output_chunks{};
+    output_chunks.reserve(expected_output_chunk_count);
 
 
+    // For every partition, create a reference segment.
+    auto partition_id = size_t{0};
+    auto output_chunk_id = size_t{0};
+    while (partition_id < _output_pos_lists_left.size()) {
+      // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
+      // build_pos_lists and probe_side_pos_lists will not be used again.
+      auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(*_output_pos_lists_left[partition_id]));
+      auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(*_output_pos_lists_right[partition_id]));
 
-
-
-    // Intermediate structure for output chunks (to avoid concurrent appending to table)
-    std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
-
-    // Determine if writing output in parallel is necessary.
-    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
-    const auto first_output_size = _output_pos_lists_left[0]->size();
-    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > JOB_SPAWN_THRESHOLD;
-
-    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
-    output_jobs.reserve(_output_pos_lists_left.size());
-    const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
-                                                             _sort_merge_join._primary_predicate.column_ids.second);
-    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-      if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
+      if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
+        ++partition_id;
         continue;
       }
 
-      auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
-        Segments segments;
-        _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
-        _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
-        auto output_chunk = std::make_shared<Chunk>(std::move(segments));
-        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-            _mode == JoinMode::Inner) {
-          output_chunk->finalize();
-          // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-          output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                                    SortColumnDefinition(right_join_column, SortMode::Ascending)});
-        }
-        output_chunks[pos_list_id] = output_chunk;
-      };
+      // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
+      // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
+      // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
+      // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
+      // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
+      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
+      constexpr auto MIN_SIZE = 500;
+      constexpr auto MAX_SIZE = MIN_SIZE * 2;
+      left_side_pos_list->reserve(MAX_SIZE);
+      right_side_pos_list->reserve(MAX_SIZE);
 
-      if (write_output_concurrently) {
-        auto job = std::make_shared<JobTask>(write_output_chunk);
-        output_jobs.push_back(job);
-        output_jobs.back()->schedule();
-      } else {
-        write_output_chunk();
+      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
+      // size or are empty (in case of semi/anti joins).
+      while (partition_id + 1 < _output_pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
+             right_side_pos_list->size() + _output_pos_lists_right[partition_id + 1]->size() < MAX_SIZE) {
+        // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
+        // used for the merged PosList.
+        std::copy(_output_pos_lists_left[partition_id + 1]->begin(), _output_pos_lists_left[partition_id + 1]->end(),
+                  std::back_inserter(*left_side_pos_list));
+        _output_pos_lists_left[partition_id + 1] = {};
+
+        std::copy(_output_pos_lists_right[partition_id + 1]->begin(), _output_pos_lists_right[partition_id + 1]->end(),
+                  std::back_inserter(*right_side_pos_list));
+        _output_pos_lists_right[partition_id + 1] = {};
+
+        ++partition_id;
       }
-    }
 
-    if (write_output_concurrently) {
-      // Wait for all chunk creation tasks to finish
-      Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+      Segments output_segments;
+
+      // Swap back the inputs, so that the order of the output columns is not changed.
+
+
+      write_output_segments(output_segments, _left_input_table, left_side_pos_lists_by_segment,
+                            left_side_pos_list);
+      write_output_segments(output_segments, _right_input_table, right_side_pos_lists_by_segment,
+                            right_side_pos_list);
+
+
+      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+      ++partition_id;
+      ++output_chunk_id;
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
-    // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
-    output_chunks.erase(
-        std::remove_if(output_chunks.begin(), output_chunks.end(),
-                       [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
-        output_chunks.end());
-
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
-        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
-      // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
-      // non-equal predicates.
-      result_table->set_value_clustered_by({left_join_column, right_join_column});
-    }
+    
+    // const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    // const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
+    //                                                          _sort_merge_join._primary_predicate.column_ids.second);
+
+    // if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+    //     _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+    //   // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
+    //   // non-equal predicates.
+    //   result_table->set_value_clustered_by({left_join_column, right_join_column});
+    // }
 
     return result_table;
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//     // Intermediate structure for output chunks (to avoid concurrent appending to table)
+//     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
+
+//     // Determine if writing output in parallel is necessary.
+//     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+//     const auto first_output_size = _output_pos_lists_left[0]->size();
+//     const auto write_output_concurrently = _cluster_count > 1 && first_output_size > JOB_SPAWN_THRESHOLD;
+
+//     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+//     output_jobs.reserve(_output_pos_lists_left.size());
+//     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+//     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
+//                                                              _sort_merge_join._primary_predicate.column_ids.second);
+//     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+//       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
+//         continue;
+//       }
+
+//       auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
+//         Segments segments;
+//         _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
+//         _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
+//         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
+//         if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+//             _mode == JoinMode::Inner) {
+//           output_chunk->finalize();
+//           // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+//           output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+//                                                     SortColumnDefinition(right_join_column, SortMode::Ascending)});
+//         }
+//         output_chunks[pos_list_id] = output_chunk;
+//       };
+
+//       if (write_output_concurrently) {
+//         auto job = std::make_shared<JobTask>(write_output_chunk);
+//         output_jobs.push_back(job);
+//         output_jobs.back()->schedule();
+//       } else {
+//         write_output_chunk();
+//       }
+//     }
+
+//     if (write_output_concurrently) {
+//       // Wait for all chunk creation tasks to finish
+//       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+//     }
+//     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
+//     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
+//     output_chunks.erase(
+//         std::remove_if(output_chunks.begin(), output_chunks.end(),
+//                        [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
+//         output_chunks.end());
+
+//     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
+//     if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+//         _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+//       // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
+//       // non-equal predicates.
+//       result_table->set_value_clustered_by({left_join_column, right_join_column});
+//     }
+
+//     return result_table;
+//   }
+// };
 
 }  // namespace opossum
