@@ -149,7 +149,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
 
   // First, collect all LQPs (the main LQP and all subqueries)
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }

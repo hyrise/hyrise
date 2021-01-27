@@ -150,7 +150,7 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
 TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsSingle) {
   const auto pqp_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
 
-  auto subqueries = collect_pqp_subquery_expressions(pqp_subquery);
+  auto subqueries = find_pqp_subquery_expressions(pqp_subquery);
 
   EXPECT_EQ(subqueries.size(), 1);
   EXPECT_EQ(subqueries.at(0), pqp_subquery);
@@ -161,27 +161,34 @@ TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsMultiple) {
   const auto pqp_subquery_b = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_b"));
   auto expression = add_(pqp_subquery_a, sub_(value_(1), pqp_subquery_b));
 
-  auto subqueries = collect_pqp_subquery_expressions(expression);
+  auto subqueries = find_pqp_subquery_expressions(expression);
 
   EXPECT_EQ(subqueries.size(), 2);
   EXPECT_EQ(subqueries.at(0), pqp_subquery_a);
   EXPECT_EQ(subqueries.at(1), pqp_subquery_b);
 }
 
-TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsDeeplyNested) {
-  const auto sub_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsIgnoreNested) {
+  // (1) Nested Subquery
+  const auto nested_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  // (2) Root Subquery
   const auto projection = std::make_shared<Projection>(std::make_shared<GetTable>("table_b"),
-                                                       expression_vector(add_(sub_subquery, value_(1))));
-  const auto root_subquery = std::make_shared<PQPSubqueryExpression>(projection);
-  auto embedded_root_subquery = add_(root_subquery, value_(1));
+                                                       expression_vector(add_(nested_subquery, value_(1))));
+  const auto subquery = std::make_shared<PQPSubqueryExpression>(projection);
 
-  // Check that the function does not return subquery expressions from subquery plans
-  auto subqueries1 = collect_pqp_subquery_expressions(root_subquery);
-  auto subqueries2 = collect_pqp_subquery_expressions(embedded_root_subquery);
-  EXPECT_EQ(subqueries1.size(), 1);
-  EXPECT_EQ(subqueries2.size(), 1);
-  EXPECT_EQ(subqueries1.at(0), root_subquery);
-  EXPECT_EQ(subqueries2.at(0), root_subquery);
+  // Nested PQPSubqueryExpressions should NOT be returned
+  {
+    auto found_pqp_subqueries = find_pqp_subquery_expressions(subquery);
+    EXPECT_EQ(found_pqp_subqueries.size(), 1);
+    EXPECT_EQ(found_pqp_subqueries.at(0), subquery);
+  }
+  // Wrapping subqueries should not make a difference
+  {
+    auto wrapped_subquery = add_(subquery, value_(1));
+    auto found_pqp_subqueries = find_pqp_subquery_expressions(wrapped_subquery);
+    EXPECT_EQ(found_pqp_subqueries.size(), 1);
+    EXPECT_EQ(found_pqp_subqueries.at(0), subquery);
+  }
 }
 
 }  // namespace opossum

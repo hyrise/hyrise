@@ -33,12 +33,7 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto lqp_copy = lqp->deep_copy();
 
-  // ToDo: Discuss
-  // Calling expressions_deep_copy(arguments) might be more intuitive since there won't be any PQPSubqueryExpressions
-  // in the arguments.
-  // However, we should pass copied_ops, because expressions_deep_copy would allocate an unordered_map anyway.
-  // Confusing?
-  return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments, copied_ops));
+  return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
 std::string LQPSubqueryExpression::description(const DescriptionMode mode) const {

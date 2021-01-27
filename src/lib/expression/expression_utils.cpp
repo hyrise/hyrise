@@ -305,24 +305,26 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   }
 }
 
-std::vector<std::shared_ptr<PQPSubqueryExpression>> collect_pqp_subquery_expressions(
+std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(
     const std::shared_ptr<AbstractExpression>& expression) {
-  // Early out
-  const auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression);
-  if (subquery_expression) return {subquery_expression};
+  if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
+    // Quick Path
+    return {pqp_subquery_expression};
+  }
 
-  std::vector<std::shared_ptr<PQPSubqueryExpression>> subquery_expressions;
+  // Long Path: Search expression's arguments for PQPSubqueryExpressions
+  std::vector<std::shared_ptr<PQPSubqueryExpression>> pqp_subquery_expressions;
   for (const auto& argument_expression : expression->arguments) {
     visit_expression(argument_expression, [&](const auto& sub_expression) {
       const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
       if (pqp_subquery_expression) {
-        subquery_expressions.push_back(pqp_subquery_expression);
+        pqp_subquery_expressions.push_back(pqp_subquery_expression);
         return ExpressionVisitation::DoNotVisitArguments;
       }
       return ExpressionVisitation::VisitArguments;
     });
   }
-  return subquery_expressions;
+  return pqp_subquery_expressions;
 }
 
 }  // namespace opossum

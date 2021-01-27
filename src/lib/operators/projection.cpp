@@ -35,7 +35,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
    * and managed by the ExpressionEvaluator.
    */
   for (const auto& expression : expressions) {
-    auto pqp_subquery_expressions = collect_pqp_subquery_expressions(expression);
+    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
     for (const auto& subquery_expression : pqp_subquery_expressions) {
       if (subquery_expression->is_correlated()) continue;
 

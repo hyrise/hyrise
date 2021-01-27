@@ -49,7 +49,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
    * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
    * and managed by the ExpressionEvaluator.
    */
-  auto pqp_subquery_expressions = collect_pqp_subquery_expressions(predicate);
+  auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
     if (subquery_expression->is_correlated()) continue;
 
