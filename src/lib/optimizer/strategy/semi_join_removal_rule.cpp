@@ -4,13 +4,13 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
 void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  const auto& root = lqp_root; // TODO rename below
+  const auto& root = lqp_root;  // TODO(anyone) rename below
 
   // Approach: Find a semi reduction node and the corresponding original join node and check whether the cardinality is
   // reduced between the semi join reduction and the original join. If it is not, the semi join reduction is likely not
@@ -23,7 +23,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  // TODO move to abs_lqp_node.hpp
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
   // be translated into the same operator. If we remove one of these reductions, we block the reuse of the join result.
   // To counter these cases, we track semi join reductions that should not be removed. `removal_candidates` holds the
@@ -32,7 +31,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   // method of identifying plan reuse in the optimizer. However, when we tried this, we found that reuse was close to
   // impossible to implement correctly in the presence of self-joins.
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  auto removal_blockers = std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
+  auto removal_blockers =
+      std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
   visit_lqp(root, [&](const auto& node) {
     // Check if the current node is a semi join (not necessarily a reduction)
