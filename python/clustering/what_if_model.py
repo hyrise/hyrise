@@ -207,7 +207,7 @@ class WhatIfModel(DisjointClustersModel):
             df = util.append_to_input_format(df, self.model_formats[model_name])
 
             predictions = model.predict(df)
-            #self.aggregate_estimates.loc[df.index, 'RUNTIME_ESTIMATE'] = np.array(predictions, dtype=np.int64)
+            self.aggregate_estimates.loc[df.index, 'RUNTIME_ESTIMATE'] = np.array(predictions, dtype=np.int64)
 
             runtime += predictions.sum()
         print()

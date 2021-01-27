@@ -48,11 +48,11 @@ class SingleTableMdcModel(AbstractModel):
         self.join_estimates['OUTPUT_WRITING_NS'] = self.joins['OUTPUT_WRITING_NS']
         self.join_estimates['RUNTIME_NS'] = self.joins['RUNTIME_NS']
 
-        #self.aggregate_estimates = pd.DataFrame()
-        #self.aggregate_estimates['QUERY_HASH'] = self.aggregates['QUERY_HASH']
-        #self.aggregate_estimates['DESCRIPTION'] = self.aggregates['DESCRIPTION']
-        #self.aggregate_estimates['RUNTIME_NS'] = self.aggregates['RUNTIME_NS']
-        #self.aggregate_estimates['RUNTIME_ESTIMATE'] = np.array([-1] * len(self.aggregates))
+        self.aggregate_estimates = pd.DataFrame()
+        self.aggregate_estimates['QUERY_HASH'] = self.aggregates['QUERY_HASH']
+        self.aggregate_estimates['DESCRIPTION'] = self.aggregates['DESCRIPTION']
+        self.aggregate_estimates['RUNTIME_NS'] = self.aggregates['RUNTIME_NS']
+        self.aggregate_estimates['RUNTIME_ESTIMATE'] = np.array([-1] * len(self.aggregates))
         
     def is_join_column(self, column_name):
         return column_name in self.join_column_names
