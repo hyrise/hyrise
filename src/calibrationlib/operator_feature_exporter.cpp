@@ -23,9 +23,26 @@
 
 namespace opossum {
 
+bool OperatorFeatureExporter::_has_column(const std::shared_ptr<const AbstractOperator>& op, const std::string& column_name) const {
+  const auto lqp_node = op->lqp_node;
+
+  if (!lqp_node) {
+    std::cout << "found an operator which has no lqp node: " << op->description() << std::endl;
+    return false;
+  }
+
+  const auto& expressions = lqp_node->output_expressions();
+  for (const auto& expression : expressions) {
+    if (expression->as_column_name() == column_name) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Assumption: just one GetTable per table
 bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op,
-                                                    const std::string& table_name) const {
+                                                    const std::string& table_name, const std::string& column_name) const {
   const auto& type = op->type();
   if (type == OperatorType::Aggregate) {
     return false;
@@ -40,19 +57,35 @@ bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const 
       Assert(hash_join, "Not a JoinHash");
       const auto mode = hash_join->mode();
       const auto& perf_data = dynamic_cast<const JoinHash::PerformanceData&>(*hash_join->performance_data);
-      if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
-        if (perf_data.radix_bits == 0) {
+      if (perf_data.radix_bits == 0) {
+        if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
           if (perf_data.left_input_is_build_side) {
-            return _data_arrives_ordered(op->right_input(), table_name);
+            return _data_arrives_ordered(op->right_input(), table_name, column_name);
           } else {
-            return _data_arrives_ordered(op->left_input(), table_name);
+            return _data_arrives_ordered(op->left_input(), table_name, column_name);
           }
         } else {
-          // TODO: only if there is a join with > 0 radix bits on another column
-          return false;
+          // if the table was on the probe side, the ordering may be unaffected by the join
+          if (perf_data.left_input_is_build_side) {
+            if (_has_column(op->right_input(), column_name)) {
+              // table was on probe side
+              return _data_arrives_ordered(op->right_input(), table_name, column_name);
+            } else {
+              // table was on build side
+              return false;
+            }
+          } else {
+            if (_has_column(op->left_input(), column_name)) {
+              // table was on probe side
+              return _data_arrives_ordered(op->left_input(), table_name, column_name);
+            } else {
+              // table was on build side
+              return false;
+            }
+          }
         }
       } else {
-        // TODO: if probe side, this may be unaffected instead
+        // TODO: only if there is a join with > 0 radix bits on another column
         return false;
       }
     } else if (type == OperatorType::JoinSortMerge) {
@@ -60,16 +93,14 @@ bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const 
       // TODO: If used for a benchmark where the sort merge join is more common than in TPC-H/DS, it may be worth to incorporate this knowledge
       return false;
     } else {
-      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll,
-             "unhandled operator type: " + op->description());
-      return _data_arrives_ordered(op->left_input(), table_name);
+      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll, "unhandled operator type: " + op->description());
+      return _data_arrives_ordered(op->left_input(), table_name, column_name);
     }
   } else {
     // One input, but neither Aggregate nor GetTable
     // This leaves TableScan, Validate, more?
-    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection,
-           "unconsidered operator type: " + op->description());
-    return _data_arrives_ordered(op->left_input(), table_name);
+    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection, "unconsidered operator type: " + op->description());
+    return _data_arrives_ordered(op->left_input(), table_name, column_name);
   }
 }
 
@@ -257,7 +288,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     left_table_name = left_table_column_information.table_name;
     left_column_name = left_table_column_information.column_name;
     left_column_type = left_table_column_information.column_type;
-    if (left_table_name != "" && _data_arrives_ordered(op->left_input(), std::string{left_table_name})) {
+    if (left_table_name != "" && _data_arrives_ordered(op->left_input(), std::string{left_table_name}, std::string{left_column_name})) {
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
@@ -277,7 +308,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_column_name = right_table_column_information.column_name;
     right_column_type = right_table_column_information.column_type;
 
-    if (right_table_name != "" && _data_arrives_ordered(op->right_input(), std::string{right_table_name})) {
+    if (right_table_name != "" && _data_arrives_ordered(op->right_input(), std::string{right_table_name}, std::string{right_column_name})) {
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
