@@ -84,7 +84,7 @@ class WhatIfModel(DisjointClustersModel):
 
         scans = self.table_scans.copy()
         scans = self.adapt_scans_to_clustering(scans, clustering_columns, sorting_column, dimension_cardinalities)
-        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'PREDICATE', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_SORTED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
+        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_ID', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'PREDICATE', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_SORTED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
         
         scans_by_implementation = scans.groupby(['OPERATOR_IMPLEMENTATION'])
         for operator_implementation, df in scans_by_implementation:
@@ -171,7 +171,7 @@ class WhatIfModel(DisjointClustersModel):
                 'PROBE_SORTED_True': 'PROBE_INPUT_COLUMN_SORTED_Ascending'
             })
 
-            df = df.drop(columns=['BUILDING_NS', 'BUILD_COLUMN', 'BUILD_SIDE', 'BUILD_SIDE_MATERIALIZING_NS', 'BUILD_TABLE', 'CLUSTERING_NS', 'DESCRIPTION', 'IS_FLIPPED', 'LEFT_COLUMN_NAME', 'LEFT_COLUMN_TYPE_DATA', 'LEFT_COLUMN_TYPE_REFERENCE', 'LEFT_INPUT_OPERATOR_HASH', 'LEFT_TABLE_CHUNK_COUNT', 'LEFT_TABLE_NAME', 'LEFT_TABLE_ROW_COUNT', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'PROBE_COLUMN', 'PROBE_SIDE', 'PROBE_SIDE_MATERIALIZING_NS', 'PROBE_TABLE', 'PROBING_NS', 'QUERY_HASH', 'RADIX_BITS', 'RIGHT_COLUMN_NAME', 'RIGHT_COLUMN_TYPE_REFERENCE', 'RIGHT_INPUT_OPERATOR_HASH', 'RIGHT_TABLE_CHUNK_COUNT', 'RIGHT_TABLE_NAME', 'RIGHT_TABLE_ROW_COUNT', 'RUNTIME_NS'], errors="ignore")
+            df = df.drop(columns=['BUILDING_NS', 'BUILD_COLUMN', 'BUILD_SIDE', 'BUILD_SIDE_MATERIALIZING_NS', 'BUILD_TABLE', 'CLUSTERING_NS', 'DESCRIPTION', 'IS_FLIPPED', 'LEFT_COLUMN_NAME', 'LEFT_COLUMN_TYPE_DATA', 'LEFT_COLUMN_TYPE_REFERENCE', 'LEFT_INPUT_OPERATOR_HASH', 'LEFT_TABLE_CHUNK_COUNT', 'LEFT_TABLE_NAME', 'LEFT_TABLE_ROW_COUNT', 'OPERATOR_HASH', 'OPERATOR_ID', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'PROBE_COLUMN', 'PROBE_SIDE', 'PROBE_SIDE_MATERIALIZING_NS', 'PROBE_TABLE', 'PROBING_NS', 'QUERY_HASH', 'RADIX_BITS', 'RIGHT_COLUMN_NAME', 'RIGHT_COLUMN_TYPE_REFERENCE', 'RIGHT_INPUT_OPERATOR_HASH', 'RIGHT_TABLE_CHUNK_COUNT', 'RIGHT_TABLE_NAME', 'RIGHT_TABLE_ROW_COUNT', 'RUNTIME_NS'], errors="ignore")
             df = util.append_to_input_format(df, self.model_formats[model_name])
             
             predictions = model.predict(df)
