@@ -949,8 +949,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
-    // left_input_table = _left_input->get_output();
-    // right_input_table = _right_input->get_output();
+    const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
+                                                             _sort_merge_join._primary_predicate.column_ids.second);
 
     PosListsByChunk left_side_pos_lists_by_segment;
     PosListsByChunk right_side_pos_lists_by_segment;
@@ -1029,25 +1030,30 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       write_output_segments(output_segments, _right_input_table, right_side_pos_lists_by_segment,
                             right_side_pos_list);
 
+      auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
+      if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+          _mode == JoinMode::Inner) {
+        output_chunk->finalize();
+        // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+        output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                                  SortColumnDefinition(right_join_column, SortMode::Ascending)});
+      }
 
-      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+      output_chunks.emplace_back(output_chunk);
       ++partition_id;
       ++output_chunk_id;
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    
-    // const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    // const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
-    //                                                          _sort_merge_join._primary_predicate.column_ids.second);
 
-    // if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
-    //     _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
-    //   // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
-    //   // non-equal predicates.
-    //   result_table->set_value_clustered_by({left_join_column, right_join_column});
-    // }
+
+    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+      // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
+      // non-equal predicates.
+      result_table->set_value_clustered_by({left_join_column, right_join_column});
+    }
 
     return result_table;
   }
