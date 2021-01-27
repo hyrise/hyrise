@@ -64,18 +64,17 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual bool requires_computation() const;
 
   /**
-   * @return deep copy of the expression
+   * @returns a deep copy of the expression.
    *
-   * Notes on PQPSubqueryExpressions & PQP subplan TODO(Julian) Rework Doc reg. deduplication
-   *  - Operator plans from nested PQPSubqueryExpressions are de-duplicated automatically.
-   *  - For subplan deduplication across multiple, separate, non-nested PQPSubqueryExpressions:
-   *     1. Create copied_ops (see impl. of AbstractExpression::deep_copy)
-   *     2. Call deep_copy(copied_ops) for each expression, with the same parameter.
+   * When copying PQPSubqueryExpressions, operator plans are deduplicated automatically. See lqp_translator.cpp for
+   * more info on deduplication.
    */
   std::shared_ptr<AbstractExpression> deep_copy() const;
 
   /**
-   * Calls _on_deep_copy with @param copied_ops which is used to deduplicate plans from (nested) PQPSubqueryExpressions.
+   * @returns a deep copy of the expression.
+   *          Uses @param copied_ops to deduplicate operator plans when deep-copying PQPSubqueryExpressions. See
+   *          lqp_translator.cpp for more info on deduplication.
    */
   std::shared_ptr<AbstractExpression> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;

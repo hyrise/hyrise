@@ -97,7 +97,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    * node. This prevents us from executing the same operation twice.
    *   Excursus: You would be right to wonder why this is not done on the LQP by some type of optimizer rule. That would
    *   indeed be the cleaner way to do it. The problem is that self-joins are only representable in the LQP if we use
-   *   two independent StoredTableNodes. If we de-duplicate these StoredTableNodes, the LQPColumnExpressions of the two
+   *   two independent StoredTableNodes. If we deduplicate these StoredTableNodes, the LQPColumnExpressions of the two
    *   instances would also become indistinguishable. That breaks things left and right.
    */
 
