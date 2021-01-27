@@ -7,10 +7,8 @@
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
+#include "cache/parameterized_plan_cache_handler.hpp"
 #include "create_sql_parser_error_message.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/placeholder_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
@@ -111,130 +109,66 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   return _translation_info;
 }
 
-void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
-                                                           std::vector<std::shared_ptr<AbstractExpression>>& values) {
-  if (expression->type == ExpressionType::Value) {
-    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
-    if (value_expression->data_type() != DataType::Null) {
-      Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
-      Assert(value_expression->value_expression_id, "ValueExpression has no ValueExpressionID.");
-      values.push_back(expression);
-      auto parameter_id = static_cast<ParameterID>(*value_expression->value_expression_id);
-      auto new_expression = std::make_shared<PlaceholderExpression>(parameter_id, expression->data_type());
-      expression = new_expression;
-    }
-  }
-}
-
-const std::shared_ptr<AbstractLQPNode> SQLPipelineStatement::split_logical_plan(
-    const std::shared_ptr<const AbstractLQPNode>& logical_plan,
-    std::vector<std::shared_ptr<AbstractExpression>>& values) {
-  // Extract all ValueExpressions from the LQP and replace them with PlaceholderExpressions
-
-  // Copy the optimized plan since the original lqp is still needed
-  auto logical_plan_copy = logical_plan->deep_copy();
-
-  auto lqp_subplans = lqp_find_subplan_roots(logical_plan_copy);
-
-  for (auto lqp_subplan : lqp_subplans) {
-    visit_lqp(lqp_subplan, [&values](const auto& node) {
-      if (node) {
-        for (auto& root_expression : node->node_expressions) {
-          visit_expression(root_expression, [&values](auto& expression) {
-            expression_parameter_extraction(expression, values);
-            return ExpressionVisitation::VisitArguments;
-          });
-        }
-      }
-      return LQPVisitation::VisitInputs;
-    });
-  }
-
-  return logical_plan_copy;
-}
-
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan) {
     return _optimized_logical_plan;
   }
 
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
-  std::shared_ptr<AbstractLQPNode> unoptimized_lqp_with_placeholders;
-  std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values;
-  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+  // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
+  // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
+  // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
+  _unoptimized_logical_plan = nullptr;
 
   // Check if similar plan (with same structure but maybe different parameters) is cached
   if (lqp_cache && _translation_info.cacheable) {
-    const auto start_cache_check_read = std::chrono::high_resolution_clock::now();
+    auto cache_handler = ParameterizedPlanCacheHandler(lqp_cache, unoptimized_lqp, _metrics->cache_duration, _use_mvcc);
+    
+    // Cache read
+    auto optional_optimized_lqp = cache_handler.try_get();
+  
+    if (optional_optimized_lqp) {
+      // Cache hit
+      _metrics->query_plan_cache_hit = true;
 
-    unoptimized_lqp_with_placeholders = split_logical_plan(unoptimized_lqp, unoptimized_extracted_values);
+      const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
+      _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(*optional_optimized_lqp), optimizer_rule_durations);
+      const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
-    // Handle logical query plan if statement has been cached
-    if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp_with_placeholders)) {
-      const auto plan = cached_plan.value();
-      DebugAssert(plan->lqp, "Optimized logical query plan retrieved from cache is empty.");
-      // MVCC-enabled and MVCC-disabled LQPs will evict each other
-      if (lqp_is_validated(plan->lqp) == (_use_mvcc == UseMvcc::Yes)) {
-        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
-        // and concurrent translations might conflict
-        auto temp_optimized_logical_plan = plan->instantiate(unoptimized_extracted_values)->deep_copy();
-        const auto done_cache_check_read = std::chrono::high_resolution_clock::now();
-        _metrics->cache_duration =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
+      _metrics->optimizer_rule_durations = *optimizer_rule_durations;
+      _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          done_post_cache_optimizer - start_post_cache_optimizer);
 
-        const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
-        _optimized_logical_plan =
-            _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
-        const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
-
-        _metrics->query_plan_cache_hit = true;
-        _metrics->optimizer_rule_durations = *optimizer_rule_durations;
-        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            done_post_cache_optimizer - start_post_cache_optimizer);
-
-        return _optimized_logical_plan;
-      }
+      return _optimized_logical_plan;
     }
-    const auto done_cache_check_read = std::chrono::high_resolution_clock::now();
-    _metrics->cache_duration =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_check_read - start_cache_check_read);
-  }
 
-  // Optimize plan with original parameters
-  const auto started_optimize = std::chrono::high_resolution_clock::now();
+    // Cache miss
+    // Optimize plan with original parameters
+    const auto start_optimize = std::chrono::high_resolution_clock::now();
 
-  auto cacheable_plan = std::make_shared<bool>(true);
+    auto cacheable_plan = std::make_shared<bool>(true);
 
-  // Need to copy since the optimizer requires exclusive ownership of the plan
-  auto unoptimized_lqp_copy = unoptimized_lqp->deep_copy();
-  _optimized_logical_plan =
-      _optimizer->optimize(std::move(unoptimized_lqp_copy), optimizer_rule_durations, cacheable_plan);
+    _optimized_logical_plan =
+        _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations, cacheable_plan);
+    const auto done_optimize = std::chrono::high_resolution_clock::now();
+    _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
 
-  const auto done_optimize = std::chrono::high_resolution_clock::now();
-
-  // Cache plan without parameters
-  if (lqp_cache && *cacheable_plan && _translation_info.cacheable) {
-    const auto start_cache_write = std::chrono::high_resolution_clock::now();
-
-    std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
-    const auto optimized_lqp_with_placeholders = split_logical_plan(_optimized_logical_plan, extracted_values);
-
-    // Convert value expression IDs into ParameterIDs in the right order
-    std::vector<ParameterID> all_parameter_ids(unoptimized_extracted_values.size());
-    auto all_parameter_ids_it = all_parameter_ids.begin();
-    for (const auto extracted_value : unoptimized_extracted_values) {
-      const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
-      *all_parameter_ids_it = static_cast<ParameterID>(*extracted_value_expression->value_expression_id);
-      ++all_parameter_ids_it;
+    // Cache plan without parameters
+    if (*cacheable_plan) {
+      cache_handler.set(_optimized_logical_plan);
     }
-    auto prepared_plan = std::make_shared<PreparedPlan>(optimized_lqp_with_placeholders, all_parameter_ids);
+  } else {
+    // Optimize plan with original parameters
+    const auto start_optimize = std::chrono::high_resolution_clock::now();
 
-    lqp_cache->set(unoptimized_lqp_with_placeholders, prepared_plan);
-
-    const auto done_cache_write = std::chrono::high_resolution_clock::now();
-    _metrics->cache_duration +=
-        std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache_write - start_cache_write);
+    // Need to copy since the optimizer requires exclusive ownership of the plan
+    _optimized_logical_plan =
+        _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
+    const auto done_optimize = std::chrono::high_resolution_clock::now();
+    _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
   }
 
   const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
@@ -243,8 +177,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
   const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
-  _metrics->optimization_duration =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize) +
+  _metrics->optimization_duration +=
       std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 

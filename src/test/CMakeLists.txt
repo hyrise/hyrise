@@ -18,6 +18,7 @@ set(
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/cache/cache_test.cpp
+    lib/cache/parameterized_plan_cache_handler_test.cpp
     lib/concurrency/commit_context_test.cpp
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp

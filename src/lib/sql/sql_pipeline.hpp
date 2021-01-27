@@ -99,6 +99,7 @@ class SQLPipeline : public Noncopyable {
 
  private:
   friend class SQLPipelineStatementTest;
+  friend class ParameterizedPlanCacheHandlerTest;
 
   // Returns the individual SQLPipelineStatements. Only for testing purposes.
   const std::vector<std::shared_ptr<SQLPipelineStatement>>& _get_sql_pipeline_statements() const;
