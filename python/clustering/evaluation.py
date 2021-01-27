@@ -46,7 +46,7 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
     if len(negative_estimates) > 0:
       print(f"There are {len(negative_estimates)} joins with estimated negative run time. This is bad.")
       print(negative_estimates)
-      m.join_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 0
+      m.join_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
 
     clustered_stats_parser = PQPInputParser("tpch", ground_truth_path)
     clustered_stats_parser.load_statistics()
@@ -104,6 +104,12 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
     if step == "CLUSTERING":
         result['RELATIVE_ERROR'].fillna(1, inplace=True)
     
+    # add some nicely formatted columns to display the data
+    result['RUNTIME_BASE_MS'] = result['RUNTIME_BASE'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+    result['RUNTIME_ESTIMATE_MS'] = result['RUNTIME_ESTIMATE'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+    result['RUNTIME_CLUSTERED_MS'] = result['RUNTIME_CLUSTERED'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+    result['TOTAL_ERROR_MS'] = result['TOTAL_ERROR'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+
     return result
 
 def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
@@ -114,7 +120,7 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
     if len(negative_estimates) > 0:
       print(f"There are: {len(negative_estimates)} negative scan estimates. This is bad.")
       print(negative_estimates)
-      m.scan_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 0
+      m.scan_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
     
     path = f"{ground_truth_path}/table_scans.csv"
     clustered_scans = pd.read_csv(path, sep='|')
@@ -146,12 +152,12 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
     return result
 
 def plot_scan_errors(estimation_errors, old_estimation_errors, query_frequencies, save_path=None):
-  bins = [-100, 0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 50, 500]
+  bins = [-100, 0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 50, 500, 1e21]
   plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, "scan", bins, save_path)
 
 
 def plot_join_errors(estimation_errors, old_estimation_errors, query_frequencies, save_path=None):
-  bins = [-100, -50, -10, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 30, 500]
+  bins = [-100, -50, -10, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.5, 5, 10, 30, 500, 1e21]
   plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, "join", bins, save_path)
 
 def plot_relative_errors(estimation_errors, old_estimation_errors, query_frequencies, operator, bins, save_path):
@@ -231,7 +237,7 @@ def print_aggregated_metrics(results, query_frequencies):
       return 200 * np.mean(diff)
 
   
-  print(f"Total estimate: {np.int64(estimates_ms.sum())} ms")
-  print(f"Total measured: {np.int64(measured_ms.sum())} ms")
-  print(f"MSE: {np.int64(mse_milliseconds)} ms^2")
+  print(f"Total estimate: {'{:,}'.format(np.int64(estimates_ms.sum()))} ms")
+  print(f"Total measured: {'{:,}'.format(np.int64(measured_ms.sum()))} ms")
+  print(f"MSE: {'{:,}'.format(np.int64(mse_milliseconds))} ms^2")
   print(f"SMAPE: {np.int64(smape(measured_ms, estimates_ms))}%")
