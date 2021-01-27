@@ -109,13 +109,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context);
 
   /**
-   * @return a new instance of the same operator with the same configuration
-   *         - recursively copies the input operators. An operator needs to implement this function in order to be
-   *         cacheable.
-   *         - subplans are deduplicated automatically TODO(Julian)
+   * Recursively copies the input operators and
+   * @returns a new instance of the same operator with the same configuration. Deduplication of subplans will be
+   * preserved. See lqp_translator.cpp for more info.
    */
   std::shared_ptr<AbstractOperator> deep_copy() const;
 
+  /**
+   * Implements AbstractOperator::deep_copy and uses @param copied_ops to preserve deduplication of operator subplans.
+   * See lqp_translator.cpp for more info.
+   */
   std::shared_ptr<AbstractOperator> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
@@ -171,6 +174,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // override this if the Operator uses Expressions and set the transaction context in the SubqueryExpressions
   virtual void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context);
 
+  // An operator needs to implement this function in order to be cacheable.
   virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
@@ -190,7 +194,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   // We track the number of consuming operators to automate the clearing of operator results.
-  std::atomic<u_short> _consumer_count = 0;
+  std::atomic<short> _consumer_count = 0;
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;

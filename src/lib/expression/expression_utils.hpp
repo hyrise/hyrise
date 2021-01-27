@@ -41,15 +41,16 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions.
- * When deep-copying PQPSubqueryExpressions, operator plans are deduplicated automatically. See lqp_translator.cpp for
- * more info on deduplication.
+ *
+ * Regarding PQPSubqueryExpressions: Deduplication of operator plans will be preserved. See lqp_translator.cpp
+ * for more info on deduplication.
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 /**
- * Utility to AbstractExpression::deep_copy() a vector of expressions.
- * Uses @param copied_ops to deduplicate operator plans when deep-copying PQPSubqueryExpressions.
+ * Utility to AbstractExpression::deep_copy() a vector of expressions. Uses
+ * @param copied_ops to preserve deduplication for the operator plans of PQPSubqueryExpressions.
  * See lqp_translator.cpp for more info on deduplication.
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(

@@ -66,15 +66,15 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * @returns a deep copy of the expression.
    *
-   * When copying PQPSubqueryExpressions, operator plans are deduplicated automatically. See lqp_translator.cpp for
-   * more info on deduplication.
+   * Regarding PQPSubqueryExpressions: Deduplication of operator plans will be preserved. See lqp_translator.cpp
+   * for more info on deduplication.
    */
   std::shared_ptr<AbstractExpression> deep_copy() const;
 
   /**
-   * @returns a deep copy of the expression.
-   *          Uses @param copied_ops to deduplicate operator plans when deep-copying PQPSubqueryExpressions. See
-   *          lqp_translator.cpp for more info on deduplication.
+   * @returns a deep copy of the expression and uses
+   * @param copied_ops to preserve deduplication for the operator plans of PQPSubqueryExpressions.
+   * See lqp_translator.cpp for more info on deduplication.
    */
   std::shared_ptr<AbstractExpression> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
