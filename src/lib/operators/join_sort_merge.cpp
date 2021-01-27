@@ -16,6 +16,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
+#include "join/join_steps.hpp"
 
 namespace opossum {
 
@@ -62,6 +63,11 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinSortMerge doesn't support these parameters");
 
+  std::shared_ptr<const Table> left_input_table_ptr;
+  std::shared_ptr<const Table> right_input_table_ptr;
+  left_input_table_ptr = _left_input->get_output();
+  right_input_table_ptr = _right_input->get_output();
+
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
   DebugAssert(left_column_type == right_input_table()->column_data_type(_primary_predicate.column_ids.second),
@@ -71,7 +77,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   resolve_data_type(left_column_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
-        *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+        *this, left_input_table_ptr, right_input_table_ptr, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
         _primary_predicate.predicate_condition, _mode, _secondary_predicates,
         dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
@@ -92,11 +98,14 @@ const std::string& JoinSortMerge::name() const {
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
+  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
+                       const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
                        const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
                        OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
+        _left_input_table{left_input_table},
+        _right_input_table{right_input_table},
         _performance{performance_data},
         _primary_left_column_id{left_column_id},
         _primary_right_column_id{right_column_id},
@@ -110,6 +119,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
  protected:
   JoinSortMerge& _sort_merge_join;
+  const std::shared_ptr<const Table> _left_input_table, _right_input_table;
 
   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
@@ -938,6 +948,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
+
+    // left_input_table = _left_input->get_output();
+    // right_input_table = _right_input->get_output();
+
+    PosListsByChunk left_side_pos_lists_by_segment;
+    PosListsByChunk right_side_pos_lists_by_segment;
+
+    // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
+    if (_left_input_table->type() == TableType::References) {
+      left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_left_input_table);
+    }
+
+    // right_side_pos_lists_by_segment will only be needed if right is a reference table
+    if (_right_input_table->type() == TableType::References) {
+      right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_right_input_table);
+    }
+
+
+
+
+
+
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
