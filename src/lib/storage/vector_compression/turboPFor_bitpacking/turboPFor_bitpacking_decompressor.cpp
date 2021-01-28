@@ -5,26 +5,47 @@
 namespace opossum {
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector)
-    : _data{&vector._data},
-      _size{vector._size},
-      _b{vector._b} {}
+    : 
+    _data{&vector._data},
+    _size{vector._size},
+      _b{vector._b} 
+      {
+
+          auto dec = std::make_shared<std::vector<uint32_t>>();;
+          dec->resize(vector._size);
+
+          _decompressed_data = dec;
+          if (vector._size == 0) {
+            return;
+          }
+
+          bitunpack32(vector._data.data(), vector._size, dec->data(), vector._b);
+      }
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor& other)
-    : _data{other._data},
+    : _decompressed_data{other._decompressed_data},
+    _data{other._data},
       _size{other._size},
-      _b{other._b} {}
+      _b{other._b} 
+      {
+
+      }
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(TurboPForBitpackingDecompressor&& other) noexcept
-    : _data{other._data},
+    : _decompressed_data{other._decompressed_data},
+    _data{other._data},
       _size{other._size},
-      _b{other._b} {}
+      _b{other._b} 
+      {
+
+      }
 
 TurboPForBitpackingDecompressor& TurboPForBitpackingDecompressor::operator=(const TurboPForBitpackingDecompressor& other) {
   if (&other == this) {
     return *this;
   }
 
-  _data = other._data;
+  _decompressed_data = other._decompressed_data;
   _size = other._size;
   _b = other._b;
 
@@ -35,7 +56,7 @@ TurboPForBitpackingDecompressor& TurboPForBitpackingDecompressor::operator=(Turb
   if (&other == this) {
     return *this;
   }
-  _data = other._data;
+  _decompressed_data = other._decompressed_data;
   _size = other._size;
   _b = other._b;
 
