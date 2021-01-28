@@ -6,7 +6,7 @@ namespace opossum {
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector)
     : 
-    _decompressed_data{std::make_unique<std::vector<uint32_t>>(vector._size)},
+    _decompressed_data{std::make_unique<std::vector<uint32_t>>(vector._size + 32)},
     _data{&vector._data},
     _size{vector._size},
       _b{vector._b} 

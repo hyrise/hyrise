@@ -24,14 +24,17 @@ std::unique_ptr<const BaseCompressedVector> TurboPForBitpackingCompressor::compr
       return std::make_unique<TurboPForBitpackingVector>(std::move(data), vector.size(), 0);
   }
 
+  std::cout << "allocated block of size " << data.size() << std::endl;
+  std::cout << "b = " << b << std::endl;
+
   uint8_t * out_end = bitpack32(in.data(), in.size(), data.data(), b);
   int bytes_written = (out_end) - data.data();
 
-  data.resize(bytes_written);
+  data.resize(bytes_written + 32);
 
   const uint8_t b_1 = static_cast<uint8_t>(b);
 
-  std::vector<uint32_t> dec(vector.size());
+  std::vector<uint32_t> dec(vector.size() + 32); // turbopfor reads in chunks of 32 values. avoid buffer overflow by allocating more memory.
   bitunpack32(data.data(), vector.size(), dec.data(), b_1);
 
   for (int i = 0; i < vector.size(); i++) {
