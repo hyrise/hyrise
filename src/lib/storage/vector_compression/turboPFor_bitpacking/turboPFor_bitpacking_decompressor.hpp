@@ -31,17 +31,17 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
-    if (_size == 0) {
-      std::cout << "error" << std::endl;
-    }
+    // if (_size == 0) {
+    //   std::cout << "error" << std::endl;
+    // }
 
-    auto v1 = bitgetx32(_data->data(), i, _b);
+    // auto v1 = bitgetx32(_data->data(), i, _b);
 
     auto val = (*_decompressed_data)[i];
 
-    if (v1 != val) {
-      std::cout << "error" << std::endl;
-    }
+    // if (v1 != val) {
+    //   std::cout << "error" << std::endl;
+    // }
 
     return val;
 
