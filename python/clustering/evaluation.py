@@ -139,7 +139,8 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
   result['QUERY_HASH1'] = np.array(m.scan_estimates['QUERY_HASH'])
   result['QUERY_HASH2'] = np.array(clustered_scans['QUERY_HASH'])
   result['RUNTIME_BASE'] = np.array(m.scan_estimates['RUNTIME_NS'])
-  result['RUNTIME_ESTIMATE'] = np.array(m.scan_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
+  #result['RUNTIME_ESTIMATE'] = np.array(m.scan_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
+  result['RUNTIME_ESTIMATE'] = np.array(m.scan_estimates['RUNTIME_ESTIMATE'], dtype=np.int64)
   result['RUNTIME_CLUSTERED'] = np.array(clustered_scans['RUNTIME_NS'])
   
   # make sure we match all operators
@@ -180,7 +181,8 @@ def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column
   result['QUERY_HASH1'] = np.array(m.aggregate_estimates['QUERY_HASH'])
   result['QUERY_HASH2'] = np.array(clustered_aggregates['QUERY_HASH'])
   result['RUNTIME_BASE'] = np.array(m.aggregate_estimates['RUNTIME_NS'], dtype=np.int64)
-  result['RUNTIME_ESTIMATE'] = np.array(m.aggregate_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
+  #result['RUNTIME_ESTIMATE'] = np.array(m.aggregate_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
+  result['RUNTIME_ESTIMATE'] = np.array(m.aggregate_estimates['RUNTIME_ESTIMATE'], dtype=np.int64)
   result['RUNTIME_CLUSTERED'] = np.array(clustered_aggregates['RUNTIME_NS'], dtype=np.int64)
   
 
@@ -266,21 +268,26 @@ def print_aggregated_metrics(results, query_frequencies):
   print(f"There are {len(results)} operators")
   print()
 
-  percentage_bounds = [[1, 1.5], [1.5, 3], [3, 100]]
+  percentage_bounds = [[1, 1.5], [1.5, 3], [3, 100], [100, 1e21]]
   percentages = get_percentage_bounds(results, percentage_bounds)
 
   for index, percentage in enumerate(percentages):
     print(f"{np.int64(percentage)}% of the operator estimates are over- or underestimated between factor {percentage_bounds[index][0]} and {percentage_bounds[index][1]}")
   print()
 
-
+  BASE_COLUMN = "RUNTIME_BASE"
   ESTIMATE_COLUMN = "RUNTIME_ESTIMATE"
   MEASURED_COLUMN = "RUNTIME_CLUSTERED"
 
-  estimates_ms = results.apply(lambda x: x[ESTIMATE_COLUMN] * query_frequencies[x['QUERY_HASH1']] / 1e6, axis=1)
-  measured_ms = results.apply(lambda x: x[MEASURED_COLUMN] * query_frequencies[x['QUERY_HASH1']] / 1e6, axis=1)
+  estimated_all_occurrences_ms = list(results[ESTIMATE_COLUMN] / 1e6)
+  measured_all_occurrences_ms = list(results[MEASURED_COLUMN] / 1e6)
+  repeated_hashes = list(filter(lambda k: query_frequencies[k] > 1, query_frequencies))
+  for query_hash in repeated_hashes:
+    for i in range(1, query_frequencies[query_hash]):
+      estimated_all_occurrences_ms.extend(list(results[results['QUERY_HASH1'] == query_hash][ESTIMATE_COLUMN] / 1e6))
+      measured_all_occurrences_ms.extend(list(results[results['QUERY_HASH1'] == query_hash][MEASURED_COLUMN] / 1e6))
 
-  mse_milliseconds = sklearn.metrics.mean_squared_error(measured_ms, estimates_ms)
+  mse_milliseconds = sklearn.metrics.mean_squared_error(measured_all_occurrences_ms, estimated_all_occurrences_ms)
 
   def smape(y_true, y_pred):
       denominator = (np.abs(y_true) + np.abs(y_pred))
@@ -288,7 +295,15 @@ def print_aggregated_metrics(results, query_frequencies):
       diff[denominator == 0] = 0.0
       return 200 * np.mean(diff)
 
-  
+
+  base_ms = results.apply(lambda x: x[BASE_COLUMN] * query_frequencies[x['QUERY_HASH1']] / 1e6, axis=1)
+  estimates_ms = results.apply(lambda x: x[ESTIMATE_COLUMN] * query_frequencies[x['QUERY_HASH1']] / 1e6, axis=1)
+  measured_ms = results.apply(lambda x: x[MEASURED_COLUMN] * query_frequencies[x['QUERY_HASH1']] / 1e6, axis=1)
+
+  assert int(estimates_ms.sum()) == int(sum(estimated_all_occurrences_ms)), f"{estimates_ms.sum()} != {sum(estimated_all_occurrences_ms)}"
+  assert int(measured_ms.sum()) == int(sum(measured_all_occurrences_ms)), f"{measured_ms.sum()} != {sum(measured_all_occurrences_ms)}"
+
+  print(f"Base clustering: {'{:,}'.format(np.int64(base_ms.sum()))} ms")
   print(f"Total estimate: {'{:,}'.format(np.int64(estimates_ms.sum()))} ms")
   print(f"Total measured: {'{:,}'.format(np.int64(measured_ms.sum()))} ms")
   print(f"MSE: {'{:,}'.format(np.int64(mse_milliseconds))} ms^2")
