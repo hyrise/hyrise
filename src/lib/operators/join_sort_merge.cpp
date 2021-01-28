@@ -961,7 +961,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                                _left_input_table, _right_input_table,
                                                                left_join_column, right_join_column,
                                                                SortMode::Ascending, SortMode::Ascending, set_individually_sorted_by,
-                                                               create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment);
+                                                               create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                                                               OutputColumnOrder::LeftFirstRightSecond);
 
     auto output_chunks = write_output_chunks(output_writing_information);
 

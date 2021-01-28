@@ -6,6 +6,7 @@
 
 namespace opossum {
 
+enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
 
 struct OutputWritingInformation {
   OutputWritingInformation(
@@ -19,7 +20,8 @@ struct OutputWritingInformation {
      SortMode sort_mode_right_join_column,
      bool set_individually_sorted_by,
      bool create_left_side_pos_lists_by_segment,
-     bool create_right_side_pos_lists_by_segment
+     bool create_right_side_pos_lists_by_segment,
+     OutputColumnOrder output_column_order
   ) : pos_lists_left{ pos_lists_left }, 
       pos_lists_right { pos_lists_right },
       left_input_table { left_input_table },
@@ -30,9 +32,10 @@ struct OutputWritingInformation {
       sort_mode_right_join_column { sort_mode_right_join_column },
       set_individually_sorted_by { set_individually_sorted_by },
       create_left_side_pos_lists_by_segment { create_left_side_pos_lists_by_segment },
-      create_right_side_pos_lists_by_segment { create_right_side_pos_lists_by_segment } {};
-  std::vector<RowIDPosList>& pos_lists_left; //_output_pos_lists_left
-  std::vector<RowIDPosList>& pos_lists_right; // _output_pos_lists_right
+      create_right_side_pos_lists_by_segment { create_right_side_pos_lists_by_segment },
+      output_column_order { output_column_order } {};
+  std::vector<RowIDPosList>& pos_lists_left;
+  std::vector<RowIDPosList>& pos_lists_right;
   const std::shared_ptr<const Table>& left_input_table;
   const std::shared_ptr<const Table>& right_input_table;
   const ColumnID left_join_column;
@@ -42,6 +45,7 @@ struct OutputWritingInformation {
   bool set_individually_sorted_by;
   bool create_left_side_pos_lists_by_segment;
   bool create_right_side_pos_lists_by_segment;
+  OutputColumnOrder output_column_order;
 };
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
@@ -193,7 +197,20 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
 }
 
 
-std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation& output_writing_information) {
+inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation& output_writing_information) {
+
+    /**
+     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
+     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
+     *  write_output_chunks a lot.
+     *
+     * They do two things:
+     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
+     *          PosLists Chunk by Chunk
+     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
+     *
+     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
+     */
 
     PosListsByChunk left_side_pos_lists_by_segment;
     PosListsByChunk right_side_pos_lists_by_segment;
@@ -263,14 +280,27 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
     }
 
     Segments output_segments;
-
     // Swap back the inputs, so that the order of the output columns is not changed.
+    switch (output_writing_information.output_column_order) {
+        case OutputColumnOrder::LeftFirstRightSecond:
+          write_output_segments(output_segments, output_writing_information.left_input_table, left_side_pos_lists_by_segment,
+                                left_side_pos_list);
+          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+                                right_side_pos_list);
+          break;
 
+        case OutputColumnOrder::RightFirstLeftSecond:
+          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+                                right_side_pos_list);
+          write_output_segments(output_segments, output_writing_information.left_input_table, left_side_pos_lists_by_segment,
+                                left_side_pos_list);
+          break;
 
-    write_output_segments(output_segments, output_writing_information.left_input_table, left_side_pos_lists_by_segment,
-                          left_side_pos_list);
-    write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
-                          right_side_pos_list);
+        case OutputColumnOrder::RightOnly:
+          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+                                right_side_pos_list);
+          break;
+      }
 
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
     if (output_writing_information.set_individually_sorted_by) {
@@ -286,27 +316,4 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
   }
   return output_chunks;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
+} // namespace opossum
