@@ -129,8 +129,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
-  std::unique_ptr<RowIDPosList> _null_rows_left;
-  std::unique_ptr<RowIDPosList> _null_rows_right;
+  RowIDPosList _null_rows_left;
+  RowIDPosList _null_rows_right;
 
   const ColumnID _primary_left_column_id;
   const ColumnID _primary_right_column_id;
@@ -147,8 +147,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
+  std::vector<RowIDPosList> _output_pos_lists_left;
+  std::vector<RowIDPosList> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -298,8 +298,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Emits a combination of a left row id and a right row id to the join output.
   **/
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
-    _output_pos_lists_left[output_cluster]->push_back(left_row_id);
-    _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+    _output_pos_lists_left[output_cluster].push_back(left_row_id);
+    _output_pos_lists_right[output_cluster].push_back(right_row_id);
   }
 
   /**
@@ -788,8 +788,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
-      _output_pos_lists_left[cluster_number] = std::make_shared<RowIDPosList>();
-      _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
+      _output_pos_lists_left[cluster_number] = RowIDPosList();
+      _output_pos_lists_right[cluster_number] = RowIDPosList();
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
@@ -912,8 +912,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
     _sorted_right_table = std::move(sort_output.clusters_right);
-    _null_rows_left = std::move(sort_output.null_rows_left);
-    _null_rows_right = std::move(sort_output.null_rows_right);
+    _null_rows_left = std::move(*sort_output.null_rows_left);
+    _null_rows_right = std::move(*sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
@@ -922,30 +922,30 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _perform_join();
 
     if (include_null_left || include_null_right) {
-      auto null_output_left = std::make_shared<RowIDPosList>();
-      auto null_output_right = std::make_shared<RowIDPosList>();
+      auto null_output_left = RowIDPosList();
+      auto null_output_right = RowIDPosList();
 
       // Add the outer join rows which had a null value in their join column
       if (include_null_left) {
-        null_output_left->reserve(_null_rows_left->size());
-        null_output_right->insert(null_output_right->end(), _null_rows_left->size(), NULL_ROW_ID);
-        for (const auto& row_id_left : *_null_rows_left) {
-          null_output_left->push_back(row_id_left);
+        null_output_left.reserve(_null_rows_left.size());
+        null_output_right.insert(null_output_right.end(), _null_rows_left.size(), NULL_ROW_ID);
+        for (const auto& row_id_left : _null_rows_left) {
+          null_output_left.push_back(row_id_left);
         }
       }
       if (include_null_right) {
-        null_output_left->insert(null_output_left->end(), _null_rows_right->size(), NULL_ROW_ID);
-        null_output_right->reserve(_null_rows_right->size());
-        for (const auto& row_id_right : *_null_rows_right) {
-          null_output_right->push_back(row_id_right);
+        null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
+        null_output_right.reserve(_null_rows_right.size());
+        for (const auto& row_id_right : _null_rows_right) {
+          null_output_right.push_back(row_id_right);
         }
       }
 
-      DebugAssert(null_output_left->size() == null_output_right->size(),
+      DebugAssert(null_output_left.size() == null_output_right.size(),
                   "Null positions lists are expected to be of equal length.");
-      if (!null_output_left->empty()) {
-        _output_pos_lists_left.push_back(null_output_left);
-        _output_pos_lists_right.push_back(null_output_right);
+      if (!null_output_left.empty()) {
+        _output_pos_lists_left.push_back(std::move(null_output_left));
+        _output_pos_lists_right.push_back(std::move(null_output_right));
       }
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());

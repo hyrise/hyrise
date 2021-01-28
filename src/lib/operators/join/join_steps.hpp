@@ -9,8 +9,8 @@ namespace opossum {
 
 struct OutputWritingInformation {
   OutputWritingInformation(
-    std::vector<std::shared_ptr<RowIDPosList>>& pos_lists_left,
-    std::vector<std::shared_ptr<RowIDPosList>>& pos_lists_right,
+    std::vector<RowIDPosList>& pos_lists_left,
+    std::vector<RowIDPosList>& pos_lists_right,
      const std::shared_ptr<const Table>& left_input_table,
      const std::shared_ptr<const Table>& right_input_table,
      const ColumnID left_join_column,
@@ -25,8 +25,8 @@ struct OutputWritingInformation {
       right_join_column { right_join_column },
       sort_mode_right_join_column { sort_mode_right_join_column },
       set_individually_sorted_by { set_individually_sorted_by } {};
-  std::vector<std::shared_ptr<RowIDPosList>>& pos_lists_left; //_output_pos_lists_left
-  std::vector<std::shared_ptr<RowIDPosList>>& pos_lists_right; // _output_pos_lists_right
+  std::vector<RowIDPosList>& pos_lists_left; //_output_pos_lists_left
+  std::vector<RowIDPosList>& pos_lists_right; // _output_pos_lists_right
   const std::shared_ptr<const Table>& left_input_table;
   const std::shared_ptr<const Table>& right_input_table;
   const ColumnID left_join_column;
@@ -202,7 +202,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
 
     auto expected_output_chunk_count = size_t{0};
     for (size_t partition_id = 0; partition_id < output_writing_information.pos_lists_left.size(); ++partition_id) {
-      if (!output_writing_information.pos_lists_left[partition_id]->empty() || !output_writing_information.pos_lists_right[partition_id]->empty()) {
+      if (!output_writing_information.pos_lists_left[partition_id].empty() || !output_writing_information.pos_lists_right[partition_id].empty()) {
         ++expected_output_chunk_count;
       }
     }
@@ -217,8 +217,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
   while (partition_id < output_writing_information.pos_lists_left.size()) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // build_pos_lists and probe_side_pos_lists will not be used again.
-    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(*output_writing_information.pos_lists_left[partition_id]));
-    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(*output_writing_information.pos_lists_right[partition_id]));
+    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(output_writing_information.pos_lists_left[partition_id]));
+    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(output_writing_information.pos_lists_right[partition_id]));
 
     if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
       ++partition_id;
@@ -239,14 +239,14 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
     // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
     // size or are empty (in case of semi/anti joins).
     while (partition_id + 1 < output_writing_information.pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-           right_side_pos_list->size() + output_writing_information.pos_lists_right[partition_id + 1]->size() < MAX_SIZE) {
+           right_side_pos_list->size() + output_writing_information.pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
       // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
       // used for the merged PosList.
-      std::copy(output_writing_information.pos_lists_left[partition_id + 1]->begin(), output_writing_information.pos_lists_left[partition_id + 1]->end(),
+      std::copy(output_writing_information.pos_lists_left[partition_id + 1].begin(), output_writing_information.pos_lists_left[partition_id + 1].end(),
                 std::back_inserter(*left_side_pos_list));
       output_writing_information.pos_lists_left[partition_id + 1] = {};
 
-      std::copy(output_writing_information.pos_lists_right[partition_id + 1]->begin(), output_writing_information.pos_lists_right[partition_id + 1]->end(),
+      std::copy(output_writing_information.pos_lists_right[partition_id + 1].begin(), output_writing_information.pos_lists_right[partition_id + 1].end(),
                 std::back_inserter(*right_side_pos_list));
       output_writing_information.pos_lists_right[partition_id + 1] = {};
 
