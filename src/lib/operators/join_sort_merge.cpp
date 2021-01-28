@@ -955,10 +955,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
     auto set_individually_sorted_by = (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner);
+    auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
+    auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
     auto output_writing_information = OutputWritingInformation(_output_pos_lists_left, _output_pos_lists_right,
                                                                _left_input_table, _right_input_table,
                                                                left_join_column, right_join_column,
-                                                               SortMode::Ascending, set_individually_sorted_by);
+                                                               SortMode::Ascending, SortMode::Ascending, set_individually_sorted_by,
+                                                               create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment);
 
     auto output_chunks = write_output_chunks(output_writing_information);
 

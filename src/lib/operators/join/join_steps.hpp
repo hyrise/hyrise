@@ -15,24 +15,33 @@ struct OutputWritingInformation {
      const std::shared_ptr<const Table>& right_input_table,
      const ColumnID left_join_column,
      const ColumnID right_join_column,
+     SortMode sort_mode_left_join_column,
      SortMode sort_mode_right_join_column,
-     bool set_individually_sorted_by
+     bool set_individually_sorted_by,
+     bool create_left_side_pos_lists_by_segment,
+     bool create_right_side_pos_lists_by_segment
   ) : pos_lists_left{ pos_lists_left }, 
       pos_lists_right { pos_lists_right },
       left_input_table { left_input_table },
       right_input_table { right_input_table },
       left_join_column { left_join_column },
       right_join_column { right_join_column },
+      sort_mode_left_join_column { sort_mode_left_join_column },
       sort_mode_right_join_column { sort_mode_right_join_column },
-      set_individually_sorted_by { set_individually_sorted_by } {};
+      set_individually_sorted_by { set_individually_sorted_by },
+      create_left_side_pos_lists_by_segment { create_left_side_pos_lists_by_segment },
+      create_right_side_pos_lists_by_segment { create_right_side_pos_lists_by_segment } {};
   std::vector<RowIDPosList>& pos_lists_left; //_output_pos_lists_left
   std::vector<RowIDPosList>& pos_lists_right; // _output_pos_lists_right
   const std::shared_ptr<const Table>& left_input_table;
   const std::shared_ptr<const Table>& right_input_table;
   const ColumnID left_join_column;
   const ColumnID right_join_column;
+  SortMode sort_mode_left_join_column;
   SortMode sort_mode_right_join_column;
   bool set_individually_sorted_by;
+  bool create_left_side_pos_lists_by_segment;
+  bool create_right_side_pos_lists_by_segment;
 };
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
@@ -190,12 +199,12 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
     PosListsByChunk right_side_pos_lists_by_segment;
 
     // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (output_writing_information.left_input_table->type() == TableType::References) {
+    if (output_writing_information.create_left_side_pos_lists_by_segment) {
       left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(output_writing_information.left_input_table);
     }
 
     // right_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (output_writing_information.right_input_table->type() == TableType::References) {
+    if (output_writing_information.create_right_side_pos_lists_by_segment) {
       right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(output_writing_information.right_input_table);
     }
 
@@ -267,8 +276,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation
     if (output_writing_information.set_individually_sorted_by) {
       output_chunk->finalize();
       // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-      output_chunk->set_individually_sorted_by({SortColumnDefinition(output_writing_information.left_join_column, SortMode::Ascending),
-                                                SortColumnDefinition(output_writing_information.right_join_column, SortMode::Ascending)});
+      output_chunk->set_individually_sorted_by({SortColumnDefinition(output_writing_information.left_join_column, output_writing_information.sort_mode_left_join_column),
+                                                SortColumnDefinition(output_writing_information.right_join_column, output_writing_information.sort_mode_right_join_column)});
     }
 
     output_chunks.emplace_back(output_chunk);
