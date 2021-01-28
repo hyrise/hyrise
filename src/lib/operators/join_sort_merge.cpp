@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
@@ -949,104 +950,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
+
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
-    PosListsByChunk left_side_pos_lists_by_segment;
-    PosListsByChunk right_side_pos_lists_by_segment;
+    auto set_individually_sorted_by = (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner);
+    auto output_writing_information = OutputWritingInformation(_output_pos_lists_left, _output_pos_lists_right,
+                                                               _left_input_table, _right_input_table,
+                                                               left_join_column, right_join_column,
+                                                               SortMode::Ascending, set_individually_sorted_by);
+    std::cout << output_writing_information.set_individually_sorted_by << std::endl;
 
-    // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (_left_input_table->type() == TableType::References) {
-      left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_left_input_table);
-    }
+    auto output_chunks = write_output_chunks(output_writing_information);
 
-    // right_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (_right_input_table->type() == TableType::References) {
-      right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_right_input_table);
-    }
-
-
-    auto expected_output_chunk_count = size_t{0};
-    for (size_t partition_id = 0; partition_id < _output_pos_lists_left.size(); ++partition_id) {
-      if (!_output_pos_lists_left[partition_id]->empty() || !_output_pos_lists_right[partition_id]->empty()) {
-        ++expected_output_chunk_count;
-      }
-    }
-
-    std::vector<std::shared_ptr<Chunk>> output_chunks{};
-    output_chunks.reserve(expected_output_chunk_count);
-
-
-    // For every partition, create a reference segment.
-    auto partition_id = size_t{0};
-    auto output_chunk_id = size_t{0};
-    while (partition_id < _output_pos_lists_left.size()) {
-      // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
-      // build_pos_lists and probe_side_pos_lists will not be used again.
-      auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(*_output_pos_lists_left[partition_id]));
-      auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(*_output_pos_lists_right[partition_id]));
-
-      if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
-        ++partition_id;
-        continue;
-      }
-
-      // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
-      // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
-      // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
-      // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
-      // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
-      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-      constexpr auto MIN_SIZE = 500;
-      constexpr auto MAX_SIZE = MIN_SIZE * 2;
-      left_side_pos_list->reserve(MAX_SIZE);
-      right_side_pos_list->reserve(MAX_SIZE);
-
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-      // size or are empty (in case of semi/anti joins).
-      while (partition_id + 1 < _output_pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-             right_side_pos_list->size() + _output_pos_lists_right[partition_id + 1]->size() < MAX_SIZE) {
-        // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
-        // used for the merged PosList.
-        std::copy(_output_pos_lists_left[partition_id + 1]->begin(), _output_pos_lists_left[partition_id + 1]->end(),
-                  std::back_inserter(*left_side_pos_list));
-        _output_pos_lists_left[partition_id + 1] = {};
-
-        std::copy(_output_pos_lists_right[partition_id + 1]->begin(), _output_pos_lists_right[partition_id + 1]->end(),
-                  std::back_inserter(*right_side_pos_list));
-        _output_pos_lists_right[partition_id + 1] = {};
-
-        ++partition_id;
-      }
-
-      Segments output_segments;
-
-      // Swap back the inputs, so that the order of the output columns is not changed.
-
-
-      write_output_segments(output_segments, _left_input_table, left_side_pos_lists_by_segment,
-                            left_side_pos_list);
-      write_output_segments(output_segments, _right_input_table, right_side_pos_lists_by_segment,
-                            right_side_pos_list);
-
-      auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-      if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-          _mode == JoinMode::Inner) {
-        output_chunk->finalize();
-        // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-        output_chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                                  SortColumnDefinition(right_join_column, SortMode::Ascending)});
-      }
-
-      output_chunks.emplace_back(output_chunk);
-      ++partition_id;
-      ++output_chunk_id;
-    }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-
 
     if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
         _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
@@ -1054,7 +974,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // non-equal predicates.
       result_table->set_value_clustered_by({left_join_column, right_join_column});
     }
-
     return result_table;
   }
 };
