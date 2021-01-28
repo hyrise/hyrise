@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
@@ -960,7 +959,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                                _left_input_table, _right_input_table,
                                                                left_join_column, right_join_column,
                                                                SortMode::Ascending, set_individually_sorted_by);
-    std::cout << output_writing_information.set_individually_sorted_by << std::endl;
 
     auto output_chunks = write_output_chunks(output_writing_information);
 
