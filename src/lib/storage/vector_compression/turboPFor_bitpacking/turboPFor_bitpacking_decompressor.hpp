@@ -52,7 +52,7 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
 
  private:
   const pmr_vector<uint8_t> *_data;
-  std::shared_ptr<std::vector<uint32_t>> _decompressed_data;
+  std::unique_ptr<std::vector<uint32_t>> _decompressed_data;
   size_t _size;
   uint8_t _b;
 };
