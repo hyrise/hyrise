@@ -76,8 +76,10 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
-        // column(s) later
-        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
+        // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
+        // the vector slightly more than necessary. Otherwise,  monotonically increasing result_ids would lead to one
+        // resize per row.
+        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1) * 1.5));
         results[result_id].row_id = row_id;
 
         return results[result_id];
