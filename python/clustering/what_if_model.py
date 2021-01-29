@@ -185,8 +185,22 @@ class WhatIfModel(DisjointClustersModel):
 
 
     def adapt_aggregates_to_clustering(self, aggregates, clustering_columns, sorting_column, dimension_cardinalities):
-        # TODO fix sortedness/locality, maybe add other metrics
-        aggregates['INPUT_COLUMN_SORTED'] = "No"
+        # TODO add other metrics, especially for clusteredness
+        def get_sortedness_information(row):
+            if int(row['GROUP_BY_COLUMN_COUNT']) != 1:
+                return "No"
+
+            group_by_ordered = row['INPUT_ORDERED'].split(",")[0]
+            if group_by_ordered == "0":
+                return "No"
+
+            group_by_column = row['COLUMN_NAME'].split(",")[0]
+            if group_by_column == sorting_column:
+                return "Ascending"
+            else:
+                return "No"
+
+        aggregates['INPUT_COLUMN_SORTED'] = aggregates.apply(get_sortedness_information, axis=1)
         return aggregates
 
     def estimate_aggregate_runtime(self, clustering_columns, sorting_column, dimension_cardinalities):
@@ -202,7 +216,7 @@ class WhatIfModel(DisjointClustersModel):
             model = self.models[model_name]
 
             df = df.copy()
-            df = df.drop(columns=['OPERATOR_IMPLEMENTATION', 'AGGREGATE_COLUMNS_WRITING_NS', 'AGGREGATE_COLUMN_COUNT', 'AGGREGATING_NS', 'COLUMN_NAME', 'DESCRIPTION', 'GROUP_BY_COLUMNS_WRITING_NS', 'GROUP_BY_COLUMN_COUNT', 'GROUP_BY_KEY_PARTITIONING_NS', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'QUERY_HASH', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'TABLE_NAME'])
+            df = df.drop(columns=['INPUT_ORDERED', 'OPERATOR_IMPLEMENTATION', 'AGGREGATE_COLUMNS_WRITING_NS', 'AGGREGATE_COLUMN_COUNT', 'AGGREGATING_NS', 'COLUMN_NAME', 'DESCRIPTION', 'GROUP_BY_COLUMNS_WRITING_NS', 'GROUP_BY_COLUMN_COUNT', 'GROUP_BY_KEY_PARTITIONING_NS', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'OUTPUT_WRITING_NS', 'QUERY_HASH', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'TABLE_NAME'])
             df = util.preprocess_data(df)
             df = util.append_to_input_format(df, self.model_formats[model_name])
 
