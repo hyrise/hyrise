@@ -142,41 +142,46 @@ namespace opossum {
   }
 
   void DipsPruningRule::top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const { //expects root in the first call
-    if(node->parent == nullptr){  //handle root
-      return;
-    }
-    auto edge = node->get_edge_for_table(node->parent);
+    if(node->parent != nullptr){  //handle root
+    
+      auto edge = node->get_edge_for_table(node->parent);
 
-    for (auto predicate : edge->predicates){
-      auto left_operand = predicate->left_operand();
-      auto right_operand = predicate->right_operand();
+      for (auto predicate : edge->predicates){
+        auto left_operand = predicate->left_operand();
+        auto right_operand = predicate->right_operand();
 
-      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+        auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+        auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
 
-      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
-      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+        std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+        std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
       
-      if (!left_stored_table_node || !right_stored_table_node) {
-          return;
+        if (!left_stored_table_node || !right_stored_table_node) {
+            return;
+        }
+
+        // LEFT -> RIGHT
+        dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node, right_lqp->original_column_id);
+
+        // RIGHT -> LEFT
+        dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
       }
-
-      // LEFT -> RIGHT
-      dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node, right_lqp->original_column_id);
-
-      // RIGHT -> LEFT
-      dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
     } 
 
     for (std::shared_ptr<DipsJoinGraphNode> child : node->children){
-      bottom_up_dip_traversal(child);
+      top_down_dip_traversal(child);
     }
   }
 
 
   void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const {
+    if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
+      return;
+    }
+    
     if (node->left_input()) _build_join_graph(node->left_input(), join_graph);
     if (node->right_input()) _build_join_graph(node->right_input(), join_graph);
+
 
     if (node->type == LQPNodeType::Join) {
       if(std::find(supported_join_types.begin(), supported_join_types.end(), std::dynamic_pointer_cast<JoinNode>(node)->join_mode) == supported_join_types.end()){
