@@ -71,7 +71,6 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       if (*first_key_entry & MASK) {
-        std::cout << "Imm key" << std::endl;
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
         const auto result_id = *first_key_entry ^ MASK;
 
@@ -81,7 +80,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // the vector slightly more than necessary. Otherwise, monotonically increasing result_ids would lead to one
         // resize per row.
         if (result_id >= results.size()) {
-          results.resize(static_cast<size_t>((result_id + 1) * 1.5));
+          results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
         }
         results[result_id].row_id = row_id;
 
