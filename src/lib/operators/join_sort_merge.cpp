@@ -221,9 +221,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * A run is a series of rows in a cluster with the same value.
   **/
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result,
-                  std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
-                  size_t cluster_id) {
-
+                  std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
@@ -512,8 +510,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_cluster(size_t cluster_id,
-                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
+  void _join_cluster(size_t cluster_id, std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     auto& left_cluster = (*_sorted_left_table)[cluster_id];
     auto& right_cluster = (*_sorted_right_table)[cluster_id];
 
@@ -773,7 +770,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   /**
   * Performs the join on all clusters in parallel.
   **/
-        void _perform_join() {
+  void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     _left_row_ids_emitted_per_chunks.resize(_cluster_count);
     _right_row_ids_emitted_per_chunks.resize(_cluster_count);
@@ -791,8 +788,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      _left_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool> {};
-      _right_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool> {};
+      _left_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool>{};
+      _right_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool>{};
 
       const auto merge_row_count =
           (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
@@ -821,19 +818,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      //We need to merge the maps from every cluster to one map.
-      for (auto const& map : _left_row_ids_emitted_per_chunks){
+      // We need to merge the maps from every cluster to one map.
+      for (auto const& map : _left_row_ids_emitted_per_chunks) {
         for (auto const& submap : map) {
-          _left_row_ids_emitted[submap.first] =  _left_row_ids_emitted[submap.first] || submap.second;
+          _left_row_ids_emitted[submap.first] = _left_row_ids_emitted[submap.first] || submap.second;
         }
       }
       _left_outer_non_equi_join();
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto const& map : _right_row_ids_emitted_per_chunks){
+      for (auto const& map : _right_row_ids_emitted_per_chunks) {
         for (auto const& submap : map) {
-          _right_row_ids_emitted[submap.first] =  _right_row_ids_emitted[submap.first] || submap.second;
+          _right_row_ids_emitted[submap.first] = _right_row_ids_emitted[submap.first] || submap.second;
         }
       }
       _right_outer_non_equi_join();
