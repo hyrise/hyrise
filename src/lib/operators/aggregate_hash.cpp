@@ -797,6 +797,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
+    // This result was overallocated (see get_or_add_result) and must be ignored
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
     if (result.aggregate_count > 0) {
@@ -817,6 +818,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
   values.reserve(results.size());
 
   for (const auto& result : results) {
+    // This result was overallocated (see get_or_add_result) and must be ignored
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
     values.emplace_back(result.aggregate_count);
@@ -831,6 +833,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
   values.reserve(results.size());
 
   for (const auto& result : results) {
+    // This result was overallocated (see get_or_add_result) and must be ignored
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
     values.emplace_back(result.accumulator.size());
@@ -846,6 +849,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
+    // This result was overallocated (see get_or_add_result) and must be ignored
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
     if (result.aggregate_count > 0) {
@@ -876,6 +880,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
+    // This result was overallocated (see get_or_add_result) and must be ignored
     if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
     if (result.aggregate_count > 1) {
@@ -1040,6 +1045,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     auto pos_list = RowIDPosList{};
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
+      // This result was overallocated (see get_or_add_result) and must be ignored
       if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
       pos_list.emplace_back(result.row_id);
     }
