@@ -27,6 +27,7 @@ namespace opossum {
 class PredicateSplitUpRule : public AbstractRule {
  public:
   explicit PredicateSplitUpRule(const bool split_disjunctions = true);
+  bool prevents_caching() const override;
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

@@ -15,7 +15,7 @@ class LQPSubqueryExpression;
 
 class AbstractRule {
  public:
-  virtual ~AbstractRule() = default;
+  virtual ~AbstractRule();
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
@@ -44,7 +44,7 @@ class AbstractRule {
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
-  virtual bool prevents_caching() const;
+  virtual bool prevents_caching() const = 0;
 
  protected:
   /**

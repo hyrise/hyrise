@@ -30,6 +30,8 @@ class ProjectionNode;
  */
 class SubqueryToJoinRule : public AbstractRule {
  public:
+  bool prevents_caching() const override;
+
   struct PredicateNodeInfo {
     /**
      * Join predicate to achieve the semantic of the input expression type (IN, comparison, ...) in the created join.

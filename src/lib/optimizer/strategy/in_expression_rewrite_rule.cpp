@@ -99,6 +99,10 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
+// Rewriting IN-Expressions might render the LQP non-cacheable.
+// If the IN-Expression is rewritten to a join, the parameters of the IN list
+// are transformed into elements into a static table and therefore cannot
+// be easily replaced by new parameter values at instantiation.
 bool InExpressionRewriteRule::prevents_caching() const { return true; }
 
 void InExpressionRewriteRule::_apply_to_plan_without_subqueries(

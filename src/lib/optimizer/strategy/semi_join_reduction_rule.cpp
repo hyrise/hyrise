@@ -8,6 +8,9 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
+
+bool SemiJoinReductionRule::prevents_caching() const { return false; }
+
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 

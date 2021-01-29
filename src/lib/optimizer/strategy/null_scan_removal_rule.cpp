@@ -23,6 +23,8 @@
 
 namespace opossum {
 
+bool NullScanRemovalRule::prevents_caching() const { return false; }
+
 void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
 

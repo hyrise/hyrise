@@ -17,6 +17,8 @@
 
 namespace opossum {
 
+bool PredicatePlacementRule::prevents_caching() const { return false; }
+
 void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);

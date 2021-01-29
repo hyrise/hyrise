@@ -21,6 +21,7 @@ namespace opossum {
 class PredicateMergeRule : public AbstractRule {
  public:
   size_t minimum_union_count{4};
+  bool prevents_caching() const override;
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
