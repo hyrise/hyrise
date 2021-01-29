@@ -112,7 +112,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   JoinSortMerge& _sort_merge_join;
 
   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
-  
+
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
@@ -773,7 +773,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   /**
   * Performs the join on all clusters in parallel.
   **/
-  void _perform_join() {
+        void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     _left_row_ids_emitted_per_chunks.resize(_cluster_count);
     _right_row_ids_emitted_per_chunks.resize(_cluster_count);
@@ -794,7 +794,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _left_row_ids_emitted_per_chunks[cluster_number] = std::map<RowID, bool> {};
       _right_row_ids_emitted_per_chunks[cluster_number] = std::map<RowID, bool> {};
 
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+      const auto merge_row_count =
+          (*_sorted_left_table)[cluster_number]->size() + (*_sorted_right_table)[cluster_number]->size();
+      const auto join_cluster_task = [this, cluster_number] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -804,7 +806,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
 
         this->_join_cluster(cluster_number, multi_predicate_join_evaluator);
-      }));
+      };
+
+      if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
+        jobs.push_back(std::make_shared<JobTask>(join_cluster_task));
+      } else {
+        join_cluster_task();
+      }
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -830,7 +838,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _right_outer_non_equi_join();
     }
   }
-
   /**
   * Adds the segments from an input table to the output table
   **/
@@ -905,7 +912,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
-        include_null_left, include_null_right, _cluster_count);
+        include_null_left, include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -914,6 +921,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
+
+    Timer timer;
 
     _perform_join();
 
@@ -944,17 +953,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _output_pos_lists_right.push_back(null_output_right);
       }
     }
+    _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
-    // Threshold of expected rows per partition over which parallel output jobs are spawned.
-    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
-
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
     const auto first_output_size = _output_pos_lists_left[0]->size();
-    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > PARALLEL_OUTPUT_THRESHOLD;
+    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > JOB_SPAWN_THRESHOLD;
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
@@ -994,6 +1001,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // Wait for all chunk creation tasks to finish
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
     }
+    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
