@@ -61,7 +61,7 @@ class Projection : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
-  std::vector<bool> _determine_pqp_columns_to_evaluate() const;
+  ExpressionUnorderedSet _determine_forward_columns(const TableType table_type) const;
 };
 
 }  // namespace opossum

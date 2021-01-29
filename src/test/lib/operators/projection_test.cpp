@@ -114,7 +114,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
   EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
+TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
@@ -124,9 +124,10 @@ TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
-  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 
+  // Materialized columns are wrapped in reference segments
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2})));
@@ -152,7 +153,7 @@ TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, EvaluateForwardableColumnsWhenBeneficial) {
+TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
