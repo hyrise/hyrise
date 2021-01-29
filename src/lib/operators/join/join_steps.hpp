@@ -14,11 +14,6 @@ struct OutputWritingInformation {
     std::vector<RowIDPosList>& pos_lists_right,
      const std::shared_ptr<const Table>& left_input_table,
      const std::shared_ptr<const Table>& right_input_table,
-     const ColumnID left_join_column,
-     const ColumnID right_join_column,
-     SortMode sort_mode_left_join_column,
-     SortMode sort_mode_right_join_column,
-     bool set_individually_sorted_by,
      bool create_left_side_pos_lists_by_segment,
      bool create_right_side_pos_lists_by_segment,
      OutputColumnOrder output_column_order
@@ -26,11 +21,6 @@ struct OutputWritingInformation {
       pos_lists_right { pos_lists_right },
       left_input_table { left_input_table },
       right_input_table { right_input_table },
-      left_join_column { left_join_column },
-      right_join_column { right_join_column },
-      sort_mode_left_join_column { sort_mode_left_join_column },
-      sort_mode_right_join_column { sort_mode_right_join_column },
-      set_individually_sorted_by { set_individually_sorted_by },
       create_left_side_pos_lists_by_segment { create_left_side_pos_lists_by_segment },
       create_right_side_pos_lists_by_segment { create_right_side_pos_lists_by_segment },
       output_column_order { output_column_order } {};
@@ -38,11 +28,6 @@ struct OutputWritingInformation {
   std::vector<RowIDPosList>& pos_lists_right;
   const std::shared_ptr<const Table>& left_input_table;
   const std::shared_ptr<const Table>& right_input_table;
-  const ColumnID left_join_column;
-  const ColumnID right_join_column;
-  SortMode sort_mode_left_join_column;
-  SortMode sort_mode_right_join_column;
-  bool set_individually_sorted_by;
   bool create_left_side_pos_lists_by_segment;
   bool create_right_side_pos_lists_by_segment;
   OutputColumnOrder output_column_order;
@@ -303,12 +288,6 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInfo
       }
 
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-    if (output_writing_information.set_individually_sorted_by) {
-      output_chunk->finalize();
-      // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-      output_chunk->set_individually_sorted_by({SortColumnDefinition(output_writing_information.left_join_column, output_writing_information.sort_mode_left_join_column),
-                                                SortColumnDefinition(output_writing_information.right_join_column, output_writing_information.sort_mode_right_join_column)});
-    }
 
     output_chunks.emplace_back(output_chunk);
     ++partition_id;

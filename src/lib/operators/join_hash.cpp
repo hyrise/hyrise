@@ -527,15 +527,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_output_writing;
 
-    auto set_individually_sorted_by = false;
     auto create_left_side_pos_lists_by_segment = (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
     auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    const auto dummy_column = ColumnID{0};
     auto output_writing_information = OutputWritingInformation(build_side_pos_lists, probe_side_pos_lists,
                                                                _build_input_table, _probe_input_table,
-                                                               dummy_column, dummy_column,
-                                                               SortMode::Ascending, SortMode::Ascending, set_individually_sorted_by,
                                                                create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
                                                                _output_column_order);
 

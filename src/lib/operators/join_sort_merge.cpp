@@ -954,17 +954,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
-    auto set_individually_sorted_by = (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner);
     auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
     auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
     auto output_writing_information = OutputWritingInformation(_output_pos_lists_left, _output_pos_lists_right,
                                                                _left_input_table, _right_input_table,
-                                                               left_join_column, right_join_column,
-                                                               SortMode::Ascending, SortMode::Ascending, set_individually_sorted_by,
                                                                create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
                                                                OutputColumnOrder::LeftFirstRightSecond);
 
     auto output_chunks = write_output_chunks(output_writing_information);
+
+    for (auto chunk : output_chunks) {
+      if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner) {
+        chunk->finalize();
+        // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+        chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                                  SortColumnDefinition(right_join_column, SortMode::Ascending)});
+      }
+    }
 
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
