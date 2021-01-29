@@ -213,7 +213,7 @@ class PQPInputParser(object):
         #min_value = df[column].min()
         #max_value = df[column].max()
         #assert  (min_value == max_value), f"min value is {min_value}, max value is {max_value}"
-        aggregate.append(", ".join(map(str, df[column].unique())))
+        aggregate.append(",".join(map(str, df[column].unique())))
       all_unique_aggregates.append(aggregate)
 
     self.aggregates = pd.DataFrame(all_unique_aggregates, columns=self.aggregates.columns)
