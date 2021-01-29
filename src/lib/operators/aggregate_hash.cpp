@@ -352,14 +352,11 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               // use the values as immediate indexes into the list of results. We can still handle some gaps, but at
               // some point these gaps make the approach less beneficial than a proper hash-based approach.
               // TODO(anyone): Find a reasonable threshold.
-std::cout << "DIFF " << static_cast<double>(max_key - min_key) << " / " << static_cast<double>(input_table->row_count()) * 1.2 << std::endl;
               if (static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
                 // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
                 // the result vector (see get_or_add_result).
                 // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
-
-std::cout << "OPT" << std::endl;
 
                 for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
                   const auto chunk_size = input_table->get_chunk(chunk_id)->size();
