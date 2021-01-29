@@ -117,6 +117,8 @@ TEST_F(OptimizerTest, VerifiesResults) {
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
 
+    bool prevents_caching() const { return true; }
+
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
@@ -143,6 +145,8 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
+
+    bool prevents_caching() const { return true; }
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
@@ -224,6 +228,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    public:
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
+    bool prevents_caching() const { return true; }
+    
     size_t& counter;
 
    protected:
