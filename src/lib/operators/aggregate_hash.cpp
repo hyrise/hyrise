@@ -934,8 +934,11 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
-      auto values = pmr_vector<ColumnDataType>(pos_list.size());
-      auto null_values = pmr_vector<bool>(column_is_nullable ? pos_list.size() : 0);
+      auto values = pmr_vector<ColumnDataType>{}; 
+      values.reserve(pos_list.size()); 
+      auto null_values = pmr_vector<bool>{}; 
+      null_values.reserve(column_is_nullable ? pos_list.size() : 0); 
+
       std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
 
       auto output_offset = ChunkOffset{0};
@@ -954,9 +957,11 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         const auto& optional_value = accessor->access(row_id.chunk_offset);
         DebugAssert(optional_value || column_is_nullable, "Only nullable columns should contain optional values");
         if (!optional_value) {
-          null_values[output_offset] = true;
+          values.emplace_back();
+          null_values.emplace_back(true);
         } else {
-          values[output_offset] = *optional_value;
+          values.emplace_back(*optional_value);
+          null_values.emplace_back(false);
         }
         ++output_offset;
       }
