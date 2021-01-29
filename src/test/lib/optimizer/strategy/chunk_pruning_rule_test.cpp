@@ -406,11 +406,10 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
 
   // clang-format off
   auto input_lqp =
-  PredicateNode::make(less_than_(table_2_a, 10000), // prune chunk 0 and 1 on table 2
-    JoinNode::make(JoinMode::Cross, 
-      PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1), // prune chunk 0 on table 1
-      PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2))); // prune chunk 3 on table 2
-
+  PredicateNode::make(less_than_(table_2_a, 10000),  // prune chunk 0 and 1 on table 2
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1),  // prune chunk 0 on table 1
+      PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2)));  // prune chunk 3 on table 2
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

@@ -107,8 +107,8 @@ class SQLPipelineStatement : public Noncopyable {
 
   static void expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
                                               std::vector<std::shared_ptr<AbstractExpression>>& values);
-  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>> split_logical_plan(
-    const std::shared_ptr<const AbstractLQPNode>& logical_plan);
+  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
+  split_logical_plan(const std::shared_ptr<const AbstractLQPNode>& logical_plan);
 
  private:
   friend class ParameterizedPlanCacheHandlerTest;
@@ -122,8 +122,10 @@ class SQLPipelineStatement : public Noncopyable {
   // Throws an InvalidInputException if an invalid PQP is detected.
   static void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp);
 
-  std::vector<ParameterID> _get_parameter_ordering(std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values);
-  std::optional<const std::shared_ptr<opossum::PreparedPlan>> _try_get_cached_optimized_lqp(const std::shared_ptr<AbstractLQPNode>& unoptimized_lqp_with_placeholders);
+  std::vector<ParameterID> _get_parameter_ordering(
+      std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values);
+  std::optional<const std::shared_ptr<opossum::PreparedPlan>> _try_get_cached_optimized_lqp(
+      const std::shared_ptr<AbstractLQPNode>& unoptimized_lqp_with_placeholders);
 
   const std::string _sql_string;
   const UseMvcc _use_mvcc;

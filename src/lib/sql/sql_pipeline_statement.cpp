@@ -126,21 +126,22 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // Check if similar plan (with same structure but maybe different parameters) is cached
   if (lqp_cache && _translation_info.cacheable) {
     auto cache_handler = ParameterizedPlanCacheHandler(lqp_cache, unoptimized_lqp, _metrics->cache_duration, _use_mvcc);
-    
+
     // Cache read
     auto optional_optimized_lqp = cache_handler.try_get();
-  
+
     if (optional_optimized_lqp) {
       // Cache hit
       _metrics->query_plan_cache_hit = true;
 
       const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
-      _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(*optional_optimized_lqp), optimizer_rule_durations);
+      _optimized_logical_plan =
+          _post_caching_optimizer->optimize(std::move(*optional_optimized_lqp), optimizer_rule_durations);
       const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
       _metrics->optimizer_rule_durations = *optimizer_rule_durations;
-      _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-          done_post_cache_optimizer - start_post_cache_optimizer);
+      _metrics->optimization_duration =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(done_post_cache_optimizer - start_post_cache_optimizer);
 
       return _optimized_logical_plan;
     }
@@ -154,7 +155,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     _optimized_logical_plan =
         _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations, cacheable_plan);
     const auto done_optimize = std::chrono::high_resolution_clock::now();
-    _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
+    _metrics->optimization_duration =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
 
     // Cache plan without parameters
     if (*cacheable_plan) {
@@ -165,10 +167,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     const auto start_optimize = std::chrono::high_resolution_clock::now();
 
     // Need to copy since the optimizer requires exclusive ownership of the plan
-    _optimized_logical_plan =
-        _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
+    _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
     const auto done_optimize = std::chrono::high_resolution_clock::now();
-    _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
+    _metrics->optimization_duration =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - start_optimize);
   }
 
   const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();

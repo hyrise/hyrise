@@ -229,7 +229,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
     bool prevents_caching() const { return true; }
-    
+
     size_t& counter;
 
    protected:
@@ -281,7 +281,7 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
   auto optimizer = Optimizer::create_default_optimizer();
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
-  
+
   // Between composition rule should pervent caching
   // clang-format off
   auto reducible_between_lqp =
@@ -289,7 +289,7 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
     PredicateNode::make(greater_than_(d_a, 4),
       node_d));
   // clang-format on
- 
+
   optimizer->optimize(std::move(reducible_between_lqp), optimizer_rule_durations, cacheable_plan);
   EXPECT_FALSE(*cacheable_plan);
 
@@ -322,7 +322,7 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
   // IN-Expression rewrite rule should prevent caching
   // clang-format off
   auto in_expression_lqp =
-    PredicateNode::make(in_(d_a, list_(0, 1, 2)), 
+    PredicateNode::make(in_(d_a, list_(0, 1, 2)),
       node_d);
   // clang-format on
 

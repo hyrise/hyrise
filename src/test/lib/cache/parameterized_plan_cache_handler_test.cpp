@@ -9,29 +9,29 @@
 namespace opossum {
 
 class ParameterizedPlanCacheHandlerTest : public BaseTest {
-  protected:
-	static void SetUpTestCase() {  // called ONCE before the tests
-	}
+ protected:
+  static void SetUpTestCase() {  // called ONCE before the tests
+  }
 
-	void SetUp() override {
-		_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    	Hyrise::get().storage_manager.add_table("table_a", _table_a);
+  void SetUp() override {
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-  	_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
-  	Hyrise::get().storage_manager.add_table("table_b", _table_b);
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    Hyrise::get().storage_manager.add_table("table_b", _table_b);
 
-  	_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-	}
+    _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  }
 
-	const std::vector<std::shared_ptr<SQLPipelineStatement>>& get_sql_pipeline_statements(SQLPipeline& sql_pipeline) {
+  const std::vector<std::shared_ptr<SQLPipelineStatement>>& get_sql_pipeline_statements(SQLPipeline& sql_pipeline) {
     return sql_pipeline._get_sql_pipeline_statements();
   }
 
   const std::shared_ptr<AbstractLQPNode> get_unoptimized_logical_plan(std::string query, UseMvcc use_mvcc) {
-    auto sql_pipeline = (use_mvcc == UseMvcc::Yes) ?
-      SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).create_pipeline() :
-      SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  
+    auto sql_pipeline = (use_mvcc == UseMvcc::Yes)
+                            ? SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).create_pipeline()
+                            : SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
+
     auto& statement = get_sql_pipeline_statements(sql_pipeline).at(0);
 
     auto unoptimized_lqp = statement->get_unoptimized_logical_plan();
@@ -40,33 +40,32 @@ class ParameterizedPlanCacheHandlerTest : public BaseTest {
     return unoptimized_lqp;
   }
 
-	AllTypeVariant value_from_value_expression(const std::shared_ptr<AbstractExpression>& abstract_expression){
-		const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(abstract_expression);
-		DebugAssert(value_expression, "Wrong expression type provided.");
-		return value_expression->value;
-	}
+  AllTypeVariant value_from_value_expression(const std::shared_ptr<AbstractExpression>& abstract_expression) {
+    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(abstract_expression);
+    DebugAssert(value_expression, "Wrong expression type provided.");
+    return value_expression->value;
+  }
 
-	const std::vector<std::shared_ptr<AbstractExpression>>& extracted_values(ParameterizedPlanCacheHandler& cache_handler){
-		return cache_handler._extracted_values;
-	}
+  const std::vector<std::shared_ptr<AbstractExpression>>& extracted_values(
+      ParameterizedPlanCacheHandler& cache_handler) {
+    return cache_handler._extracted_values;
+  }
 
-	std::shared_ptr<Table> _table_a;
-	std::shared_ptr<Table> _table_b;
-	std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
-	const std::string _parameter_query_a = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
-	const std::string _parameter_query_b = "SELECT table_a.a + 8.2 FROM table_a WHERE table_a.a > 23";
+  std::shared_ptr<Table> _table_a;
+  std::shared_ptr<Table> _table_b;
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
+  const std::string _parameter_query_a = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
+  const std::string _parameter_query_b = "SELECT table_a.a + 8.2 FROM table_a WHERE table_a.a > 23";
   const std::string _parameter_query_c = "SELECT table_a.a + 3, (SELECT table_a.b * 2 FROM table_a) AS b FROM table_a";
-	const std::string _non_cacheble_qery_a = "SELECT table_a.a FROM table_a WHERE table_a.a > 5 AND table_a.a < 10";
+  const std::string _non_cacheble_qery_a = "SELECT table_a.a FROM table_a WHERE table_a.a > 5 AND table_a.a < 10";
   const std::string _non_cacheble_qery_b = "SELECT table_a.a FROM table_a WHERE table_a.a = 5 AND table_a.a = 6";
 };
 
+class ParameterizedPlanCacheHandlerMvccTest : public ParameterizedPlanCacheHandlerTest,
+                                              public ::testing::WithParamInterface<UseMvcc> {};
 
-class ParameterizedPlanCacheHandlerMvccTest : public ParameterizedPlanCacheHandlerTest, public ::testing::WithParamInterface<UseMvcc> {};
-
-INSTANTIATE_TEST_SUITE_P(
-        MvccYesNo,
-        ParameterizedPlanCacheHandlerMvccTest,
-        ::testing::Values(UseMvcc::Yes, UseMvcc::No));
+INSTANTIATE_TEST_SUITE_P(MvccYesNo, ParameterizedPlanCacheHandlerMvccTest,
+                         ::testing::Values(UseMvcc::Yes, UseMvcc::No));
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromWhere) {
   const auto use_mvcc = GetParam();
@@ -74,9 +73,9 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromWhere) {
 
   auto cache_duration = std::chrono::nanoseconds(0);
   auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
- 	
+
   const auto cached_plan_optional = cache_handler.try_get();
-  
+
   // Expect two extracted values from plan
   EXPECT_EQ(extracted_values(cache_handler).size(), 2);
   // Check if right values are extracted
@@ -90,9 +89,9 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSelect) {
 
   auto cache_duration = std::chrono::nanoseconds(0);
   auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
-  
+
   const auto cached_plan_optional = cache_handler.try_get();
-  
+
   // Expect two extracted values from plan
   EXPECT_EQ(extracted_values(cache_handler).size(), 2);
   // Check if right values are extracted
@@ -106,9 +105,9 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSubquery) {
 
   auto cache_duration = std::chrono::nanoseconds(0);
   auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
-  
+
   const auto cached_plan_optional = cache_handler.try_get();
-  
+
   // Expect two distinct extracted values from plan
   EXPECT_EQ(extracted_values(cache_handler).size(), 4);
   // Check if right values are extracted
@@ -126,7 +125,7 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
 
   auto cache_duration = std::chrono::nanoseconds(0);
   auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
-  
+
   auto cached_plan_optional = cache_handler.try_get();
 
   // Expect cache miss
@@ -156,7 +155,7 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, DontEvictSamePlanWithDifferentMvcc) {
   const auto use_mvcc = GetParam();
-  
+
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_a, use_mvcc);
 
   auto cache_duration = std::chrono::nanoseconds(0);
@@ -192,7 +191,7 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, DontEvictSamePlanWithDifferentMvcc
   // Expect cache to contain LQP with different validation status than before
   EXPECT_TRUE(cached_plan_optional_2);
   EXPECT_TRUE((use_mvcc_2 == UseMvcc::Yes) == lqp_is_validated(*cached_plan_optional_2));
-  
+
   cached_plan_optional = cache_handler.try_get();
 
   // Expect previous LQP to be still cached

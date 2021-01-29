@@ -7,8 +7,8 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
-#include "hyrise.hpp"
 #include "cache/parameterized_plan_cache_handler.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -80,10 +80,11 @@ class SQLPipelineStatementTest : public BaseTest {
     return sql_pipeline._get_sql_pipeline_statements();
   }
 
-  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>> split_lqp_values(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>> split_lqp_values(
+      const std::shared_ptr<AbstractLQPNode>& lqp) {
     return ParameterizedPlanCacheHandler::_split_lqp_values(lqp);
-  };
-  
+  }
+
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _table_int;

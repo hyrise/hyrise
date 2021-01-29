@@ -37,10 +37,10 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
-  // The ChunkPruningRule is like the BetweenCompositionRule, the ExpressionReductionRule and the InExpressionRewriteRule
-  // not reuse-safe. However since this rule has an impact on nearly every plan, excluding queries from caching
-  // that get optimized by this rule would render the whole cache useless. Therefore, this rule is applied after
-  // caching.
+  // The ChunkPruningRule is like the BetweenCompositionRule, the ExpressionReductionRule and the
+  // InExpressionRewriteRule not reuse-safe. However since this rule has an impact on nearly every
+  // plan, excluding queries from caching that get optimized by this rule would render the whole
+  // cache useless. Therefore, this rule is applied after caching.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
   return optimizer;
 }

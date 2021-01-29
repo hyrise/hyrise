@@ -26,7 +26,7 @@ class PredicateNode;
  * after the substitution.
 **/
 class BetweenCompositionRule : public AbstractRule {
- public: 
+ public:
   bool prevents_caching() const override;
 
  protected:
