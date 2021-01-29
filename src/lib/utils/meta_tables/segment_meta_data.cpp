@@ -63,11 +63,14 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
           std::string statistics_string = "";
 
-          resolve_data_type((*chunk->pruning_statistics())[column_id]->data_type, [&](auto type) {
-            using ColumnDataType = typename decltype(type)::type;
-
-            statistics_string = (static_cast<const AttributeStatistics<ColumnDataType>&>(*(*chunk->pruning_statistics())[column_id])).range_strings();
-          });
+          if (chunk->pruning_statistics().has_value()){
+            resolve_data_type((*chunk->pruning_statistics())[column_id]->data_type, [&](auto type) {
+              using ColumnDataType = typename decltype(type)::type;
+              statistics_string = (static_cast<const AttributeStatistics<ColumnDataType>&>(*(*chunk->pruning_statistics())[column_id])).range_strings();
+            });
+          } else {
+            statistics_string = "Found no statistics object";
+          }
           
 
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
