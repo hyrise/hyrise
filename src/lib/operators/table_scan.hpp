@@ -50,13 +50,15 @@ class TableScan : public AbstractReadOnlyOperator {
 
   struct PerformanceData : public OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps> {
     std::atomic<size_t> num_chunks_with_early_out{0};
+    std::atomic<size_t> num_chunks_with_all_rows_matching{0};
     std::atomic<size_t> num_chunks_with_binary_search{0};
 
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
       OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>::output_to_stream(stream, description_mode);
 
       const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-      stream << separator << "Chunks: " << num_chunks_with_early_out.load() << " skipped, ";
+      stream << separator << "Chunks: " << num_chunks_with_early_out.load() << " skipped with no results, ";
+      stream << separator << num_chunks_with_all_rows_matching.load() << " skipped with all matching, ";
       stream << num_chunks_with_binary_search.load() << " scanned using binary search.";
     }
   };

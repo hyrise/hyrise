@@ -39,4 +39,6 @@ class GenericHistogramBuilder {
   std::vector<HistogramCountType> _bin_distinct_counts;
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogramBuilder);
+
 }  // namespace opossum

@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
 
   /**
@@ -21,18 +21,18 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
    * have changed it
    */
 
-  Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
 
-  const auto expected_column_order = root->output_expressions();
+  const auto expected_column_order = lqp_root->output_expressions();
 
-  auto result_lqp = _perform_join_ordering_recursively(root->left_input());
+  auto result_lqp = _perform_join_ordering_recursively(lqp_root->left_input());
 
   // Join ordering might change the output column order, let's fix that
   if (!expressions_equal(expected_column_order, result_lqp->output_expressions())) {
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
 
-  root->set_left_input(result_lqp);
+  lqp_root->set_left_input(result_lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
