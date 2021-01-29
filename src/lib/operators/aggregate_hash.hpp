@@ -153,7 +153,7 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   template <typename AggregateKey>
-  KeysPerChunk<AggregateKey> _partition_by_groupby_keys() const;
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys();
 
   template <typename AggregateKey>
   void _aggregate();
@@ -183,6 +183,8 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
+
+  bool _use_int_immediate_shortcut = false;
 
   std::chrono::nanoseconds groupby_columns_writing_duration{};
   std::chrono::nanoseconds aggregate_columns_writing_duration{};

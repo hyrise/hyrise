@@ -71,6 +71,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       if (*first_key_entry & MASK) {
+        std::cout << "Imm key" << std::endl;
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
         const auto result_id = *first_key_entry ^ MASK;
 
@@ -231,8 +232,9 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   };
 
   // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
-  // indexes, see get_or_add_result for details.
-  if (_contexts_per_column.size() > 1) {
+  // indexes, see get_or_add_result for details. Further more, if we use the integer immediate shortcut, we need to
+  // pass true_type so that the aggregate keys are checked for immediate access values.
+  if (_contexts_per_column.size() > 1 || _use_int_immediate_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment,
                                     [&](const auto& position) { process_position(std::true_type{}, position); });
   } else {
@@ -246,7 +248,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
  */
 template <typename AggregateKey>
-KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
+KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
@@ -357,6 +359,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               // some point these gaps make the approach less beneficial than a proper hash-based approach.
               // TODO(anyone): Find a reasonable threshold.
               if (static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
+                _use_int_immediate_shortcut = true;
+
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
                 // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
                 // the result vector (see get_or_add_result).
