@@ -77,10 +77,10 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
         // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
-        // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
-        // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
+        // the vector slightly more than necessary. Otherwise, monotonically increasing result_ids would lead to one
+        // resize per row.
         if (result_id >= results.size()) {
-          results.resize(std::max(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5)), _int_shortcut_result_size.value_or(0));
+          results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
         }
         results[result_id].row_id = row_id;
 
@@ -358,7 +358,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               // some point these gaps make the approach less beneficial than a proper hash-based approach.
               // TODO(anyone): Find a reasonable threshold.
               if (static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
-                _int_shortcut_result_size = static_cast<size_t>(max_key - min_key);
+                _use_int_immediate_shortcut = true;
 
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
                 // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
