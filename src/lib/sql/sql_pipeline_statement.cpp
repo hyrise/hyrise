@@ -166,7 +166,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     // Optimize plan with original parameters
     const auto start_optimize = std::chrono::high_resolution_clock::now();
 
-    // Need to copy since the optimizer requires exclusive ownership of the plan
     _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
     const auto done_optimize = std::chrono::high_resolution_clock::now();
     _metrics->optimization_duration =
