@@ -961,7 +961,6 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
           values.emplace_back(*optional_value);
           null_values.emplace_back(false);
         }
-        ++output_offset;
       }
 
       auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
@@ -1040,7 +1039,6 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   if (aggregate_index == 0) {
     auto pos_list = RowIDPosList{};
     pos_list.reserve(context->results.size());
-    auto chunk_offset = ChunkOffset{0};
     for (const auto& result : context->results) {
       if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
       pos_list.emplace_back(result.row_id);
