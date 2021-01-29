@@ -13,7 +13,7 @@
 
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
-#include "join/join_steps.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "scheduler/abstract_task.hpp"

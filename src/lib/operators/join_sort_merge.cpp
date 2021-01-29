@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "hyrise.hpp"
-#include "join/join_steps.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
