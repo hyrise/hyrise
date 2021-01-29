@@ -303,8 +303,10 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
 
-            auto min_key = uint64_t{1};  // 0 is reserved for NULL
-            auto max_key = std::numeric_limits<uint64_t>::max();
+            // Track the minimum and maximum key for an optimization. Search for the last use of min_key in this file
+            // for a longer explanation.
+            auto min_key = std::numeric_limits<AggregateKeyEntry>::max();
+            auto max_key = uint64_t{0};
 
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
@@ -344,16 +346,24 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             }
 
             if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+              // In some cases (e.g., TPC-H Q18), we aggregate with consecutive values being used as a group by key.
+              // Notably, this is the case when aggregating on the serial primary key of a table without filtering
+              // the table before. In these cases, we do not need to perform a full hash-based aggregation, but can
+              // use the values as immediate indexes into the list of results. We can still handle some gaps, but at
+              // some point these gaps make the approach less beneficial than a proper hash-based approach.
+              // TODO(anyone): Find a reasonable threshold.
+std::cout << "DIFF " << static_cast<double>(max_key - min_key) << " / " << static_cast<double>(input_table->row_count()) * 1.2 << std::endl;
               if (static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
-                // The values are consecutive, with a maximum of 20% gaps. Instead of performing a proper hash-based
-                // aggregation, we can simply use the ids as indexes into the result vector. We rewrite the keys and
-                // (1) subtract min, (2) set the first bit which indicates that the key is an immediate index into
+                // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
+                // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
                 // the result vector (see get_or_add_result).
+                // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
+
+std::cout << "OPT" << std::endl;
 
                 for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
                   const auto chunk_size = input_table->get_chunk(chunk_id)->size();
                   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-                    break;
                     auto& key = keys_per_chunk[chunk_id][chunk_offset];
                     key = (key - min_key + 1) | (AggregateKeyEntry{1} << 63);
                   }
