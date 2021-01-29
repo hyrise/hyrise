@@ -302,6 +302,10 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
             // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an
             // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
+
+            auto min_key = uint64_t{1};  // 0 is reserved for NULL
+            auto max_key = std::numeric_limits<uint64_t>::max();
+
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
@@ -321,7 +325,12 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   if (position.is_null()) {
                     keys[chunk_offset] = 0;
                   } else {
-                    keys[chunk_offset] = int_to_uint(position.value()) + 1;
+                    const auto key = int_to_uint(position.value()) + 1;
+
+                    keys[chunk_offset] = key;
+
+                    min_key = std::min(min_key, key);
+                    max_key = std::max(max_key, key);
                   }
                 } else {
                   if (position.is_null()) {
@@ -332,6 +341,24 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                 }
                 ++chunk_offset;
               });
+            }
+
+            if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+              if (static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
+                // The values are consecutive, with a maximum of 20% gaps. Instead of performing a proper hash-based
+                // aggregation, we can simply use the ids as indexes into the result vector. We rewrite the keys and
+                // (1) subtract min, (2) set the first bit which indicates that the key is an immediate index into
+                // the result vector (see get_or_add_result).
+
+                for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+                  const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+                  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+                    break;
+                    auto& key = keys_per_chunk[chunk_id][chunk_offset];
+                    key = (key - min_key + 1) | (AggregateKeyEntry{1} << 63);
+                  }
+                }
+              }
             }
           } else {
             /*
@@ -752,32 +779,33 @@ std::enable_if_t<aggregate_func == AggregateFunction::Min || aggregate_func == A
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  values.resize(results.size());
-  null_values.resize(results.size());
+  values.reserve(results.size());
+  null_values.reserve(results.size());
 
-  size_t output_offset = 0;
   for (const auto& result : results) {
-    if (result.aggregate_count > 0) {
-      values[output_offset] = result.accumulator;
-    } else {
-      null_values[output_offset] = true;
-    }
+    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
 
-    ++output_offset;
+    if (result.aggregate_count > 0) {
+      values.emplace_back(result.accumulator);
+      null_values.emplace_back(false);
+    } else {
+      values.emplace_back();
+      null_values.emplace_back(true);
+    }
   }
 }
 
 // COUNT writes the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>  // TODO aggregate_function
 std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  values.resize(results.size());
+  values.reserve(results.size());
 
-  size_t output_offset = 0;
   for (const auto& result : results) {
-    values[output_offset] = result.aggregate_count;
-    ++output_offset;
+    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+
+    values.emplace_back(result.aggregate_count);
   }
 }
 
@@ -786,12 +814,12 @@ template <typename ColumnDataType, typename AggregateType, AggregateFunction agg
 std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  values.resize(results.size());
+  values.reserve(results.size());
 
-  size_t output_offset = 0;
   for (const auto& result : results) {
-    values[output_offset] = result.accumulator.size();
-    ++output_offset;
+    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+
+    values.emplace_back(result.accumulator.size());
   }
 }
 
@@ -800,17 +828,19 @@ template <typename ColumnDataType, typename AggregateType, AggregateFunction agg
 std::enable_if_t<aggregate_func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  values.resize(results.size());
-  null_values.resize(results.size());
+  values.reserve(results.size());
+  null_values.reserve(results.size());
 
-  auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
+    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+
     if (result.aggregate_count > 0) {
-      values[output_offset] = result.accumulator / static_cast<AggregateType>(result.aggregate_count);
+      values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
+      null_values.emplace_back(false);
     } else {
-      null_values[output_offset] = true;
+      values.emplace_back();
+      null_values.emplace_back(true);
     }
-    ++output_offset;
   }
 }
 
@@ -828,18 +858,20 @@ std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample &&
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  values.resize(results.size());
-  null_values.resize(results.size());
+  values.reserve(results.size());
+  null_values.reserve(results.size());
 
-  auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
+    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+
     if (result.aggregate_count > 1) {
-      values[output_offset] = result.accumulator[3];
+      values.emplace_back(result.accumulator[3]);
+      null_values.emplace_back(false);
     } else {
       // STDDEV_SAMP is undefined for lists with less than two elements
-      null_values[output_offset] = true;
+      values.emplace_back();
+      null_values.emplace_back(true);
     }
-    ++output_offset;
   }
 }
 
