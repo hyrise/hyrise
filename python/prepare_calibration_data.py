@@ -71,11 +71,11 @@ def import_operator_data(path, filename):
             # remove the rows with ExpressionEvaluator queries from the test data since we don't have any in the test data
             joined_data = joined_data.loc[(joined_data["OPERATOR_IMPLEMENTATION"] != "ExpressionEvaluator")]
             # joined_data = current_data.drop(labels=["TABLE_NAME", "COLUMN_NAME", "ROW_COUNT", "CHUNK_ID"], axis=1)
-    #drop_labels = [
+    # drop_labels = [
     #    [label for label in joined_data.columns if keyword in label]
     #    for keyword in ["TABLE_NAME", "COLUMN_NAME", "ROW_COUNT", "CHUNK_ID"]
-    #]
-    #joined_data = joined_data.drop(labels=np.concatenate(drop_labels), axis=1)
+    # ]
+    # joined_data = joined_data.drop(labels=np.concatenate(drop_labels), axis=1)
 
     # explicitly add selectivity
     input_rows_left = "INPUT_ROWS"

@@ -23,7 +23,8 @@
 
 namespace opossum {
 
-bool OperatorFeatureExporter::_has_column(const std::shared_ptr<const AbstractOperator>& op, const std::string& column_name) const {
+bool OperatorFeatureExporter::_has_column(const std::shared_ptr<const AbstractOperator>& op,
+                                          const std::string& column_name) const {
   const auto lqp_node = op->lqp_node;
 
   if (!lqp_node) {
@@ -42,7 +43,8 @@ bool OperatorFeatureExporter::_has_column(const std::shared_ptr<const AbstractOp
 
 // Assumption: just one GetTable per table
 bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const AbstractOperator>& op,
-                                                    const std::string& table_name, const std::string& column_name) const {
+                                                    const std::string& table_name,
+                                                    const std::string& column_name) const {
   const auto& type = op->type();
   if (type == OperatorType::Aggregate) {
     return false;
@@ -93,20 +95,22 @@ bool OperatorFeatureExporter::_data_arrives_ordered(const std::shared_ptr<const 
       // TODO: If used for a benchmark where the sort merge join is more common than in TPC-H/DS, it may be worth to incorporate this knowledge
       return false;
     } else {
-      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll, "unhandled operator type: " + op->description());
+      Assert(type == OperatorType::UnionPositions || type == OperatorType::UnionAll,
+             "unhandled operator type: " + op->description());
       return _data_arrives_ordered(op->left_input(), table_name, column_name);
     }
   } else {
     // One input, but neither Aggregate nor GetTable
     // This leaves TableScan, Validate, more?
-    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection, "unconsidered operator type: " + op->description());
+    Assert(type == OperatorType::TableScan || type == OperatorType::Validate || type == OperatorType::Projection,
+           "unconsidered operator type: " + op->description());
     return _data_arrives_ordered(op->left_input(), table_name, column_name);
   }
 }
 
 OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir)
     : _path_to_dir(path_to_dir),
-      _output_path(path_to_dir + "/operators.csv"),
+      _aggegate_output_path(path_to_dir + "/aggregates.csv"),
       _scan_output_path(path_to_dir + "/scans.csv"),
       _join_output_path(_path_to_dir + "/joins.csv"),
       _join_stages_output_path(path_to_dir + "/join_stages.csv"),
@@ -148,7 +152,7 @@ void OperatorFeatureExporter::_export_to_csv(const std::shared_ptr<const Abstrac
 
 void OperatorFeatureExporter::flush() {
   std::lock_guard<std::mutex> lock(_mutex);
-  CsvWriter::write(*_general_output_table, _output_path);
+  CsvWriter::write(*_aggregate_output_table, _aggegate_output_path);
   CsvWriter::write(*_scan_output_table, _scan_output_path);
   CsvWriter::write(*_join_output_table, _join_output_path);
   CsvWriter::write(*_join_stages_table, _join_stages_output_path);
@@ -160,9 +164,6 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
     case OperatorType::Aggregate:
       _export_aggregate(static_pointer_cast<const AbstractAggregateOperator>(op));
       break;
-    case OperatorType::GetTable:
-      _export_get_table(static_pointer_cast<const GetTable>(op));
-      break;
     case OperatorType::JoinHash:
     case OperatorType::JoinSortMerge:
     case OperatorType::JoinNestedLoop:
@@ -171,83 +172,58 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
     case OperatorType::TableScan:
       _export_table_scan(static_pointer_cast<const TableScan>(op));
       break;
-    case OperatorType::IndexScan:
-      _export_index_scan(static_pointer_cast<const IndexScan>(op));
-      break;
     default:
-      //_export_general_operator(op);
       break;
-  }
-}
-
-void OperatorFeatureExporter::_export_general_operator(const std::shared_ptr<const AbstractOperator>& op) {
-  const auto& operator_info = _general_operator_information(op);
-  pmr_string table_name{};
-  pmr_string column_name{};
-  pmr_string column_type{};
-  const auto node = op->lqp_node;
-
-  for (const auto& el : node->node_expressions) {
-    if (el->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(el);
-      const auto original_node = column_expression->original_node.lock();
-      const auto& table_column_information = _table_column_information(node, column_expression);
-      table_name = table_column_information.table_name;
-      column_name = table_column_information.column_name;
-      column_type = table_column_information.column_type;
-    }
-
-    const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
-                                                        operator_info.left_input_rows,
-                                                        operator_info.left_input_columns,
-                                                        operator_info.estimated_left_input_rows,
-                                                        operator_info.output_rows,
-                                                        operator_info.output_columns,
-                                                        operator_info.estimated_cardinality,
-                                                        operator_info.walltime,
-                                                        column_type,
-                                                        table_name,
-                                                        column_name,
-                                                        "",
-                                                        int64_t{0}};
-    _general_output_table->append(output_row);
   }
 }
 
 void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
   const auto node = op->lqp_node;
-  const pmr_string input_sorted =
-      op->groupby_column_ids().size() > 0
-          ? _check_column_sorted(op->left_input()->performance_data, op->groupby_column_ids().at(0))
-          : "";
+  const auto aggregate_node = static_pointer_cast<const AggregateNode>(node);
+  pmr_string input_sorted = "No";
+  pmr_string column_type = "";
 
-  for (const auto& el : node->node_expressions) {
-    if (el->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(el);
+  if (op->groupby_column_ids().size() == 1) {
+    const auto group_by_expression = aggregate_node->node_expressions.at(0);
+    if (group_by_expression->type == ExpressionType::LQPColumn) {
+      const auto column_expression = static_pointer_cast<LQPColumnExpression>(group_by_expression);
       const auto original_node = column_expression->original_node.lock();
       const auto& table_column_information = _table_column_information(node, column_expression);
+      column_type = table_column_information.column_type;
+      const auto table_name = table_column_information.table_name;
+      const auto column_name = table_column_information.column_name;
 
-      const auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
-                                                          operator_info.left_input_rows,
-                                                          operator_info.left_input_columns,
-                                                          operator_info.estimated_left_input_rows,
-                                                          operator_info.output_rows,
-                                                          operator_info.output_columns,
-                                                          operator_info.estimated_cardinality,
-                                                          operator_info.walltime,
-                                                          table_column_information.column_type,
-                                                          table_column_information.table_name,
-                                                          table_column_information.column_name,
-                                                          operator_info.name,
-                                                          input_sorted,
-                                                          _current_query_hash,
-                                                          operator_info.left_input_chunks,
-                                                          "",
-                                                          int64_t{0}};
-      _general_output_table->append(output_row);
+      if (table_name != "" &&
+          _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name})) {
+        const auto& table = Hyrise::get().storage_manager.get_table(std::string{table_name});
+        auto wrapper = std::make_shared<TableWrapper>(table);
+        wrapper->execute();
+        input_sorted =
+            _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{column_name}));
+      }
     }
   }
+
+  const auto aggregate_columns = static_cast<int32_t>(op->aggregates().size());
+  const auto group_columns = static_cast<int32_t>(op->groupby_column_ids().size());
+
+  const auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
+                                                      operator_info.left_input_rows,
+                                                      operator_info.left_input_columns,
+                                                      operator_info.estimated_left_input_rows,
+                                                      operator_info.output_rows,
+                                                      operator_info.output_columns,
+                                                      operator_info.estimated_cardinality,
+                                                      operator_info.walltime,
+                                                      column_type,
+                                                      operator_info.name,
+                                                      input_sorted,
+                                                      _current_query_hash,
+                                                      operator_info.left_input_chunks,
+                                                      group_columns,
+                                                      aggregate_columns};
+  _aggregate_output_table->append(output_row);
 }
 
 void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJoinOperator>& op) {
@@ -288,7 +264,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     left_table_name = left_table_column_information.table_name;
     left_column_name = left_table_column_information.column_name;
     left_column_type = left_table_column_information.column_type;
-    if (left_table_name != "" && _data_arrives_ordered(op->left_input(), std::string{left_table_name}, std::string{left_column_name})) {
+    if (left_table_name != "" &&
+        _data_arrives_ordered(op->left_input(), std::string{left_table_name}, std::string{left_column_name})) {
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
@@ -308,7 +285,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     right_column_name = right_table_column_information.column_name;
     right_column_type = right_table_column_information.column_type;
 
-    if (right_table_name != "" && _data_arrives_ordered(op->right_input(), std::string{right_table_name}, std::string{right_column_name})) {
+    if (right_table_name != "" &&
+        _data_arrives_ordered(op->right_input(), std::string{right_table_name}, std::string{right_column_name})) {
       const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
       auto wrapper = std::make_shared<TableWrapper>(table);
       wrapper->execute();
@@ -437,30 +415,6 @@ size_t OperatorFeatureExporter::_get_pruned_chunk_count(std::shared_ptr<const Ab
   return std::numeric_limits<size_t>::max() - 1;
 }
 
-void OperatorFeatureExporter::_export_get_table(const std::shared_ptr<const GetTable>& op) {
-  const auto& operator_info = _general_operator_information(op);
-
-  const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
-                                                      operator_info.left_input_rows,
-                                                      operator_info.left_input_columns,
-                                                      operator_info.estimated_left_input_rows,
-                                                      operator_info.output_rows,
-                                                      operator_info.output_columns,
-                                                      operator_info.estimated_cardinality,
-                                                      operator_info.walltime,
-                                                      "",
-                                                      pmr_string{op->table_name()},
-                                                      "",
-                                                      "",
-                                                      "",
-                                                      _current_query_hash,
-                                                      operator_info.left_input_chunks,
-                                                      "",
-                                                      int64_t{0}};
-
-  _general_output_table->append(output_row);
-}
-
 void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const TableScan>& op) {
   const auto& operator_info = _general_operator_information(op);
   Assert(op->_impl_description != "Unset", "Expected TableScan to be executed.");
@@ -508,42 +462,6 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           static_cast<int64_t>(sorted_scans),
                                                           static_cast<int64_t>(segments_scanned)};
       _scan_output_table->append(output_row);
-    }
-    return ExpressionVisitation::VisitArguments;
-  });
-}
-
-void OperatorFeatureExporter::_export_index_scan(const std::shared_ptr<const IndexScan>& op) {
-  const auto& operator_info = _general_operator_information(op);
-  const auto node = op->lqp_node;
-  const auto predicate_node = static_pointer_cast<const PredicateNode>(node);
-  const auto predicate = predicate_node->predicate();
-  //const pmr_string input_sorted = _find_input_sorted(op->left_input()->get_output(), op->predicate());
-
-  // We iterate through the expression until we find the desired column being scanned. This works acceptably ok
-  // for most scans we are interested in (e.g., visits both columns of a column vs column scan).
-  visit_expression(predicate, [&](const auto& expression) {
-    if (expression->type == ExpressionType::LQPColumn) {
-      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
-      const auto& table_column_information = _table_column_information(node, column_expression);
-      const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
-                                                          operator_info.left_input_rows,
-                                                          operator_info.left_input_columns,
-                                                          operator_info.estimated_left_input_rows,
-                                                          operator_info.output_rows,
-                                                          operator_info.output_columns,
-                                                          operator_info.estimated_cardinality,
-                                                          operator_info.walltime,
-                                                          table_column_information.column_type,
-                                                          table_column_information.table_name,
-                                                          table_column_information.column_name,
-                                                          operator_info.name,
-                                                          "",
-                                                          _current_query_hash,
-                                                          operator_info.left_input_chunks,
-                                                          "",
-                                                          int64_t{0}};
-      _general_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
   });

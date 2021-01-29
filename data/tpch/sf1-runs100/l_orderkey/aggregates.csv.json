@@ -46,16 +46,6 @@
             "type": "string"
         },
         {
-            "name": "TABLE_NAME",
-            "nullable": false,
-            "type": "string"
-        },
-        {
-            "name": "COLUMN_NAME",
-            "nullable": false,
-            "type": "string"
-        },
-        {
             "name": "OPERATOR_IMPLEMENTATION",
             "nullable": true,
             "type": "string"
@@ -76,14 +66,14 @@
             "type": "long"
         },
         {
-            "name": "PREDICATE",
+            "name": "GROUP_COLUMNS",
             "nullable": false,
-            "type": "string"
+            "type": "int"
         },
         {
-            "name": "SKIPPED_CHUNKS",
+            "name": "AGGREGATE_COLUMNS",
             "nullable": false,
-            "type": "long"
+            "type": "int"
         }
     ],
     "config": {
