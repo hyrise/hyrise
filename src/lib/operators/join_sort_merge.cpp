@@ -443,11 +443,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        // If left_row_id not yet in _left_row_ids_emitted, this initializes it to false
-        _left_row_ids_emitted_per_chunks[output_cluster][left_row_id];
+        _left_row_ids_emitted_per_chunks[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          // If right_row_id not yet in _right_row_id_has_match, this initializes it to false
-          _right_row_ids_emitted_per_chunks[output_cluster][right_row_id];
+          _right_row_ids_emitted_per_chunks[output_cluster].emplace(right_row_id, false);
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             _left_row_ids_emitted_per_chunks[output_cluster][left_row_id] = true;
