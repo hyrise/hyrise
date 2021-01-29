@@ -9,8 +9,6 @@
 
 namespace opossum {
 
-AbstractRule::~AbstractRule() = default;
-
 void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP
   _apply_to_plan_without_subqueries(lqp_root);

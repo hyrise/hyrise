@@ -15,7 +15,7 @@ class LQPSubqueryExpression;
 
 class AbstractRule {
  public:
-  virtual ~AbstractRule();
+  virtual ~AbstractRule() = default;
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
