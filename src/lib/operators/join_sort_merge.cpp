@@ -10,13 +10,13 @@
 #include <vector>
 
 #include "hyrise.hpp"
+#include "join/join_steps.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
-#include "join/join_steps.hpp"
 
 namespace opossum {
 
@@ -77,8 +77,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   resolve_data_type(left_column_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
-        *this, left_input_table_ptr, right_input_table_ptr, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-        _primary_predicate.predicate_condition, _mode, _secondary_predicates,
+        *this, left_input_table_ptr, right_input_table_ptr, _primary_predicate.column_ids.first,
+        _primary_predicate.column_ids.second, _primary_predicate.predicate_condition, _mode, _secondary_predicates,
         dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
 
@@ -99,8 +99,8 @@ template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
-                       const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id, ColumnID right_column_id,
-                       const PredicateCondition op, JoinMode mode,
+                       const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
+                       ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
                        const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
                        OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
@@ -952,21 +952,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
     auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
 
-    auto output_chunks = write_output_chunks(_output_pos_lists_left, _output_pos_lists_right,
-                                                               _left_input_table, _right_input_table,
-                                                               create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                                                               OutputColumnOrder::LeftFirstRightSecond);
+    auto output_chunks =
+        write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
+                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                            OutputColumnOrder::LeftFirstRightSecond);
 
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
     for (auto chunk : output_chunks) {
-      if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner) {
+      if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+          _mode == JoinMode::Inner) {
         chunk->finalize();
         // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
         chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                                  SortColumnDefinition(right_join_column, SortMode::Ascending)});
+                                           SortColumnDefinition(right_join_column, SortMode::Ascending)});
       }
     }
 

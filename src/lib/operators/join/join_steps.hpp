@@ -3,7 +3,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
-
 namespace opossum {
 
 enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
@@ -156,12 +155,14 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
   }
 }
 
-inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
-                                                                const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
-                                                                bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
-                                                                OutputColumnOrder output_column_order) {
-
-    /**
+inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left,
+                                                               std::vector<RowIDPosList>& pos_lists_right,
+                                                               const std::shared_ptr<const Table>& left_input_table,
+                                                               const std::shared_ptr<const Table>& right_input_table,
+                                                               bool create_left_side_pos_lists_by_segment,
+                                                               bool create_right_side_pos_lists_by_segment,
+                                                               OutputColumnOrder output_column_order) {
+  /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
      *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
      *  write_output_chunks a lot.
@@ -174,29 +175,28 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowID
      * They hold one entry per column in the table, not per AbstractSegment in a single chunk
      */
 
-    PosListsByChunk left_side_pos_lists_by_segment;
-    PosListsByChunk right_side_pos_lists_by_segment;
+  PosListsByChunk left_side_pos_lists_by_segment;
+  PosListsByChunk right_side_pos_lists_by_segment;
 
-    // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (create_left_side_pos_lists_by_segment) {
-      left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
+  // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
+  if (create_left_side_pos_lists_by_segment) {
+    left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
+  }
+
+  // right_side_pos_lists_by_segment will only be needed if right is a reference table
+  if (create_right_side_pos_lists_by_segment) {
+    right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
+  }
+
+  auto expected_output_chunk_count = size_t{0};
+  for (size_t partition_id = 0; partition_id < pos_lists_left.size(); ++partition_id) {
+    if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
+      ++expected_output_chunk_count;
     }
+  }
 
-    // right_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (create_right_side_pos_lists_by_segment) {
-      right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
-    }
-
-
-    auto expected_output_chunk_count = size_t{0};
-    for (size_t partition_id = 0; partition_id < pos_lists_left.size(); ++partition_id) {
-      if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
-        ++expected_output_chunk_count;
-      }
-    }
-
-    std::vector<std::shared_ptr<Chunk>> output_chunks{};
-    output_chunks.reserve(expected_output_chunk_count);
+  std::vector<std::shared_ptr<Chunk>> output_chunks{};
+  output_chunks.reserve(expected_output_chunk_count);
 
   // _output_pos_lists_left should not be a shared pointer
   // For every partition, create a reference segment.
@@ -244,25 +244,20 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowID
     Segments output_segments;
     // Swap back the inputs, so that the order of the output columns is not changed.
     switch (output_column_order) {
-        case OutputColumnOrder::LeftFirstRightSecond:
-          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment,
-                                left_side_pos_list);
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
-                                right_side_pos_list);
-          break;
+      case OutputColumnOrder::LeftFirstRightSecond:
+        write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment, left_side_pos_list);
+        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
+        break;
 
-        case OutputColumnOrder::RightFirstLeftSecond:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
-                                right_side_pos_list);
-          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment,
-                                left_side_pos_list);
-          break;
+      case OutputColumnOrder::RightFirstLeftSecond:
+        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
+        write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment, left_side_pos_list);
+        break;
 
-        case OutputColumnOrder::RightOnly:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
-                                right_side_pos_list);
-          break;
-      }
+      case OutputColumnOrder::RightOnly:
+        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
+        break;
+    }
 
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
 
@@ -272,4 +267,4 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowID
   }
   return output_chunks;
 }
-} // namespace opossum
+}  // namespace opossum

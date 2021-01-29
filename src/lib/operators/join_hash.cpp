@@ -13,6 +13,7 @@
 
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
+#include "join/join_steps.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -21,11 +22,8 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
-#include "join/join_steps.hpp"
 
-namespace {
-
-}  // namespace
+namespace {}  // namespace
 
 namespace opossum {
 
@@ -527,13 +525,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_output_writing;
 
-    auto create_left_side_pos_lists_by_segment = (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
+    auto create_left_side_pos_lists_by_segment =
+        (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
     auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    auto output_chunks = write_output_chunks(build_side_pos_lists, probe_side_pos_lists,
-                                                               _build_input_table, _probe_input_table,
-                                                               create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                                                               _output_column_order);
+    auto output_chunks = write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table,
+                                             _probe_input_table, create_left_side_pos_lists_by_segment,
+                                             create_right_side_pos_lists_by_segment, _output_column_order);
 
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
