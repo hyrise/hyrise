@@ -71,7 +71,6 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       if (*first_key_entry & MASK) {
-        std::cout << "Imm key" << std::endl;
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
         const auto result_id = *first_key_entry ^ MASK;
 
