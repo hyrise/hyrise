@@ -80,6 +80,9 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size, const JoinMode mode) {
+  if ((build_relation_size + probe_relation_size) < 5'000) {
+    return size_t{0};
+  }
   /*
     Setting number of bits for radix clustering:
     The number of bits is used to create probe partitions with a size that can

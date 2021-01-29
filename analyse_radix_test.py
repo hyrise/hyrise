@@ -9,12 +9,12 @@ sns.set_theme()
 Assumptions:
 	`rel` is gcc build folder, `rel_clang` is clang
 """
-output_csv_filename = 'radix_test.csv'
+output_csv_filename = 'radix_test2.csv'
 
 output = open(output_csv_filename, 'w')
 output.write('COMPILER,SCHEDULER_USED,CACHE_SIZE_FACTOR,SEMI_ADAPTION_FACTOR,QUERY_ID,RUNTIME_MS\n')
 
-with open('radix_test', 'r') as file:
+with open('radix_test2', 'r') as file:
 	config = {}
 	query = ''
 	for line in file:
