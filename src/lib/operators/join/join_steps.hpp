@@ -8,31 +8,6 @@ namespace opossum {
 
 enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
 
-struct OutputWritingInformation {
-  OutputWritingInformation(
-    std::vector<RowIDPosList>& pos_lists_left,
-    std::vector<RowIDPosList>& pos_lists_right,
-     const std::shared_ptr<const Table>& left_input_table,
-     const std::shared_ptr<const Table>& right_input_table,
-     bool create_left_side_pos_lists_by_segment,
-     bool create_right_side_pos_lists_by_segment,
-     OutputColumnOrder output_column_order
-  ) : pos_lists_left{ pos_lists_left }, 
-      pos_lists_right { pos_lists_right },
-      left_input_table { left_input_table },
-      right_input_table { right_input_table },
-      create_left_side_pos_lists_by_segment { create_left_side_pos_lists_by_segment },
-      create_right_side_pos_lists_by_segment { create_right_side_pos_lists_by_segment },
-      output_column_order { output_column_order } {};
-  std::vector<RowIDPosList>& pos_lists_left;
-  std::vector<RowIDPosList>& pos_lists_right;
-  const std::shared_ptr<const Table>& left_input_table;
-  const std::shared_ptr<const Table>& right_input_table;
-  bool create_left_side_pos_lists_by_segment;
-  bool create_right_side_pos_lists_by_segment;
-  OutputColumnOrder output_column_order;
-};
-
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 
@@ -181,8 +156,10 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
   }
 }
 
-
-inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInformation& output_writing_information) {
+inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+                                                                const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
+                                                                bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
+                                                                OutputColumnOrder output_column_order) {
 
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
@@ -201,19 +178,19 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInfo
     PosListsByChunk right_side_pos_lists_by_segment;
 
     // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (output_writing_information.create_left_side_pos_lists_by_segment) {
-      left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(output_writing_information.left_input_table);
+    if (create_left_side_pos_lists_by_segment) {
+      left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
     }
 
     // right_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (output_writing_information.create_right_side_pos_lists_by_segment) {
-      right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(output_writing_information.right_input_table);
+    if (create_right_side_pos_lists_by_segment) {
+      right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
     }
 
 
     auto expected_output_chunk_count = size_t{0};
-    for (size_t partition_id = 0; partition_id < output_writing_information.pos_lists_left.size(); ++partition_id) {
-      if (!output_writing_information.pos_lists_left[partition_id].empty() || !output_writing_information.pos_lists_right[partition_id].empty()) {
+    for (size_t partition_id = 0; partition_id < pos_lists_left.size(); ++partition_id) {
+      if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
         ++expected_output_chunk_count;
       }
     }
@@ -225,11 +202,11 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInfo
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
   auto output_chunk_id = size_t{0};
-  while (partition_id < output_writing_information.pos_lists_left.size()) {
+  while (partition_id < pos_lists_left.size()) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // build_pos_lists and probe_side_pos_lists will not be used again.
-    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(output_writing_information.pos_lists_left[partition_id]));
-    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(output_writing_information.pos_lists_right[partition_id]));
+    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
+    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
 
     if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
       ++partition_id;
@@ -249,40 +226,40 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(OutputWritingInfo
 
     // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
     // size or are empty (in case of semi/anti joins).
-    while (partition_id + 1 < output_writing_information.pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-           right_side_pos_list->size() + output_writing_information.pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
+    while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
+           right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
       // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
       // used for the merged PosList.
-      std::copy(output_writing_information.pos_lists_left[partition_id + 1].begin(), output_writing_information.pos_lists_left[partition_id + 1].end(),
+      std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
                 std::back_inserter(*left_side_pos_list));
-      output_writing_information.pos_lists_left[partition_id + 1] = {};
+      pos_lists_left[partition_id + 1] = {};
 
-      std::copy(output_writing_information.pos_lists_right[partition_id + 1].begin(), output_writing_information.pos_lists_right[partition_id + 1].end(),
+      std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
                 std::back_inserter(*right_side_pos_list));
-      output_writing_information.pos_lists_right[partition_id + 1] = {};
+      pos_lists_right[partition_id + 1] = {};
 
       ++partition_id;
     }
 
     Segments output_segments;
     // Swap back the inputs, so that the order of the output columns is not changed.
-    switch (output_writing_information.output_column_order) {
+    switch (output_column_order) {
         case OutputColumnOrder::LeftFirstRightSecond:
-          write_output_segments(output_segments, output_writing_information.left_input_table, left_side_pos_lists_by_segment,
+          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment,
                                 left_side_pos_list);
-          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
                                 right_side_pos_list);
           break;
 
         case OutputColumnOrder::RightFirstLeftSecond:
-          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
                                 right_side_pos_list);
-          write_output_segments(output_segments, output_writing_information.left_input_table, left_side_pos_lists_by_segment,
+          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment,
                                 left_side_pos_list);
           break;
 
         case OutputColumnOrder::RightOnly:
-          write_output_segments(output_segments, output_writing_information.right_input_table, right_side_pos_lists_by_segment,
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment,
                                 right_side_pos_list);
           break;
       }

@@ -530,12 +530,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto create_left_side_pos_lists_by_segment = (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
     auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    auto output_writing_information = OutputWritingInformation(build_side_pos_lists, probe_side_pos_lists,
+    auto output_chunks = write_output_chunks(build_side_pos_lists, probe_side_pos_lists,
                                                                _build_input_table, _probe_input_table,
                                                                create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
                                                                _output_column_order);
-
-    auto output_chunks = write_output_chunks(output_writing_information);
 
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
