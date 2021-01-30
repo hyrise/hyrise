@@ -80,11 +80,13 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
-        if (result_id >= results.capacity()) {
-          results.reserve(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+        if (result_id >= results.size()) {
+          if (result_id >= results.capacity()) {
+            results.reserve(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+          }
+          results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
         }
-        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
-        results.at(result_id).row_id = row_id;  // TODO remove at
+        results[result_id].row_id = row_id;  // TODO remove at
 
         return results[result_id];
       }
