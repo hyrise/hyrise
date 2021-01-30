@@ -162,8 +162,8 @@ TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
   EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
 
   // a_a is not forwarded as it is used in an expression. Thus, it's part of the expression evaluator output.
   EXPECT_EQ(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
@@ -178,7 +178,6 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
   table_scan->execute();
 
   // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
-  const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
   projection->execute();
