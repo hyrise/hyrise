@@ -112,16 +112,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   jobs.reserve(chunk_count);
 
   const auto expression_count = expressions.size();
-
-  // Vector to denote whether a forwardable column should be forwarded or if it should be evaluated by the expression
-  // evaluator. See _determine_pqp_columns_to_evaluate() for more details on forwarding and evaluation.
-  // auto forwardable_pqp_columns = ExpressionUnorderedSet{};
-  // if (output_table_type == TableType::References) {
-    // In case of data tables, forwarding a PQPColumn can be beneficial (e.g., when the column is dictionary-encoded
-    // and the following operator can exploit dictionary encoded columns). In case a slower encoding is used, this is
-    // less likely the case. Currently, no standard benchmark in Hyrise has projections on encoded data tables.
-    const auto forwardable_pqp_columns = _determine_forward_columns(output_table_type);
-  // }
+  const auto forwardable_pqp_columns = _determine_forward_columns(output_table_type);
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
   // vector stores atomic bool values. This allows parallel write operation per thread.
@@ -305,16 +296,15 @@ std::shared_ptr<Table> Projection::dummy_table() {
 }
 
 /**
- *  Method to determine PQPColumn that should not be forwarded. In most cases, forwarding a column comes with almost
- *  zero costs and should be done. However, in cases where the same PQPColumn is also accessed in the expression
- *  evaluation, the whole column is materialized and cached anyways. In that case, returning the materialized PQPColumn
- *  instead of forwarding it benefits the following operator which can process a fully materialized column sequentially
- *  instead of accessing the column indirectly via a position list.
+ *  Method to determine PQPColumns to forward. In most cases, forwarding a column comes with almost zero costs.
+ *  However, in cases where the same PQPColumn is also accessed in the expression evaluation, the whole column is
+ *  materialized and cached anyways. In that case, returning the materialized PQPColumn instead of forwarding it
+ *  benefits the following operator which can process a fully materialized column sequentially instead of accessing the
+ *  column indirectly via a position list.
  */
 ExpressionUnorderedSet Projection::_determine_forward_columns(const TableType table_type) const {
-  // To decide which forwardable columns should be evaluated, we first need to know if they are part of an expression.
-  // As expressions that reference a PQPColumn might be place before or behind the forwardable PQPColumn, we run twice
-  // over the expressions. In a first step, we collect the number of occurences of PQPColumns.
+  // We collect all forwardable PQP column expressions and all evaluated PQP column expressions. In a second step, all
+  // forwardable expressions that are also evaluated, are removed from the set.
   auto forwardable_pqp_columns = ExpressionUnorderedSet{};
   auto evaluated_pqp_columns = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
@@ -333,7 +323,10 @@ ExpressionUnorderedSet Projection::_determine_forward_columns(const TableType ta
     });
   }
 
-  // Do not forward columns which are also evaluated.
+  // Do not forward columns which are also evaluated. Not relevant for data tables as the following operator does not
+  // need to iterate via a position list anyways. In cases where the data table is encoded (e.g., dictionary encoded)
+  // and the following operator has fast paths for dictionary-encoded segments, forwarding over using the materialized
+  // column of the expression evaluator can be advantegeous.
   if (table_type == TableType::References) {
     for (const auto& evaluated_pqp_column : evaluated_pqp_columns) {
       forwardable_pqp_columns.erase(evaluated_pqp_column);
