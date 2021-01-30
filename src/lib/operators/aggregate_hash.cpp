@@ -81,11 +81,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
         if (result_id >= results.size()) {
-          // if (result_id >= results.capacity()) {
-            results.resize(static_cast<size_t>(static_cast<double>(result_id + 1)));
-            // results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
-          // }
-          // results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
+          results.resize(static_cast<size_t>(static_cast<double>(result_id + 1)));
         }
         results[result_id].row_id = row_id;
 
