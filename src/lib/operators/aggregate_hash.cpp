@@ -14,6 +14,7 @@
 #include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "print.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -79,10 +80,11 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
-        if (result_id >= results.size()) {
-          results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+        if (result_id >= results.capacity()) {
+          results.reserve(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
         }
-        results[result_id].row_id = row_id;
+        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
+        results.at(result_id).row_id = row_id;  // TODO remove at
 
         return results[result_id];
       }
@@ -174,8 +176,7 @@ struct AggregateResultContext : SegmentVisitorContext {
   using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, aggregate_function>>;
 
   // TODO explain preallocated_size
-  AggregateResultContext(const size_t preallocated_size = 0) : results(preallocated_size, AggregateResultAllocator{&buffer}) {
-  }
+  AggregateResultContext(const size_t preallocated_size = 0) : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
@@ -762,7 +763,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
-      pos_list.push_back(result.row_id);
+      // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+      if (result.row_id.is_null()) continue;
+      pos_list.emplace_back(result.row_id);
     }
     _write_groupby_output(pos_list);
   }
@@ -820,8 +823,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // This result was overallocated (see get_or_add_result) and must be ignored
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator);
@@ -841,8 +844,8 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
   values.reserve(results.size());
 
   for (const auto& result : results) {
-    // This result was overallocated (see get_or_add_result) and must be ignored
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    if (result.row_id.is_null()) continue;
 
     values.emplace_back(result.aggregate_count);
   }
@@ -856,8 +859,8 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
   values.reserve(results.size());
 
   for (const auto& result : results) {
-    // This result was overallocated (see get_or_add_result) and must be ignored
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    if (result.row_id.is_null()) continue;
 
     values.emplace_back(result.accumulator.size());
   }
@@ -872,8 +875,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // This result was overallocated (see get_or_add_result) and must be ignored
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
@@ -903,8 +906,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // This result was overallocated (see get_or_add_result) and must be ignored
-    if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 1) {
       values.emplace_back(result.accumulator[3]);
@@ -972,7 +975,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       for (const auto& row_id : pos_list) {
         // pos_list was generated by grouping the input data. While it might point to rows that contain NULL
         // values, no new NULL values should have been added.
-        DebugAssert(!row_id.is_null(), "Did not expect NULL value here");
+        Assert(!row_id.is_null(), "Did not expect NULL value here");
+        // TODO change to DebugAssert
 
         auto& accessor = accessors[row_id.chunk_id];
         if (!accessor) {
@@ -1066,10 +1070,10 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (aggregate_index == 0) {
     auto pos_list = RowIDPosList{};
-    pos_list.reserve(context->results.size());
-    for (const auto& result : context->results) {
-      // This result was overallocated (see get_or_add_result) and must be ignored
-      if (result.row_id == RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET}) continue;
+    pos_list.reserve(results.size());
+    for (const auto& result : results) {
+      // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+      if (result.row_id.is_null()) continue;
       pos_list.emplace_back(result.row_id);
     }
     Timer write_groupby_output_timer;
@@ -1086,9 +1090,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   constexpr bool NEEDS_NULL =
       (aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct);
 
-  if (!results.empty()) {
-    write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
-  } else if (_groupby_column_ids.empty()) {
+  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
+
+  if (_groupby_column_ids.empty() && values.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
     values.push_back(decltype(aggregate_type){});
     if (NEEDS_NULL) {
@@ -1118,33 +1122,34 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
     const DataType data_type, const AggregateFunction aggregate_function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
+    const auto size = _int_shortcut_result_size.value_or(0);
     using ColumnDataType = typename decltype(type)::type;
     switch (aggregate_function) {
       case AggregateFunction::Min:
         // We cannot deduplicate this as `context` has a different type in each case
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>(size);
         break;
       case AggregateFunction::Max:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>(size);
         break;
       case AggregateFunction::Sum:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>(size);
         break;
       case AggregateFunction::Avg:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>(size);
         break;
       case AggregateFunction::Count:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>(size);
         break;
       case AggregateFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>(size);
         break;
       case AggregateFunction::StandardDeviationSample:
         context = std::make_shared<
-            AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+            AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>(size);
         break;
       case AggregateFunction::Any:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>(size);
         break;
     }
   });
