@@ -325,8 +325,8 @@ ExpressionUnorderedSet Projection::_determine_forward_columns(const TableType ta
 
   // Do not forward columns which are also evaluated. Not relevant for data tables as the following operator does not
   // need to iterate via a position list anyways. In cases where the data table is encoded (e.g., dictionary encoded)
-  // and the following operator has fast paths for dictionary-encoded segments, forwarding over using the materialized
-  // column of the expression evaluator can be advantegeous.
+  // and the following operator has fast paths for dictionary-encoded segments (e.g., hash aggreagate), forwarding over
+  // using the materialized column of the expression evaluator can be beneficial.
   if (table_type == TableType::References) {
     for (const auto& evaluated_pqp_column : evaluated_pqp_columns) {
       forwardable_pqp_columns.erase(evaluated_pqp_column);
