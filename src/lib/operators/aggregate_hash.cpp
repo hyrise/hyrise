@@ -169,7 +169,7 @@ template <typename ColumnDataType, AggregateFunction aggregate_function>
 struct AggregateResultContext : SegmentVisitorContext {
   using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, aggregate_function>>;
 
-  AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {}
+  AggregateResultContext(const size_t preallocated_size = 0) : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
@@ -177,7 +177,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 
 template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
-  AggregateContext() {
+  AggregateContext(const size_t preallocated_size = 0) : AggregateResultContext(preallocated_size) {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
@@ -533,9 +533,8 @@ void AggregateHash::_aggregate() {
     This is important later on when we write the group keys into the table.
     The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
-    auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>();
-    context->results.resize(_int_shortcut_result_size.value_or(0));
-    
+    auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(_int_shortcut_result_size.value_or(0));
+
     _contexts_per_column.push_back(context);
   }
 
@@ -553,8 +552,7 @@ void AggregateHash::_aggregate() {
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
-      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>();
-      context->results.resize(_int_shortcut_result_size.value_or(0));
+      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>(_int_shortcut_result_size.value_or(0));
 
       _contexts_per_column[aggregate_idx] = context;
       continue;
@@ -1100,39 +1098,30 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
     using ColumnDataType = typename decltype(type)::type;
     switch (aggregate_function) {
       case AggregateFunction::Min:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>();
-
         // We cannot deduplicate this as `context` has a different type in each case
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Max:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Sum:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Avg:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Count:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::StandardDeviationSample:
         context = std::make_shared<
-            AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+            AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Any:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>();
-        context->results.resize(_int_shortcut_result_size.value_or(0));
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>(_int_shortcut_result_size.value_or(0));
         break;
     }
   });
