@@ -169,6 +169,7 @@ template <typename ColumnDataType, AggregateFunction aggregate_function>
 struct AggregateResultContext : SegmentVisitorContext {
   using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, aggregate_function>>;
 
+  // TODO explain preallocated_size
   AggregateResultContext(const size_t preallocated_size = 0) : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
@@ -177,7 +178,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 
 template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
-  AggregateContext(const size_t preallocated_size = 0) : AggregateResultContext(preallocated_size) {
+  AggregateContext(const size_t preallocated_size = 0) : AggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
