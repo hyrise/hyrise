@@ -35,7 +35,7 @@ using namespace opossum;  // NOLINT
 // aggregate functions can then retrieve the index from the AggregateKey.
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
-                                              AggregateKey& key, const RowID& row_id) {
+                                              AggregateKey& key, const RowID& row_id, const std::optional<AggregateKeyEntry>& int_shortcut_result_size) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
     // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result
@@ -80,7 +80,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
         if (result_id >= results.size()) {
-          results.resize(std::max(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5)), _int_shortcut_result_size.value_or(0));
+          results.resize(std::max(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5), int_shortcut_result_size.value_or(0)));
         }
         results[result_id].row_id = row_id;
 
@@ -213,7 +213,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
     auto& result = get_or_add_result(cache_result_ids, result_ids, results,
                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                     RowID{chunk_id, chunk_offset});
+                                     RowID{chunk_id, chunk_offset}, _int_shortcut_result_size);
 
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
@@ -233,7 +233,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
   // indexes, see get_or_add_result for details. Further more, if we use the integer immediate shortcut, we need to
   // pass true_type so that the aggregate keys are checked for immediate access values.
-  if (_contexts_per_column.size() > 1 || _use_int_immediate_shortcut) {
+  if (_contexts_per_column.size() > 1 || _int_shortcut_result_size.has_value()) {
     segment_iterate<ColumnDataType>(abstract_segment,
                                     [&](const auto& position) { process_position(std::true_type{}, position); });
   } else {
@@ -596,7 +596,7 @@ void AggregateHash::_aggregate() {
         // ids as there is no aggregate function that could reuse the cached indexes.
         get_or_add_result(std::false_type{}, result_ids, results,
                           get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                          RowID{chunk_id, chunk_offset});
+                          RowID{chunk_id, chunk_offset}, _int_shortcut_result_size);
       }
     } else {
       ColumnID aggregate_idx{0};
@@ -633,7 +633,7 @@ void AggregateHash::_aggregate() {
                 auto& result =
                     get_or_add_result(std::true_type{}, result_ids, results,
                                       get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                                      RowID{chunk_id, chunk_offset}, _int_shortcut_result_size);
                 ++result.aggregate_count;
               }
             } else {
@@ -641,7 +641,7 @@ void AggregateHash::_aggregate() {
                 auto& result =
                     get_or_add_result(std::false_type{}, result_ids, results,
                                       get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                                      RowID{chunk_id, chunk_offset}, _int_shortcut_result_size);
                 ++result.aggregate_count;
               }
             }
