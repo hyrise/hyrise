@@ -82,7 +82,8 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
         if (result_id >= results.size()) {
           // if (result_id >= results.capacity()) {
-            results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+            results.resize(static_cast<size_t>(static_cast<double>(result_id + 1)));
+            // results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
           // }
           // results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
         }
@@ -357,35 +358,35 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               });
             }
 
-            if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-              // In some cases (e.g., TPC-H Q18), we aggregate with consecutive values being used as a group by key.
-              // Notably, this is the case when aggregating on the serial primary key of a table without filtering
-              // the table before. In these cases, we do not need to perform a full hash-based aggregation, but can
-              // use the values as immediate indexes into the list of results. We can still handle some gaps, but at
-              // some point these gaps make the approach less beneficial than a proper hash-based approach.
-              // TODO(anyone): Find a reasonable threshold.
-              if (max_key > 0 && static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
-                // Include space for min, max, and NULL
-                _int_shortcut_result_size = static_cast<size_t>(max_key - min_key) + 2;
+            // if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+            //   // In some cases (e.g., TPC-H Q18), we aggregate with consecutive values being used as a group by key.
+            //   // Notably, this is the case when aggregating on the serial primary key of a table without filtering
+            //   // the table before. In these cases, we do not need to perform a full hash-based aggregation, but can
+            //   // use the values as immediate indexes into the list of results. We can still handle some gaps, but at
+            //   // some point these gaps make the approach less beneficial than a proper hash-based approach.
+            //   // TODO(anyone): Find a reasonable threshold.
+            //   if (max_key > 0 && static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
+            //     // Include space for min, max, and NULL
+            //     _int_shortcut_result_size = static_cast<size_t>(max_key - min_key) + 2;
 
-                // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
-                // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
-                // the result vector (see get_or_add_result).
-                // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
+            //     // Rewrite the keys and (1) subtract min so that we can also handle consecutive values that do not
+            //     // start at 1* and (2) set the first bit which indicates that the key is an immediate index into
+            //     // the result vector (see get_or_add_result).
+            //     // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
 
-                for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-                  const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-                  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-                    auto& key = keys_per_chunk[chunk_id][chunk_offset];
-                    if (key == 0) {
-                      key = key | (AggregateKeyEntry{1} << 63);
-                    } else {
-                      key = (key - min_key + 1) | (AggregateKeyEntry{1} << 63);
-                    }
-                  }
-                }
-              }
-            }
+            //     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            //       const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+            //       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+            //         auto& key = keys_per_chunk[chunk_id][chunk_offset];
+            //         if (key == 0) {
+            //           key = key | (AggregateKeyEntry{1} << 63);
+            //         } else {
+            //           key = (key - min_key + 1) | (AggregateKeyEntry{1} << 63);
+            //         }
+            //       }
+            //     }
+            //   }
+            // }
           } else {
             /*
             Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
@@ -650,6 +651,9 @@ void AggregateHash::_aggregate() {
             // Not grouped by anything, simply count the number of rows
             results.resize(1);
             results[0].aggregate_count += input_chunk_size;
+
+            // We need a fake RowID as the default value (NULL_ROW_ID) would later be skipped.
+            results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
             // one context), it makes sense to cache the results indexes, see get_or_add_result for details.

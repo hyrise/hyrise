@@ -39,6 +39,7 @@ TEST_F(CreateTableTest, NameAndDescription) {
   EXPECT_EQ(create_table->name(), "CreateTable");
   EXPECT_EQ(create_table->description(DescriptionMode::SingleLine),
             "CreateTable 't' ('a' int NOT NULL, 'b' float NULL)");
+  create_table->execute();
   dummy_table_wrapper->clear_output();
   EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),
             "CreateTable 't' ('a' int NOT NULL\n'b' float NULL)");
