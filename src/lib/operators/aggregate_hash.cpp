@@ -79,7 +79,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row. Furthermore, if we use the int shortcut, we resize to the largest immediate key generate there.
-        results.resize(results.size(), std::max(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5)));
+        results.resize(std::max(results.size(), static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5)));
         results[result_id].row_id = row_id;
 
         return results[result_id];
@@ -534,6 +534,8 @@ void AggregateHash::_aggregate() {
     The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
     auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>();
+    context->results.resize(_int_shortcut_result_size.value_or(0));
+    
     _contexts_per_column.push_back(context);
   }
 
@@ -552,6 +554,8 @@ void AggregateHash::_aggregate() {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>();
+      context->results.resize(_int_shortcut_result_size.value_or(0));
+
       _contexts_per_column[aggregate_idx] = context;
       continue;
     }
@@ -1097,35 +1101,41 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
     switch (aggregate_function) {
       case AggregateFunction::Min:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>();
+
+        // We cannot deduplicate this as `context` has a different type in each case
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Max:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Sum:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Avg:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Count:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::CountDistinct:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::StandardDeviationSample:
         context = std::make_shared<
             AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
       case AggregateFunction::Any:
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>();
+        context->results.resize(_int_shortcut_result_size.value_or(0));
         break;
     }
   });
-
-  if (_int_shortcut_result_size.has_value()) {
-    context->results.resize(*_int_shortcut_result_size);
-  }
 
   return context;
 }
