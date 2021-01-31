@@ -33,6 +33,8 @@ using namespace opossum;  // NOLINT
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
+constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63u;  // See explanation below
+
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
                                               AggregateKey& key, const RowID& row_id) {
@@ -56,6 +58,8 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
       first_key_entry = &key[0];
     }
 
+    // Explanation for CACHE_MASK (placed here because it has to be defined outside but the explanation makes more sense
+    // at this place):
     // If we store the result of the hashmap lookup (i.e., the index into results) in the AggregateKeyEntry, we do this
     // by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
     // marker that the AggregateKeyEntry now contains a cached result. We can do this because AggregateKeyEntry can not
@@ -66,13 +70,12 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
     // result in another 8 bytes being used.
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
                   "Expected AggregateKeyEntry to be unsigned 64-bit value");
-    constexpr auto MASK = AggregateKeyEntry{1} << 63u;
 
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
-      if (*first_key_entry & MASK) {
+      if (*first_key_entry & CACHE_MASK) {
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
-        const auto result_id = *first_key_entry ^ MASK;
+        const auto result_id = *first_key_entry ^ CACHE_MASK;
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
@@ -87,7 +90,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         return results[result_id];
       }
     } else {
-      Assert(!(*first_key_entry & MASK),
+      Assert(!(*first_key_entry & CACHE_MASK),
              "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found");
     }
 
@@ -98,7 +101,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
       const auto result_id = it->second;
       if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-        *first_key_entry = MASK | result_id;
+        *first_key_entry = CACHE_MASK | result_id;
       }
       return results[result_id];
     }
@@ -113,7 +116,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
 
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-      *first_key_entry = MASK | result_id;
+      *first_key_entry = CACHE_MASK | result_id;
     }
 
     return results[result_id];
@@ -382,9 +385,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                     auto& key = keys_per_chunk[chunk_id][chunk_offset];
                     if (key == 0) {
                       // Key that denotes NULL, do not rewrite but set the cached flag
-                      key = key | (AggregateKeyEntry{1} << 63);
+                      key = key | (AggregateKeyEntry{1} << CACHE_MASK);
                     } else {
-                      key = (key - min_key + 1) | (AggregateKeyEntry{1} << 63);
+                      key = (key - min_key + 1) | (AggregateKeyEntry{1} << CACHE_MASK);
                     }
                   }
                 }
@@ -505,9 +508,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
                 ++chunk_offset;
               });
-
-              _expected_result_size = std::max(_expected_result_size, id_map.size());
             }
+
+            _expected_result_size = std::max(_expected_result_size, id_map.size());
           }
         });
       }));
