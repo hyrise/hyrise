@@ -14,7 +14,8 @@ You can still find the (archived) previous version of Hyrise on [Github](https:/
 
 When referencing this version of Hyrise, please use the following bibtex entry:
 <details><summary>(click to expand)</summary>
-```
+  
+```bibtex
 @inproceedings{DBLP:conf/edbt/DreselerK0KUP19,
   author    = {Markus Dreseler and
                Jan Kossmann and
