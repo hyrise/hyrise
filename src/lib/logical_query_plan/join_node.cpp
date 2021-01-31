@@ -109,20 +109,13 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     return std::make_shared<LQPUniqueConstraints>();
   }
 
-  auto left_operand = join_predicate->left_operand();
-  auto right_operand = join_predicate->right_operand();
-  if (!left_input()->find_column_id(*left_operand)) {
-    std::swap(left_operand, right_operand);
-  }
-  DebugAssert(left_input()->find_column_id(*left_operand), "Cannot find join operand");
-
   // Check uniqueness of join columns
   bool left_operand_is_unique =
       !left_unique_constraints->empty() &&
-      contains_matching_unique_constraint(left_unique_constraints, {left_operand});
+      contains_matching_unique_constraint(left_unique_constraints, {join_predicate->left_operand()});
   bool right_operand_is_unique =
       !right_unique_constraints->empty() &&
-      contains_matching_unique_constraint(right_unique_constraints, {right_operand});
+      contains_matching_unique_constraint(right_unique_constraints, {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
