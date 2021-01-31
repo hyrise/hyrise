@@ -43,6 +43,7 @@ TEST_F(CreateTableTest, NameAndDescription) {
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);
   create_table->execute();
+  context->commit();
   dummy_table_wrapper->clear_output();
 
   EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),

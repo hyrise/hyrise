@@ -55,7 +55,8 @@ one AggregateResult exists per aggregate function.
 This result contains:
 - the current (primary) aggregated value,
 - the number of rows that were used, which are used for AVG, COUNT, and STDDEV_SAMP,
-- a RowID for any row that belongs into this group. This is needed to fill the GROUP BY columns later
+- a RowID, pointing into the input data, for any row that belongs into this group. This is needed to fill the GROUP BY
+  columns later
 
 Optionally, the result may also contain:
 - a set of DISTINCT values OR
@@ -77,7 +78,12 @@ struct AggregateResult {
 
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;
-  RowID row_id{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
+
+  // A NULL_ROW_ID means that the aggregate result is not (yet) valid and should be skipped when materializing the
+  // results. There is no ambiguity with actual NULLs, because this field always points to a row from the input
+  // data. The row that is pointed to may be in a ReferenceSegment, in which case we might point to another NULL
+  // RowID. *That* one would be valid.
+  RowID row_id{NULL_ROW_ID};
 
   // Note that the size of this struct is a significant performance factor (see #2252). Be careful when adding fields or
   // changing data types.
@@ -184,7 +190,8 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::optional<size_t> _int_shortcut_result_size{};
+  size_t _expected_result_size{};
+  bool _use_immediate_key_shortcut{};
 
   std::chrono::nanoseconds groupby_columns_writing_duration{};
   std::chrono::nanoseconds aggregate_columns_writing_duration{};
