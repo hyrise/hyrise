@@ -133,7 +133,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         continue;
       }
 
-      DebugAssert(std::dynamic_pointer_cast<PQPColumnExpression>(expression), "Non-PQP column expressions should not reach this point.");
+      DebugAssert(std::dynamic_pointer_cast<PQPColumnExpression>(expression),
+                  "Non-PQP column expressions should not reach this point.");
 
       // Forward input segment if possible
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
