@@ -176,7 +176,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 
   // In cases where we know how many values to expect, we can preallocate the context in order to avoid later
   // re-allocations.
-  AggregateResultContext(const size_t preallocated_size = 0)
+  explicit AggregateResultContext(const size_t preallocated_size = 0)
       : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
@@ -185,7 +185,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 
 template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
-  AggregateContext(const size_t preallocated_size = 0)
+  explicit AggregateContext(const size_t preallocated_size = 0)
       : AggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
