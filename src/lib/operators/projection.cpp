@@ -308,21 +308,11 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
   // We collect all forwardable PQP column expressions and all evaluated PQP column expressions. In a second step, all
   // forwardable expressions that are also evaluated are removed from the set.
   auto forwarded_pqp_columns = ExpressionUnorderedSet{};
-  auto evaluated_pqp_columns = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     const auto& expression = expressions[column_id];
-
     if (expression->type == ExpressionType::PQPColumn) {
       forwarded_pqp_columns.emplace(expression);
-      continue;
     }
-
-    visit_expression(expression, [&](const auto& sub_expression) {
-      if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(sub_expression)) {
-        evaluated_pqp_columns.emplace(sub_expression);
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
   }
 
   // Do not forward columns which are also evaluated. Not relevant for data tables as the following operator does not
@@ -330,8 +320,19 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
   // and the following operator has fast paths for dictionary-encoded segments (e.g., hash aggreagate), forwarding over
   // using the materialized column of the expression evaluator can be beneficial.
   if (table_type == TableType::References) {
-    for (const auto& evaluated_pqp_column : evaluated_pqp_columns) {
-      forwarded_pqp_columns.erase(evaluated_pqp_column);
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      const auto& expression = expressions[column_id];
+
+      if (expression->type == ExpressionType::PQPColumn) {
+        continue;
+      }
+
+      visit_expression(expression, [&](const auto& sub_expression) {
+        if (sub_expression->type == ExpressionType::PQPColumn) {
+          forwarded_pqp_columns.erase(sub_expression);
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
     }
   }
 
