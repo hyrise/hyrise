@@ -87,7 +87,8 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
         return results[result_id];
       }
     } else {
-      Assert(!(*first_key_entry & MASK), "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found");
+      Assert(!(*first_key_entry & MASK),
+             "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found");
     }
 
     // Lookup the key in the result_ids map
@@ -175,7 +176,8 @@ struct AggregateResultContext : SegmentVisitorContext {
 
   // In cases where we know how many values to expect, we can preallocate the context in order to avoid later
   // re-allocations.
-  AggregateResultContext(const size_t preallocated_size = 0) : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
+  AggregateResultContext(const size_t preallocated_size = 0)
+      : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
@@ -183,7 +185,8 @@ struct AggregateResultContext : SegmentVisitorContext {
 
 template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
-  AggregateContext(const size_t preallocated_size = 0) : AggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
+  AggregateContext(const size_t preallocated_size = 0)
+      : AggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
@@ -313,7 +316,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
 
             // Track the minimum and maximum key for the immediate key optimization. Search for the last use of min_key
-            // in this file   for a longer explanation.
+            // in this file for a longer explanation.
             auto min_key = std::numeric_limits<AggregateKeyEntry>::max();
             auto max_key = uint64_t{0};
 
@@ -362,7 +365,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               // certain threshold, but at some point these gaps make the approach less beneficial than a proper
               // hash-based approach.
               // TODO(anyone): Find a reasonable threshold.
-              if (max_key > 0 && static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
+              if (max_key > 0 &&
+                  static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
                 // Include space for min, max, and NULL
                 _expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
                 _use_immediate_key_shortcut = true;
@@ -501,8 +505,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
                 ++chunk_offset;
               });
-            
-            _expected_result_size = id_map.size();
+
+              _expected_result_size = std::max(_expected_result_size, id_map.size());
             }
           }
         });
@@ -549,7 +553,8 @@ void AggregateHash::_aggregate() {
     This is important later on when we write the group keys into the table.
     The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
-    auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(_expected_result_size);
+    auto context =
+        std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(_expected_result_size);
 
     _contexts_per_column.push_back(context);
   }
@@ -568,7 +573,8 @@ void AggregateHash::_aggregate() {
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
-      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>(_expected_result_size);
+      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>(
+          _expected_result_size);
 
       _contexts_per_column[aggregate_idx] = context;
       continue;
@@ -972,12 +978,13 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
-      auto values = pmr_vector<ColumnDataType>{}; 
-      values.reserve(pos_list.size()); 
-      auto null_values = pmr_vector<bool>{}; 
-      null_values.reserve(column_is_nullable ? pos_list.size() : 0); 
+      auto values = pmr_vector<ColumnDataType>{};
+      values.reserve(pos_list.size());
+      auto null_values = pmr_vector<bool>{};
+      null_values.reserve(column_is_nullable ? pos_list.size() : 0);
 
-      auto accessors = std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());
+      auto accessors =
+          std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());
 
       for (const auto& row_id : pos_list) {
         // pos_list was generated by grouping the input data. While it might point to rows that contain NULL
@@ -1147,7 +1154,8 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
         context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>(size);
         break;
       case AggregateFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>(size);
+        context =
+            std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>(size);
         break;
       case AggregateFunction::StandardDeviationSample:
         context = std::make_shared<

@@ -166,9 +166,9 @@ std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
   return nullCheck(column_id) ? std::nullopt
-                              : address.street_name2 == nullptr
-                                    ? std::optional{pmr_string{address.street_name1}}
-                                    : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+         : address.street_name2 == nullptr
+             ? std::optional{pmr_string{address.street_name1}}
+             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
 // mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
