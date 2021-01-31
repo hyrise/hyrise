@@ -385,9 +385,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                     auto& key = keys_per_chunk[chunk_id][chunk_offset];
                     if (key == 0) {
                       // Key that denotes NULL, do not rewrite but set the cached flag
-                      key = key | (AggregateKeyEntry{1} << CACHE_MASK);
+                      key = key | CACHE_MASK;
                     } else {
-                      key = (key - min_key + 1) | (AggregateKeyEntry{1} << CACHE_MASK);
+                      key = (key - min_key + 1) | CACHE_MASK;
                     }
                   }
                 }
@@ -510,7 +510,13 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               });
             }
 
-            _expected_result_size = std::max(_expected_result_size, id_map.size());
+            auto previous_max = _expected_result_size.load();
+            while (previous_max < id_map.size()) {
+              // How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
+              if (_expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
+                break;
+              }
+            }
           }
         });
       }));
@@ -1138,7 +1144,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
     const DataType data_type, const AggregateFunction aggregate_function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
-    const auto size = _expected_result_size;
+    const auto size = _expected_result_size.load();
     using ColumnDataType = typename decltype(type)::type;
     switch (aggregate_function) {
       case AggregateFunction::Min:
