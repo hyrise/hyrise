@@ -83,13 +83,10 @@ using RadixContainer = std::vector<Partition<T>>;
 // in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
 template <typename HashedType>
 class PosHashTable {
-<<<<<<< HEAD
  public:
-=======
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
   using Offset = uint32_t;
 
->>>>>>> origin/master
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
   using OffsetHashTable = ska::bytell_hash_map<HashedType, Offset>;
