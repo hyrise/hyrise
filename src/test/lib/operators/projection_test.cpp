@@ -178,6 +178,7 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
   table_scan->execute();
 
   // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
+  const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
   projection->execute();
