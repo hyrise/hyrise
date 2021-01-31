@@ -112,7 +112,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   jobs.reserve(chunk_count);
 
   const auto expression_count = expressions.size();
-  const auto forwardable_pqp_columns = _determine_forward_columns(output_table_type);
+  const auto forwarded_pqp_columns = _determine_forwarded_columns(output_table_type);
 
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
   // vector stores atomic bool values. This allows parallel write operation per thread.
@@ -128,10 +128,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
-      if (!forwardable_pqp_columns.contains(expression)) {
+      if (!forwarded_pqp_columns.contains(expression)) {
         all_segments_forwarded = false;
         continue;
       }
+
+      DebugAssert(std::dynamic_pointer_cast<PQPColumnExpression>(expression), "Non-PQP column expressions should not reach this point.");
 
       // Forward input segment if possible
       const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
@@ -148,13 +150,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
-                                          &output_segments_by_chunk, &column_is_nullable, &forwardable_pqp_columns]() {
+                                          &output_segments_by_chunk, &column_is_nullable, &forwarded_pqp_columns]() {
       auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
 
-        if (!forwardable_pqp_columns.contains(expression)) {
+        if (!forwarded_pqp_columns.contains(expression)) {
           // Newly generated column - the expression needs to be evaluated
           auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
           column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
@@ -193,7 +195,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                                   expressions[column_id]->data_type(), column_is_nullable[column_id]};
     output_column_definitions.emplace_back(definition);
 
-    if (!forwardable_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
+    if (!forwarded_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
       projection_result_column_definitions.emplace_back(definition);
     }
   }
@@ -214,7 +216,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
-      if (forwardable_pqp_columns.contains(expression)) {
+      if (forwarded_pqp_columns.contains(expression)) {
         const auto& original_id = pqp_column_expression->column_id;
         input_column_to_output_column[original_id] = expression_id;
       }
@@ -231,7 +233,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_chunk->size());
     for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       // Turn newly generated ValueSegments into ReferenceSegments, if needed
-      if (!forwardable_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
+      if (!forwarded_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
         projection_result_segments.emplace_back(output_segments_by_chunk[chunk_id][column_id]);
 
         const auto projection_result_column_id =
@@ -297,21 +299,21 @@ std::shared_ptr<Table> Projection::dummy_table() {
 
 /**
  *  Method to determine PQPColumns to forward. In most cases, forwarding a column comes with almost zero costs.
- *  However, in cases where the same PQPColumn is also accessed in the expression evaluation, the whole column is
- *  materialized and cached anyways. In that case, returning the materialized PQPColumn instead of forwarding it
- *  benefits the following operator which can process a fully materialized column sequentially instead of accessing the
- *  column indirectly via a position list.
+ *  In cases where the same PQPColumn is also accessed in the expression evaluation, the whole column is materialized
+ *  and cached. In that case, returning the materialized PQPColumn instead of forwarding it benefits the
+ *  following operator, which can process a fully materialized column sequentially instead of accessing the column
+ *  indirectly via a position list.
  */
-ExpressionUnorderedSet Projection::_determine_forward_columns(const TableType table_type) const {
+ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType table_type) const {
   // We collect all forwardable PQP column expressions and all evaluated PQP column expressions. In a second step, all
-  // forwardable expressions that are also evaluated, are removed from the set.
-  auto forwardable_pqp_columns = ExpressionUnorderedSet{};
+  // forwardable expressions that are also evaluated are removed from the set.
+  auto forwarded_pqp_columns = ExpressionUnorderedSet{};
   auto evaluated_pqp_columns = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     const auto& expression = expressions[column_id];
 
     if (expression->type == ExpressionType::PQPColumn) {
-      forwardable_pqp_columns.emplace(expression);
+      forwarded_pqp_columns.emplace(expression);
       continue;
     }
 
@@ -329,11 +331,11 @@ ExpressionUnorderedSet Projection::_determine_forward_columns(const TableType ta
   // using the materialized column of the expression evaluator can be beneficial.
   if (table_type == TableType::References) {
     for (const auto& evaluated_pqp_column : evaluated_pqp_columns) {
-      forwardable_pqp_columns.erase(evaluated_pqp_column);
+      forwarded_pqp_columns.erase(evaluated_pqp_column);
     }
   }
 
-  return forwardable_pqp_columns;
+  return forwarded_pqp_columns;
 }
 
 }  // namespace opossum
