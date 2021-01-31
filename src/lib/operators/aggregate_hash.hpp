@@ -1,5 +1,3 @@
-// TODO write high-level description
-
 #pragma once
 
 #include <functional>
@@ -185,9 +183,6 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
-
-  mutable AggregateKeyEntry _min{0};
-  mutable AggregateKeyEntry _max{0};
 
   std::chrono::nanoseconds groupby_columns_writing_duration{};
   std::chrono::nanoseconds aggregate_columns_writing_duration{};
