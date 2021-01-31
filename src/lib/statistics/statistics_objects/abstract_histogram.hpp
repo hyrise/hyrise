@@ -265,4 +265,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
   HistogramDomain<T> _domain;
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(AbstractHistogram);
+
 }  // namespace opossum
