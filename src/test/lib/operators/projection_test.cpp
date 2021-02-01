@@ -9,7 +9,6 @@
 #include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/delete.hpp"
-#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -115,7 +114,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
   EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
+TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
@@ -125,9 +124,10 @@ TEST_F(OperatorsProjectionTest, ForwardReferencesWithExpression) {
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
-  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 
+  // Materialized columns are wrapped in reference segments
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2})));
@@ -151,6 +151,49 @@ TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
   EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
+}
+
+TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->execute();
+  const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
+  projection->execute();
+
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
+
+  // a_a is not forwarded as it is used in an expression. Thus, it's part of the expression evaluator output.
+  EXPECT_EQ(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2}))->referenced_table());
+  EXPECT_NE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1}))->referenced_table());
+}
+
+// Check if two PQP columns expressions to the same column are interpreted as equal when using ExpressionUnorderedSet
+TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->execute();
+
+  // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
+  const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
+  projection->execute();
+
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
+
+  // a_a is not forwarded as it is used in an expression. Thus, it's part of the expression evaluator output.
+  EXPECT_EQ(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2}))->referenced_table());
+  EXPECT_NE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1}))->referenced_table());
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
