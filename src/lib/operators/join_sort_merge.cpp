@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/functional/hash_fwd.hpp>
+#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -128,12 +130,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
 
   const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
-  // these are used for outer joins where the primary predicate is not Equals.
-  std::map<RowID, bool> _left_row_ids_emitted{};
-  std::map<RowID, bool> _right_row_ids_emitted{};
-
-  std::vector<std::map<RowID, bool>> _left_row_ids_emitted_per_chunks;
-  std::vector<std::map<RowID, bool>> _right_row_ids_emitted_per_chunks;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
@@ -141,6 +137,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Contains the output row ids for each cluster
   std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_left;
   std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
+
+  struct RowHasher {
+    size_t operator()(const RowID& row) const {
+      size_t seed = 0;
+      boost::hash_combine(seed, row.chunk_id);
+      boost::hash_combine(seed, row.chunk_offset);
+      return seed;
+    }
+  };
+
+  using RowHashTable = ska::bytell_hash_map<RowID, bool, RowHasher>;
+  // these are used for outer joins where the primary predicate is not Equals.
+  RowHashTable _left_row_ids_emitted{};
+  RowHashTable _right_row_ids_emitted{};
+
+  std::vector<RowHashTable> _left_row_ids_emitted_per_chunks;
+  std::vector<RowHashTable> _right_row_ids_emitted_per_chunks;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -788,8 +801,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      _left_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool>{};
-      _right_row_ids_emitted_per_chunks[cluster_id] = std::map<RowID, bool>{};
+      _left_row_ids_emitted_per_chunks[cluster_id] = RowHashTable{};
+      _right_row_ids_emitted_per_chunks[cluster_id] = RowHashTable{};
 
       const auto merge_row_count =
           (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
