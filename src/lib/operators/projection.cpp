@@ -299,8 +299,8 @@ std::shared_ptr<Table> Projection::dummy_table() {
 }
 
 /**
- *  Method to determine PQPColumns to forward. As explained above, we forward columns which are simply projected and
- *  which must not be evaluated. But there are cases when forwarding is not beneficial. When a forwardable column is
+ *  Method to determine PQPColumns to forward. As explained above, we forward columns that are simply projected and
+ *  need not be evaluated. But there are cases when forwarding is not beneficial. When a forwardable column is
  *  also evaluated in an expression, the expression evaluator materializes this column and caches it. In case of having
  *  a reference segment as input, forwarding the materialized and cached segment has a similar performance in the
  *  projection operator, but is faster in the following operator. The reason is that the following operator does not
@@ -317,8 +317,8 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
     }
   }
 
-  // Iterate the expressions and check if a forwardable column is part of an expression. In this case, remove it from
-  // the list of forwardable columns. When the input is a data table (and thus the output table is as well) the
+  // Iterate the expressions and check if a forwarded column is part of an expression. In this case, remove it from
+  // the list of forwarded columns. When the input is a data table (and thus the output table is as well) the
   // forwarded column does not need to be accessed via its position list later. And since the following operator might
   // have optimizations for accessing an encoded segment, we always forward for data tables.
   if (table_type == TableType::References) {
