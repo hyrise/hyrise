@@ -46,6 +46,15 @@ class DipsPruningRuleTestClass : DipsPruningRule {
     ) const {
         return DipsPruningRule::calculate_pruned_chunks<COLUMN_TYPE>(base_chunk_ranges, partner_chunk_ranges);
     }
+
+    void bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+       return DipsPruningRule::bottom_up_dip_traversal(node);
+    }
+
+    void top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+       return DipsPruningRule::top_down_dip_traversal(node);
+    }
+    
 };
 
 class DipsPruningRuleTest : public StrategyBaseTest{
@@ -53,13 +62,17 @@ class DipsPruningRuleTest : public StrategyBaseTest{
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    auto join_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
-    ChunkEncoder::encode_all_chunks(join_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("join", join_table);
+    auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
+    ChunkEncoder::encode_all_chunks(int_float2_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("int_float2", int_float2_table);
 
-    auto join_target_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
-    ChunkEncoder::encode_all_chunks(join_target_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("join_target", join_target_table);
+    auto int_float2_sorted_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
+    ChunkEncoder::encode_all_chunks(int_float2_sorted_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("int_float2_sorted", int_float2_sorted_table);
+
+    auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
+    ChunkEncoder::encode_all_chunks(int_float2_sorted_mixed_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("int_float2_sorted_mixed", int_float2_sorted_mixed_table);
 
     _real_rule = std::make_shared<DipsPruningRule>();
     _rule = std::make_shared<DipsPruningRuleTestClass>();
@@ -183,8 +196,8 @@ TEST_F(DipsPruningRuleTest, CalculatePrunedChunks) {
 
 TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   // LEFT -> RIGHT
-  auto stored_table_node_1 = std::make_shared<StoredTableNode>("join");
-  auto stored_table_node_2 = std::make_shared<StoredTableNode>("join_target");
+  auto stored_table_node_1 = std::make_shared<StoredTableNode>("int_float2_sorted");
+  auto stored_table_node_2 = std::make_shared<StoredTableNode>("int_float2");
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(lqp_column_(stored_table_node_2, ColumnID{0}),
                                                                        lqp_column_(stored_table_node_1, ColumnID{0})));
   join_node->set_left_input(stored_table_node_1);
@@ -329,5 +342,73 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphSetsRoot) {
   EXPECT_TRUE(std::find(table1_node->children.begin(), table1_node->children.end(), table2_node) != table1_node->children.end());
   EXPECT_TRUE(std::find(table2_node->children.begin(), table2_node->children.end(), table3_node) != table2_node->children.end());
 }
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
+  // [table1 <-> table2 <-> table3] cycle free structure
+  std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("int_float2");
+  std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("int_float2_sorted");
+  std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("int_float2_sorted_mixed");
+
+  std::vector<ChunkID> table1_pruned_chunk_ids{};
+  std::vector<ChunkID> table2_pruned_chunk_ids{ChunkID{0}};
+  std::vector<ChunkID> table3_pruned_chunk_ids{};
+
+  table1->set_pruned_chunk_ids(std::vector<ChunkID>(table1_pruned_chunk_ids.begin(), table1_pruned_chunk_ids.end()));
+  table2->set_pruned_chunk_ids(std::vector<ChunkID>(table2_pruned_chunk_ids.begin(), table2_pruned_chunk_ids.end()));
+  table3->set_pruned_chunk_ids(std::vector<ChunkID>(table3_pruned_chunk_ids.begin(), table3_pruned_chunk_ids.end()));
+
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();                              // build dips join graph
+
+  std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
+  std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
+  std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+
+  std::shared_ptr<DipsJoinGraphEdge> table1_to_table2_edge = table1_node->get_edge_for_table(table2_node);    // set int_float2 JOIN int_float2_sorted ON a=a
+  std::shared_ptr<DipsJoinGraphEdge> table2_to_table1_edge = table2_node->get_edge_for_table(table1_node);
+  
+  table1_to_table2_edge->append_predicate(equals_(
+    lqp_column_(table1, ColumnID{0}),
+    lqp_column_(table2, ColumnID{0}))
+  );
+  table2_to_table1_edge->append_predicate(equals_(
+    lqp_column_(table1, ColumnID{0}),
+    lqp_column_(table2, ColumnID{0}))
+  );
+
+  std::shared_ptr<DipsJoinGraphEdge> table2_to_table3_edge = table2_node->get_edge_for_table(table3_node);   // set int_float2 JOIN int_float2_sorted ON b=b
+  std::shared_ptr<DipsJoinGraphEdge> table3_to_table2_edge = table3_node->get_edge_for_table(table2_node);
+  table2_to_table3_edge->append_predicate(equals_(
+    lqp_column_(table2, ColumnID{1}),
+    lqp_column_(table3, ColumnID{1}))
+  );
+  table3_to_table2_edge->append_predicate(equals_(
+    lqp_column_(table2, ColumnID{1}),
+    lqp_column_(table3, ColumnID{1}))
+  );
+  
+  EXPECT_TRUE(join_graph->is_tree());
+
+  join_graph->set_root(table1_node);                                                                         // prune based on dips
+  _rule->bottom_up_dip_traversal(table1_node);
+
+  std::vector<ChunkID> expected_table1_pruned_ids{ChunkID{1}};
+  std::vector<ChunkID> expected_table2_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  std::vector<ChunkID> expected_table3_pruned_ids{ChunkID{0}};
+
+  EXPECT_EQ(table1->pruned_chunk_ids(), expected_table1_pruned_ids);
+  EXPECT_EQ(table2->pruned_chunk_ids(), expected_table2_pruned_ids);
+  EXPECT_EQ(table3->pruned_chunk_ids(), expected_table3_pruned_ids);
+
+  _rule->top_down_dip_traversal(table1_node);
+
+  expected_table1_pruned_ids = std::vector<ChunkID> {ChunkID{1}};
+  expected_table2_pruned_ids = std::vector<ChunkID> {ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  expected_table3_pruned_ids = std::vector<ChunkID> {ChunkID{0}, ChunkID{2}, ChunkID{3}};
+
+  EXPECT_EQ(table1->pruned_chunk_ids(), expected_table1_pruned_ids);
+  EXPECT_EQ(table2->pruned_chunk_ids(), expected_table2_pruned_ids);
+  EXPECT_EQ(table3->pruned_chunk_ids(), expected_table3_pruned_ids);
+}
+
 
 }  // namespace opossum
