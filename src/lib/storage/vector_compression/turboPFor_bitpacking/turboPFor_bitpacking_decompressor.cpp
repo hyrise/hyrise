@@ -6,7 +6,7 @@ namespace opossum {
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector)
     : 
-    _decompressed_data{std::make_unique<std::vector<uint32_t>>(vector._size + 32)},
+    _decompressed_data{std::vector<uint32_t>(vector._size + 32)},
     _data{&vector._data},
     _size{vector._size},
       _b{vector._b} 
@@ -15,11 +15,11 @@ TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPFor
             return;
           }
 
-          bitunpack32(vector._data.data(), vector._size, _decompressed_data->data(), vector._b);
+          bitunpack32(vector._data.data(), vector._size, _decompressed_data.data(), vector._b);
       }
 
 TurboPForBitpackingDecompressor::TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor& other)
-    : _decompressed_data{std::make_unique<std::vector<uint32_t>>(*other._decompressed_data)},
+    : _decompressed_data{std::vector<uint32_t>(other._decompressed_data)},
     _data{other._data},
       _size{other._size},
       _b{other._b} 
@@ -41,7 +41,7 @@ TurboPForBitpackingDecompressor& TurboPForBitpackingDecompressor::operator=(cons
     return *this;
   }
 
-  _decompressed_data = std::make_unique<std::vector<uint32_t>>(*other._decompressed_data);
+  _decompressed_data = std::vector<uint32_t>(other._decompressed_data);
   _size = other._size;
   _b = other._b;
 
