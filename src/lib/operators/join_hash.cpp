@@ -652,9 +652,7 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
 
   const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   stream << separator << "Radix bits:" << separator << radix_bits;
-  if (!left_input_is_build_side) {
-    stream << "." << separator <<  "Input sides have been flipped.";
-  }
+  stream << "." << separator <<  "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
 }  // namespace opossum
