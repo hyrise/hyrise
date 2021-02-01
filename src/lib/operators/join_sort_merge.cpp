@@ -955,7 +955,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto output_chunks =
         write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                            OutputColumnOrder::LeftFirstRightSecond);
+                            OutputColumnOrder::LeftFirstRightSecond, false);
 
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +

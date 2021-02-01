@@ -155,13 +155,11 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
   }
 }
 
-inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left,
-                                                               std::vector<RowIDPosList>& pos_lists_right,
-                                                               const std::shared_ptr<const Table>& left_input_table,
-                                                               const std::shared_ptr<const Table>& right_input_table,
-                                                               bool create_left_side_pos_lists_by_segment,
-                                                               bool create_right_side_pos_lists_by_segment,
-                                                               OutputColumnOrder output_column_order) {
+inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
+    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
+    bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
+    OutputColumnOrder output_column_order, bool allow_partition_merge) {
   /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
      *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
@@ -223,21 +221,23 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowID
     left_side_pos_list->reserve(MAX_SIZE);
     right_side_pos_list->reserve(MAX_SIZE);
 
-    // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-    // size or are empty (in case of semi/anti joins).
-    while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-           right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
-      // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
-      // used for the merged PosList.
-      std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
-                std::back_inserter(*left_side_pos_list));
-      pos_lists_left[partition_id + 1] = {};
+    if (allow_partition_merge) {
+      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
+      // size or are empty (in case of semi/anti joins).
+      while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
+             right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
+        // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
+        // used for the merged PosList.
+        std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
+                  std::back_inserter(*left_side_pos_list));
+        pos_lists_left[partition_id + 1] = {};
 
-      std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
-                std::back_inserter(*right_side_pos_list));
-      pos_lists_right[partition_id + 1] = {};
+        std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
+                  std::back_inserter(*right_side_pos_list));
+        pos_lists_right[partition_id + 1] = {};
 
-      ++partition_id;
+        ++partition_id;
+      }
     }
 
     Segments output_segments;

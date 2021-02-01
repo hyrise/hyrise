@@ -13,9 +13,9 @@
 
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
-#include "join_helper/join_output_writing.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
@@ -531,7 +531,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     auto output_chunks = write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table,
                                              _probe_input_table, create_left_side_pos_lists_by_segment,
-                                             create_right_side_pos_lists_by_segment, _output_column_order);
+                                             create_right_side_pos_lists_by_segment, _output_column_order, true);
 
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
