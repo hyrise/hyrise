@@ -5,11 +5,12 @@
 #include <unordered_set>
 
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
@@ -17,12 +18,13 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+void ExpressionReductionRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
-  visit_lqp(node, [&](const auto& sub_node) {
+  visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type == LQPNodeType::Aggregate) {
-      remove_duplicate_aggregate(sub_node->node_expressions, sub_node, node);
+      remove_duplicate_aggregate(sub_node->node_expressions, sub_node, lqp_root);
     }
 
     for (auto& expression : sub_node->node_expressions) {
@@ -202,24 +204,20 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   }
 
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+  // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
+  // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new predicate nodes. For now, we assume
+  // that the potential pruning of such LIKE predicates via the chunk pruning rule is sufficient. However, if not many
+  // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
   if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
       multi_char_wildcard_pos + 1 != pattern.size()) {
     return;
   }
+  const auto bounds = LikeMatcher::bounds(pattern);
 
-  // Calculate lower and upper bound of the search pattern
-  const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
-  const auto current_character_value = lower_bound.back();
+  // In case of an ASCII overflow
+  if (!bounds) return;
 
-  // Find next value according to ASCII-table
-  constexpr int MAX_ASCII_VALUE = 127;
-  if (current_character_value >= MAX_ASCII_VALUE) {
-    // current_character_value + 1 would overflow; use regexp-based LIKE for this edge case
-    return;
-  }
-
-  const auto next_character = static_cast<char>(current_character_value + 1);
-  const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
+  const auto [lower_bound, upper_bound] = *bounds;
 
   if (binary_predicate->predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);

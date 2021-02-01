@@ -59,7 +59,7 @@ std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t DictionarySegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+size_t DictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 
   if constexpr (std::is_same_v<T, pmr_string>) {
