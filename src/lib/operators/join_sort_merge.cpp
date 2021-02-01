@@ -835,8 +835,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _primary_predicate_condition != PredicateCondition::Equals) {
       // We need to merge the maps from every cluster to one map.
       for (auto const& map : _left_row_ids_emitted_per_chunks) {
-        for (auto const& submap : map) {
-          _left_row_ids_emitted[submap.first] = _left_row_ids_emitted[submap.first] || submap.second;
+        for (auto const& [row_id, emitted] : map) {
+          _left_row_ids_emitted[row_id] |= emitted;
         }
       }
       _left_outer_non_equi_join();
@@ -844,8 +844,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
       for (auto const& map : _right_row_ids_emitted_per_chunks) {
-        for (auto const& submap : map) {
-          _right_row_ids_emitted[submap.first] = _right_row_ids_emitted[submap.first] || submap.second;
+        for (auto const& [row_id, emitted] : map) {
+          _right_row_ids_emitted[row_id] |= emitted;
         }
       }
       _right_outer_non_equi_join();
