@@ -299,15 +299,16 @@ std::shared_ptr<Table> Projection::dummy_table() {
 }
 
 /**
- *  Method to determine PQPColumns to forward. In most cases, forwarding a column comes with almost zero costs.
- *  In cases where the same PQPColumn is also accessed in the expression evaluation, the whole column is materialized
- *  and cached. In that case, returning the materialized PQPColumn instead of forwarding it benefits the
- *  following operator, which can process a fully materialized column sequentially instead of accessing the column
- *  indirectly via a position list.
+ *  Method to determine PQPColumns to forward. As explained above, we forward columns which are simply projected and
+ *  which must not be evaluated. But there are cases when forwarding is not beneficial. When a forwardable column is
+ *  also evaluated in an expression, the expression evaluator materializes this column and caches it. In case of having
+ *  a reference segment as input, forwarding the materialized and cached segment has a similar performance in the
+ *  projection operator, but is faster in the following operator. The reason is that the following operator does not
+ *  need to process the forwarded reference segment via its position list indirection but can directly access the value
+ *  segment sequentially.
  */
 ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType table_type) const {
-  // We collect all forwardable PQP column expressions and all evaluated PQP column expressions. In a second step, all
-  // forwardable expressions that are also evaluated are removed from the set.
+  // First gather all forwardable PQP column expressions.
   auto forwarded_pqp_columns = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     const auto& expression = expressions[column_id];
@@ -316,10 +317,10 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
     }
   }
 
-  // Do not forward columns which are also evaluated. Not relevant for data tables as the following operator does not
-  // need to iterate via a position list anyways. In cases where the data table is encoded (e.g., dictionary encoded)
-  // and the following operator has fast paths for dictionary-encoded segments (e.g., hash aggreagate), forwarding over
-  // using the materialized column of the expression evaluator can be beneficial.
+  // Iterate the expressions and check if a forwardable column is part of an expression. In this case, remove it from
+  // the list of forwardable columns. When the input is a data table (and thus the output table is as well) the
+  // forwarded column does not need to be accessed via its position list later. And since the following operator might
+  // have optimizations for accessing an encoded segment, we always forward for data tables.
   if (table_type == TableType::References) {
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
