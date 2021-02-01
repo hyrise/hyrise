@@ -14,37 +14,33 @@ class TurboPForBitpackingVector;
 class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
  public:
   explicit TurboPForBitpackingDecompressor(const TurboPForBitpackingVector& vector);
-  TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor& other);
-  TurboPForBitpackingDecompressor(TurboPForBitpackingDecompressor&& other) noexcept;
+  TurboPForBitpackingDecompressor(const TurboPForBitpackingDecompressor&) = default;
+  TurboPForBitpackingDecompressor(TurboPForBitpackingDecompressor&&) = default;
 
-  TurboPForBitpackingDecompressor& operator=(const TurboPForBitpackingDecompressor& other);
-  TurboPForBitpackingDecompressor& operator=(TurboPForBitpackingDecompressor&& other) noexcept;
+      
+  TurboPForBitpackingDecompressor& operator=(const TurboPForBitpackingDecompressor& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    return *this;
+  }
+
+  TurboPForBitpackingDecompressor& operator=(TurboPForBitpackingDecompressor&& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    return *this;
+  }
 
   ~TurboPForBitpackingDecompressor() override = default;
 
   uint32_t get(size_t i) final {
-    // GCC warns here: _data may be used uninitialized in this function [-Werror=maybe-uninitialized]
-    // Clang does not complain. Also, _data is a reference, so there should be no way of it being uninitialized.
-    // Since gcc's uninitialized-detection is known to be buggy, we ignore that.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-
-    if (_size == 0) {
-      std::cout << "error" << std::endl;
-    }
-
-    return _decompressed_data[i];
-
-#pragma GCC diagnostic pop
+    return _decompressed[i];
   }
 
   size_t size() const final { return _size; }
 
  private:
-  const pmr_vector<uint8_t> *_data;
-  std::vector<uint32_t> _decompressed_data;
+  const pmr_vector<uint8_t>& _data;
   size_t _size;
   uint8_t _b;
+  std::vector<uint32_t> _decompressed;
 };
 
 }  // namespace opossum
