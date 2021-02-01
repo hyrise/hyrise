@@ -19,12 +19,12 @@ class TurboPForBitpackingDecompressor : public BaseVectorDecompressor {
 
       
   TurboPForBitpackingDecompressor& operator=(const TurboPForBitpackingDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitpackingDecompressor");
     return *this;
   }
 
   TurboPForBitpackingDecompressor& operator=(TurboPForBitpackingDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitpackingDecompressor");
     return *this;
   }
 
