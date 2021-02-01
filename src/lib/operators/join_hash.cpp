@@ -106,7 +106,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
       // number of items in map
       static_cast<double>(build_relation_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + 1) / 0.85;
+      static_cast<double>(sizeof(uint32_t)) / 0.8;
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
 
