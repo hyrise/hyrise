@@ -218,4 +218,116 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
     
 }
 
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphIsEmpty) {
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+
+  EXPECT_TRUE(join_graph->is_empty());
+}
+
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphAddsNewNode) {
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+
+  std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("table1");
+  std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("table2");
+  std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("table3");
+
+  std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
+  std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
+  std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+
+  EXPECT_TRUE(table1_node->table_node == table1);
+  EXPECT_TRUE(table2_node->table_node == table2);
+  EXPECT_TRUE(table3_node->table_node == table3);
+  
+  EXPECT_TRUE(std::find(join_graph->nodes.begin(), join_graph->nodes.end(), table1_node) != join_graph->nodes.end());
+  EXPECT_TRUE(std::find(join_graph->nodes.begin(), join_graph->nodes.end(), table2_node) != join_graph->nodes.end());
+  EXPECT_TRUE(std::find(join_graph->nodes.begin(), join_graph->nodes.end(), table3_node) != join_graph->nodes.end());
+
+  EXPECT_TRUE(join_graph->nodes.size() == 3);
+  EXPECT_FALSE(join_graph->is_empty());
+}
+
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphIsTree) {
+  // [table1 <-> table2 <-> table3] cycle free structure
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+
+  std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("table1");
+  std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("table2");
+  std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("table3");
+
+  std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
+  std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
+  std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+
+  table1_node->get_edge_for_table(table2_node);
+  table2_node->get_edge_for_table(table1_node);
+
+  table2_node->get_edge_for_table(table3_node);
+  table3_node->get_edge_for_table(table2_node);
+  
+  EXPECT_TRUE(join_graph->is_tree());
+}
+
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNotTree) {
+  // [table1 <-> table2 <-> table3] cycle structure
+  // [  ^----------------------^  ]
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+
+  std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("table1");
+  std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("table2");
+  std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("table3");
+
+  std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
+  std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
+  std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+
+  table1_node->get_edge_for_table(table2_node);
+  table2_node->get_edge_for_table(table1_node);
+
+  table2_node->get_edge_for_table(table3_node);
+  table3_node->get_edge_for_table(table2_node);
+
+  table3_node->get_edge_for_table(table1_node);
+  table1_node->get_edge_for_table(table3_node);
+  
+  EXPECT_FALSE(join_graph->is_tree());
+}
+
+
+TEST_F(DipsPruningRuleTest, DipsJoinGraphSetsRoot) {
+  // [table1 <-> table2 <-> table3] cycle free structure
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+
+  std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("table1");
+  std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("table2");
+  std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("table3");
+
+  std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
+  std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
+  std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+
+  table1_node->get_edge_for_table(table2_node);
+  table2_node->get_edge_for_table(table1_node);
+
+  table2_node->get_edge_for_table(table3_node);
+  table3_node->get_edge_for_table(table2_node);
+  
+  join_graph->set_root(table1_node);
+
+  EXPECT_TRUE(table1_node->parent == nullptr);
+  EXPECT_TRUE(table2_node->parent == table1_node);
+  EXPECT_TRUE(table3_node->parent == table2_node);
+
+  EXPECT_TRUE(table1_node->children.size() == 1);
+  EXPECT_TRUE(table2_node->children.size() == 1);
+  EXPECT_TRUE(table3_node->children.size() == 0);
+
+  EXPECT_TRUE(std::find(table1_node->children.begin(), table1_node->children.end(), table2_node) != table1_node->children.end());
+  EXPECT_TRUE(std::find(table2_node->children.begin(), table2_node->children.end(), table3_node) != table2_node->children.end());
+}
+
 }  // namespace opossum
