@@ -154,8 +154,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   RowHashTable _left_row_ids_emitted{};
   RowHashTable _right_row_ids_emitted{};
 
-  std::vector<RowHashTable> _left_row_ids_emitted_per_chunks;
-  std::vector<RowHashTable> _right_row_ids_emitted_per_chunks;
+  std::vector<RowHashTable> _left_row_ids_emitted_per_chunk;
+  std::vector<RowHashTable> _right_row_ids_emitted_per_chunk;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -379,11 +379,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _left_row_ids_emitted_per_chunks[output_cluster].emplace(left_row_id, false);
+        _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted_per_chunks[output_cluster][left_row_id] = true;
+            _left_row_ids_emitted_per_chunk[output_cluster][left_row_id] = true;
           }
         });
       });
@@ -415,11 +415,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _right_row_ids_emitted_per_chunks[output_cluster].emplace(right_row_id, false);
+        _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id, false);
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _right_row_ids_emitted_per_chunks[output_cluster][right_row_id] = true;
+            _right_row_ids_emitted_per_chunk[output_cluster][right_row_id] = true;
           }
         });
       });
@@ -461,13 +461,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _left_row_ids_emitted_per_chunks[output_cluster].emplace(left_row_id, false);
+        _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          _right_row_ids_emitted_per_chunks[output_cluster].emplace(right_row_id, false);
+          _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id, false);
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted_per_chunks[output_cluster][left_row_id] = true;
-            _right_row_ids_emitted_per_chunks[output_cluster][right_row_id] = true;
+            _left_row_ids_emitted_per_chunk[output_cluster][left_row_id] = true;
+            _right_row_ids_emitted_per_chunk[output_cluster][right_row_id] = true;
           }
         });
       });
@@ -787,8 +787,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    _left_row_ids_emitted_per_chunks.resize(_cluster_count);
-    _right_row_ids_emitted_per_chunks.resize(_cluster_count);
+    _left_row_ids_emitted_per_chunk.resize(_cluster_count);
+    _right_row_ids_emitted_per_chunk.resize(_cluster_count);
     // Parallel join for each cluster
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
@@ -803,8 +803,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      _left_row_ids_emitted_per_chunks[cluster_id] = RowHashTable{};
-      _right_row_ids_emitted_per_chunks[cluster_id] = RowHashTable{};
+      _left_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
+      _right_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
 
       const auto merge_row_count =
           (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
@@ -834,7 +834,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
       // We need to merge the maps from every cluster to one map.
-      for (auto const& map : _left_row_ids_emitted_per_chunks) {
+      for (auto const& map : _left_row_ids_emitted_per_chunk) {
         for (auto const& [row_id, emitted] : map) {
           _left_row_ids_emitted[row_id] |= emitted;
         }
@@ -843,7 +843,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto const& map : _right_row_ids_emitted_per_chunks) {
+      for (auto const& map : _right_row_ids_emitted_per_chunk) {
         for (auto const& [row_id, emitted] : map) {
           _right_row_ids_emitted[row_id] |= emitted;
         }
