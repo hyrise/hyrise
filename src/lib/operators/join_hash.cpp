@@ -74,13 +74,14 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
   /*
-    The number of radix bits is used to determine the number of build partitions whose hash maps have a size that can
-    be expected to fit into the L2 cache. This should incorporate hardware knowledge, once available in Hyrise. As of
-    now, we assume a L2 cache size of 1024 KB, of which we use 75 %.
+    The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
+    a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
+    that's the L2 cache, for Apple's M1 the L1 cache). This calculation should include hardware knowledge, once
+    available in Hyrise. As of now, we assume a cache size of 1024 KB, of which we use 75 %.
 
     We estimate the size the following way:
       - we assume each key appears once (that is an overestimation space-wise, but we
-      aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+        aim rather for a hash map that is slightly smaller than the cache than slightly larger)
       - each entry in the hash map is a pair of the actual hash key and the SmallPosList storing uint32_t offsets (see
         hash_join_steps.hpp)
   */
@@ -92,8 +93,8 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
     PerformanceWarning("Build relation larger than probe relation in hash join");
   }
 
-  // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
-  // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
+  // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
+  // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
   constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
   constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
