@@ -1,16 +1,15 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include <boost/functional/hash_fwd.hpp>
-#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -147,7 +146,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   };
 
-  using RowHashTable = ska::bytell_hash_map<RowID, bool, RowHasher>;
+  using RowHashTable = std::unordered_map<RowID, bool, RowHasher>;
   // these are used for outer joins where the primary predicate is not Equals.
   RowHashTable _left_row_ids_emitted{};
   RowHashTable _right_row_ids_emitted{};
