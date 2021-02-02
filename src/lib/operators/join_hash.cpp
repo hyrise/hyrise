@@ -72,8 +72,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size,
-                                      const JoinMode mode) {
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
     a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
@@ -90,8 +89,8 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
     /*
       Hash joins perform best when the build side is small. For inner joins, we can simply select the smaller input
       table as the build side. For other joins, such as semi or outer joins, the build side is fixed. In this case,
-      other join operators might be more efficient. We emit performance warning in this case. Note, as of now we do not
-      consider such cases of inefficient hash joins and do not switch to other join algorithms.
+      other join operators might be more efficient. We emit performance warning in this case. In the future, the
+      optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
     std::stringstream performance_warning;
     performance_warning << "Build side larger than probe side in hash join (join mode: " << magic_enum::enum_name(mode)
@@ -658,8 +657,8 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
-  stream << separator << "Radix bits:" << separator << radix_bits;
-  stream << "." << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
+  stream << separator << "Radix bits: " << radix_bits << ".";
+  stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
 }  // namespace opossum
