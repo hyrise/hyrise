@@ -72,7 +72,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size,
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size,
                                       const JoinMode mode) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
@@ -86,7 +86,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
       - each entry in the hash map is a pair of the actual hash key and the SmallPosList storing uint32_t offsets (see
         hash_join_steps.hpp)
   */
-  if (build_relation_size > probe_relation_size) {
+  if (build_side_size > probe_side_size) {
     /*
       Hash joins perform best when the build side is small. For inner joins, we can simply select the smaller input
       table as the build side. For other joins, such as semi or outer joins, the build side is fixed. In this case,
@@ -111,7 +111,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
-      static_cast<double>(build_relation_size) *
+      static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
       static_cast<double>(sizeof(uint32_t)) / 0.8;
 
@@ -138,10 +138,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    * input table. For other cases, we cannot freely decide.
    *
    * Build and probe side are assigned as follows:
-   *   JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
-   *   JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
+   *   JoinMode::Inner        The smaller table becomes the build side, the bigger the probe side
+   *   JoinMode::Left/Right   The outer table becomes the probe side, the inner table becomes the build side
    *   JoinMode::FullOuter    Not supported by JoinHash
-   *   JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
+   *   JoinMode::Semi/Anti*   The left table becomes the probe side, the right table becomes the build side
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
@@ -276,12 +276,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * Keep/Discard NULLs from build and probe columns as follows
      *
      * JoinMode::Inner              Discard NULLs from both columns
-     * JoinMode::Left/Right         Discard NULLs from the build column (the inner relation), but keep them on the probe
-     *                              column (the outer relation)
+     * JoinMode::Left/Right         Discard NULLs from the build column (the inner table), but keep them on the probe
+     *                              column (the outer table)
      * JoinMode::FullOuter          Not supported by JoinHash
      * JoinMode::Semi               Discard NULLs from both columns
-     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the right relation), but keep them on the probe
-     *                              column (the left relation)
+     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the right table), but keep them on the probe
+     *                              column (the left table)
      * JoinMode::AntiNullAsTrue     Keep NULLs from both columns
      */
 
@@ -315,7 +315,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *
      * Bloom filters can be used to skip rows that will not find a join partner. They are not shown here.
      *
-     *           Build Relation                       Probe Relation
+     *            Build Table                          Probe Table
      *                 |                                    |
      *        materialize_input()                  materialize_input()
      *                 |                                    |
@@ -481,7 +481,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);
 
-    // simple heuristic: half of the rows of the probe relation will match
+    // simple heuristic: half of the rows of the probe side will match
     const size_t result_rows_per_partition =
         _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
     for (size_t i = 0; i < partition_count; i++) {
