@@ -72,7 +72,8 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size,
+                                      const JoinMode mode) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
     a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
@@ -87,10 +88,15 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   */
   if (build_relation_size > probe_relation_size) {
     /*
-      Hash joins perform best when the build relation is small. In case the inputs are switched (e.g., due to the join
-      mode) making the build partition larger than the probe partition, the user will be warned.
+      Hash joins perform best when the build side is small. For inner joins, we can simply select the smaller input
+      table as the build side. For other joins, such as semi or outer joins, the build side is fixed. In this case,
+      other join operators might be more efficient. We emit performance warning in this case. Note, as of now we do not
+      consider such cases of inefficient hash joins and do not switch to other join algorithms.
     */
-    PerformanceWarning("Build relation larger than probe relation in hash join");
+    std::stringstream performance_warning;
+    performance_warning << "Build side larger than probe side in hash join (join mode: " << magic_enum::enum_name(mode)
+                        << ").";
+    PerformanceWarning(performance_warning.str());
   }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
@@ -194,8 +200,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+          _radix_bits = calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(),
+                                                                  probe_input_table->row_count(), _mode);
         }
 
         // It needs to be ensured that the build partition does not get too large, because the

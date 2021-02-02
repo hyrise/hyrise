@@ -35,7 +35,8 @@ class JoinHash : public AbstractJoinOperator {
   std::string description(DescriptionMode description_mode) const override;
 
   template <typename T>
-  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
+  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size,
+                                     const JoinMode mode);
 
   enum class OperatorSteps : uint8_t {
     BuildSideMaterializing,
@@ -47,7 +48,7 @@ class JoinHash : public AbstractJoinOperator {
   };
 
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
-    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const;
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
 
     size_t radix_bits{0};
     // Initially, the left input is the build side and the right side is the probe side.
