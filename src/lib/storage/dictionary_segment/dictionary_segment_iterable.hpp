@@ -30,10 +30,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using CompressedVectorIterator = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
 
-      auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{_dictionary->cbegin(), _segment.null_value_id(),
-                                                                    vector.cbegin(), vector.cbegin()};
+      auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), vector.cend()};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -69,25 +69,29 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
-    Iterator(DictionaryIteratorType dictionary_begin_it, ValueID null_value_id, CompressedVectorIterator attribute_begin_it, CompressedVectorIterator attribute_it)
+    Iterator(DictionaryIteratorType dictionary_begin_it, ValueID null_value_id, CompressedVectorIterator attribute_it,
+             ChunkOffset chunk_offset)
         : _dictionary_begin_it{std::move(dictionary_begin_it)},
           _null_value_id{null_value_id},
-          _attribute_begin_it{std::move(attribute_begin_it)},
-          _attribute_it{std::move(attribute_it)} {}
+          _attribute_it{std::move(attribute_it)},
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
       ++_attribute_it;
+      ++_chunk_offset;
     }
 
     void decrement() {
       --_attribute_it;
+      --_chunk_offset;
     }
 
     void advance(std::ptrdiff_t n) {
       _attribute_it += n;
+      _chunk_offset += n;
     }
 
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
@@ -95,21 +99,19 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
 
     SegmentPosition<T> dereference() const {
-      const auto chunk_offset = static_cast<ChunkOffset>(_attribute_it - _attribute_begin_it);
-
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, chunk_offset};
+      if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};  // TODO pass empty string_view here and below?
 
-      return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, chunk_offset};
+      return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, _chunk_offset};
     }
 
    private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
-    CompressedVectorIterator _attribute_begin_it;
     CompressedVectorIterator _attribute_it;
+    ChunkOffset _chunk_offset;
   };
 
   template <typename Decompressor, typename DictionaryIteratorType, typename PosListIteratorType>
