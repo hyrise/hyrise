@@ -136,12 +136,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    *   JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
    *   JoinMode::FullOuter    Not supported by JoinHash
    *   JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
-
-   * One example are semi/anti* joins, where the probe side
-   * is per convention the left side (that's how Hyrise determines which input table to keep and filter in the semi
-   * join). For outer join modes, we use the right input table as the build side (e.g., left outer
-   * join) or the left input table (right outer joins) for easier tracking of NULL values. For inner joins, we consider
-   * the size of the input tables as it does not matter which side is probed.
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
