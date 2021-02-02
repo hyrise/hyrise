@@ -23,8 +23,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-namespace {}  // namespace
-
 namespace opossum {
 
 bool JoinHash::supports(const JoinConfiguration config) {
@@ -525,11 +523,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_output_writing;
 
-    auto create_left_side_pos_lists_by_segment =
+    const auto create_left_side_pos_lists_by_segment =
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
-    auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
+    const auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    auto allow_partition_merge = true;
+    // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
+    // partitions can be merged (#2202).
+    constexpr auto allow_partition_merge = true;
     auto output_chunks =
         write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,

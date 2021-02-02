@@ -949,11 +949,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
-    auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
-    auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
+    const auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
+    const auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
 
     // Do not allow merge of the partitions, to keep the sort order.
-    auto allow_partition_merge = false;
+    constexpr auto allow_partition_merge = false;
     auto output_chunks =
         write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
