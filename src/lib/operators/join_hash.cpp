@@ -127,13 +127,21 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_column_id = ColumnID{};
 
   /**
-   * Build and probe side are assigned as follows (depending only on JoinMode, except for inner joins where input
-   * relation sizes are considered):
+   * The hash join works best when the table being probed is larger than the side for which the hash table is built
+   * (i.e., the build side). As consequence, when we are to freely determine the build side, we chose the smaller
+   * input table. For other cases, we cannot freely decide.
    *
-   * JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
-   * JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
-   * JoinMode::FullOuter    Not supported by JoinHash
-   * JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
+   * Build and probe side are assigned as follows:
+   *   JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
+   *   JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
+   *   JoinMode::FullOuter    Not supported by JoinHash
+   *   JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
+
+   * One example are semi/anti* joins, where the probe side
+   * is per convention the left side (that's how Hyrise determines which input table to keep and filter in the semi
+   * join). For outer join modes, we use the right input table as the build side (e.g., left outer
+   * join) or the left input table (right outer joins) for easier tracking of NULL values. For inner joins, we consider
+   * the size of the input tables as it does not matter which side is probed.
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
@@ -207,15 +215,15 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            join_hash_performance_data, std::move(adjusted_secondary_predicates));
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
+            std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
     });
   });
 
-  DebugAssert(_radix_bits, "Radix bits are not set.");
+  Assert(_radix_bits, "Radix bits are not set.");
   join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
@@ -251,7 +259,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   JoinHash::PerformanceData& _performance;
-
 
   OutputColumnOrder _output_column_order;
 
@@ -650,9 +657,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   stream << separator << "Radix bits:" << separator << radix_bits;
-  stream << "." << separator <<  "Build side is " << (left_input_is_build_side ? "left." : "right.");
+  stream << "." << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
 }  // namespace opossum

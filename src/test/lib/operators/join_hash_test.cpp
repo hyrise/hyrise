@@ -109,13 +109,13 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
 }
 
 TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
-  // Simpe tests to check that side switching and zero-sizes work.
+  // Simple tests to check that side switching and zero-sizes work.
   EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(1, 0), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(0, 1), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(0, 0), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int32_t>(1, 1), 0ul);
   EXPECT_TRUE(JoinHash::calculate_radix_bits<int32_t>(std::numeric_limits<size_t>::max(),
-                                                       std::numeric_limits<size_t>::max()) > 0ul);
+                                                      std::numeric_limits<size_t>::max()) > 0ul);
 }
 
 }  // namespace opossum
