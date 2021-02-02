@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/functional/hash_fwd.hpp>
+#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -16,8 +18,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
-#include "bytell_hash_map.hpp"
-#include <boost/functional/hash_fwd.hpp>
 
 namespace opossum {
 
@@ -88,13 +88,11 @@ const std::string& JoinSortMerge::name() const {
   return name;
 }
 
-
 /**
 ** Start of implementation.
 **/
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
-
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
@@ -141,12 +139,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
 
   struct RowHasher {
-    size_t operator() (const RowID& row) const {
+    size_t operator()(const RowID& row) const {
       size_t seed = 0;
       boost::hash_combine(seed, row.chunk_id);
       boost::hash_combine(seed, row.chunk_offset);
       return seed;
-    } 
+    }
   };
 
   using RowHashTable = ska::bytell_hash_map<RowID, bool, RowHasher>;
@@ -525,7 +523,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_cluster(const size_t cluster_id, std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
+  void _join_cluster(const size_t cluster_id,
+                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     auto& left_cluster = (*_sorted_left_table)[cluster_id];
     auto& right_cluster = (*_sorted_right_table)[cluster_id];
 
