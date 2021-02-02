@@ -204,10 +204,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                                                                   probe_input_table->row_count(), _mode);
         }
 
-        // It needs to be ensured that the build partition does not get too large, because the
-        // used offsets in the hash map might otherwise overflow. Since radix partitioning aims
-        // to avoid large build partitions, this should never happen. Nonetheless, we better
-        // assert since the effects of overflows will probably hard to debug.
+        // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
+        // hash maps might otherwise overflow. Since radix partitioning aims to avoid large build partitions, this
+        // should never happen. Nonetheless, we better assert since the effects of overflows will probably be hard to
+        // debug.
         const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
         Assert(static_cast<uint32_t>(static_cast<double>(build_input_table->row_count()) / std::pow(2, *_radix_bits)) <
                    max_partition_size,
