@@ -124,7 +124,7 @@ class SQLTranslator final {
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                ValueExpressionID value_expression_id,
+                const std::shared_ptr<ValueExpressionID>& value_expression_id,
                 const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
                 const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
 
@@ -213,7 +213,7 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
-  ValueExpressionID _value_expression_id;
+  std::shared_ptr<ValueExpressionID> _value_expression_id;
   std::optional<TableSourceState> _from_clause_result;
   std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
   std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> _meta_tables;

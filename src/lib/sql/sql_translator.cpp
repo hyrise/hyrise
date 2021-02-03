@@ -137,7 +137,7 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
-    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(), ValueExpressionID{0},
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(), std::make_shared<ValueExpressionID>(0),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{},
                     std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>()) {}
 
@@ -164,7 +164,8 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
 
 SQLTranslator::SQLTranslator(
     const UseMvcc use_mvcc, const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-    const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator, ValueExpressionID value_expression_id,
+    const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+    const std::shared_ptr<ValueExpressionID>& value_expression_id,
     const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
     const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
     : _use_mvcc(use_mvcc),
@@ -176,7 +177,7 @@ SQLTranslator::SQLTranslator(
 
 SQLTranslator::SQLTranslator(
     const UseMvcc use_mvcc, const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
-    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(), ValueExpressionID{0},
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(), std::make_shared<ValueExpressionID>(0),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
@@ -605,7 +606,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
       } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
         const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
-        _cacheable = false;
         lqp = view->lqp;
 
         /**
@@ -1501,18 +1501,18 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprLiteralFloat:
-      return std::make_shared<ValueExpression>(expr.fval, ValueExpressionID{_value_expression_id++});
+      return std::make_shared<ValueExpression>(expr.fval, ValueExpressionID{(*_value_expression_id)++});
 
     case hsql::kExprLiteralString:
       AssertInput(expr.name, "No value given for string literal");
-      return std::make_shared<ValueExpression>(pmr_string{name}, ValueExpressionID{_value_expression_id++});
+      return std::make_shared<ValueExpression>(pmr_string{name}, ValueExpressionID{(*_value_expression_id)++});
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
         return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival),
-                                                 ValueExpressionID{_value_expression_id++});
+                                                 ValueExpressionID{(*_value_expression_id)++});
       } else {
-        return std::make_shared<ValueExpression>(expr.ival, ValueExpressionID{_value_expression_id++});
+        return std::make_shared<ValueExpression>(expr.ival, ValueExpressionID{(*_value_expression_id)++});
       }
 
     case hsql::kExprLiteralNull:

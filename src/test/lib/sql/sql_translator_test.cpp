@@ -2998,4 +2998,32 @@ TEST_F(SQLTranslatorTest, ImportStatement) {
   }
 }
 
+TEST_F(SQLTranslatorTest, UniqueValueExpressionsIDs) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT a, c FROM int_int_int WHERE (SELECT a from int_string WHERE b == 'test2') > 123 AND c < 9");
+
+  auto lqp_subplans = lqp_find_subplan_roots(actual_lqp);
+  auto value_expression_ids = std::vector<ValueExpressionID>();
+  for (auto lqp_subplan : lqp_subplans) {
+    visit_lqp(lqp_subplan, [&value_expression_ids](const auto& node) {
+      if (node) {
+        for (auto& root_expression : node->node_expressions) {
+          visit_expression(root_expression, [&value_expression_ids](auto& expression) {
+            if (expression->type == ExpressionType::Value) {
+              const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
+              value_expression_ids.push_back(*value_expression->value_expression_id);
+            }
+            return ExpressionVisitation::VisitArguments;
+          });
+        }
+      }
+      return LQPVisitation::VisitInputs;
+    });
+  }
+
+  const auto expected_value_expression_ids =
+      std::vector<ValueExpressionID>{ValueExpressionID{1}, ValueExpressionID{2}, ValueExpressionID{0}};
+  EXPECT_EQ(value_expression_ids, expected_value_expression_ids);
+}
+
 }  // namespace opossum
