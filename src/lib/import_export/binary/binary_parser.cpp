@@ -16,9 +16,6 @@
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/vector_compression/simd_bp128/oversized_types.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
-#include "storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_vector.hpp"
-#include "storage/turboPFOR_segment/turboPFOR_wrapper.hpp"
-
 
 #include "utils/assert.hpp"
 
@@ -164,13 +161,6 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
-    case EncodingType::TurboPFOR:
-      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::TurboPFOR>,
-                                                hana::type_c<ColumnDataType>)) {
-        return _import_TurboPFOR_segment<ColumnDataType>(file, row_count);
-      } else {
-        Fail("Unsupported data type for TurboPFOR encoding");
-      }
   }
 
   Fail("Invalid EncodingType");
@@ -223,22 +213,6 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
   const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
-}
-
-template <typename T>
-std::shared_ptr<TurboPFORSegment<T>> BinaryParser::_import_TurboPFOR_segment(std::ifstream& file,
-                                                                           ChunkOffset row_count) {
-
-  const auto size = _read_value<uint32_t>(file);
-  auto encoded_values = std::make_shared<turboPFOR::EncodedTurboPForVector>(); // WRONG
-
-  const auto null_values_stored = _read_value<BoolAsByteType>(file);
-  std::optional<pmr_vector<bool>> null_values;
-  if (null_values_stored) {
-    null_values = pmr_vector<bool>(_read_values<bool>(file, row_count));
-  }
-
-  return std::make_shared<TurboPFORSegment<T>>(encoded_values, null_values, row_count);
 }
 
 template <typename T>
@@ -318,10 +292,6 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
       return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
       return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    // case 5: {
-    //   auto dataSize = _read_value<size_t>(file);
-    //   return std::make_shared<TurboPForBitpackingVector>(_read_values<uint8_t>(file, dataSize), _read_value<size_t>(file), _read_value<uint8_t>(file));
-    // }
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
@@ -336,10 +306,6 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
       return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
       return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    // case 5: {
-    //   auto dataSize = _read_value<size_t>(file);
-    //   return std::make_unique<TurboPForBitpackingVector>(_read_values<uint8_t>(file, dataSize), _read_value<size_t>(file), _read_value<uint8_t>(file));
-    // }
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }

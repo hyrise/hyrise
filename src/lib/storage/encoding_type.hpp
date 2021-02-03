@@ -23,13 +23,12 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4, TurboPFOR };
+enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
 
 inline static std::vector<EncodingType> encoding_type_enum_values{
     EncodingType::Unencoded,        EncodingType::Dictionary,
     EncodingType::RunLength,        EncodingType::FixedStringDictionary,
-    EncodingType::FrameOfReference, EncodingType::LZ4,
-    EncodingType::TurboPFOR};
+    EncodingType::FrameOfReference, EncodingType::LZ4};
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -45,7 +44,6 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<pmr_string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::TurboPFOR>, hana::tuple_t<int32_t>),
     hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, data_types));
 
 /**
@@ -84,6 +82,6 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
 inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                               EncodingType::RunLength,        EncodingType::LZ4, EncodingType::TurboPFOR};
+                                               EncodingType::RunLength,        EncodingType::LZ4};
 
 }  // namespace opossum

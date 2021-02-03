@@ -11,7 +11,6 @@
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
-#include "storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -248,23 +247,6 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
   export_values(ofstream, *run_length_segment.end_positions());
 }
 
-template <typename T>
-void BinaryWriter::_write_segment(const TurboPFORSegment<T>& turboPFOR_segment, bool column_is_nullable,
-                                  std::ofstream& ofstream) {
-  export_value(ofstream, EncodingType::TurboPFOR);
-
-  // Write size and values
-  //export_value(ofstream, static_cast<uint32_t>(turboPFOR_segment.encoded_values()->size()));
-  //export_values(ofstream, *turboPFOR_segment.encoded_values());
-
-  // Write flag if optional NULL value vector is written
-  export_value(ofstream, static_cast<BoolAsByteType>(turboPFOR_segment.null_values().has_value()));
-  if (turboPFOR_segment.null_values()) {
-    // Write NULL values
-    export_values(ofstream, *turboPFOR_segment.null_values());
-  }
-}
-
 template <>
 void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
                                   bool column_is_nullable, std::ofstream& ofstream) {
@@ -384,12 +366,6 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::SimdBp128:
       export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
       return;
-    // case CompressedVectorType::TurboPForBitpacking:
-    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).data().size());
-    //   export_values(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).data());
-    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).on_size());
-    //   export_value(ofstream, dynamic_cast<const TurboPForBitpackingVector&>(compressed_vector).b());
-    //   return;
     default:
       Fail("Any other type should have been caught before.");
   }

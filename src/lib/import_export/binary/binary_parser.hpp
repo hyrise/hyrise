@@ -14,7 +14,6 @@
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/turboPFOR_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
@@ -81,9 +80,6 @@ class BinaryParser {
 
   template <typename T>
   static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
-
-  template <typename T>
-  static std::shared_ptr<TurboPFORSegment<T>> _import_TurboPFOR_segment(std::ifstream& file, ChunkOffset row_count);
 
   template <typename T>
   static std::shared_ptr<FrameOfReferenceSegment<T>> _import_frame_of_reference_segment(std::ifstream& file,

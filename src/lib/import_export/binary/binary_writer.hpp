@@ -10,7 +10,6 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/turboPFOR_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -154,25 +153,6 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
-                             std::ofstream& ofstream);
-
-  /**
-    * SIMDCAISegments are dumped with the following layout:
-    *
-    * Description                 | Type                                | Size in bytes
-    * --------------------------------------------------------------------------------------------------------
-    * Encoding Type               | EncodingType                        | 1
-    * Encoded Values size         | uint32_t                            | 4
-    * Encoded Values              | uint32_t                            | Encoded Values size * sizeof(uint32_t)
-    * Stores NULL values          | bool (stored as BoolAsByteType)     | 1
-    * NULL values (optional)      | vector<bool> (BoolAsByteType)       | Run count * 1
-    * codec id                    | uint8_t                             | 1
-    *
-    * Please note that the number of rows are written in the header of the chunk.
-    * The type of the column can be found in the global header of the file.
-    */
-  template <typename T>
-  static void _write_segment(const TurboPFORSegment<T>& turboPFOR_segment, bool column_is_nullable,
                              std::ofstream& ofstream);
 
   /**

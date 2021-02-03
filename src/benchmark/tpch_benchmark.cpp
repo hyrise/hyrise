@@ -17,6 +17,8 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
+#include <valgrind/callgrind.h>
+
 
 using namespace opossum;  // NOLINT
 
@@ -178,5 +180,9 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
+  CALLGRIND_START_INSTRUMENTATION;
   benchmark_runner->run();
+  CALLGRIND_STOP_INSTRUMENTATION;
+
+
 }
