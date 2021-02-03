@@ -277,11 +277,12 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
                                                        right_operand);
   }
   if (auto between_predicate = std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
-    auto lower_bound = materialized_arguments.at(0);
-    auto upper_bound = materialized_arguments.at(1);
-    DebugAssert(lower_bound && upper_bound, "Unexpected null pointer.");
-    return std::make_shared<BetweenExpression>(between_predicate->predicate_condition, lower_bound,
-                                                       upper_bound);
+    auto value = materialized_arguments.at(0);
+    auto lower_bound = materialized_arguments.at(1);
+    auto upper_bound = materialized_arguments.at(2);
+    DebugAssert(value && lower_bound && upper_bound, "Unexpected null pointer.");
+    return std::make_shared<BetweenExpression>(between_predicate->predicate_condition, value, lower_bound,
+                                               upper_bound);
   }
   if (auto is_null_predicate = std::dynamic_pointer_cast<const IsNullExpression>(predicate)) {
     auto operand = materialized_arguments.at(0);
