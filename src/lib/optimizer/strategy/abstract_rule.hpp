@@ -44,6 +44,18 @@ class AbstractRule {
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
+  /**
+   * Each rule needs to specify if it could potentially prevent caching.
+   * This info is used for caching of parameterized plans in order to make sure that
+   * an instantiation with new parameters of an already optimized and cached plan is
+   * still a valid optimization.
+   * A rule does not prevent caching if for every possible input lqp, the input
+   * and output lqp of the rule yield the same result even if the parameters are
+   * changed afterwards.
+   * Consequently, all rules that alter the number of parameters or make optimizations
+   * based on the actual values of the parameters prevent caching.
+   * Each new rule should be thoroughly examined if it could potentially prevent caching.
+   */
   virtual bool prevents_caching() const = 0;
 
  protected:
