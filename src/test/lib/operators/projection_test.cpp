@@ -210,18 +210,22 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto table_scan_a = create_table_scan(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, 5);
-  const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
+
   const auto subquery_expression =
       std::make_shared<PQPSubqueryExpression>(table_scan_a, DataType::Int, false, PQPSubqueryExpression::Parameters{});
-  const auto projection_b = std::make_shared<Projection>(
-      table_wrapper_a, expression_vector(correlated_parameter_(ParameterID{2}, a_a), subquery_expression));
+
+  // Hint: To set parameters, operators are not allowed to have executed.
+  //       Therefore, we deep copy table_wrapper_a & subquery_expression to reset their execution state.
+  const auto projection = std::make_shared<Projection>(
+      table_wrapper_a->deep_copy(),
+      expression_vector(correlated_parameter_(ParameterID{2}, a_a), subquery_expression->deep_copy()));
 
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
                                                                           {ParameterID{2}, AllTypeVariant{13}}};
-  projection_b->set_parameters(parameters);
+  projection->set_parameters(parameters);
 
   const auto correlated_parameter_expression =
-      std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection_b->expressions.at(0));
+      std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection->expressions.at(0));
   ASSERT_TRUE(correlated_parameter_expression);
   EXPECT_TRUE(correlated_parameter_expression->value());
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});

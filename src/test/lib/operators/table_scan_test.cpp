@@ -911,18 +911,20 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
 
   const auto column = get_column_expression(_int_int_compressed, ColumnID{0});
 
-  const auto scan_a = std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, 4));
+  // Hint: To set parameters, operators are not allowed to have executed.
+  //       Therefore, we deep copy the TableWrapper _int_int_compressed to reset its execution state.
+  const auto scan_a = std::make_shared<TableScan>(_int_int_compressed->deep_copy(), greater_than_equals_(column, 4));
   scan_a->set_parameters(parameters);
   EXPECT_EQ(*scan_a->predicate(), *greater_than_equals_(column, 4));
 
   const auto parameter_expression_with_value = placeholder_(ParameterID{2});
-  const auto scan_b =
-      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{2})));
+  const auto scan_b = std::make_shared<TableScan>(_int_int_compressed->deep_copy(),
+                                                  greater_than_equals_(column, placeholder_(ParameterID{2})));
   scan_b->set_parameters(parameters);
   EXPECT_EQ(*scan_b->predicate(), *greater_than_equals_(column, parameter_expression_with_value));
 
-  const auto scan_c =
-      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{4})));
+  const auto scan_c = std::make_shared<TableScan>(_int_int_compressed->deep_copy(),
+                                                  greater_than_equals_(column, placeholder_(ParameterID{4})));
   scan_c->set_parameters(parameters);
   EXPECT_EQ(*scan_c->predicate(), *greater_than_equals_(column, placeholder_(ParameterID{4})));
 }

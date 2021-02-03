@@ -244,10 +244,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  // TODO(Julian) Remove Assert because it breaks the following tests:
-  //  - OperatorsProjectionTest, SetParameters
-  //  - OperatorsTableScanTest, SetParameters
-  // DebugAssert(!_executed, "Setting parameters on operators that have already executed is illegal.");
+  DebugAssert(!_executed, "Setting parameters on operators that have already executed is illegal.");
   if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
