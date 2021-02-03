@@ -307,18 +307,6 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
 
   *cacheable_plan = true;
 
-  // Chunk pruning rule should prevent caching
-  // clang-format off
-  auto prunable_lqp =
-    PredicateNode::make(equals_(d_a, 1234),
-      node_d);
-  // clang-format on
-
-  optimizer->optimize(std::move(prunable_lqp), optimizer_rule_durations, cacheable_plan);
-  EXPECT_FALSE(*cacheable_plan);
-
-  *cacheable_plan = true;
-
   // IN-Expression rewrite rule should prevent caching
   // clang-format off
   auto in_expression_lqp =
@@ -327,6 +315,19 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
   // clang-format on
 
   optimizer->optimize(std::move(in_expression_lqp), optimizer_rule_durations, cacheable_plan);
+  EXPECT_FALSE(*cacheable_plan);
+
+  *cacheable_plan = true;
+
+  // Chunk pruning rule should prevent caching
+  auto post_cache_optimizer = Optimizer::create_post_caching_optimizer();
+  // clang-format off
+  auto prunable_lqp =
+    PredicateNode::make(equals_(d_a, 1234),
+      node_d);
+  // clang-format on
+
+  post_cache_optimizer->optimize(std::move(prunable_lqp), optimizer_rule_durations, cacheable_plan);
   EXPECT_FALSE(*cacheable_plan);
 }
 

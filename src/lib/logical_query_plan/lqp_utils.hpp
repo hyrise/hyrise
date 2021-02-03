@@ -111,7 +111,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
  * 
- * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Subsequent PredicateNodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
  * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
@@ -207,6 +207,32 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * Traverses @param lqp from top to bottom to find all leaf nodes.
+ * @return By default, all leaf nodes are returned.
+ *         Optionally, the template parameter can be set to return leaf nodes of type @tparam LQPNode only.
+ */
+template <class LQPNode = AbstractLQPNode>
+std::vector<std::shared_ptr<LQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  static_assert(std::is_same<LQPNode, AbstractLQPNode>::value || std::is_base_of<AbstractLQPNode, LQPNode>::value,
+                "The given type LQPNode must be derived from AbstractLQPNode");
+  std::vector<std::shared_ptr<LQPNode>> leaf_nodes;
+
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->input_count() > 0) return LQPVisitation::VisitInputs;
+
+    if constexpr (std::is_same<LQPNode, AbstractLQPNode>::value) {
+      leaf_nodes.emplace_back(node);
+    } else {
+      auto casted_node = std::dynamic_pointer_cast<LQPNode>(node);
+      if (casted_node) leaf_nodes.emplace_back(casted_node);
+    }
+    return LQPVisitation::DoNotVisitInputs;
+  });
+
+  return leaf_nodes;
+}
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
