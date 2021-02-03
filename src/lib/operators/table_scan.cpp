@@ -221,11 +221,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
 std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     const std::shared_ptr<const AbstractExpression>& predicate) {
-  // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
-  // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
-  // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
-  // those complex queries anyway.
-
+  /**
+   * If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
+   * use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
+   * about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
+   * those complex queries anyway.
+   */
   if (!std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate) &&
       !std::dynamic_pointer_cast<const IsNullExpression>(predicate) &&
       !std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
@@ -233,15 +234,17 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     return predicate;
   }
 
-  // ToDo(Julian) Discuss
-  // We do not want to deep copy any PQPs, because they become irrelevant after this function. Instead, we could
-  //  (1) materialize the uncorrelated subqueries and
-  //  (2) manually create a new predicate from it.
-  auto predicate_with_materialized_subquery_results = predicate->deep_copy();
+  // (1) Materialize uncorrelated subqueries
   auto arguments_count = predicate->arguments.size();
+  auto materialized_subquery_results = std::vector<std::shared_ptr<ValueExpression>>(arguments_count);
+
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
-    if (!subquery || subquery->is_correlated()) continue;
+    if (!subquery || subquery->is_correlated()) {
+      // We add a nullptr to preserve the index-mapping with predicate->arguments
+      materialized_subquery_results.push_back(nullptr);
+      continue;
+    }
 
     auto subquery_result = AllTypeVariant{};
     resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
@@ -252,14 +255,45 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    predicate_with_materialized_subquery_results->arguments.at(argument_idx) =
-        std::make_shared<ValueExpression>(std::move(subquery_result));
+    materialized_subquery_results.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
 
     // Deregister, because we obtained the subquery result and no longer need the subquery plan.
     subquery->pqp->deregister_consumer();
   }
+  DebugAssert(materialized_subquery_results.size() == arguments_count, "Unexpected number of elements");
 
-  return predicate_with_materialized_subquery_results;
+  // Return original predicate if we did not compute any subquery results
+  if (!std::any_of(materialized_subquery_results.begin(), materialized_subquery_results.end(),
+                   [](const auto& value_expression) { return value_expression != nullptr; })) {
+    return predicate;
+  }
+
+  // (2) Create new predicate from materialized subquery results
+  if (auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate)) {
+    auto left_operand = materialized_subquery_results.at(0);
+    auto right_operand = materialized_subquery_results.at(1);
+    DebugAssert(left_operand || right_operand, "Expected at least one materialized subquery result.");
+    if (!left_operand) binary_predicate->left_operand()->deep_copy();
+    if (!right_operand) binary_predicate->right_operand()->deep_copy();
+    return std::make_shared<BinaryPredicateExpression>(binary_predicate->predicate_condition, left_operand,
+                                                       right_operand);
+  }
+  if (auto between_predicate = std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
+    auto lower_bound = materialized_subquery_results.at(0);
+    auto upper_bound = materialized_subquery_results.at(1);
+    DebugAssert(lower_bound || upper_bound, "Expected at least one materialized subquery result.");
+    if (!lower_bound) between_predicate->lower_bound()->deep_copy();
+    if (!upper_bound) between_predicate->upper_bound()->deep_copy();
+    return std::make_shared<BinaryPredicateExpression>(between_predicate->predicate_condition, lower_bound,
+                                                       upper_bound);
+  }
+  if (auto is_null_predicate = std::dynamic_pointer_cast<const IsNullExpression>(predicate)) {
+    auto operand = materialized_subquery_results.at(0);
+    DebugAssert(operand, "Expected materialized subquery result.");
+    return std::make_shared<IsNullExpression>(is_null_predicate->predicate_condition, operand);
+  }
+
+  Fail("Unexpected predicate type");
 }
 
 std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
