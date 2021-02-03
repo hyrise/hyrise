@@ -82,8 +82,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
 TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   // With Parameter
   const auto _pqp_subquery_expression_with_param_copy =
-      std::dynamic_pointer_cast<PQPSubqueryExpression>
-          (_pqp_subquery_expression_with_param->deep_copy());
+      std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression_with_param->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_with_param_copy);
 
   ASSERT_EQ(_pqp_subquery_expression_with_param_copy->parameters.size(), 1u);

@@ -104,7 +104,7 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                      visited_nodes);
+                                                          visited_nodes);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });

@@ -44,8 +44,7 @@ AbstractOperator::~AbstractOperator() {
     bool aborted = transaction_context ? transaction_context->aborted() : false;
     bool left_has_executed = _left_input ? _left_input->executed() : false;
     bool right_has_executed = _right_input ? _right_input->executed() : false;
-    Assert(_executed || aborted || !left_has_executed || !right_has_executed ||
-               _consumer_count == 0,
+    Assert(_executed || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
 }

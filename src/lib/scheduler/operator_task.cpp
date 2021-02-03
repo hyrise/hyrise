@@ -40,9 +40,9 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_left_input()) {
-      if (auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op)) {
-        left_subtree_root->set_as_predecessor_of(task);
-      }
+    if (auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op)) {
+      left_subtree_root->set_as_predecessor_of(task);
+    }
   }
   if (auto right = op->mutable_right_input()) {
     if (auto right_subtree_root = _add_tasks_from_operator(right, tasks, task_by_op)) {

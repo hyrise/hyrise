@@ -212,8 +212,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;
-
-
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);
