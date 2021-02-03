@@ -208,7 +208,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   // We track the number of consuming operators to automate the clearing of operator results.
-  std::atomic<short> _consumer_count = 0;
+  std::atomic<int16_t> _consumer_count = 0;
 
   // Determines whether operator results are cleared automatically based on consumer count tracking.
   bool _clear_output = true;
