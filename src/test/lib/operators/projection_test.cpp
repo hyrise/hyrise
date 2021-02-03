@@ -162,8 +162,11 @@ TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
 
 TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
+
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
+  projection->never_clear_output();
   projection->execute();
 
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
@@ -182,12 +185,14 @@ TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
 // Check if two PQP columns expressions to the same column are interpreted as equal when using ExpressionUnorderedSet
 TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
 
   // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
   const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
+  projection->never_clear_output();
   projection->execute();
 
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
