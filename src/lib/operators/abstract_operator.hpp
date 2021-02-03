@@ -52,20 +52,34 @@ enum class OperatorType {
   Mock  // for Tests that need to Mock operators
 };
 
-// AbstractOperator is the abstract super class for all operators.
-// All operators have up to two input tables and one output table.
-// Their lifecycle has three phases:
-// 1. The operator is constructed. Previous operators are not guaranteed to have already executed, so operators must not
-// call get_output in their execute method
-// 2. The execute method is called from the outside (usually by the scheduler). This is where the heavy lifting is done.
-// By now, the input operators have already executed.
-// 3. The consumer (usually another operator) calls get_output. This should be very cheap. It is only guaranteed to
-// succeed if execute was called before. Otherwise, a nullptr or an empty table could be returned.
-//
-// Operators shall not be executed twice.
-//
-// Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
-
+/**
+ * AbstractOperator is the abstract super class for all operators.
+ * All operators have up to two input tables and one output table.
+ *
+ * LIFECYCLE
+ *  1. The operator is constructed. Because input operators are not guaranteed to have already executed, operators
+ *     must not call get_output in their execute method.
+ *  2. The execute method is called from the outside (usually by the scheduler). This is where the heavy lifting is
+ *     done. By now, the input operators have already executed.
+ *  3. The consumer (usually another operator) calls get_output. This should be very cheap. It is only guaranteed to
+ *     succeed if execute was called before. Otherwise, a nullptr or an empty table could be returned.
+ *
+ *  Operators shall not be executed twice.
+ *
+ * CONSUMER TRACKING
+ *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
+ *  operators register for consumption at input operators from their constructor. After having executed, operators
+ *  automatically deregister from their input operators.
+ *
+ *  Pleate note: This abstract class handles consumer registration/deregistration for input operators only.
+ *               Operators that consume subqueries, such as TableScan and Projection, have to register and
+ *               deregister as consumers for those manually.
+ *               It is crucial to call register_consumer() as early as possible, meaning from the constructor, to
+ *               prevent subquery results from being cleared too early. Otherwise, operators may need to re-execute,
+ *               which is illegal.
+ *
+ * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
+ */
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
   AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,

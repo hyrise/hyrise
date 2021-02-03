@@ -175,8 +175,8 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
 
 /**
- * @returns a vector of PQPSubqueryExpressions associated with @param expression.
- *          If @param expression is not of type PQPSubqueryExpression, its arguments will be searched for
+ * @returns a vector of PQPSubqueryExpressions consisting of @param expression or a subset of its arguments.
+ *          If @param expression is not of type PQPSubqueryExpression, this function will search its arguments for
  *          PQPSubqueryExpressions. Note, however, that it will not search for nested PQPSubqueryExpressions.
  */
 std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(
