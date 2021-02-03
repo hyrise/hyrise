@@ -150,6 +150,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     // Optimize plan with original parameters
     const auto start_optimize = std::chrono::high_resolution_clock::now();
 
+    // Some optimizer rules may render the plan non-cacheable.
     auto cacheable_plan = std::make_shared<bool>(true);
 
     _optimized_logical_plan =

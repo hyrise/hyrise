@@ -37,10 +37,12 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
-  // The ChunkPruningRule is like the BetweenCompositionRule, the ExpressionReductionRule and the
-  // InExpressionRewriteRule not reuse-safe. However since this rule has an impact on nearly every
-  // plan, excluding queries from caching that get optimized by this rule would render the whole
-  // cache useless. Therefore, this rule is applied after caching.
+  // Some rules may prevent caching/safe reuse of the optimized plan. (see prevents_caching() of each rule for
+  // detailed explanation).
+  // For most of these rules, this is not critical, since they only act a part in the optimization of a few plans.
+  // However, the ChunkPruningRule has an impact on nearly every plan optimization, which would render nearly every
+  // plan non-cacheable and the whole cache useless. Therefore, this rule is applied after caching in a seperate
+  // optimizer.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
   return optimizer;
 }
@@ -142,11 +144,12 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     Timer rule_timer{};
 
     if (rule->prevents_caching()) {
-      const auto previous_plan = root_node->deep_copy();
+      // Some rules may prevent caching, however if they have no effect on the plan, it can be cached anyway
+      const auto previous_plan_hash = root_node->hash();
       rule->apply_to_plan(root_node);
 
-      if (*previous_plan != *root_node) {
-        // in case that the rule didn't change the plan, we can safely reuse it
+      if (previous_plan_hash != root_node->hash()) {
+        // only in case it changed the plan, we can't reuse it
         *cacheable = false;
       }
     } else {

@@ -20,7 +20,7 @@ class ValueExpression : public AbstractExpression {
   DataType data_type() const override;
 
   const AllTypeVariant value;
-  const std::optional<ValueExpressionID> value_expression_id;
+  const std::optional<ValueExpressionID> value_expression_id = std::nullopt;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
