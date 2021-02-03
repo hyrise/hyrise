@@ -121,6 +121,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
       });
     } else {
       // No NULLs, all rows match.
+      ++num_chunks_with_all_rows_matching;
       const auto output_size = position_filter ? position_filter->size() : segment.size();
       const auto output_start_offset = matches.size();
       matches.resize(matches.size() + output_size);

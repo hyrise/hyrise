@@ -43,7 +43,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const OperatorJoinPredicate& primary_predicate,
                              const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {}
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -72,7 +73,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
     using ColumnDataType = typename decltype(type)::type;
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
         *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-        _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates,
+        dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
 
   return _impl->_on_execute();
@@ -93,8 +95,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
-                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates)
+                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                       OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
+        _performance{performance_data},
         _primary_left_column_id{left_column_id},
         _primary_right_column_id{right_column_id},
         _primary_predicate_condition{op},
@@ -107,6 +111,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
  protected:
   JoinSortMerge& _sort_merge_join;
+
+  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
@@ -782,7 +788,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+      const auto merge_row_count =
+          (*_sorted_left_table)[cluster_number]->size() + (*_sorted_right_table)[cluster_number]->size();
+      const auto join_cluster_task = [this, cluster_number] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -792,7 +800,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
 
         this->_join_cluster(cluster_number, multi_predicate_join_evaluator);
-      }));
+      };
+
+      if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
+        jobs.push_back(std::make_shared<JobTask>(join_cluster_task));
+      } else {
+        join_cluster_task();
+      }
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -883,7 +897,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
-        include_null_left, include_null_right, _cluster_count);
+        include_null_left, include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -892,6 +906,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
+
+    Timer timer;
 
     _perform_join();
 
@@ -922,17 +938,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _output_pos_lists_right.push_back(null_output_right);
       }
     }
+    _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
-    // Threshold of expected rows per partition over which parallel output jobs are spawned.
-    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
-
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
     const auto first_output_size = _output_pos_lists_left[0]->size();
-    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > PARALLEL_OUTPUT_THRESHOLD;
+    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > JOB_SPAWN_THRESHOLD;
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
@@ -972,6 +986,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // Wait for all chunk creation tasks to finish
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
     }
+    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(

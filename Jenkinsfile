@@ -6,13 +6,16 @@ tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/
 try {
   node {
     stage ("Start") {
-      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-      if (env.CHANGE_ID) {
+      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team) or the Jenkins admin user
+      def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
+      def jenkinsUserName = cause ? cause['userId'] : null
+
+      if (jenkinsUserName != "admin" && env.BRANCH_NAME != "master") {
         try {
           withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
             env.PR_CREATED_BY = pullRequest.createdBy
             sh '''
-              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "204"
             '''
           }
         } catch (error) {
@@ -125,6 +128,7 @@ try {
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
               sh "./scripts/test/hyriseConsole_test.py clang-release"
+              sh "./scripts/test/hyriseServer_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkTPCC_test.py clang-release"
@@ -140,11 +144,13 @@ try {
               sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
               sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
               sh "./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "./scripts/test/hyriseServer_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
               sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
               sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+              sh "./scripts/test/hyriseServer_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
               sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -209,6 +215,7 @@ try {
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
+              sh "./scripts/test/hyriseServer_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkTPCC_test.py gcc-release"
@@ -319,6 +326,7 @@ try {
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
           sh "ls -A1 | xargs rm -rf"

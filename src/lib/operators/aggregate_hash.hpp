@@ -175,7 +175,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,

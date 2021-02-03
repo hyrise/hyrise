@@ -430,7 +430,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     Timer timer_hash_map_building;
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
@@ -457,6 +457,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
     }
+
+    radix_build_column.clear();
 
     /**
      * 4. Probe step
@@ -513,9 +515,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
-    // After probing, the partitioned columns are not needed anymore.
-    radix_build_column.clear();
     radix_probe_column.clear();
+    hash_tables.clear();
 
     /**
      * 5. Write output Table
