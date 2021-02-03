@@ -236,13 +236,15 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
 
   // (1) Materialize uncorrelated subqueries
   auto arguments_count = predicate->arguments.size();
-  auto materialized_subquery_results = std::vector<std::shared_ptr<ValueExpression>>(arguments_count);
+  auto materialized_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
+  materialized_arguments.reserve(arguments_count);
+  int computed_subqueries_count = 0;
 
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
     if (!subquery || subquery->is_correlated()) {
-      // We add a nullptr to preserve the index-mapping with predicate->arguments
-      materialized_subquery_results.push_back(nullptr);
+      // Instead, create a deep copy of the argument
+      materialized_arguments.emplace_back(predicate->arguments.at(argument_idx)->deep_copy());
       continue;
     }
 
@@ -255,44 +257,37 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    materialized_subquery_results.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
+    materialized_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
 
     // Deregister, because we obtained the subquery result and no longer need the subquery plan.
     subquery->pqp->deregister_consumer();
+    computed_subqueries_count++;
   }
-  DebugAssert(materialized_subquery_results.size() == arguments_count, "Unexpected number of elements");
 
   // Return original predicate if we did not compute any subquery results
-  if (!std::any_of(materialized_subquery_results.begin(), materialized_subquery_results.end(),
-                   [](const auto& value_expression) { return value_expression != nullptr; })) {
-    return predicate;
-  }
+  if (computed_subqueries_count == 0) return predicate;
 
   // (2) Create new predicate from materialized subquery results
+  DebugAssert(materialized_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
   if (auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate)) {
-    auto left_operand = materialized_subquery_results.at(0);
-    auto right_operand = materialized_subquery_results.at(1);
-    DebugAssert(left_operand || right_operand, "Expected at least one materialized subquery result.");
-    if (!left_operand) binary_predicate->left_operand()->deep_copy();
-    if (!right_operand) binary_predicate->right_operand()->deep_copy();
+    auto left_operand = materialized_arguments.at(0);
+    auto right_operand = materialized_arguments.at(1);
+    DebugAssert(left_operand && right_operand, "Unexpected null pointer.");
     return std::make_shared<BinaryPredicateExpression>(binary_predicate->predicate_condition, left_operand,
                                                        right_operand);
   }
   if (auto between_predicate = std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
-    auto lower_bound = materialized_subquery_results.at(0);
-    auto upper_bound = materialized_subquery_results.at(1);
-    DebugAssert(lower_bound || upper_bound, "Expected at least one materialized subquery result.");
-    if (!lower_bound) between_predicate->lower_bound()->deep_copy();
-    if (!upper_bound) between_predicate->upper_bound()->deep_copy();
+    auto lower_bound = materialized_arguments.at(0);
+    auto upper_bound = materialized_arguments.at(1);
+    DebugAssert(lower_bound && upper_bound, "Unexpected null pointer.");
     return std::make_shared<BinaryPredicateExpression>(between_predicate->predicate_condition, lower_bound,
                                                        upper_bound);
   }
   if (auto is_null_predicate = std::dynamic_pointer_cast<const IsNullExpression>(predicate)) {
-    auto operand = materialized_subquery_results.at(0);
-    DebugAssert(operand, "Expected materialized subquery result.");
+    auto operand = materialized_arguments.at(0);
+    DebugAssert(operand, "Unexpected null pointer.");
     return std::make_shared<IsNullExpression>(is_null_predicate->predicate_condition, operand);
   }
-
   Fail("Unexpected predicate type");
 }
 
