@@ -68,7 +68,7 @@ std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
-  // Make sure that sort order, indexes, and constraints have made it all the way up to here
+  // Make sure that indexes and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
   if (_config->indexes) {

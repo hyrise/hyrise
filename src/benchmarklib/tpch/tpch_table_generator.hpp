@@ -29,11 +29,17 @@ extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
  */
 class TPCHTableGenerator : virtual public AbstractTableGenerator {
  public:
+  enum class ClusteringConfiguration { None, Pruning };
+
   // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
   explicit TPCHTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHTableGenerator in a benchmark
   explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+
+  // Constructor for creating a TPCHTableGenerator in a benchmark
+  explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+  							  const ClusteringConfiguration clustering_configuration);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -43,5 +49,6 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
   float _scale_factor;
+  ClusteringConfiguration _clustering_configuration;
 };
 }  // namespace opossum
