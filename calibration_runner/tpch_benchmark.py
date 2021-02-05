@@ -54,6 +54,10 @@ class TPCHBenchmark(AbstractBenchmark):
         'lineitem': [['l_receiptdate', 2]],
         **others
       },
+      'l_partkey': {
+        'lineitem': [['l_partkey', 2]],
+        **others
+      },
     }
 
 

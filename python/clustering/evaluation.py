@@ -160,7 +160,7 @@ def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column
   if len(negative_estimates) > 0:
     print(f"There are {len(negative_estimates)} negative aggregate estimates. This is bad.")
     print(negative_estimates)
-    m.scan_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
+    m.aggregate_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
   
   ground_truth_parser = PQPInputParser("tpch", ground_truth_path)
   ground_truth_parser.load_statistics()    

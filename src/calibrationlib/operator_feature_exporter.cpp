@@ -205,6 +205,17 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
     }
   }
 
+  switch (op->left_input()->type()) {
+
+    case OperatorType::GetTable:
+    case OperatorType::Aggregate:
+      column_type = "DATA";
+      break;
+
+    default:
+      column_type = "REFERENCE";
+  }
+
   const auto aggregate_columns = static_cast<int32_t>(op->aggregates().size());
   const auto group_columns = static_cast<int32_t>(op->groupby_column_ids().size());
 
