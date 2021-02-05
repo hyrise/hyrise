@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import glob
 import json
 import os
 import sys
@@ -44,7 +45,7 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
-    benchmark.expect_exact("Not caching tables as binary files")
+    benchmark.expect_exact("Caching tables as binary files")
     benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
     benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
     benchmark.expect_exact("Running subset of queries: select_statement")
@@ -64,6 +65,10 @@ def main():
     check_exit_status(benchmark)
 
     CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename_1, output_filename_2).run()
+
+    if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
+        print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
+        return_error = True
 
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 

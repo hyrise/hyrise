@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# import glob
 import json
 import os
 import sys
@@ -28,6 +27,10 @@ def main():
     arguments["--encoding"] = "'Unencoded'"
     arguments["--clients"] = "1"
     arguments["--scheduler"] = "false"
+
+    # Binary tables would be written into the table_path. In CI, this path is shared by different targets that are
+    # potentially executed concurrently. This sometimes led to issues with corrupted binary files.
+    arguments["--dont_cache_binary_tables"] = "true"
 
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
@@ -98,10 +101,6 @@ def main():
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
 
-    # if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
-    #     print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
-    #     return_error = True
-
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     arguments = {}
@@ -115,6 +114,7 @@ def main():
     arguments["--clients"] = "4"
     arguments["--chunk_size"] = "100000"
     arguments["--verify"] = "true"
+    arguments["--dont_cache_binary_tables"] = "true"
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
