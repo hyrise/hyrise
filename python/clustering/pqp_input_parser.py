@@ -222,8 +222,12 @@ class PQPInputParser(object):
         'INPUT_ROW_COUNT': 'INPUT_ROWS',
         'OUTPUT_ROW_COUNT': 'OUTPUT_ROWS',
         'INPUT_CHUNK_COUNT': 'INPUT_CHUNKS',
+        'GROUP_BY_COLUMN_COUNT': 'GROUP_COLUMNS',
+        'AGGREGATE_COLUMN_COUNT': 'AGGREGATE_COLUMNS'
       })
-
+    self.aggregates['RUNTIME_NS'] = self.aggregates['RUNTIME_NS'].astype(np.int64)
+    self.aggregates['AGGREGATE_COLUMNS'] = self.aggregates['AGGREGATE_COLUMNS'].astype(np.int64)
+    self.aggregates['GROUP_COLUMNS'] = self.aggregates['GROUP_COLUMNS'].astype(np.int64)
 
   """Extract interesting table names. Currently fixed to columns which are used in scans or joins"""
   def get_table_names(self):
