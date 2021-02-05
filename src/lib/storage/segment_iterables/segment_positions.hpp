@@ -78,7 +78,7 @@ class SegmentPosition<pmr_string> final : public AbstractSegmentPosition<std::st
       : _string{std::move(value)}, _view(_string), _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   SegmentPosition(std::string_view value, const bool null_value, const ChunkOffset& chunk_offset) noexcept
-      : _string{std::move(value)}, _view{_string}, _null_value{null_value}, _chunk_offset{chunk_offset} {}  // TODO don't use string
+      : _view{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}  // TODO don't use string
 
   // TODO if HYRISE_DEBUG copy string and assert equality on value(), same for NonNullSegmentPosition
 
@@ -125,7 +125,7 @@ class NonNullSegmentPosition<pmr_string> final : public AbstractSegmentPosition<
       : _string(value), _view{_string}, _chunk_offset{chunk_offset} {}
 
   NonNullSegmentPosition(std::string_view value, const ChunkOffset& chunk_offset) noexcept
-      : _string{std::move(value)}, _view{_string}, _chunk_offset{chunk_offset} {}
+      : _view{value}, _chunk_offset{chunk_offset} {}
 
   const std::string_view& value() const override { return _view; }
   bool is_null() const override { return false; }
