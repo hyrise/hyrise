@@ -66,8 +66,8 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
       break;
     case CompressedVectorType::SimdBp128:
       return VectorCompressionType::SimdBp128;
-   case CompressedVectorType::TurboPForBitpacking:
-     return VectorCompressionType::TurboPForBitpacking;
+   case CompressedVectorType::Bitpacking:
+     return VectorCompressionType::Bitpacking;
   }
   Fail("Invalid enum value");
 }

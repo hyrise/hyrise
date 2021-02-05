@@ -548,14 +548,14 @@ set(
     storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
     storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
     storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_compressor.cpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_compressor.hpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_decompressor.hpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_decompressor.cpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_iterator.cpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_iterator.hpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_vector.hpp
-    storage/vector_compression/turboPFor_bitpacking/turboPFor_bitpacking_vector.cpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.cpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_iterator.cpp
+    storage/vector_compression/bitpacking/bitpacking_iterator.hpp
+    storage/vector_compression/bitpacking/bitpacking_decompressor.cpp
+    storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.cpp
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp
@@ -655,8 +655,8 @@ set(
 
 set(
     LIBRARIES
-    turboPFOR
     lz4
+    compact_vector
     sqlparser
     uninitialized_vector
     zstd

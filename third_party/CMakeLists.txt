@@ -74,6 +74,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
 
+# Add compact_vector
+add_library(compact_vector INTERFACE)
+target_include_directories(compact_vector INTERFACE compact_vector/include)
+
 # Add Libraries with their own build setup
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
@@ -100,22 +104,6 @@ target_include_directories(
 )
 
 target_compile_options(lz4 PRIVATE -fPIC)
-
-## Build TurboPFOR (https://stackoverflow.com/questions/31274577/custom-target-as-a-target-library-in-cmake)
-SET(TURBOPFOR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/TurboPFor-Integer-Compression/libic.a)
-SET(TURBOPFOR_HEADER_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/TurboPFor-Integer-Compression)
-
-add_custom_command(OUTPUT ${TURBOPFOR_FILE}
-                   COMMAND make libic.a
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/TurboPFor-Integer-Compression)
-add_custom_target(turboPFOR_target DEPENDS ${TURBOPFOR_FILE})
-
-add_library(turboPFOR STATIC IMPORTED GLOBAL)
-add_dependencies(turboPFOR turboPFOR_target)
-set_target_properties(turboPFOR
-    PROPERTIES
-    IMPORTED_LOCATION ${TURBOPFOR_FILE}
-    INTERFACE_INCLUDE_DIRECTORIES ${TURBOPFOR_HEADER_FOLDER})
 
 ## Build zstd
 set(ZSTD_LIBRARY_DIR zstd/lib)
