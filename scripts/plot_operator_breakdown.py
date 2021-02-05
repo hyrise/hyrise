@@ -70,7 +70,7 @@ df.loc["Total"] = df.sum() / df.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
-#df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
+df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 
 # Print the dataframe for easy access to the raw numbers
 print(df)

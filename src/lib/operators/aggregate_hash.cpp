@@ -431,7 +431,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
                     // Could not take the shortcut above, either because we don't have a string or because it is too
                     // long
-                    auto inserted = id_map.try_emplace(position.value(), id_counter);
+                    auto inserted = id_map.try_emplace(ColumnDataType{position.value()}, id_counter);  // TODO materialization might not be necessary
 
                     id = inserted.first->second;
 

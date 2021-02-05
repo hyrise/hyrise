@@ -37,22 +37,22 @@ std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetw
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+  // const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
 
   // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
   // pre-filtered dictionary segments with string data. In this case, the optimized _scan_dictionary_segment() path if
   // faster than the sorted search. Without this workaround, TPC-H Q6 would lose up to 30%. When the iterator issues of
   // #1531 are resolved, the current workaround should be revisited.
   const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
-  if (!chunk_sorted_by.empty() &&
-      !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
-    for (const auto& sorted_by : chunk_sorted_by) {
-      if (sorted_by.column == _column_id) {
-        _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        return;
-      }
-    }
-  }
+  // if (!chunk_sorted_by.empty() &&
+  //     !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
+  //   for (const auto& sorted_by : chunk_sorted_by) {
+  //     if (sorted_by.column == _column_id) {
+  //       _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+  //       return;
+  //     }
+  //   }
+  // }
 
   // Select optimized or generic scanning implementation based on segment type
   if (dictionary_segment) {

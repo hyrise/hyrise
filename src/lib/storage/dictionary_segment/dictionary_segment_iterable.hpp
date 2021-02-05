@@ -104,7 +104,12 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};  // TODO pass empty string_view here and below?
 
-      return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, _chunk_offset};
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        return SegmentPosition<T>{std::string_view{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
+      } else {
+        return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, _chunk_offset};
+      }
+
     }
 
    private:
@@ -143,7 +148,12 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
 
-      return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, chunk_offsets.offset_in_poslist};
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        return SegmentPosition<T>{std::string_view{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
+      } else {
+        return SegmentPosition<T>{*(_dictionary_begin_it + value_id), false, chunk_offsets.offset_in_poslist};
+      }
+
     }
 
    private:

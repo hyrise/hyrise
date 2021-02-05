@@ -64,9 +64,9 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  T _value;
-  bool _null_value;
-  ChunkOffset _chunk_offset;
+  alignas(8) T _value;
+  alignas(8) bool _null_value;
+  alignas(8) ChunkOffset _chunk_offset;
 };
 
 template <>
@@ -74,18 +74,21 @@ class SegmentPosition<pmr_string> final : public AbstractSegmentPosition<std::st
  public:
   static constexpr bool Nullable = true;
 
+  SegmentPosition(const pmr_string& value, const bool null_value, const ChunkOffset& chunk_offset) noexcept
+      : _string{std::move(value)}, _view(_string), _null_value{null_value}, _chunk_offset{chunk_offset} {}
+
   SegmentPosition(std::string_view value, const bool null_value, const ChunkOffset& chunk_offset) noexcept
-      : _value{std::move(value)}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
+      : _string{std::move(value)}, _view{_string}, _null_value{null_value}, _chunk_offset{chunk_offset} {}  // TODO don't use string
 
   // TODO if HYRISE_DEBUG copy string and assert equality on value(), same for NonNullSegmentPosition
 
-  const std::string_view& value() const noexcept override { return _value; }
+  const std::string_view& value() const noexcept override { return _view; }
   bool is_null() const noexcept override { return _null_value; }
   ChunkOffset chunk_offset() const noexcept override { return _chunk_offset; }
 
  private:
-  // The alignment improves the suitability of the iterator for (auto-)vectorization
-  std::string_view _value;
+  std::string _string{};
+  std::string_view _view;
   bool _null_value;
   ChunkOffset _chunk_offset;
 };
@@ -109,8 +112,8 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  T _value;
-  ChunkOffset _chunk_offset;
+  alignas(8) T _value;
+  alignas(8) ChunkOffset _chunk_offset;
 };
 
 template <>
@@ -118,16 +121,19 @@ class NonNullSegmentPosition<pmr_string> final : public AbstractSegmentPosition<
  public:
   static constexpr bool Nullable = false;
 
-  NonNullSegmentPosition(std::string_view value, const ChunkOffset& chunk_offset) noexcept
-      : _value{value}, _chunk_offset{chunk_offset} {}
+  NonNullSegmentPosition(const pmr_string& value, const ChunkOffset& chunk_offset) noexcept
+      : _string(value), _view{_string}, _chunk_offset{chunk_offset} {}
 
-  const std::string_view& value() const override { return _value; }
+  NonNullSegmentPosition(std::string_view value, const ChunkOffset& chunk_offset) noexcept
+      : _string{std::move(value)}, _view{_string}, _chunk_offset{chunk_offset} {}
+
+  const std::string_view& value() const override { return _view; }
   bool is_null() const override { return false; }
   ChunkOffset chunk_offset() const override { return _chunk_offset; }
 
  private:
-  // The alignment improves the suitability of the iterator for (auto-)vectorization
-  std::string_view _value;
+  std::string _string{};
+  std::string_view _view;
   ChunkOffset _chunk_offset;
 };
 
