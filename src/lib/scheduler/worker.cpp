@@ -33,7 +33,12 @@ namespace opossum {
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
 Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _queue(queue), _id(id), _cpu_id(cpu_id) {}
+    : _queue(queue), _id(id), _cpu_id(cpu_id) {
+  // Generate a random distribution from 0-99 for later use, see below
+  _random.resize(100);
+  std::iota(_random.begin(), _random.end());
+  std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}});
+}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -152,8 +157,10 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
       // Give other tasks a certain chance of being executed, too. Anectotal evidence says that this is a good idea.
       // For some reason, this keeps the memory consumption of TPC-H Q6 low even if the scheduler is overcommitted.
+      // Because generating random numbers is somewhat expensive, we keep a list of random numbers and reuse them.
       // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
-      if (std::uniform_int_distribution<int>{0, 99}(_random) <= 20) {
+      _next_random = (_next_random + 1) % _random.size();
+      if (_random[_next_random] <= 20) {
         return false;
       }
 

@@ -68,7 +68,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::thread _thread;
   std::atomic<uint64_t> _num_finished_tasks{0};
 
-  std::default_random_engine _random{std::random_device{}()};
+  std::vector<int> _random{};
+  int _next_random{};
 };
 
 }  // namespace opossum
