@@ -46,6 +46,16 @@
             "type": "string"
         },
         {
+            "name": "TABLE_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "COLUMN_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
             "name": "OPERATOR_IMPLEMENTATION",
             "nullable": true,
             "type": "string"
@@ -53,7 +63,7 @@
         {
             "name": "INPUT_COLUMN_SORTED",
             "nullable": true,
-            "type": "int"
+            "type": "string"
         },
         {
             "name": "QUERY_HASH",
@@ -66,19 +76,14 @@
             "type": "long"
         },
         {
-            "name": "GROUP_COLUMNS",
-            "nullable": false,
-            "type": "int"
-        },
-        {
-            "name": "AGGREGATE_COLUMNS",
-            "nullable": false,
-            "type": "int"
-        },
-        {
-            "name": "GROUP_COlUMN_NAMES",
+            "name": "PREDICATE",
             "nullable": false,
             "type": "string"
+        },
+        {
+            "name": "SKIPPED_CHUNKS",
+            "nullable": false,
+            "type": "long"
         }
     ],
     "config": {

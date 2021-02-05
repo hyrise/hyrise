@@ -53,7 +53,7 @@
         {
             "name": "INPUT_COLUMN_SORTED",
             "nullable": true,
-            "type": "int"
+            "type": "string"
         },
         {
             "name": "QUERY_HASH",
@@ -74,11 +74,6 @@
             "name": "AGGREGATE_COLUMNS",
             "nullable": false,
             "type": "int"
-        },
-        {
-            "name": "GROUP_COlUMN_NAMES",
-            "nullable": false,
-            "type": "string"
         }
     ],
     "config": {
