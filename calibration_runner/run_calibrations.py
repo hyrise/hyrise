@@ -28,10 +28,6 @@ def run_benchmark(benchmark, config_name, chunk_size):
   process_env["CLUSTERING_ALGORITHM"] = "DisjointClusters"
   #process_env["CLUSTERING_ALGORITHM"] = "Partitioner"
 
-  # not sure if using "--cache_binary_tables" is a good idea.
-  # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
-  # this might influence subsequent benchmarks (e.g. via pruning)
-  #output_file = f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"
   p = Popen(
             [benchmark.exec_path(), "--benchmark", benchmark.name(), "--dont_cache_binary_tables", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size)],
             env=process_env,
@@ -39,11 +35,8 @@ def run_benchmark(benchmark, config_name, chunk_size):
             stdin=sys.stdin,
             stderr=sys.stderr
         )
-  p.wait()  
-    
+  p.wait()
 
-
-  
   #visualization_path = f"visualizations/final/{benchmark.name()}/sf{benchmark.scale()}-3d-corrected/{config_name}_{chunk_size}"
   #if not os.path.exists(visualization_path):
   #  os.makedirs(visualization_path)
@@ -59,6 +52,8 @@ def run_benchmark(benchmark, config_name, chunk_size):
 
   for file in glob.glob(data_path + "/*.csv*"):
     shutil.move(file, target_path + '/' + os.path.basename(file))
+
+  shutil.copyfile('clustering_config.json', f'{target_path}/clustering_config.json')
 
 def build_sort_order_string(sort_order_per_table):
   return json.dumps(sort_order_per_table)

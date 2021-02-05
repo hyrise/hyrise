@@ -90,11 +90,12 @@ class OperatorFeatureExporter {
                                                      {"RUNTIME_NS", DataType::Long, false},
                                                      {"COLUMN_TYPE", DataType::String, false},
                                                      {"OPERATOR_IMPLEMENTATION", DataType::String, true},
-                                                     {"INPUT_COLUMN_SORTED", DataType::String, true},
+                                                     {"INPUT_COLUMN_SORTED", DataType::Int, true},
                                                      {"QUERY_HASH", DataType::String, true},
                                                      {"INPUT_CHUNKS", DataType::Long, false},
                                                      {"GROUP_COLUMNS", DataType::Int, false},
-                                                     {"AGGREGATE_COLUMNS", DataType::Int, false}},
+                                                     {"AGGREGATE_COLUMNS", DataType::Int, false},
+                                                     {"GROUP_COlUMN_NAMES", DataType::String, false}},
                               TableType::Data);
 
   const std::shared_ptr<Table> _scan_output_table =

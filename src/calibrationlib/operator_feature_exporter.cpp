@@ -181,7 +181,7 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
   const auto& operator_info = _general_operator_information(op);
   const auto node = op->lqp_node;
   const auto aggregate_node = static_pointer_cast<const AggregateNode>(node);
-  pmr_string input_sorted = "No";
+  bool input_sorted = false;
   pmr_string column_type = "";
 
   if (op->groupby_column_ids().size() == 1) {
@@ -194,13 +194,8 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
       const auto table_name = table_column_information.table_name;
       const auto column_name = table_column_information.column_name;
 
-      if (table_name != "" &&
-          _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name})) {
-        const auto& table = Hyrise::get().storage_manager.get_table(std::string{table_name});
-        auto wrapper = std::make_shared<TableWrapper>(table);
-        wrapper->execute();
-        input_sorted =
-            _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{column_name}));
+      if (table_name != "") {
+        input_sorted = _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name});;
       }
     }
   }
@@ -219,6 +214,22 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
   const auto aggregate_columns = static_cast<int32_t>(op->aggregates().size());
   const auto group_columns = static_cast<int32_t>(op->groupby_column_ids().size());
 
+  std::string group_column_names;
+  for (auto group_by_column_index = 0; group_by_column_index < group_columns; group_by_column_index++) {
+    const auto& group_by_expression = aggregate_node->node_expressions.at(group_by_column_index);
+    if (group_by_expression->type == ExpressionType::LQPColumn) {
+      const auto column_expression = static_pointer_cast<LQPColumnExpression>(group_by_expression);
+      const auto original_node = column_expression->original_node.lock();
+      const auto& table_column_information = _table_column_information(node, column_expression);
+      column_type = table_column_information.column_type;
+      const auto table_name = table_column_information.table_name;
+      const auto column_name = table_column_information.column_name;
+
+      group_column_names += column_name + ",";
+    }
+  }
+  group_column_names = group_column_names.substr(0, group_column_names.length() - 1);
+
   const auto output_row = std::vector<AllTypeVariant>{pmr_string{"Aggregate"},
                                                       operator_info.left_input_rows,
                                                       operator_info.left_input_columns,
@@ -233,7 +244,8 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                       _current_query_hash,
                                                       operator_info.left_input_chunks,
                                                       group_columns,
-                                                      aggregate_columns};
+                                                      aggregate_columns,
+                                                      pmr_string{group_column_names}};
   _aggregate_output_table->append(output_row);
 }
 
