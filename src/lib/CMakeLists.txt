@@ -550,7 +550,6 @@ set(
     storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
     storage/vector_compression/bitpacking/bitpacking_compressor.cpp
     storage/vector_compression/bitpacking/bitpacking_compressor.hpp
-    storage/vector_compression/bitpacking/bitpacking_iterator.cpp
     storage/vector_compression/bitpacking/bitpacking_iterator.hpp
     storage/vector_compression/bitpacking/bitpacking_decompressor.cpp
     storage/vector_compression/bitpacking/bitpacking_decompressor.hpp

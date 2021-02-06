@@ -3,7 +3,7 @@
 # Sequential: Measure
 mkdir -p sequential
 ./hyriseBenchmarkTPCH --encoding ../encoding_bitcompression.json --output sequential/bitcompression_result_sequential.json  -r 100 --dont_cache_binary_tables
-./hyriseBenchmarkTPCH --encoding ../encoding_dictionary.json --output sequential/dictionary_result_sequential.json -r 100 --dont_cache_binary_tables
+£
 
 # Sequential: Visualize
 mkdir -p sequential/vis_dict
