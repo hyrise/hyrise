@@ -69,7 +69,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::atomic<uint64_t> _num_finished_tasks{0};
 
   std::vector<int> _random{};
-  int _next_random{};
+  size_t _next_random{};
 };
 
 }  // namespace opossum
