@@ -18,7 +18,6 @@ class BitpackingCompressor : public BaseVectorCompressor {
     
   private:
     uint32_t _find_max_value(const pmr_vector<uint32_t>& vector) const;
-    uint32_t _bit_width(uint32_t number);
 };
 
 }  // namespace opossum

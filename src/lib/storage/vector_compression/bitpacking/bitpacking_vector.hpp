@@ -11,15 +11,12 @@
 
 namespace opossum {
 
-template <typename T>
-using pmr_bitpacking_vector = compact::vector<T, 0, uint64_t, PolymorphicAllocator<uint64_t>>;
-
 class BitpackingVector : public CompressedVector<BitpackingVector> {
  public:
-  explicit BitpackingVector(std::shared_ptr<pmr_bitpacking_vector<uint32_t>> data);
+  explicit BitpackingVector(const pmr_bitpacking_vector<uint32_t>& data);
   ~BitpackingVector() override = default;
 
-  const std::shared_ptr<pmr_bitpacking_vector<uint32_t>> data() const;
+  const pmr_bitpacking_vector<uint32_t>& data() const;
 
   size_t on_size() const;
   size_t on_data_size() const;
@@ -35,7 +32,7 @@ class BitpackingVector : public CompressedVector<BitpackingVector> {
  private:
   friend class BitpackingDecompressor;
 
-  const std::shared_ptr<pmr_bitpacking_vector<uint32_t>> _data;
+  const pmr_bitpacking_vector<uint32_t> _data;
 };
 
 }  // namespace opossum

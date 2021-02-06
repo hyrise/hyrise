@@ -3,12 +3,12 @@
 
 namespace opossum {
 
-BitpackingVector::BitpackingVector(std::shared_ptr<pmr_bitpacking_vector<uint32_t>> data) : _data{data} {}
+BitpackingVector::BitpackingVector(const pmr_bitpacking_vector<uint32_t>& data) : _data{data} {}
 
-const std::shared_ptr<pmr_bitpacking_vector<uint32_t>> BitpackingVector::data() const { return _data; }
+const pmr_bitpacking_vector<uint32_t>& BitpackingVector::data() const { return _data; }
 
-size_t BitpackingVector::on_size() const { return _data->size(); }
-size_t BitpackingVector::on_data_size() const { return sizeof(uint32_t) * _data->size(); }
+size_t BitpackingVector::on_size() const { return _data.size(); }
+size_t BitpackingVector::on_data_size() const { return _data.bytes(); }
 
 std::unique_ptr<BaseVectorDecompressor> BitpackingVector::on_create_base_decompressor() const {
   return std::make_unique<BitpackingDecompressor>(*this);
@@ -18,13 +18,13 @@ BitpackingDecompressor BitpackingVector::on_create_decompressor() const { return
 
 BitpackingIterator BitpackingVector::on_begin() const { return BitpackingIterator(on_create_decompressor(), 0u);}
 
-BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(on_create_decompressor(), _data->size()); }
+BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(on_create_decompressor(), _data.size()); }
 
 std::unique_ptr<const BaseCompressedVector> BitpackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto data_copy = std::make_shared<pmr_bitpacking_vector<uint32_t>>(_data->used_bits(), alloc);
-  for (int i = 0; i < _data->size(); i++) {
-    (*data_copy)[i] = (*_data)[i];
+  auto data_copy = pmr_bitpacking_vector<uint32_t>(_data.used_bits(), _data.size(), alloc);
+  for (int i = 0; i < _data.size(); i++) {
+    data_copy[i] = _data[i];
   }
   return std::make_unique<BitpackingVector>(data_copy);
 }
