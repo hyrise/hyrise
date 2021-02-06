@@ -2,19 +2,23 @@
 
 namespace opossum {
 
-BitpackingIterator::BitpackingIterator(BitpackingDecompressor&& decompressor, const size_t absolute_index)
-    : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
-
-BitpackingIterator::BitpackingIterator(const BitpackingIterator& other)
-    : _decompressor{BitpackingDecompressor(other._decompressor)}, _absolute_index{other._absolute_index} {}
-
-BitpackingIterator::BitpackingIterator(BitpackingIterator&& other) noexcept
-    : _decompressor{std::move(other._decompressor)}, _absolute_index{other._absolute_index} {}
+  BitpackingIterator::BitpackingIterator(const pmr_bitpacking_vector<uint32_t>& data, const size_t absolute_index) : _data{data}, _absolute_index{absolute_index}
+  {
+    
+  }
 
 BitpackingIterator& BitpackingIterator::operator=(const BitpackingIterator& other) {
   if (this == &other) return *this;
 
-  _decompressor = BitpackingDecompressor(other._decompressor);
+  DebugAssert(&_data == &other._data, "Cannot reassign BitpackingIterator");
+  _absolute_index = other._absolute_index;
+  return *this;
+}
+
+BitpackingIterator& BitpackingIterator::operator=(BitpackingIterator&& other) {
+  if (this == &other) return *this;
+
+  DebugAssert(&_data == &other._data, "Cannot reassign BitpackingIterator");
   _absolute_index = other._absolute_index;
   return *this;
 }
@@ -36,7 +40,7 @@ std::ptrdiff_t BitpackingIterator::distance_to(const BitpackingIterator& other) 
 }
 
 uint32_t BitpackingIterator::dereference() const { 
-  return _decompressor.get(_absolute_index); 
+  return _data[_absolute_index]; 
 }  // NOLINT
 
 }  // namespace opossum

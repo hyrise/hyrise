@@ -4,6 +4,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <valgrind/callgrind.h>
 
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
@@ -178,5 +179,8 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
+  CALLGRIND_START_INSTRUMENTATION;
   benchmark_runner->run();
+  CALLGRIND_STOP_INSTRUMENTATION;
+
 }

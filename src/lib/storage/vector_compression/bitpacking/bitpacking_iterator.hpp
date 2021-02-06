@@ -15,12 +15,12 @@ namespace opossum {
 class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterator> {
 
  public:
-  explicit BitpackingIterator(BitpackingDecompressor&& decompressor, const size_t absolute_index = 0u);
-  BitpackingIterator(const BitpackingIterator& other);
-  BitpackingIterator(BitpackingIterator&& other) noexcept;
+  explicit BitpackingIterator(const pmr_bitpacking_vector<uint32_t>& data, const size_t absolute_index = 0u);
+  BitpackingIterator(const BitpackingIterator& other) = default;
+  BitpackingIterator(BitpackingIterator&& other) = default;
 
   BitpackingIterator& operator=(const BitpackingIterator& other);
-  BitpackingIterator& operator=(BitpackingIterator&& other) = default;
+  BitpackingIterator& operator=(BitpackingIterator&& other);
 
   ~BitpackingIterator() = default;
 
@@ -35,7 +35,7 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
   uint32_t dereference() const;
 
  private:
-  mutable BitpackingDecompressor _decompressor;
+  const pmr_bitpacking_vector<uint32_t>& _data;
   size_t _absolute_index;
 };
 

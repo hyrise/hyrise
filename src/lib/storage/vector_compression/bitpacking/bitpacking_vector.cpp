@@ -16,9 +16,9 @@ std::unique_ptr<BaseVectorDecompressor> BitpackingVector::on_create_base_decompr
 
 BitpackingDecompressor BitpackingVector::on_create_decompressor() const { return BitpackingDecompressor(*this); }
 
-BitpackingIterator BitpackingVector::on_begin() const { return BitpackingIterator(on_create_decompressor(), 0u);}
+BitpackingIterator BitpackingVector::on_begin() const { return BitpackingIterator(_data, 0u);}
 
-BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(on_create_decompressor(), _data.size()); }
+BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(_data, _data.size()); }
 
 std::unique_ptr<const BaseCompressedVector> BitpackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
