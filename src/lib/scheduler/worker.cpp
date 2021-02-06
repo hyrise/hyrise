@@ -36,8 +36,8 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_i
     : _queue(queue), _id(id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
-  std::iota(_random.begin(), _random.end());
-  std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}});
+  std::iota(_random.begin(), _random.end(), 0);
+  std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
 }
 
 WorkerID Worker::id() const { return _id; }
