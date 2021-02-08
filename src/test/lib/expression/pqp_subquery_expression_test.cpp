@@ -28,26 +28,28 @@ class PQPSubqueryExpressionTest : public BaseTest {
     _a = PQPColumnExpression::from_table(*_table, "a");
     _b = PQPColumnExpression::from_table(*_table, "b");
 
-    // Create PQPSubqueryExpression
-    //  Build a PQP WITHOUT PARAMETERS
-    const auto get_table1 = std::make_shared<GetTable>(_table_name);
-    _pqp = std::make_shared<TableScan>(get_table1, greater_than_(_a, 5));
+    // Create PQPSubqueryExpression without parameters
+    {
+      const auto get_table = std::make_shared<GetTable>(_table_name);
+      // TableScan (a > 5)
+      _pqp = std::make_shared<TableScan>(get_table, greater_than_(_a, 5));
 
-    _pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(_pqp);
+      _pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(_pqp);
+    }
 
-    // Create PQPSubqueryExpression with Parameter
-    //  Build a PQP with ONE PARAMETER returning a SINGLE NON-NULLABLE VALUE
-    //  (1) GetTable
-    const auto get_table2 = std::make_shared<GetTable>(_table_name);
-    //  (2) Projection: a + ?
-    const auto parameter0 = placeholder_(ParameterID{0});
-    const auto projection = std::make_shared<Projection>(get_table2, expression_vector(add_(_a, parameter0)));
-    //  (3) Limit
-    _pqp_with_param = std::make_shared<Limit>(projection, value_(1));
-    _parameters = {std::make_pair(ParameterID{2}, ColumnID{3})};
+    // Create PQPSubqueryExpression with parameter
+    {
+      // Build a PQP with one parameter returning a SINGLE NON-NULLABLE VALUE
+      const auto get_table = std::make_shared<GetTable>(_table_name);
+      // Projection (a + ?)
+      const auto parameter = placeholder_(ParameterID{0});
+      const auto projection = std::make_shared<Projection>(get_table, expression_vector(add_(_a, parameter)));
+      _pqp_with_param = std::make_shared<Limit>(projection, value_(1));
 
-    _pqp_subquery_expression_with_param =
-        std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, _parameters);
+      _parameters = {std::make_pair(ParameterID{0}, ColumnID{0})};
+      _pqp_subquery_expression_with_param =
+          std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, _parameters);
+    }
   }
 
  protected:
@@ -67,16 +69,16 @@ TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
   EXPECT_EQ(*_pqp_subquery_expression_with_param, *_pqp_subquery_expression_with_param);
 
   // different parameters:
-  const auto parameters_b = PQPSubqueryExpression::Parameters{std::make_pair(ParameterID{2}, ColumnID{2})};
+  const auto parameters_b = PQPSubqueryExpression::Parameters{std::make_pair(ParameterID{0}, ColumnID{2})};
   const auto subquery_different_parameter =
       std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, parameters_b);
-  EXPECT_NE(*_pqp_subquery_expression, *subquery_different_parameter);
+  EXPECT_NE(*_pqp_subquery_expression_with_param, *subquery_different_parameter);
 
   // different PQP:
   const auto pqp_without_limit = _pqp_with_param->mutable_left_input();
   const auto subquery_different_lqp =
       std::make_shared<PQPSubqueryExpression>(pqp_without_limit, DataType::Int, false, _parameters);
-  EXPECT_NE(*_pqp_subquery_expression, *subquery_different_lqp);
+  EXPECT_NE(*_pqp_subquery_expression_with_param, *subquery_different_lqp);
 }
 
 TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
@@ -86,8 +88,8 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
   ASSERT_TRUE(_pqp_subquery_expression_with_param_copy);
 
   ASSERT_EQ(_pqp_subquery_expression_with_param_copy->parameters.size(), 1u);
-  EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].first, ParameterID{2});
-  EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].second, ColumnID{3});
+  EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].first, ParameterID{0});
+  EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].second, ColumnID{0});
   EXPECT_NE(_pqp_subquery_expression_with_param_copy->pqp, _pqp_subquery_expression_with_param->pqp);
   EXPECT_EQ(_pqp_subquery_expression_with_param_copy->pqp->type(), OperatorType::Limit);
 
@@ -124,7 +126,7 @@ TEST_F(PQPSubqueryExpressionTest, RequiresCalculation) {
 }
 
 TEST_F(PQPSubqueryExpressionTest, DataType) {
-  // Subquerie returning tables don't have a data type
+  // Subqueries returning tables don't have a data type
   EXPECT_ANY_THROW(_pqp_subquery_expression->data_type());
   EXPECT_EQ(_pqp_subquery_expression_with_param->data_type(), DataType::Int);
   const auto subquery_float =
