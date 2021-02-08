@@ -63,7 +63,7 @@ void AbstractOperator::execute() {
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
   if (_executed) return;
-  Assert((!_output), "Unexpected re-execution of an operator.");
+  Assert(!_output, "Unexpected re-execution of an operator.");
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
@@ -166,7 +166,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const { return _outp
 void AbstractOperator::clear_output() {
   Assert(_executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (_clear_output) _output = nullptr;
+  if (!_never_clear_output) _output = nullptr;
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
@@ -208,7 +208,7 @@ void AbstractOperator::deregister_consumer() {
   if (_consumer_count == 0) clear_output();
 }
 
-void AbstractOperator::never_clear_output() { _clear_output = false; }
+void AbstractOperator::never_clear_output() { _never_clear_output = true; }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 

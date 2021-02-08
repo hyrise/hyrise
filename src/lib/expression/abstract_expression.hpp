@@ -79,9 +79,6 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   std::shared_ptr<AbstractExpression> deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
-  virtual std::shared_ptr<AbstractExpression> _on_deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
-
   /**
    * @return the expression's column name or, optionally, a more detailed description of the expression
    */
@@ -131,6 +128,9 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual size_t _shallow_hash() const;
 
   virtual bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
+
+  virtual std::shared_ptr<AbstractExpression> _on_deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
 
   /**
    * Used internally in _enclose_argument to put parentheses around expression arguments if they have a lower

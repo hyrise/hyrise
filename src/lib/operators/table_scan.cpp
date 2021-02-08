@@ -246,7 +246,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
   auto arguments_count = predicate->arguments.size();
   auto materialized_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   materialized_arguments.reserve(arguments_count);
-  int computed_subqueries_count = 0;
+  auto computed_subqueries_count = int{0};
 
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
