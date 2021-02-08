@@ -68,8 +68,8 @@ enum class OperatorType {
  *
  * CONSUMER TRACKING
  *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
- *  operators register for consumption at input operators from their constructor. After having executed, operators
- *  automatically deregister from their input operators.
+ *  an operator registers as a consumer at all of its input operators. After having executed, an operator deregisters
+ *  automatically.
  *
  *  Pleate note: This abstract class handles consumer registration/deregistration for input operators only.
  *               Operators that consume subqueries, such as TableScan and Projection, have to register and
@@ -210,8 +210,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic<int16_t> _consumer_count = 0;
 
-  // Determines whether operator results are cleared automatically based on consumer count tracking.
-  bool _never_clear_output = true;
+  // Determines whether operator results can be cleared via clear_output().
+  bool _never_clear_output = false;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

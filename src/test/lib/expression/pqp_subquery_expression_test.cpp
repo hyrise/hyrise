@@ -37,9 +37,9 @@ class PQPSubqueryExpressionTest : public BaseTest {
       _pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(_pqp);
     }
 
-    // Create PQPSubqueryExpression with parameter
+    // Create PQPSubqueryExpression with parameters
     {
-      // Build a PQP with one parameter returning a SINGLE NON-NULLABLE VALUE
+      // Build a PQP with one parameter returning a single non-nullable value
       const auto get_table = std::make_shared<GetTable>(_table_name);
       // Projection (a + ?)
       const auto parameter = placeholder_(ParameterID{0});
