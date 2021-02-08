@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-template <typename T>
-using pmr_bitpacking_vector = compact::vector<T, 0, uint64_t, PolymorphicAllocator<uint64_t>>;
+template <typename T, unsigned B>
+using pmr_bitpacking_vector = compact::vector<T, B, uint64_t, PolymorphicAllocator<uint64_t>>;
 
 }  // namespace opossum

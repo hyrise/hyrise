@@ -5,17 +5,18 @@
 
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
-#include "bitpacking_decompressor.hpp"
+#include "bitpacking_vector.hpp"
 
 #include "vector_types.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
 
+
 class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterator> {
 
  public:
-  explicit BitpackingIterator(const pmr_bitpacking_vector<uint32_t>& data, const size_t absolute_index = 0u) : _data{data}, _absolute_index{absolute_index}
+  explicit BitpackingIterator(const BitpackingVector& vector, const size_t absolute_index = 0u) : _vector{vector}, _absolute_index{absolute_index}
   {
     
   }
@@ -26,7 +27,7 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
   BitpackingIterator& operator=(const BitpackingIterator& other) {
     if (this == &other) return *this;
 
-    DebugAssert(&_data == &other._data, "Cannot reassign BitpackingIterator");
+    DebugAssert(&_vector == &other._vector, "Cannot reassign BitpackingIterator");
     _absolute_index = other._absolute_index;
     return *this;
   }
@@ -34,7 +35,7 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
   BitpackingIterator& operator=(BitpackingIterator&& other) {
     if (this == &other) return *this;
 
-    DebugAssert(&_data == &other._data, "Cannot reassign BitpackingIterator");
+    DebugAssert(&_vector == &other._vector, "Cannot reassign BitpackingIterator");
     _absolute_index = other._absolute_index;
     return *this;
   }
@@ -64,11 +65,11 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
   }
 
   uint32_t dereference() const {
-    return _data[_absolute_index];
+    return _vector.get(_absolute_index);
   };
 
  private:
-  const pmr_bitpacking_vector<uint32_t>& _data;
+  const BitpackingVector& _vector;
   size_t _absolute_index;
 };
 

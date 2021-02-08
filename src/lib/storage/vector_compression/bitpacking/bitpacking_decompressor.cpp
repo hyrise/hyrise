@@ -5,10 +5,9 @@
 namespace opossum {
 
 BitpackingDecompressor::BitpackingDecompressor(const BitpackingVector& vector)
-    : 
-    _data{vector.data()}
+    : vector{vector}
       {
-      
+        
       }
 
 }  // namespace opossum
