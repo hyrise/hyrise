@@ -12,12 +12,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_sort_merge.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -33,7 +31,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 1.0f;
+    const auto scale_factor = 0.01f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -303,33 +301,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
-}
-
-  BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state) {
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  auto& sm = Hyrise::get().storage_manager;
-  auto orders_table = sm.get_table("orders");
-  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
-                                       orders_table->column_is_nullable(ColumnID{0}), "");
-  auto int_predicate =
-      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
-  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
-  table_scan->execute();
-  auto runs = 10'000;
-  auto t = std::vector<OperatorJoinPredicate>{OperatorJoinPredicate{{ColumnID{1}, ColumnID{0}}, PredicateCondition::NotEquals}};
-  std::cout << "starting: " << std::endl;
-  for (int i = 0; i < runs; i++) {
-    std::cout << "-> run: " << i << std::endl;
-    for (auto _ : state) {
-      auto join = std::make_shared<JoinSortMerge>(
-          table_scan, _table_wrapper_map.at("lineitem"), JoinMode::FullOuter,
-          OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::GreaterThan},
-          t);
-      join->execute();
-      std::cout << join->get_output()->row_count() << " rows" << std::endl;
-    }
-  }
-  Hyrise::get().scheduler()->finish();
 }
 
 }  // namespace opossum

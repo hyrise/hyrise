@@ -208,11 +208,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    return size_t{64};
-    // size_t chunk_count_left = _sort_merge_join.left_input_table()->chunk_count();
-    // size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
-    // return static_cast<size_t>(
-    //     std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
+    size_t chunk_count_left = _sort_merge_join.left_input_table()->chunk_count();
+    size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
+    return static_cast<size_t>(
+        std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
   }
 
   /**
@@ -805,8 +804,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _left_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
 
-      // const auto merge_row_count =
-      //     (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
+      const auto merge_row_count =
+          (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
       const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
@@ -819,11 +818,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
 
-      // if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
+      if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
         jobs.push_back(std::make_shared<JobTask>(join_cluster_task));
-      // } else {
-      //   join_cluster_task();
-      // }
+      } else {
+        join_cluster_task();
+      }
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
