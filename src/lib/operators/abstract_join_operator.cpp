@@ -40,10 +40,11 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
 
 std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   const auto column_name = [&](const auto from_left, const auto column_id) {
-    const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
-    if (input_table) {
-      // Input table is still available, use name from there
-      return input_table->column_name(column_id);
+    const auto executed = from_left ? _left_input->executed() : _right_input->executed();
+    if (executed) {
+      const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
+      // If input table is still available, use name from there
+      if (input_table) return input_table->column_name(column_id);
     }
 
     if (lqp_node) {

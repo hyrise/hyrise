@@ -51,7 +51,10 @@ AbstractOperator::~AbstractOperator() {
 
 OperatorType AbstractOperator::type() const { return _type; }
 
-bool AbstractOperator::executed() const { return _executed; }
+bool AbstractOperator::executed() const {
+  DebugAssert(_executed || !_output, "Did not expect to see an output for an unexecuted operator.");
+  return _executed;
+}
 
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
@@ -161,7 +164,10 @@ void AbstractOperator::execute() {
   }
 }
 
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  Assert(_executed, "Empty output because operator did not execute yet.");
+  return _output;
+}
 
 void AbstractOperator::clear_output() {
   Assert(_executed, "Unexpected call of clear_output() since operator did not execute yet.");
@@ -267,8 +273,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
     fn_stream << op->description();
 
     // If the operator was already executed, print some info about data and performance
-    const auto output = op->get_output();
-    if (output) {
+    if (op->executed() && op->get_output()) {
+      const auto output = op->get_output();
       fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
                 << output->column_count() << " column(s)/";
 
