@@ -30,8 +30,10 @@ class TableScan : public AbstractReadOnlyOperator {
 
   /**
    * Create the TableScanImpl based on the predicate type. Public for testing purposes.
+   * Resolves uncorrelated subqueries, caches their results in the ExpressionEvaluator or a new predicate, and
+   * deregisters accordingly.
    */
-  std::unique_ptr<AbstractTableScanImpl> create_impl() const;
+  std::unique_ptr<AbstractTableScanImpl> create_impl();
 
   /**
    * @brief If set, the specified chunks will not be scanned.
@@ -79,7 +81,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
   // Turns top-level uncorrelated subqueries into their value, e.g. `a = (SELECT 123)` becomes `a = 123`. This makes it
   // easier to avoid using the more expensive ExpressionEvaluatorTableScanImpl.
-  static std::shared_ptr<const AbstractExpression> _resolve_uncorrelated_subqueries(
+  std::shared_ptr<const AbstractExpression> _resolve_uncorrelated_subqueries(
       const std::shared_ptr<const AbstractExpression>& predicate);
 
  private:

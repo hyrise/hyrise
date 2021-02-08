@@ -52,9 +52,12 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
   auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
     if (subquery_expression->is_correlated()) continue;
-
-    // Register as consumer and keep a pointer to the subquery so that we can deregister ourselves later without
-    // having to traverse the PQP again
+    /**
+     * Uncorrelated subqueries will be resolved after TableScan::create_impl got called. Therefore, we
+     * 1. register as a consumer.
+     * 2. We also store a pointer because we may want to populate the ExpressionEvaluator's cache with the results of
+     *    these uncorrelated subqueries.
+     */
     subquery_expression->pqp->register_consumer();
     _uncorrelated_subquery_expressions.push_back(subquery_expression);
   }
@@ -242,17 +245,20 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     return predicate;
   }
 
-  // (1) Materialize uncorrelated subqueries
+  /**
+   * (1) Create arguments for new predicate
+   *      - resolve arguments of type uncorrelated subquery, and create ValueExpressions from the results
+   *      - create deep copies for all other arguments
+   */
   auto arguments_count = predicate->arguments.size();
-  auto materialized_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
-  materialized_arguments.reserve(arguments_count);
+  auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
+  new_arguments.reserve(arguments_count);
   auto computed_subqueries_count = int{0};
 
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
     if (!subquery || subquery->is_correlated()) {
-      // Instead, create a deep copy of the argument
-      materialized_arguments.emplace_back(predicate->arguments.at(argument_idx)->deep_copy());
+      new_arguments.emplace_back(predicate->arguments.at(argument_idx)->deep_copy());
       continue;
     }
 
@@ -265,41 +271,46 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    materialized_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
+    new_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
 
     // Deregister, because we obtained the subquery result and no longer need the subquery plan.
     subquery->pqp->deregister_consumer();
     computed_subqueries_count++;
   }
+  DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
+  DebugAssert(static_cast<int>(_uncorrelated_subquery_expressions.size()) == computed_subqueries_count,
+              "Expected to resolve all uncorrelated subqueries.");
 
   // Return original predicate if we did not compute any subquery results
   if (computed_subqueries_count == 0) return predicate;
 
-  // (2) Create new predicate from materialized subquery results
-  DebugAssert(materialized_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
+  /**
+   * (2) Create new predicate with arguments from step (1)
+   */
   if (auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate)) {
-    auto left_operand = materialized_arguments.at(0);
-    auto right_operand = materialized_arguments.at(1);
+    auto left_operand = new_arguments.at(0);
+    auto right_operand = new_arguments.at(1);
     DebugAssert(left_operand && right_operand, "Unexpected null pointer.");
     return std::make_shared<BinaryPredicateExpression>(binary_predicate->predicate_condition, left_operand,
                                                        right_operand);
   }
   if (auto between_predicate = std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
-    auto value = materialized_arguments.at(0);
-    auto lower_bound = materialized_arguments.at(1);
-    auto upper_bound = materialized_arguments.at(2);
+    auto value = new_arguments.at(0);
+    auto lower_bound = new_arguments.at(1);
+    auto upper_bound = new_arguments.at(2);
     DebugAssert(value && lower_bound && upper_bound, "Unexpected null pointer.");
     return std::make_shared<BetweenExpression>(between_predicate->predicate_condition, value, lower_bound, upper_bound);
   }
   if (auto is_null_predicate = std::dynamic_pointer_cast<const IsNullExpression>(predicate)) {
-    auto operand = materialized_arguments.at(0);
+    auto operand = new_arguments.at(0);
     DebugAssert(operand, "Unexpected null pointer.");
     return std::make_shared<IsNullExpression>(is_null_predicate->predicate_condition, operand);
   }
+
   Fail("Unexpected predicate type");
 }
 
-std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
+std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.

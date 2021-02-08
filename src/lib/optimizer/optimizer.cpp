@@ -81,10 +81,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  // The LQPTranslator deduplicates operator plans to avoid performing the same computation twice (see
-  // LQPTranslator::translate_node). The StoredTableColumnAlignmentRule supports this effort by aligning the list of
-  // pruned column ids across nodes that could become deduplicated. For this, the ColumnPruningRule needs to have
-  // been executed.
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired

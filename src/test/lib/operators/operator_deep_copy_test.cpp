@@ -250,7 +250,10 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
-  // Uncorrelated subquery shares part of the root PQP (compare TPC-H Q11)
+  /**
+   * In this test, we check whether deep copies preserve deduplication for
+   *  uncorrelated subqueries that share a part of the root PQP. Similar to TPC-H Q11.
+   */
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);
 
@@ -273,7 +276,10 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
-  // Uncorrelated subqueries share parts of their PQP among each other (compare TPC-DS Q9)
+  /**
+   * In this test, we check whether deep copies preserve deduplication for
+   *  uncorrelated subqueries that share parts of their PQP among each other. Similar to TPC-DS Q9.
+   */
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);
 

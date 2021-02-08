@@ -71,10 +71,10 @@ enum class OperatorType {
  *  an operator registers as a consumer at all of its input operators. After having executed, an operator deregisters
  *  automatically.
  *
- *  Pleate note: This abstract class handles consumer registration/deregistration for input operators only.
+ *  WARNING:     This abstract class handles consumer registration/deregistration for input operators only.
  *               Operators that consume subqueries, such as TableScan and Projection, have to register and
  *               deregister as consumers for those manually.
- *               It is crucial to call register_consumer() as early as possible, meaning from the constructor, to
+ *               It is crucial to call register_consumer() from the constructor, before the execution starts, to
  *               prevent subquery results from being cleared too early. Otherwise, operators may need to re-execute,
  *               which is illegal.
  *
@@ -106,7 +106,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    * AUTOMATIC CLEARING
    *  This function is called automatically by the last consuming operator on deregistration. Note, however, that
    *  top-level operators do not have any consuming operators. Therefore, owning instances, such as
-   *  SQLPipelineStatement, have to manually call clear_output() on top-level operators.
+   *  SQLPipelineStatement, have to call clear_output() manually or register as consumers themselves.
    */
   void clear_output();
 
@@ -208,7 +208,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   // We track the number of consuming operators to automate the clearing of operator results.
-  std::atomic<int16_t> _consumer_count = 0;
+  std::atomic<int> _consumer_count = 0;
 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
