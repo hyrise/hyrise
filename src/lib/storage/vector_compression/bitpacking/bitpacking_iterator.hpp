@@ -5,18 +5,17 @@
 
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
+#include "bitpacking_decompressor.hpp"
 
 #include "vector_types.hpp"
 #include "utils/performance_warning.hpp"
-#include "compact_static_vector.hpp"
 
 namespace opossum {
-
 
 class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterator> {
 
  public:
-  explicit BitpackingIterator(const CompactStaticVector& data, const size_t absolute_index = 0u) : _data{data}, _absolute_index{absolute_index}
+  explicit BitpackingIterator(const pmr_bitpacking_vector<uint32_t>& data, const size_t absolute_index = 0u) : _data{data}, _absolute_index{absolute_index}
   {
     
   }
@@ -65,11 +64,11 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
   }
 
   uint32_t dereference() const {
-    return _data.get(_absolute_index);
+    return _data[_absolute_index];
   };
 
  private:
-  const CompactStaticVector& _data;
+  const pmr_bitpacking_vector<uint32_t>& _data;
   size_t _absolute_index;
 };
 

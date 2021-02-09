@@ -551,7 +551,6 @@ set(
     storage/vector_compression/bitpacking/bitpacking_compressor.cpp
     storage/vector_compression/bitpacking/bitpacking_compressor.hpp
     storage/vector_compression/bitpacking/bitpacking_iterator.hpp
-    storage/vector_compression/bitpacking/compact_static_vector.hpp
     storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
     storage/vector_compression/bitpacking/bitpacking_vector.hpp
     storage/vector_compression/bitpacking/bitpacking_vector.cpp
