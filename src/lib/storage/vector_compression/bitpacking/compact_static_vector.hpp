@@ -40,10 +40,10 @@ namespace opossum {
             case 29: data29 = pmr_bitpacking_vector<uint32_t,29>(alloc); break;
             case 30: data30 = pmr_bitpacking_vector<uint32_t,30>(alloc); break;
             case 31: data31 = pmr_bitpacking_vector<uint32_t,31>(alloc); break;
-            case 32: data32 = pmr_bitpacking_vector<uint32_t,32>(alloc); break;
-            default: std::cerr << "unexpected b=" << _b << std::endl; break;
+            default: print_error(); break;
           }
       }
+
 
       size_t b() const {
         return _b;
@@ -82,8 +82,7 @@ namespace opossum {
             case 29: data29.push_back(value); break;
             case 30: data30.push_back(value); break;
             case 31: data31.push_back(value); break;
-            case 32: data32.push_back(value); break;
-            default: std::cerr << "unexpected b=" << _b << std::endl; break;
+            default: print_error(); break;
         }
       }
 
@@ -120,8 +119,7 @@ namespace opossum {
             case 29: return data29.size();
             case 30: return data30.size();
             case 31: return data31.size();
-            case 32: return data32.size();
-            default: std::cerr << "unexpected b=" << _b << std::endl; return 0;
+            default: print_error(); return 0;
         }
       }
 
@@ -158,8 +156,7 @@ namespace opossum {
             case 29: return data29.bytes();
             case 30: return data30.bytes();
             case 31: return data31.bytes();
-            case 32: return data32.bytes();
-            default: std::cerr << "unexpected b=" << _b << std::endl; return 0;
+            default: print_error(); return 0;
         }
       }
 
@@ -196,9 +193,12 @@ namespace opossum {
             case 29: return data29[i];
             case 30: return data30[i];
             case 31: return data31[i];
-            case 32: return data32[i];
-            default: std::cerr << "unexpected b=" << _b << std::endl; return 0;
+            default: print_error(); return 0;
         }
+      }
+
+      void print_error() const {
+         std::cout << "error" << std::endl;
       }
 
     private:
@@ -235,6 +235,5 @@ namespace opossum {
       pmr_bitpacking_vector<uint32_t, 29> data29;
       pmr_bitpacking_vector<uint32_t, 30> data30;
       pmr_bitpacking_vector<uint32_t, 31> data31;
-      pmr_bitpacking_vector<uint32_t, 32> data32;
   };
 } // namespace Opposum
