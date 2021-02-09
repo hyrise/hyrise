@@ -70,12 +70,11 @@ enum class OperatorType {
  *  an operator registers as a consumer at all of its input operators. After having executed, an operator deregisters
  *  automatically.
  *
- *  WARNING:     This abstract class handles consumer registration/deregistration for input operators only.
- *               Operators that consume subqueries, such as TableScan and Projection, have to register and
- *               deregister as consumers for those manually.
- *               It is crucial to call register_consumer() from the constructor, before the execution starts, to
- *               prevent subquery results from being cleared too early. Otherwise, operators may need to re-execute,
- *               which is illegal.
+ *  WARNING on handling Subqueries:
+ *   This abstract class handles consumer registration/deregistration for input operators only. Operators that consume
+ *   subqueries, such as TableScan and Projection, have to register and deregister as consumers for those manually.
+ *   It is crucial to call register_consumer() from the constructor, before the execution starts, to prevent subquery
+ *   results from being cleared too early. Otherwise, operators may need to re-execute, which is illegal.
  *
  * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
  */
