@@ -284,14 +284,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                 << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-      fn_stream << "/";
-      if (abstract_operator.executed()) {
-        fn_stream << "Executed. ";
-        fn_stream << *abstract_operator.performance_data;
-      } else {
-        fn_stream << "Not executed.";
-      }
-      fn_stream << ")";
+      fn_stream << "/" << *abstract_operator.performance_data << ")";
     }
   };
 
