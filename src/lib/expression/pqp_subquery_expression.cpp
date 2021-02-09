@@ -52,7 +52,7 @@ bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
   DebugAssert(dynamic_cast<const PQPSubqueryExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other = static_cast<const PQPSubqueryExpression&>(expression);
-  return pqp == other.pqp && parameters == parameters;
+  return pqp == other.pqp && parameters == other.parameters;
 }
 
 size_t PQPSubqueryExpression::_shallow_hash() const {
