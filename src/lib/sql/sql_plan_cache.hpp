@@ -12,8 +12,10 @@ namespace opossum {
 class AbstractOperator;
 class AbstractLQPNode;
 
+using ParameterizedPlan = PreparedPlan;
+
 using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOperator>>;
-using SQLLogicalPlanCache = GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<PreparedPlan>,
+using SQLLogicalPlanCache = GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<ParameterizedPlan>,
                                       LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
 
 }  // namespace opossum
