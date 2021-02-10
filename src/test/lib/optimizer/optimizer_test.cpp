@@ -57,7 +57,7 @@ TEST_F(OptimizerTest, RequiresOwnership) {
       node_a));
   // clang-format on
 
-  auto optimizer = Optimizer::create_default_optimizer();
+  auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   // Does not move the LQP into the optimizer
   EXPECT_THROW(optimizer->optimize(lqp), std::logic_error);
 }
@@ -278,7 +278,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
 }
 
 TEST_F(OptimizerTest, NonCacheablePlans) {
-  auto optimizer = Optimizer::create_default_optimizer();
+  auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
 
@@ -320,7 +320,7 @@ TEST_F(OptimizerTest, NonCacheablePlans) {
   *cacheable_plan = true;
 
   // Chunk pruning rule should prevent caching
-  auto post_cache_optimizer = Optimizer::create_post_caching_optimizer();
+  auto post_cache_optimizer = Optimizer::create_default_post_caching_optimizer();
   // clang-format off
   auto prunable_lqp =
     PredicateNode::make(equals_(d_a, 1234),

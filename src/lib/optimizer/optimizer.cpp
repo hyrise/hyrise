@@ -35,7 +35,7 @@ namespace opossum {
  * optimization costs reasonable.
  */
 
-std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
+std::shared_ptr<Optimizer> Optimizer::create_default_post_caching_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
   // Some rules may prevent caching/safe reuse of the optimized plan. (see prevents_caching() of each rule for
   // detailed explanation).
@@ -47,7 +47,7 @@ std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   return optimizer;
 }
 
-std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
+std::shared_ptr<Optimizer> Optimizer::create_default_pre_caching_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());

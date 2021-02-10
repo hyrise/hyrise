@@ -150,7 +150,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
 TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
-  const auto optimizer = Optimizer::create_default_optimizer();
+  const auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context

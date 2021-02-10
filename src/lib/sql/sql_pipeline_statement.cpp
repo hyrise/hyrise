@@ -30,7 +30,7 @@ namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
-                                           const std::shared_ptr<Optimizer>& post_caching_optimizer,
+                                           const std::shared_ptr<Optimizer>& default_post_caching_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
@@ -38,7 +38,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _optimizer(optimizer),
-      _post_caching_optimizer(post_caching_optimizer),
+      _default_post_caching_optimizer(default_post_caching_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
@@ -136,7 +136,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
       const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
       _optimized_logical_plan =
-          _post_caching_optimizer->optimize(std::move(*optional_optimized_lqp), optimizer_rule_durations);
+          _default_post_caching_optimizer->optimize(std::move(*optional_optimized_lqp), optimizer_rule_durations);
       const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
       _metrics->optimizer_rule_durations = *optimizer_rule_durations;
@@ -176,7 +176,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   const auto start_post_cache_optimizer = std::chrono::high_resolution_clock::now();
   auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
   _optimized_logical_plan =
-      _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
+      _default_post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan), optimizer_rule_durations);
   const auto done_post_cache_optimizer = std::chrono::high_resolution_clock::now();
 
   _metrics->optimization_duration +=

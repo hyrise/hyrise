@@ -131,7 +131,7 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
   // Expect cache miss
   EXPECT_FALSE(cached_plan_optional);
 
-  auto optimizer = Optimizer::create_default_optimizer();
+  auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
   auto optimized_lqp = optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations, cacheable_plan);
@@ -161,7 +161,7 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, DontEvictSamePlanWithDifferentMvcc
   auto cache_duration = std::chrono::nanoseconds(0);
   auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
 
-  auto optimizer = Optimizer::create_default_optimizer();
+  auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
   auto cacheable_plan = std::make_shared<bool>(true);
   auto optimized_lqp = optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations, cacheable_plan);
