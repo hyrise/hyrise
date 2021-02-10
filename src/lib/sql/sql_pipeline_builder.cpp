@@ -40,10 +40,11 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvc
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_pre_caching_optimizer();
-  auto default_post_caching_optimizer =
-      _default_post_caching_optimizer ? _default_post_caching_optimizer : Optimizer::create_default_post_caching_optimizer();
-  auto pipeline =
-      SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, default_post_caching_optimizer, _pqp_cache, _lqp_cache);
+  auto default_post_caching_optimizer = _default_post_caching_optimizer
+                                            ? _default_post_caching_optimizer
+                                            : Optimizer::create_default_post_caching_optimizer();
+  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, default_post_caching_optimizer,
+                              _pqp_cache, _lqp_cache);
   DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
                 reinterpret_cast<uintptr_t>(this));
   return pipeline;
