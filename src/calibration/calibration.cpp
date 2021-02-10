@@ -86,8 +86,8 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
     lqp_generator.generate(OperatorType::TableScan, table);
   }
-
   lqp_generator.generate_joins(tables);
+  lqp_generator.generate_aggregates(tables);
   const auto lqps = lqp_generator.lqps();
   const auto lqp_count = lqps.size();
 

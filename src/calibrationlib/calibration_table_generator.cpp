@@ -1,7 +1,10 @@
 #include "calibration_table_generator.hpp"
 
 #include <unordered_map>
+#include <sstream>
+#include <iomanip>
 
+#include "operators/export.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -59,7 +62,75 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
       table_wrappers.emplace_back(_generate_sorted_table(calibration_table_wrapper));
     }
   }
+
+  const auto& aggregate_table_wrappers = _generate_aggregate_tables();
+  for (const auto& aggregate_table_wrapper : aggregate_table_wrappers) {
+    table_wrappers.push_back(aggregate_table_wrapper);
+  }
+
   return table_wrappers;
+}
+
+std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_aggregate_tables() const {
+  std::cout << "Generating aggregate tables" << std::endl;
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
+
+  const auto column_definitions = TableColumnDefinitions{{"id", DataType::Long, false}, {"date", DataType::String, false}, {"quantity", DataType::Long, false}};
+  const std::vector<uint64_t> max_date_diffs = {10, 20, 30, 40, 50, 60, 90, 180};
+  std::srand(42);
+
+  constexpr size_t NUM_DIFFERENT_DATES = 2550; // l_shipdate covers dates from 1992 to 1998, i.e., 7 years ~ 2550 days
+  for (const auto max_date_diff : max_date_diffs) {
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    for (size_t id{0}; id < 1'500'000; id++) {
+      const size_t num_entries = (std::rand() % 7) + 1;
+      const auto base_date = (std::rand() % NUM_DIFFERENT_DATES);
+      for (size_t entry_id{0}; entry_id < num_entries; entry_id++) {
+        auto date = (std::rand() % max_date_diff) + base_date;
+        date = std::min(NUM_DIFFERENT_DATES, std::max(0ul, date));
+        std::stringstream ss;
+        ss << std::setw(10) << std::setfill('0') << date;
+        const int64_t quantity = std::rand() % 100;
+
+        table->append(std::vector<AllTypeVariant>{static_cast<int64_t>(id), pmr_string{ss.str()}, quantity});
+      }
+    }
+
+    const auto wrapper = std::make_shared<TableWrapper>(table);
+    wrapper->execute();
+    auto sort = std::make_shared<Sort>(wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Ascending}}, table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+    sort->execute();
+
+    auto sorted_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+      Segments segments;
+      const auto chunk = sort->get_output()->get_chunk(chunk_id);
+      Assert(chunk, "chunk disappeared");
+      for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
+        segments.push_back(chunk->get_segment(column_id));
+      }
+      const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+      sorted_table->append_chunk(segments, mvcc_data);
+      sorted_table->last_chunk()->finalize();
+      sorted_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
+    }
+
+    ChunkEncoder::encode_all_chunks(sorted_table, SegmentEncodingSpec(EncodingType::Dictionary));
+    const auto table_name =  "aggregate_maxdiff" + std::to_string(max_date_diff);
+
+    if (max_date_diff == 10) {
+      const auto w = std::make_shared<TableWrapper>(sorted_table);
+      w->execute();
+      auto exporter = std::make_shared<Export>(w, table_name, FileType::Csv);
+      exporter->execute();
+    }
+
+    const auto calibration_wrapper = std::make_shared<CalibrationTableWrapper>(sorted_table, table_name);
+    tables.push_back(calibration_wrapper);
+  }
+
+  std::cout << "Generated aggregate tables" << std::endl;
+  return tables;
 }
 
 std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_sorted_table(
@@ -77,7 +148,9 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     const auto sort_column_definition = SortColumnDefinition{column_id};
     sort_column_definitions.emplace_back(sort_column_definition);
-    column_data_distributions.emplace_back(original_table->get_column_data_distribution(column_id));
+    if (original_table->has_column_data_distribution()) {
+      column_data_distributions.emplace_back(original_table->get_column_data_distribution(column_id));
+    }
 
     // create a ChunkEncodingSpec for the sorted table
     const auto original_segment = table->get_chunk(ChunkID{0})->get_segment(column_id);

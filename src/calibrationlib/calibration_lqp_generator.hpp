@@ -15,6 +15,7 @@ class CalibrationLQPGenerator {
   CalibrationLQPGenerator();
   void generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table);
   void generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables);
+  void generate_aggregates(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers);
   const std::vector<std::shared_ptr<AbstractLQPNode>>& lqps();
 
  private:

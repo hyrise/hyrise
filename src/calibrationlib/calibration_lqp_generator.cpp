@@ -2,6 +2,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
@@ -20,6 +21,8 @@ using opossum::expression_functional::is_null_;
 using opossum::expression_functional::less_than_;
 using opossum::expression_functional::like_;
 using opossum::expression_functional::not_in_;
+using opossum::expression_functional::min_;
+using opossum::expression_functional::sum_;
 
 namespace opossum {
 void CalibrationLQPGenerator::generate(OperatorType operator_type,
@@ -40,6 +43,10 @@ void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const C
   auto semi_join_build_table_small = _generate_semi_join_build_table(Chunk::DEFAULT_SIZE);
 
   for (const auto& table : tables) {
+    if (table->get_name().find("aggregate") != std::string::npos) {
+      continue;
+    }
+
     if (table->get_name() == std::string("65535_6000000_sorted")) {
       _generate_semi_joins(table, semi_join_build_table_large);
       _generate_semi_joins(table, semi_join_build_table_small);
@@ -157,8 +164,39 @@ void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const C
   }
 }
 
+void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers) {
+  for (const auto& table_wrapper : table_wrappers) {
+    if (table_wrapper->get_name().find("aggregate") == std::string::npos) {
+      continue;
+    }
+
+    const auto table_node = StoredTableNode::make(table_wrapper->get_name());
+    const auto validate_node = ValidateNode::make(table_node);
+
+    const auto group_by_column_expression = std::make_shared<LQPColumnExpression>(table_node, ColumnID{0}); // id
+    const auto aggregate_column_expression = std::make_shared<LQPColumnExpression>(table_node, ColumnID{2}); // quantity
+
+    constexpr size_t MAX_AGGREGATE_COUNT = 5;
+    for (size_t aggregate_count = 1; aggregate_count <= MAX_AGGREGATE_COUNT; aggregate_count++) {
+      std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions;
+      for (size_t aggregate_id = 0; aggregate_id < aggregate_count; aggregate_id++) {
+        aggregate_expressions.push_back(sum_(aggregate_column_expression));
+      }
+
+      const auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<AbstractExpression>>{group_by_column_expression}, aggregate_expressions, validate_node);
+      _generated_lqps.push_back(aggregate_node);
+    }
+  }
+}
+
 void CalibrationLQPGenerator::_generate_table_scans(
     const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
+  // do not generate scans on aggregate tables
+  if (table_wrapper->get_name().find("aggregate") != std::string::npos) {
+    return;
+  }
+
+
   // selectivity resolution determines in how many LQPs with a different selectivity are generated
   // increase this value for providing more training data to the model
   // The resulting LQPs are equally distributed from 0% to 100% selectivity.

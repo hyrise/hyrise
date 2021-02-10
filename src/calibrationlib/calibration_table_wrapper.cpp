@@ -18,6 +18,10 @@ const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const { return
 
 const std::string& CalibrationTableWrapper::get_name() const { return _name; }
 
+bool CalibrationTableWrapper::has_column_data_distribution() const {
+  return _column_data_distribution_collection.size() > 0;
+}
+
 const ColumnDataDistribution CalibrationTableWrapper::get_column_data_distribution(ColumnID id) const {
   return _column_data_distribution_collection.at(id);
 }
