@@ -70,7 +70,7 @@ ParameterizedPlanCacheHandler::_split_lqp_values(const std::shared_ptr<AbstractL
   auto lqp_subplans = lqp_find_subplan_roots(lqp_copy);
 
   auto values = std::vector<std::shared_ptr<AbstractExpression>>();
-  for (auto lqp_subplan : lqp_subplans) {
+  for (auto& lqp_subplan : lqp_subplans) {
     visit_lqp(lqp_subplan, [&values](const auto& node) {
       if (node) {
         for (auto& root_expression : node->node_expressions) {

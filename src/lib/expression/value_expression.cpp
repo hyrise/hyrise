@@ -9,7 +9,7 @@ namespace opossum {
 
 // ValueExpressions that are generated in the SQLTranslator are attributed with unique ValueExpressionIDs in order to
 // keep track of how they might be moved in the LQP during optimization.
-ValueExpression::ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_id)
+ValueExpression::ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_expression_id)
     : AbstractExpression(ExpressionType::Value, {}),
       value(init_value),
       value_expression_id(std::in_place, init_value_expression_id) {}
