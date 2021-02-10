@@ -325,7 +325,7 @@ void prune_projection_node(
 
 }  // namespace
 
-bool ColumnPruningRule::prevents_caching() const { return true; }
+bool ColumnPruningRule::prevents_caching() const { return false; }
 
 void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its

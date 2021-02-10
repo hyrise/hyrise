@@ -56,9 +56,8 @@ class ParameterizedPlanCacheHandlerTest : public BaseTest {
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
   const std::string _parameter_query_a = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
   const std::string _parameter_query_b = "SELECT table_a.a + 8.2 FROM table_a WHERE table_a.a > 23";
+  const std::string _parameter_query_b2 = "SELECT table_a.a + 12.1 FROM table_a WHERE table_a.a > 103";
   const std::string _parameter_query_c = "SELECT table_a.a + 3, (SELECT table_a.b * 2 FROM table_a) AS b FROM table_a";
-  const std::string _non_cacheble_qery_a = "SELECT table_a.a FROM table_a WHERE table_a.a > 5 AND table_a.a < 10";
-  const std::string _non_cacheble_qery_b = "SELECT table_a.a FROM table_a WHERE table_a.a = 5 AND table_a.a = 6";
 };
 
 class ParameterizedPlanCacheHandlerMvccTest : public ParameterizedPlanCacheHandlerTest,
@@ -151,6 +150,45 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
 
   // Expect cache retrieved value to be equal to set value
   EXPECT_LQP_EQ(*cached_plan_optional, optimized_lqp);
+}
+
+TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQPDifferntQuery) {
+  const auto use_mvcc = GetParam();
+
+  auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_b, use_mvcc);
+
+  auto cache_duration = std::chrono::nanoseconds(0);
+  auto cache_handler = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp, cache_duration, use_mvcc);
+
+  auto cached_plan_optional = cache_handler.try_get();
+  // Expect cache miss
+  EXPECT_FALSE(cached_plan_optional);
+
+  auto optimizer = Optimizer::create_default_pre_caching_optimizer();
+  auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
+  auto cacheable_plan = std::make_shared<bool>(true);
+  auto optimized_lqp = optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations, cacheable_plan);
+
+  EXPECT_TRUE(*cacheable_plan);
+  EXPECT_TRUE((use_mvcc == UseMvcc::Yes) == lqp_is_validated(optimized_lqp));
+
+  cache_handler.set(optimized_lqp);
+
+  cached_plan_optional = cache_handler.try_get();
+
+  // Expect cache hit
+  EXPECT_TRUE(cached_plan_optional);
+
+  // request with different unoptimized plan as key.
+  auto unoptimized_lqp_2 = get_unoptimized_logical_plan(_parameter_query_b2, use_mvcc);
+
+  cache_duration = std::chrono::nanoseconds(0);
+  auto cache_handler_2 = ParameterizedPlanCacheHandler(_lqp_cache, unoptimized_lqp_2, cache_duration, use_mvcc);
+
+  cached_plan_optional = cache_handler_2.try_get();
+
+  // Expect cache hit
+  EXPECT_TRUE(cached_plan_optional);
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, DontEvictSamePlanWithDifferentMvcc) {
