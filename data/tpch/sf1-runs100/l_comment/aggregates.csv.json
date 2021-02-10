@@ -76,7 +76,7 @@
             "type": "int"
         },
         {
-            "name": "GROUP_COlUMN_NAMES",
+            "name": "GROUP_COLUMN_NAMES",
             "nullable": false,
             "type": "string"
         }

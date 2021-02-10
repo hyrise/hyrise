@@ -95,7 +95,7 @@ class OperatorFeatureExporter {
                                                      {"INPUT_CHUNKS", DataType::Long, false},
                                                      {"GROUP_COLUMNS", DataType::Int, false},
                                                      {"AGGREGATE_COLUMNS", DataType::Int, false},
-                                                     {"GROUP_COlUMN_NAMES", DataType::String, false}},
+                                                     {"GROUP_COLUMN_NAMES", DataType::String, false}},
                               TableType::Data);
 
   const std::shared_ptr<Table> _scan_output_table =

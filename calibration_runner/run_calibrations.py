@@ -4,6 +4,7 @@ from subprocess import Popen
 import numpy as np
 import math
 import json
+import pandas as pd
 
 from tpch_benchmark import TPCHBenchmark
 from tpcds_benchmark import TPCDSBenchmark
@@ -41,10 +42,34 @@ def run_benchmark(benchmark, config_name, chunk_size):
   #if not os.path.exists(visualization_path):
   #  os.makedirs(visualization_path)
 
+
+  # modify aggregate ordering information
+  data_path = f"data/{benchmark.name()}"
+
+  correlations = {
+    'lineitem': {
+      'l_orderkey': ['l_shipdate', 'l_receiptdate'],
+      'l_receiptdate': ['l_shipdate', 'l_orderkey'],
+      'l_shipdate': ['l_orderkey', 'l_receiptdate'],
+    }
+  }
+
+  with open(f"{data_path}/aggregates.csv.json") as aggregate_json:
+    column_information = json.load(aggregate_json)
+  column_names = list(map(lambda x: x['name'], column_information['columns']))
+  print(f"column names: {column_names}")
+
+  aggregates = pd.read_csv(f"{data_path}/aggregates.csv", names=column_names)
+  INPUT_COLUMN_SORTED_COLUMN = 'INPUT_COLUMN_SORTED'
+  GROUP_COLUMNS = 'GROUP_COLUMNS'
+  GROUP_COLUMN_NAMES = 'GROUP_COLUMN_NAMES'
+  aggregates = aggregates[aggregates.apply(lambda x: not (x[GROUP_COLUMNS] == 1 and pd.isnull(x[GROUP_COLUMN_NAMES])), axis=1)]
+  aggregates[INPUT_COLUMN_SORTED_COLUMN] = aggregates.apply(actual_aggregate_ordering_information, args=(sort_order, correlations,), axis=1)
+  aggregates.to_csv(f"{data_path}/aggregates.csv", header=False)
+
   #visualization_file_pattern = benchmark.visualization_pattern()
   import glob
   import shutil
-  data_path = f"data/{benchmark.name()}"
   target_path = f"{data_path}/sf{benchmark.scale()}-runs{benchmark.max_runs()}/{config_name}"
   
   if not os.path.exists(target_path):
@@ -54,6 +79,39 @@ def run_benchmark(benchmark, config_name, chunk_size):
     shutil.move(file, target_path + '/' + os.path.basename(file))
 
   shutil.copyfile('clustering_config.json', f'{target_path}/clustering_config.json')
+
+def actual_aggregate_ordering_information(row, sort_order, correlations):
+  group_columns = row['GROUP_COLUMNS']
+  group_column_names = row['GROUP_COLUMN_NAMES']
+  input_column_sorted = row['INPUT_COLUMN_SORTED']
+  if int(group_columns) != 1:
+    return 0
+  assert len(group_column_names) > 0 and ',' not in group_column_names
+
+  if input_column_sorted == 0:
+    return 0
+  assert input_column_sorted == 1, "INPUT_COLUMN_SORTED is neither 0 nor 1: " + str(input_column_sorted)
+
+
+  def correlates(group_column, clustering_columns, correlations):
+    correlated_columns = correlations.get(group_column, {})
+    if group_column == 'l_orderkey':
+      print("following columns are correlated to l_orderkey: " + ",".join(correlated_columns))
+    for column in correlated_columns:
+      if column in clustering_columns:
+        print(f"{group_column} is correlated to the clustered column {column}")
+        return True
+    print(f"{group_column} is not correlated to any of the clustered columns [{','.join(clustering_columns)}]")
+    return False
+
+  if 'lineitem' in sort_order:
+    clustering_columns = list(map(lambda x: x[0], sort_order['lineitem']))
+    if group_column_names in clustering_columns:
+      return 1
+    elif correlates(group_column_names, clustering_columns, correlations['lineitem']):
+      return 0.5
+
+  return 0
 
 def build_sort_order_string(sort_order_per_table):
   return json.dumps(sort_order_per_table)
