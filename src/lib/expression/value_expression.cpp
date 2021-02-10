@@ -60,8 +60,10 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) return true;
 
   const auto value_equality = (value == value_expression.value);
-  // Checking for value id equality would be reasonable, however SQLite QUery 285 doesn't like that
+  // Checking for value id equality would be reasonable, however SQLite Query 285 doesn't like that
   // SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1
+  // The "1" in the select and group by statement get different value ids and would be therefore identified as
+  // different expressions. This renders the LQP invalid.
   // const auto value_id_equality = (value_expression_id && value_expression.value_expression_id)
   //                                     ? (*value_expression_id == *value_expression.value_expression_id)
   //                                     : true;
