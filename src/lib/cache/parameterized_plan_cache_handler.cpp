@@ -47,15 +47,15 @@ void ParameterizedPlanCacheHandler::set(std::shared_ptr<AbstractLQPNode>& optimi
   // Convert value expression IDs into ParameterIDs in the right order
   std::vector<ParameterID> parameter_ids(_extracted_values.size());
   auto parameter_ids_it = parameter_ids.begin();
-  for (const auto extracted_value : _extracted_values) {
+  for (const auto& extracted_value : _extracted_values) {
     const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
     *parameter_ids_it = static_cast<ParameterID>(*extracted_value_expression->value_expression_id);
     ++parameter_ids_it;
   }
 
-  auto prepared_plan = std::make_shared<PreparedPlan>(cache_value, parameter_ids);
+  auto parameterized_plan = std::make_shared<ParameterizedPlan>(cache_value, parameter_ids);
 
-  _lqp_cache->set(_cache_key, prepared_plan);
+  _lqp_cache->set(_cache_key, parameterized_plan);
 
   const auto end_set = std::chrono::high_resolution_clock::now();
   _cache_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_set - start_set);
