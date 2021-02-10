@@ -21,7 +21,7 @@ std::optional<std::shared_ptr<AbstractLQPNode>> ParameterizedPlanCacheHandler::t
   const auto start_try_get = std::chrono::high_resolution_clock::now();
   if (const auto cached_plan_optional = _lqp_cache->try_get(_cache_key)) {
     // Cache hit
-    const auto cached_plan = cached_plan_optional.value();
+    const auto& cached_plan = cached_plan_optional.value();
     DebugAssert(cached_plan->lqp, "Optimized logical query plan retrieved from cache is empty.");
 
     // MVCC-enabled and MVCC-disabled LQPs will evict each other
@@ -61,7 +61,7 @@ void ParameterizedPlanCacheHandler::set(std::shared_ptr<AbstractLQPNode>& optimi
   _cache_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_set - start_set);
 }
 
-const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
+std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
 ParameterizedPlanCacheHandler::_split_lqp_values(const std::shared_ptr<AbstractLQPNode>& lqp) {
   // Extract all ValueExpressions from the LQP and replace them with PlaceholderExpressions.
   // Copy the optimized plan since the original lqp is still needed for optimization.

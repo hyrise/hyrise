@@ -36,7 +36,7 @@ namespace opossum {
  */
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+  auto optimizer = std::make_shared<Optimizer>();
   // Some rules may prevent caching/safe reuse of the optimized plan. (see prevents_caching() of each rule for
   // detailed explanation).
   // For most of these rules, this is not critical, since they only act a part in the optimization of a few plans.

@@ -54,7 +54,7 @@ class ParameterizedPlanCacheHandler {
  private:
   friend class ParameterizedPlanCacheHandlerTest;
   friend class SQLPipelineStatementTest;
-  static const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
+  static const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>
   _split_lqp_values(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   const std::shared_ptr<SQLLogicalPlanCache>& _lqp_cache;
