@@ -215,8 +215,8 @@ class PosHashTable {
 //     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
 // (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
-// (3) Check whether using multiple hash functions (k>1) brings any improvement. For single-threaded TPC-H SF 10 (which
-//     mostly joins on integers where many are under 2^20), it however appears as if this has no immediate benefits.
+// (3) Evaluate whether using multiple hash functions (k>1) brings any improvement. In a first experiment, however, we
+//     saw no benefits for single-threaded TPC-H SF 10.
 // (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
 //     intermediary results. When a bloom filter-supported partitioning has been done (i.e., partitioning has not
 //     been skipped), we do not need to use a bloom filter in the build phase anymore.

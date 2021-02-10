@@ -54,7 +54,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
   };
 
   // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  // Note that async has a bunch of issues (cf. Mastering the C++17 STL, pages 205f).
+  // Note that async has a bunch of issues:
+  //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
+  //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;

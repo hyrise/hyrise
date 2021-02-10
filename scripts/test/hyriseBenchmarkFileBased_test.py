@@ -33,6 +33,10 @@ def main():
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
 
+    # Binary tables would be written into the table_path. In CI, this path is shared by different targets that are
+    # potentially executed concurrently. This sometimes led to issues with corrupted binary files.
+    arguments["--dont_cache_binary_tables"] = "true"
+
     os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
@@ -45,7 +49,7 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
-    benchmark.expect_exact("Caching tables as binary files")
+    benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
     benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
     benchmark.expect_exact("Running subset of queries: select_statement")
@@ -129,6 +133,7 @@ def main():
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"
+    arguments["--dont_cache_binary_tables"] = "true"
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
 
