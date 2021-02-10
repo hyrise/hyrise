@@ -10,6 +10,7 @@
 #include "cache/parameterized_plan_cache_handler.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
@@ -30,6 +31,17 @@ std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_c
       if (node->type != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
         return join_node->join_mode == opossum::JoinMode::Cross;
+      }
+      return false;
+    };
+
+// This function relies on the ChunkPruningRule in the post cache optimizer and could break if something is changed
+// in the post caching optimizer.
+std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> has_pruned_chunks =
+    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
+      if (node->type != opossum::LQPNodeType::StoredTable) return false;
+      if (auto stored_table_node = std::dynamic_pointer_cast<opossum::StoredTableNode>(node)) {
+        return !stored_table_node->pruned_chunk_ids().empty();
       }
       return false;
     };
@@ -100,7 +112,7 @@ class SQLPipelineStatementTest : public BaseTest {
   const std::string _invalid_sql = "SELECT FROM table_a";
   const std::string _join_query =
       "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a, table_b WHERE table_a.a = table_b.a AND table_a.a "
-      "> 1000";
+      "> 2000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
   const std::string _parameter_query = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
@@ -258,6 +270,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQP) {
   const auto& lqp = statement->get_optimized_logical_plan();
 
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_TRUE(contained_in_lqp(lqp, has_pruned_chunks));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPTwice) {
@@ -268,6 +281,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPTwice) {
   const auto& lqp = statement->get_optimized_logical_plan();
 
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_TRUE(contained_in_lqp(lqp, has_pruned_chunks));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
