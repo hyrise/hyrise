@@ -1,6 +1,7 @@
 #include "bitpacking_compressor.hpp"
 #include "compact_vector.hpp"
 #include <algorithm>
+#include "math.h"
 
 namespace opossum {
 
@@ -11,7 +12,8 @@ std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(
     const UncompressedVectorInfo& meta_info) {
  
   const auto max_value = _find_max_value(vector);
-  uint32_t b = std::max(compact::vector<unsigned int, 32>::required_bits(max_value), 1u);
+  const uint32_t upper_bound = log2(max_value) + 2;
+  uint32_t b = std::min(upper_bound, std::max(compact::vector<unsigned int, 32>::required_bits(max_value), 1u));
 
   auto data = pmr_bitpacking_vector<uint32_t>(b, alloc);
   for (int i = 0; i < vector.size(); i++) {
