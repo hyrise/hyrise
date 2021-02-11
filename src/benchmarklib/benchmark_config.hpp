@@ -26,7 +26,7 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 
 class BenchmarkConfig {
  public:
-  BenchmarkConfig(const BenchmarkMode benchmark_mode, const ClusteringConfiguration clustering_config,
+  BenchmarkConfig(const BenchmarkMode benchmark_mode, const ClusteringConfiguration clustering_configuration,
                   const ChunkOffset chunk_size, const EncodingConfig& encoding_config, const bool indexes,
                   const int64_t max_runs, const Duration& max_duration, const Duration& warmup_duration,
                   const std::optional<std::string>& output_file_path, const bool enable_scheduler,
@@ -36,7 +36,7 @@ class BenchmarkConfig {
   static BenchmarkConfig get_default_config();
 
   BenchmarkMode benchmark_mode = BenchmarkMode::Ordered;
-  ClusteringConfiguration clustering_config = ClusteringConfiguration::None;
+  ClusteringConfiguration clustering_configuration = ClusteringConfiguration::None;
   ChunkOffset chunk_size = Chunk::DEFAULT_SIZE;
   EncodingConfig encoding_config = EncodingConfig{};
   bool indexes = false;

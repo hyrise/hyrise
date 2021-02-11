@@ -326,7 +326,7 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
-  if (_benchmark_config->clustering_config == ClusteringConfiguration::TPCHPruning) {
+  if (_benchmark_config->clustering_configuration == ClusteringConfiguration::TPCHPruning) {
     // This clustering improve the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
     // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
     // Allowed as per TPC-H Specification, paragraph 1.5.2.
