@@ -53,7 +53,20 @@ void AbstractTableGenerator::generate_and_store() {
    */
   {
     const auto& sort_order_by_table = _sort_order_by_table();
-    if (!sort_order_by_table.empty()) {
+    if (sort_order_by_table.empty()) {
+      // If there is no clustering for the benchmark defined, there should not be a single sorted chunk. This check is
+      // necessary to avoid loading sorted binary data (created with a clustering configuration) in a run that is
+      // supposed to be unclustered.
+      for (auto& [table_name, table_info] : table_info_by_name) {
+        auto& table = table_info_by_name[table_name].table;
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto chunk = table->get_chunk(chunk_id);
+          Assert(chunk->individually_sorted_by().empty(), "Tables are sorted, but no clustering has been requested. "
+                                                           "This might be case when clustered data is import from "
+                                                           "binary exports.");
+        }
+      }
+    } else {
       std::cout << "- Sorting tables" << std::endl;
 
       // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even
