@@ -79,8 +79,13 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       auto sort_definitions = std::vector<SortColumnDefinition>{};
       sort_definitions.reserve(sorted_by.size());
 
+      for (auto column_id : _column_ids) {
+        std::cout << "col id " << column_id << std::endl;
+      }
+
       // Adapt column ids
       for (const auto& sort_definition : sorted_by) {
+        std::cout << "sorted by " << sort_definition.column << std::endl;
         const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
         Assert(it != _column_ids.cend(), "Chunk is sorted by an invalid column ID.");
         const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
