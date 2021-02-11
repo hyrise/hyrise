@@ -119,10 +119,7 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
     : TPCHTableGenerator(scale_factor, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : TPCHTableGenerator(scale_factor, create_benchmark_config_with_chunk_size(chunk_size), ClusteringConfiguration::None) {}
-
-TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, const ClusteringConfiguration clustering_configuration)
-    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor), _clustering_configuration{clustering_configuration} {}
+    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
@@ -329,9 +326,10 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
-  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
-    // Allowed as per TPC-H Specification, paragraph 1.5.2. This clustering improve the pruning of chunks as both
-    // columns are frequently filtered.
+  if (_benchmark_config->clustering_config == ClusteringConfiguration::TPCHPruning) {
+    // This clustering improve the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
+    // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
+    // Allowed as per TPC-H Specification, paragraph 1.5.2.
     return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
   }
 

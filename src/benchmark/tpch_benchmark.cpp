@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
                "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
                "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
-                   "by the TPC-H data generator. With --clustering=Pruning, the two largest tables 'lineitem' and "
+                   "by the TPC-H data generator. With --clustering=\"TPCHPruning\", the two largest tables 'lineitem' and "
                    "'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning.",
                    cxxopts::value<std::string>()->default_value("None")); // NOLINT
   // clang-format on

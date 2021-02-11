@@ -2,15 +2,16 @@
 
 namespace opossum {
 
-BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
-                                 const EncodingConfig& init_encoding_config, const bool init_indexes,
-                                 const int64_t init_max_runs, const Duration& init_max_duration,
-                                 const Duration& init_warmup_duration,
+BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ClusteringConfiguration init_clustering_config,
+                                 const ChunkOffset init_chunk_size, const EncodingConfig& init_encoding_config,
+                                 const bool init_indexes, const int64_t init_max_runs,
+                                 const Duration& init_max_duration, const Duration& init_warmup_duration,
                                  const std::optional<std::string>& init_output_file_path,
                                  const bool init_enable_scheduler, const uint32_t init_cores,
                                  const uint32_t init_clients, const bool init_enable_visualization,
                                  const bool init_verify, const bool init_cache_binary_tables, const bool init_metrics)
     : benchmark_mode(init_benchmark_mode),
+      clustering_config(init_clustering_config),
       chunk_size(init_chunk_size),
       encoding_config(init_encoding_config),
       indexes(init_indexes),
