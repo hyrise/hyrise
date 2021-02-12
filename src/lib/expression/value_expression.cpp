@@ -44,10 +44,6 @@ std::string ValueExpression::description(const DescriptionMode mode) const {
     stream << "F";
   }
 
-  if (value_expression_id) {
-    stream << " (ID=" << *value_expression_id << ")";
-  }
-
   return stream.str();
 }
 
