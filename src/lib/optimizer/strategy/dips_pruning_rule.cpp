@@ -24,84 +24,22 @@ namespace opossum {
 
   void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
       
-      // 1. bau den JoinGraph (Baum traversieren)
-      // (1.1) Verhindere Zyklen
-      // 2. Waehle Wurzel
-      // 3. Child-Parent Pointers setzen
-      // 4. Baum von unten nach oben durchgehen (Paper)
-      // 5. Baum von oben nach unten durchgehen (Paper)
-
-    // _clear_join_graph();
-
     std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
     _build_join_graph(node, join_graph);
     
-    //std::cout << *join_graph << '\n';
-    //std::cout << "Is tree: "<< join_graph->is_tree() << '\n';
-
     if(join_graph->is_empty()){
-      //std::cout << "==== JOIN GRAPH IS EMPTY ====" << std::endl;
       return;
     }
 
     if(join_graph->is_tree()){
-      std::shared_ptr<DipsJoinGraphNode> root = join_graph->nodes[0]; // TODO: finding root implementation
-      //std::cout << "==== ROOT ====" << std::endl;
-      //std::cout << "    " << root << std::endl;
+      std::shared_ptr<DipsJoinGraphNode> root = join_graph->nodes[0]; // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
       join_graph->set_root(root);
       bottom_up_dip_traversal(root);
       top_down_dip_traversal(root);
     } else {
       // TODO: cycle implementation
+      // Assumption: Hyrise handles cycles itself
     }
-
-    //std::cout << "\nAFTER OPERATIONS\n" << '\n';
-    //std::cout << *join_graph << '\n';
-
-
-    /*
-    _apply_to_inputs(node);
-
-    if (node->type == LQPNodeType::Join) {
-      const auto& join_node = static_cast<JoinNode&>(*node);
-      const auto join_predicates = join_node.join_predicates();
-          
-      for (auto predicate : join_predicates) {
-
-        std::shared_ptr<BinaryPredicateExpression> binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-        auto left_operand = binary_predicate->left_operand();
-        auto right_operand = binary_predicate->right_operand();
-
-        auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-        auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
-
-        if (!left_lqp || !right_lqp) {
-          return;
-        }
-
-        // TODO: check const pointer cast
-
-        std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
-        std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
-        // int number_of_pruned_left = left_stored_table_node->pruned_chunk_ids().size();
-        // int number_of_pruned_right = right_stored_table_node->pruned_chunk_ids().size();
-
-        if (!left_stored_table_node || !right_stored_table_node) {
-          return;
-        }
-
-        // LEFT -> RIGHT
-        dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node, right_lqp->original_column_id);
-
-        // RIGHT -> LEFT
-        dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
-
-        // std::cout << "Prune on " << left_stored_table_node->table_name << " Before: " << number_of_pruned_left << " After " << left_stored_table_node->pruned_chunk_ids().size() << std::endl;
-        // std::cout << "Prune on " << right_stored_table_node->table_name << " Before: " << number_of_pruned_right << " After " << right_stored_table_node->pruned_chunk_ids().size() << std::endl;
-      
-      }
-    }
-    */
   }
 
   void DipsPruningRule::bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const { //expects root in the first call
@@ -122,9 +60,6 @@ namespace opossum {
 
       std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
       std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
-      // int number_of_pruned_left = left_stored_table_node->pruned_chunk_ids().size();
-      // int number_of_pruned_right = right_stored_table_node->pruned_chunk_ids().size();
-
 
       if (!left_stored_table_node || !right_stored_table_node) {
           return;
@@ -135,9 +70,6 @@ namespace opossum {
 
       // RIGHT -> LEFT
       dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node, left_lqp->original_column_id);
-
-      // std::cout << "Prune on " << left_stored_table_node->table_name << " Before: " << number_of_pruned_left << " After " << left_stored_table_node->pruned_chunk_ids().size() << std::endl;
-      // std::cout << "Prune on " << right_stored_table_node->table_name << " Before: " << number_of_pruned_right << " After " << right_stored_table_node->pruned_chunk_ids().size() << std::endl;
     } 
   }
 
@@ -222,10 +154,6 @@ namespace opossum {
         // append predicates
         left_right_edge->append_predicate(binary_predicate); // TODO: visit every node in LQP only once (avoid cycles) -> use "simple" append
         right_left_edge->append_predicate(binary_predicate);
-
-        // left_right_edge->predicates.push_back(predicate);
-        // right_left_edge->predicates.push_back(predicate);
-        
       }
     }
   }
@@ -289,6 +217,4 @@ namespace opossum {
     return stream;
   }
 
-
-
-}
+} // namespace opossum

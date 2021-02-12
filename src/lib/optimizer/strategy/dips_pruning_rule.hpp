@@ -32,12 +32,6 @@
 namespace opossum {
 
   class AbstractLQPNode;
-  /**
-  * This rule determines which chunks can be pruned from table scans based on
-  * the predicates present in the LQP and stores that information in the stored
-  * table nodes.
-  */
-
   class DipsJoinGraphEdge;
   class DipsJoinGraphNode;
   class DipsJoinGraph;
@@ -195,11 +189,11 @@ namespace opossum {
             if (segment_statistics->range_filter) {                       // false if all values in the chunk are NULL
               ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(chunk_index, segment_statistics->range_filter->ranges));
             } else {
-              if (segment_statistics->min_max_filter) {
+              if (segment_statistics->dips_min_max_filter) {
                 ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
                   chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>(
-                    {std::pair<COLUMN_TYPE, COLUMN_TYPE>(segment_statistics->min_max_filter->min,
-                                                          segment_statistics->min_max_filter->max)}
+                    {std::pair<COLUMN_TYPE, COLUMN_TYPE>(segment_statistics->dips_min_max_filter->min,
+                                                          segment_statistics->dips_min_max_filter->max)}
                       )
                     )
                   );
@@ -210,8 +204,8 @@ namespace opossum {
               }
 
             // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
-            //DebugAssert(!segment_statistics->min_max_filter,
-            //            "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
+            DebugAssert(!segment_statistics->min_max_filter,
+                       "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
             }
           }
 
@@ -226,16 +220,7 @@ namespace opossum {
           }
         }
       }
-
-
-      // std::cout << "Pruned statistic for table: " << table_node->table_name << std::endl;
-      // for (auto [chunk_id, rangess] : ranges) {
-      //   std::cout << chunk_id << std::endl;
-      //   for (auto range : rangess) {
-      //     std::cout << range.first << " "<< range.second << std::endl;
-      //   }
-      // }
-    
+      
       return ranges;
     }
 

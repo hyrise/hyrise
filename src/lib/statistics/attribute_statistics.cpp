@@ -23,6 +23,8 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
 
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
+  } else if (const auto dips_min_max_object = std::dynamic_pointer_cast<DipsMinMaxFilter<T>>(statistics_object)) {
+    dips_min_max_filter = dips_min_max_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
   } else if (const auto null_value_ratio_object =

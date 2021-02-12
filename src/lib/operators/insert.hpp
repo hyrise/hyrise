@@ -10,6 +10,7 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/dips_min_max_filter.hpp"
 
 namespace opossum {
 
@@ -43,7 +44,8 @@ class Insert : public AbstractReadWriteOperator {
       std::shared_ptr<AbstractSegment> source_segment, 
       ChunkOffset source_chunk_offset, 
       std::shared_ptr<BaseAttributeStatistics> segment_statistic, 
-      ChunkOffset num_rows_current_iteration
+      ChunkOffset num_rows_current_iteration,
+      std::shared_ptr<TransactionContext> context
     ) {
     
       auto attribute_statistic = std::dynamic_pointer_cast<AttributeStatistics<T>>(segment_statistic);
@@ -79,7 +81,7 @@ class Insert : public AbstractReadWriteOperator {
           ++source_iter;
         }
 
-        auto new_min_max_filter = std::make_shared<MinMaxFilter<T>>(new_min, new_max);
+        auto new_min_max_filter = std::make_shared<DipsMinMaxFilter<T>>(new_min, new_max, context->transaction_id());
         result->set_statistics_object(new_min_max_filter);
       });
 

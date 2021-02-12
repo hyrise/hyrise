@@ -198,7 +198,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       }
     }
 
-
     auto target_chunk_offset = target_chunk_range.begin_chunk_offset;
     auto target_chunk_range_remaining_rows =
         target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
@@ -228,7 +227,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
             source_segment, 
             source_row_id.chunk_offset, 
             segment_statistic, 
-            num_rows_current_iteration
+            num_rows_current_iteration,
+            context
           );
 
           new_target_chunk_statistic.value()[column_id] = new_segment_statistic;

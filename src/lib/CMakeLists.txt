@@ -398,6 +398,8 @@ set(
     statistics/statistics_objects/abstract_histogram.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
+    statistics/statistics_objects/dips_min_max_filter.cpp
+    statistics/statistics_objects/dips_min_max_filter.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp
