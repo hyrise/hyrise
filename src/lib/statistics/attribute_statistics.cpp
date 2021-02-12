@@ -70,13 +70,17 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
 
 template <typename T>
 std::string AttributeStatistics<T>::range_strings() const {
+  std::string output_string = "";
   if constexpr (std::is_arithmetic_v<T>) {
-  if (range_filter) {
-    return range_filter->range_strings();
-  }
+    if (range_filter) {
+      output_string += range_filter->range_strings();
+    }
+    if (min_max_filter) {
+      output_string += min_max_filter->range_strings();
+    }
   }
 
-  return "";
+  return output_string;
 }
 
 template <typename T>

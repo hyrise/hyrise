@@ -195,14 +195,24 @@ namespace opossum {
             if (segment_statistics->range_filter) {                       // false if all values in the chunk are NULL
               ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(chunk_index, segment_statistics->range_filter->ranges));
             } else {
-              ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>()));
-              // Note: if we don't do it, we assume, the chunk has been already pruned -> error
-              continue;  
-            }
+              if (segment_statistics->min_max_filter) {
+                ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
+                  chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>(
+                    {std::pair<COLUMN_TYPE, COLUMN_TYPE>(segment_statistics->min_max_filter->min,
+                                                          segment_statistics->min_max_filter->max)}
+                      )
+                    )
+                  );
+                } else {
+                ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>()));
+                // Note: if we don't do it, we assume, the chunk has been already pruned -> error
+                continue;  
+              }
 
             // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
-            DebugAssert(!segment_statistics->min_max_filter,
-                        "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
+            //DebugAssert(!segment_statistics->min_max_filter,
+            //            "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
+            }
           }
 
           if (segment_statistics->min_max_filter) {
@@ -217,6 +227,15 @@ namespace opossum {
         }
       }
 
+
+      // std::cout << "Pruned statistic for table: " << table_node->table_name << std::endl;
+      // for (auto [chunk_id, rangess] : ranges) {
+      //   std::cout << chunk_id << std::endl;
+      //   for (auto range : rangess) {
+      //     std::cout << range.first << " "<< range.second << std::endl;
+      //   }
+      // }
+    
       return ranges;
     }
 

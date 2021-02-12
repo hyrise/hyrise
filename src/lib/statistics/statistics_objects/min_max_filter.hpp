@@ -41,6 +41,8 @@ class MinMaxFilter : public AbstractStatisticsObject {
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
+  std::string range_strings() const;
+
   const T min;
   const T max;
 };

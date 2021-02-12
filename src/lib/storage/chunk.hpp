@@ -51,6 +51,9 @@ class Chunk : private Noncopyable {
   // meaning that FixedSizeByteAligned vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
   // account for NULL being encoded as a separate value id.
   static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
+  // static constexpr ChunkOffset DEFAULT_SIZE = 2;
+
+  bool has_generated_pruning_statistics = false;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
@@ -199,6 +202,7 @@ class Chunk : private Noncopyable {
   bool _is_mutable = true;
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
 
   // Default value of zero means "not set"
   std::atomic<CommitID> _cleanup_commit_id{0};
