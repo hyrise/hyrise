@@ -139,10 +139,10 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
     if (rule->prevents_caching()) {
       // Some rules may prevent caching, however if they have no effect on the plan, it can be cached anyway
-      const auto previous_plan_hash = root_node->hash();
+      const auto previous_plan = root_node->deep_copy();
       rule->apply_to_plan(root_node);
 
-      if (previous_plan_hash != root_node->hash()) {
+      if (*previous_plan != *root_node) {
         // only in case it changed the plan, we can't reuse it
         *cacheable = false;
       }
