@@ -1,0 +1,6 @@
+{
+  "default": {
+          "encoding": "Dictionary",
+          "compression": "Fixed-size byte-aligned"
+  }
+}
