@@ -2540,8 +2540,8 @@ TEST_F(SQLTranslatorTest, IntLimitsAndUnaryMinus) {
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + - 2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 +-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, 9223372036854775807ll)), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(9223372036854775807ll))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, static_cast<int64_t>(9223372036854775807ll))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(static_cast<int64_t>(9223372036854775807ll)))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775808").first, ProjectionNode::make(expression_vector(add_(1, LLONG_MIN)), DummyTableNode::make()));  // NOLINT
   EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 9223372036854775808"));
   EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 1-9223372036854775808"));
