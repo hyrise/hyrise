@@ -2534,6 +2534,19 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
   EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
 }
 
+TEST_F(SQLTranslatorTest, IntLimitsAndUnaryMinus) {
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2").first, ProjectionNode::make(expression_vector(add_(1, 2)), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + -2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + - 2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 +-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, 9223372036854775807ll)), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(9223372036854775807ll))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775808").first, ProjectionNode::make(expression_vector(add_(1, LLONG_MIN)), DummyTableNode::make()));  // NOLINT
+  EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 9223372036854775808"));
+  EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 1-9223372036854775808"));
+}
+
 TEST_F(SQLTranslatorTest, OperatorPrecedence) {
   /**
    * Though the operator precedence is handled by the sql-parser, do some checks here as well that it works as expected.
@@ -2542,7 +2555,7 @@ TEST_F(SQLTranslatorTest, OperatorPrecedence) {
    */
 
   // clang-format off
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2 * 3 / -4").first, ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), -4))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2 * 3 / -4").first, ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), unary_minus_(4)))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2 * 3 / 4").first, ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), 4))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 3 + 5 % 3").first, ProjectionNode::make(expression_vector(add_(3, mod_(5, 3))), DummyTableNode::make()));  // NOLINT
   EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 3 + 5 > 4 / 2").first, ProjectionNode::make(expression_vector(greater_than_(add_(3, 5), div_(4, 2))), DummyTableNode::make()));  // NOLINT
