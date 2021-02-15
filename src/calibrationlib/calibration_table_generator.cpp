@@ -1,8 +1,8 @@
 #include "calibration_table_generator.hpp"
 
-#include <unordered_map>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+#include <unordered_map>
 
 #include "operators/export.hpp"
 #include "operators/sort.hpp"
@@ -63,26 +63,34 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
     }
   }
 
-  const auto& aggregate_table_wrappers = _generate_aggregate_tables();
+  const auto& aggregate_table_wrappers = _generate_aggregate_tables(_config->scale_factor);
   for (const auto& aggregate_table_wrapper : aggregate_table_wrappers) {
     table_wrappers.push_back(aggregate_table_wrapper);
+  }
+
+  const auto& join_table_wrappers = _generate_semi_join_tables(_config->scale_factor);
+  for (const auto& join_table_wrapper : join_table_wrappers) {
+    table_wrappers.push_back(join_table_wrapper);
   }
 
   return table_wrappers;
 }
 
-std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_aggregate_tables() const {
-  std::cout << "Generating aggregate tables" << std::endl;
+std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_aggregate_tables(
+    const float scale_factor) const {
+  std::cout << "  - Generating aggregate tables" << std::endl;
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
 
-  const auto column_definitions = TableColumnDefinitions{{"id", DataType::Int, false}, {"date", DataType::String, false}, {"quantity", DataType::Float, false}};
+  const auto column_definitions = TableColumnDefinitions{
+      {"id", DataType::Int, false}, {"date", DataType::String, false}, {"quantity", DataType::Float, false}};
   const std::vector<uint64_t> max_date_diffs = {10, 20, 30, 40, 50, 60, 90, 180};
   std::srand(42);
+  const auto table_size = static_cast<size_t>(1'500'000 * scale_factor);
 
-  constexpr size_t NUM_DIFFERENT_DATES = 2550; // l_shipdate covers dates from 1992 to 1998, i.e., 7 years ~ 2550 days
+  constexpr size_t NUM_DIFFERENT_DATES = 2550;  // l_shipdate covers dates from 1992 to 1998, i.e., 7 years ~ 2550 days
   for (const auto max_date_diff : max_date_diffs) {
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (size_t id{0}; id < 1'500'000; id++) {
+    for (size_t id{0}; id < table_size; id++) {
       const size_t num_entries = (std::rand() % 7) + 1;
       const auto base_date = (std::rand() % NUM_DIFFERENT_DATES);
       for (size_t entry_id{0}; entry_id < num_entries; entry_id++) {
@@ -98,10 +106,13 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
 
     const auto wrapper = std::make_shared<TableWrapper>(table);
     wrapper->execute();
-    auto sort = std::make_shared<Sort>(wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Ascending}}, table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+    auto sort = std::make_shared<Sort>(
+        wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Ascending}},
+        table->target_chunk_size(), Sort::ForceMaterialization::Yes);
     sort->execute();
 
-    auto sorted_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    auto sorted_table =
+        std::make_shared<Table>(table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
       Segments segments;
       const auto chunk = sort->get_output()->get_chunk(chunk_id);
@@ -116,14 +127,50 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
     }
 
     ChunkEncoder::encode_all_chunks(sorted_table, SegmentEncodingSpec(EncodingType::Dictionary));
-    const auto table_name =  "aggregate_maxdiff" + std::to_string(max_date_diff);
+    const auto table_name = "aggregate_maxdiff" + std::to_string(max_date_diff);
 
     const auto calibration_wrapper = std::make_shared<CalibrationTableWrapper>(sorted_table, table_name);
     tables.push_back(calibration_wrapper);
   }
 
-  std::cout << "Generated aggregate tables" << std::endl;
+  std::cout << "  - Generated aggregate tables" << std::endl;
   return tables;
+}
+
+std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_semi_join_tables(
+    const float scale_factor) const {
+  std::cout << "\t-Generating semi join build tables" << std::endl;
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
+
+  tables.emplace_back(_generate_semi_join_table(static_cast<size_t>(300'000 * scale_factor)));
+  tables.emplace_back(_generate_semi_join_table(Chunk::DEFAULT_SIZE));
+
+  std::cout << "  - Generated semi join build tables" << std::endl;
+  return tables;
+}
+
+std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_semi_join_table(
+    const size_t row_count) const {
+  std::set<DataType> data_types = {DataType::Int, DataType::Float};
+  auto data_distribution = ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(row_count));
+  auto column_count = 0;
+  std::vector<ColumnSpecification> column_specs;
+  std::vector<ColumnDataDistribution> column_data_distributions;
+  const std::string table_name = "semi_join_" + std::to_string(row_count);
+
+  for (const auto data_type : data_types) {
+    std::stringstream column_name_stringstream;
+    column_name_stringstream << data_type << "_" << EncodingType::Dictionary << "_" << column_count;
+    auto column_name = table_name + "_" + column_name_stringstream.str();
+    column_data_distributions.emplace_back(data_distribution);
+    column_specs.emplace_back(
+        ColumnSpecification(data_distribution, data_type, SegmentEncodingSpec(EncodingType::Dictionary), column_name));
+    ++column_count;
+  }
+
+  const auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  const auto table = table_generator->generate_table(column_specs, row_count, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  return std::make_shared<const CalibrationTableWrapper>(table, table_name, column_data_distributions);
 }
 
 std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_sorted_table(

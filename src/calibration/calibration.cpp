@@ -9,7 +9,8 @@
 
 using namespace opossum;  // NOLINT
 
-void execute_calibration(const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config);
+void execute_calibration(const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
+                         const float scale_factor);
 
 int main(int argc, char** argv) {
   // Data generation settings
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
     std::cout << "Run " << magic_enum::enum_name(benchmark_type) << std::endl;
     benchmark_runner.run_benchmark(benchmark_type, scale_factor, NUMBER_BENCHMARK_EXECUTIONS);
   } else {
-    execute_calibration(DATA_PATH, config);
+    execute_calibration(DATA_PATH, config, scale_factor);
   }
 
   const auto test_duration =
@@ -62,7 +63,8 @@ int main(int argc, char** argv) {
   std::cout << "Generated data in " << test_duration << " s" << std::endl;
 }
 
-void execute_calibration(const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config) {
+void execute_calibration(const std::string& data_path, const std::shared_ptr<BenchmarkConfig>& config,
+                         const float scale_factor) {
   std::cout << "Run calibration" << std::endl;
   const std::set<DataType> TABLE_DATA_TYPES = {DataType::Double, DataType::Float,  DataType::Int,
                                                DataType::Long,   DataType::String, DataType::Null};
@@ -70,9 +72,12 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
   const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
       ColumnDataDistribution::make_uniform_config(0.0, 300'000.0)};
   const std::set<ChunkOffset> CHUNK_SIZES = {config->chunk_size};
-  const std::set<int> ROW_COUNTS = {100'000, 6'000'000};
+  std::set<int> ROW_COUNTS = {100'000, 6'000'000};
+  if (scale_factor == 10.0) {
+    ROW_COUNTS.emplace(60'000'000);
+  }
   const auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
-      TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS});
+      TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS, scale_factor});
 
   std::cout << " - Generating tables" << std::endl;
   auto table_generator = CalibrationTableGenerator(table_config);
@@ -86,7 +91,7 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
     lqp_generator.generate(OperatorType::TableScan, table);
   }
-  lqp_generator.generate_joins(tables);
+  lqp_generator.generate_joins(tables, scale_factor);
   lqp_generator.generate_aggregates(tables);
   const auto lqps = lqp_generator.lqps();
   const auto lqp_count = lqps.size();
