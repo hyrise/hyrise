@@ -9,6 +9,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
+#include "optimizer/strategy/column_pruning_rule.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
 
@@ -165,6 +166,9 @@ void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const C
 }
 
 void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers) {
+  auto optimizer = std::make_shared<Optimizer>();
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
   for (const auto& table_wrapper : table_wrappers) {
     if (table_wrapper->get_name().find("aggregate") == std::string::npos) {
       continue;
@@ -184,7 +188,11 @@ void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_
       }
 
       const auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<AbstractExpression>>{group_by_column_expression}, aggregate_expressions, validate_node);
-      _generated_lqps.push_back(aggregate_node);
+
+      auto optimized_aggregate = aggregate_node->deep_copy();
+      optimized_aggregate = optimizer->optimize(std::move(optimized_aggregate));
+
+      _generated_lqps.push_back(optimized_aggregate);
     }
   }
 }

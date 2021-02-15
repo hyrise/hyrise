@@ -75,7 +75,7 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
   std::cout << "Generating aggregate tables" << std::endl;
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
 
-  const auto column_definitions = TableColumnDefinitions{{"id", DataType::Long, false}, {"date", DataType::String, false}, {"quantity", DataType::Long, false}};
+  const auto column_definitions = TableColumnDefinitions{{"id", DataType::Int, false}, {"date", DataType::String, false}, {"quantity", DataType::Float, false}};
   const std::vector<uint64_t> max_date_diffs = {10, 20, 30, 40, 50, 60, 90, 180};
   std::srand(42);
 
@@ -89,10 +89,10 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
         auto date = (std::rand() % max_date_diff) + base_date;
         date = std::min(NUM_DIFFERENT_DATES, std::max(0ul, date));
         std::stringstream ss;
-        ss << std::setw(10) << std::setfill('0') << date;
-        const int64_t quantity = std::rand() % 100;
+        ss << std::setw(4) << std::setfill('0') << date;
+        const auto quantity = static_cast<float_t>(std::rand() % 100);
 
-        table->append(std::vector<AllTypeVariant>{static_cast<int64_t>(id), pmr_string{ss.str()}, quantity});
+        table->append(std::vector<AllTypeVariant>{static_cast<int32_t>(id), pmr_string{ss.str()} + "000000", quantity});
       }
     }
 
