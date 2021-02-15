@@ -24,8 +24,7 @@ void MvccDeletePlugin::stop() {
   // Call destructor of PausableLoopThread to terminate its thread
   _loop_thread_logical_delete.reset();
   _loop_thread_physical_delete.reset();
-  std::queue<TableAndChunkID> empty;
-  std::swap(_physical_delete_queue, empty);
+  _physical_delete_queue = {};
 }
 
 /**
