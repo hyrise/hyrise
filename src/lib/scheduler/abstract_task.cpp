@@ -51,6 +51,8 @@ void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
 bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
+bool AbstractTask::try_mark_as_enqueued() { return !_is_assigned_to_worker.exchange(true); }
+
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
 

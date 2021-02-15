@@ -95,8 +95,9 @@ void Worker::_work() {
     }
   }
 
-  const auto already_started = task->about_to_be_executed.exchange(true);
-  if (already_started) {
+  const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
+  if (!successfully_assigned) {
+    // Some other worker has already started to work on this task - pick a different one.
     return;
   }
 
@@ -166,8 +167,9 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
       // Run one of our own tasks. First, let everyone know that we are about to execute it. This is necessary because
       // the task is already in a queue and some other worker might pull it at the same time.
-      const auto already_started = task->about_to_be_executed.exchange(true);
-      if (already_started) {
+      const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
+      if (!successfully_assigned) {
+        // Some other worker has already started to work on this task - pick a different one.
         all_done = false;
         continue;
       }
