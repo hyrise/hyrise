@@ -186,21 +186,18 @@ class WhatIfModel(DisjointClustersModel):
 
     def adapt_aggregates_to_clustering(self, aggregates, clustering_columns, sorting_column, dimension_cardinalities):
         # TODO add other metrics, especially for clusteredness
-        def get_sortedness_information(row):
-            if int(row['GROUP_COLUMNS']) != 1:
-                return "No"
 
-            group_by_ordered = row['INPUT_ORDERED'].split(",")[0]
-            if group_by_ordered == "0":
-                return "No"
+        correlations = {
+            'lineitem': {
+              'l_orderkey': ['l_shipdate', 'l_receiptdate'],
+              'l_receiptdate': ['l_shipdate', 'l_orderkey'],
+              'l_shipdate': ['l_orderkey', 'l_receiptdate'],
+            }
+        }
 
-            group_by_column = row['COLUMN_NAME'].split(",")[0]
-            if group_by_column == sorting_column:
-                return "Ascending"
-            else:
-                return "No"
+        sort_order = {'lineitem': [[sorting_column, 2]] }
 
-        aggregates['INPUT_COLUMN_SORTED'] = aggregates.apply(get_sortedness_information, axis=1)
+        aggregates['INPUT_COLUMN_SORTED'] = aggregates.apply(self.actual_aggregate_ordering_information, args=(sort_order, correlations), axis=1)
         return aggregates
 
     def estimate_aggregate_runtime(self, clustering_columns, sorting_column, dimension_cardinalities):
@@ -227,4 +224,31 @@ class WhatIfModel(DisjointClustersModel):
         print()
 
         return runtime
-    
+
+    def actual_aggregate_ordering_information(self, row, sort_order, correlations):
+      group_columns = row['GROUP_COLUMNS']
+      group_column_names = row['COLUMN_NAME'].split(",")[0]
+      if int(group_columns) != 1:
+        return 0
+      assert len(group_column_names) > 0 and ',' not in group_column_names
+
+      input_column_sorted = int(row['INPUT_ORDERED'].split(',')[0])
+      if input_column_sorted == 0:
+        return 0
+      assert input_column_sorted == 1, "INPUT_ORDERED is neither 0 nor 1: " + str(input_column_sorted)
+
+      def correlates(group_column, clustering_columns, correlations):
+        correlated_columns = correlations.get(group_column, {})
+        for column in correlated_columns:
+          if column in clustering_columns:
+            return True
+        return False
+
+      if 'lineitem' in sort_order:
+        clustering_columns = list(map(lambda x: x[0], sort_order['lineitem']))
+        if group_column_names in clustering_columns:
+          return 1
+        elif correlates(group_column_names, clustering_columns, correlations['lineitem']):
+          return 0.5
+
+      return 0
