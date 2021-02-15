@@ -144,6 +144,8 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
   // worker performs work for others (i.e., executes tasks from the queue).
   auto check_own_tasks = [&]() {
     auto all_done = true;
+    // Note: If we found a task that has not yet been executed, we reset this loop and start from the beginning.
+    // As such, both all_done and it may be reset outside of the following line.
     for (auto it = tasks.begin(); it != tasks.end(); ++it) {
       const auto& task = *it;
       if (task->is_done()) {
@@ -187,7 +189,8 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
   };
 
   while (!check_own_tasks()) {
-    // Do work for someone else
+    // Run any job. this could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
+    // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
     _work();
   }
 }
