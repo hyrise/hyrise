@@ -33,17 +33,13 @@ void test_hash_map(const std::vector<T>& values) {
 
   const auto& first_hash_map = hash_maps.at(0).value();
 
-  size_t row_count = 0;
-  for (const auto& pos_list_pair : first_hash_map) {
-    row_count += pos_list_pair.size();
-  }
-  EXPECT_EQ(row_count, partition.elements.size());
-
   ChunkOffset offset = ChunkOffset{0};
   for (const auto& element : partition.elements) {
     const auto probe_value = element.value;
 
-    const auto result_list = *first_hash_map.find(probe_value);
+    const auto [begin, end] = first_hash_map.find(probe_value);
+    const auto result_list = RowIDPosList{begin, end};
+
     const RowID probe_row_id{ChunkID{17}, offset};
     EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
     ++offset;
