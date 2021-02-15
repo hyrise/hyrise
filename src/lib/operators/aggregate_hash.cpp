@@ -79,7 +79,7 @@ typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
-        // column(s) later. By default, the newly created values have an invalid RowID and are later ignored. We grow
+        // column(s) later. By default, the newly created values have a NULL_ROW_ID and are later ignored. We grow
         // the vector slightly more than necessary. Otherwise, monotonically increasing keys would lead to one resize
         // per row.
         if (result_id >= results.size()) {
@@ -241,8 +241,8 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   };
 
   // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
-  // indexes, see get_or_add_result for details. Furthermore, if we use the immediate key shortcut, we need to pass
-  //  true_type so that the aggregate keys are checked for immediate access values.
+  // indexes, see get_or_add_result for details. Furthermore, if we use the immediate key shortcut (which uses the same
+  // code path as caching), we need to pass true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment,
                                     [&](const auto& position) { process_position(std::true_type{}, position); });
@@ -318,8 +318,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
 
-            // Track the minimum and maximum key for the immediate key optimization. Search for the last use of min_key
-            // in this file for a longer explanation.
+            // Track the minimum and maximum key for the immediate key optimization. Search this cpp file for the last use
+            // of `min_key` for a longer explanation.
             auto min_key = std::numeric_limits<AggregateKeyEntry>::max();
             auto max_key = uint64_t{0};
 
@@ -361,12 +361,13 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             }
 
             if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-              // In some cases (e.g., TPC-H Q18), we aggregate with consecutive values being used as a group by key.
-              // Notably, this is the case when aggregating on the serial primary key of a table without filtering the
-              // table before. In these cases, we do not need to perform a full hash-based aggregation, but can use the
-              // values as immediate indexes into the list of results. To handle smaller gaps, we include cases up to a
-              // certain threshold, but at some point these gaps make the approach less beneficial than a proper
-              // hash-based approach.
+              // In some cases (e.g., TPC-H Q18), we aggregate with consecutive int32_t values being used as a group by
+              // key. Notably, this is the case when aggregating on the serial primary key of a table without filtering
+              // the table before. In these cases, we do not need to perform a full hash-based aggregation, but can use
+              // the values as immediate indexes into the list of results. To handle smaller gaps, we include cases up
+              // to a certain threshold, but at some point these gaps make the approach less beneficial than a proper
+              // hash-based approach. Both min_key and max_key do not correspond to the original int32_t value, but are
+              // the result of the int_to_uint transformation. As such, they are guaranteed to be positive.
               // TODO(anyone): Find a reasonable threshold.
               if (max_key > 0 &&
                   static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
@@ -624,14 +625,16 @@ void AggregateHash::_aggregate() {
 
       if (_use_immediate_key_shortcut) {
         for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-          // Make sure the value or combination of values is added to the list of distinct value(s). Do not cache result
-          // ids as there is no aggregate function that could reuse the cached indexes.
+          // Make sure the value or combination of values is added to the list of distinct value(s). As we are able to
+          // use immediate keys, pass true_type so that the combined caching/immediate key code path is enabled in
+          // get_or_add_result.
           get_or_add_result(std::true_type{}, result_ids, results,
                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                             RowID{chunk_id, chunk_offset});
         }
       } else {
-        // Same as above, but with false_type
+        // Same as above, but we do not have immediate keys, so we disable that code path to reduce the complexity of
+        // get_aggregate_key.
         for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
           get_or_add_result(std::false_type{}, result_ids, results,
                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),

@@ -79,10 +79,11 @@ struct AggregateResult {
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;
 
+  // As described above, this stores a pointer into the input data that is used to later restore the GROUP BY values.
   // A NULL_ROW_ID means that the aggregate result is not (yet) valid and should be skipped when materializing the
-  // results. There is no ambiguity with actual NULLs, because this field always points to a row from the input
-  // data. The row that is pointed to may be in a ReferenceSegment, in which case we might point to another NULL
-  // RowID. *That* one would be valid.
+  // results. There is no ambiguity with actual NULLs because the aggregate operator is not NULL-producing. As such,
+  // we know that each valid GROUP BY-group has at least one valid input RowID. As the input may be a ReferenceSegment,
+  // a valid RowID may *point to* a row that is NULL.
   RowID row_id{NULL_ROW_ID};
 
   // Note that the size of this struct is a significant performance factor (see #2252). Be careful when adding fields or
