@@ -132,6 +132,7 @@ set(
     lib/optimizer/strategy/index_scan_rule_test.cpp
     lib/optimizer/strategy/join_ordering_rule_test.cpp
     lib/optimizer/strategy/join_predicate_ordering_rule_test.cpp
+    lib/optimizer/strategy/null_scan_removal_rule_test.cpp
     lib/optimizer/strategy/predicate_merge_rule_test.cpp
     lib/optimizer/strategy/predicate_placement_rule_test.cpp
     lib/optimizer/strategy/predicate_reordering_rule_test.cpp

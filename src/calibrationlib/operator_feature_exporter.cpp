@@ -9,6 +9,9 @@
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_writer.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -162,15 +165,15 @@ void OperatorFeatureExporter::flush() {
 void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractOperator>& op) {
   switch (op->type()) {
     case OperatorType::Aggregate:
-      _export_aggregate(static_pointer_cast<const AbstractAggregateOperator>(op));
+      _export_aggregate(std::static_pointer_cast<const AbstractAggregateOperator>(op));
       break;
     case OperatorType::JoinHash:
     case OperatorType::JoinSortMerge:
     case OperatorType::JoinNestedLoop:
-      _export_join(static_pointer_cast<const AbstractJoinOperator>(op));
+      _export_join(std::static_pointer_cast<const AbstractJoinOperator>(op));
       break;
     case OperatorType::TableScan:
-      _export_table_scan(static_pointer_cast<const TableScan>(op));
+      _export_table_scan(std::static_pointer_cast<const TableScan>(op));
       break;
     default:
       break;
@@ -180,14 +183,14 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
 void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const AbstractAggregateOperator>& op) {
   const auto& operator_info = _general_operator_information(op);
   const auto node = op->lqp_node;
-  const auto aggregate_node = static_pointer_cast<const AggregateNode>(node);
+  const auto aggregate_node = std::static_pointer_cast<const AggregateNode>(node);
   bool input_sorted = false;
   pmr_string column_type = "";
 
   if (op->groupby_column_ids().size() == 1) {
     const auto group_by_expression = aggregate_node->node_expressions.at(0);
     if (group_by_expression->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(group_by_expression);
+      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(group_by_expression);
       const auto original_node = column_expression->original_node.lock();
       const auto& table_column_information = _table_column_information(node, column_expression);
       column_type = table_column_information.column_type;
@@ -218,7 +221,7 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
   for (auto group_by_column_index = 0; group_by_column_index < group_columns; group_by_column_index++) {
     const auto& group_by_expression = aggregate_node->node_expressions.at(group_by_column_index);
     if (group_by_expression->type == ExpressionType::LQPColumn) {
-      const auto column_expression = static_pointer_cast<LQPColumnExpression>(group_by_expression);
+      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(group_by_expression);
       const auto original_node = column_expression->original_node.lock();
       const auto& table_column_information = _table_column_information(node, column_expression);
       column_type = table_column_information.column_type;
@@ -265,13 +268,13 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   int64_t right_distinct_values = -1;
 
   const auto node = op->lqp_node;
-  const auto join_node = static_pointer_cast<const JoinNode>(node);
+  const auto join_node = std::static_pointer_cast<const JoinNode>(node);
   // const auto operator_predicate = OperatorJoinPredicate::from_expression(*(join_node->node_expressions[0]),
   //                                                                       *node->left_input(), *node->right_input());
   const auto& operator_predicate = op->primary_predicate();
 
   const auto predicate_expression =
-      static_pointer_cast<const AbstractPredicateExpression>(join_node->node_expressions[0]);
+      std::static_pointer_cast<const AbstractPredicateExpression>(join_node->node_expressions[0]);
 
   auto predicate_condition = operator_predicate.predicate_condition;  //.value().predicate_condition;
   if (operator_predicate.is_flipped()) {
@@ -443,7 +446,7 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   Assert(op->_impl_description != "Unset", "Expected TableScan to be executed.");
   const auto implementation = pmr_string{op->_impl_description};
   const auto node = op->lqp_node;
-  const auto predicate_node = static_pointer_cast<const PredicateNode>(node);
+  const auto predicate_node = std::static_pointer_cast<const PredicateNode>(node);
   const auto predicate = predicate_node->predicate();
   const pmr_string input_sorted = _find_input_sorted(op->left_input()->performance_data, op->predicate());
   pmr_string predicate_str{};
@@ -514,7 +517,7 @@ const OperatorFeatureExporter::TableColumnInformation OperatorFeatureExporter::_
   const auto original_node = column_expression->original_node.lock();
 
   if (original_node->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = static_pointer_cast<const StoredTableNode>(original_node);
+    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node);
     table_name = stored_table_node->table_name;
 
     const auto input = input_side == InputSide::Left ? lqp_node->left_input() : lqp_node->right_input();

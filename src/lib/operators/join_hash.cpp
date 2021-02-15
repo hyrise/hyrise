@@ -84,28 +84,34 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
   /*
-    The number of radix bits is used to determine the number of build partitions whose hash maps have a size that can
-    be expected to fit into the L2 cache. This should incorporate hardware knowledge, once available in Hyrise. As of
-    now, we assume a L2 cache size of 1024 KB, of which we use 75 %.
+    The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
+    a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
+    that's the L2 cache, for Apple's M1 the L1 cache). This calculation should include hardware knowledge, once
+    available in Hyrise. As of now, we assume a cache size of 1024 KB, of which we use 75 %.
 
     We estimate the size the following way:
       - we assume each key appears once (that is an overestimation space-wise, but we
-      aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+        aim rather for a hash map that is slightly smaller than the cache than slightly larger)
       - each entry in the hash map is a pair of the actual hash key and the SmallPosList storing uint32_t offsets (see
         hash_join_steps.hpp)
   */
-  if (build_relation_size > probe_relation_size) {
+  if (build_side_size > probe_side_size) {
     /*
-      Hash joins perform best when the build relation is small. In case the inputs are switched (e.g., due to the join
-      mode) making the build partition larger than the probe partition, the user will be warned.
+      Hash joins perform best when the build side is small. For inner joins, we can simply select the smaller input
+      table as the build side. For other joins, such as semi or outer joins, the build side is fixed. In this case,
+      other join operators might be more efficient. We emit performance warning in this case. In the future, the
+      optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
-    PerformanceWarning("Build relation larger than probe relation in hash join");
+    std::stringstream performance_warning;
+    performance_warning << "Build side larger than probe side in hash join (join mode: " << magic_enum::enum_name(mode)
+                        << ").";
+    PerformanceWarning(performance_warning.str());
   }
 
-  // We assume an L2 cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size
-  // might be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 16 MB).
+  // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
+  // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
   constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
   constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
@@ -116,7 +122,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
-      static_cast<double>(build_relation_size) *
+      static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
       static_cast<double>(sizeof(T) + 1) / 0.85;
 
@@ -138,13 +144,15 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_column_id = ColumnID{};
 
   /**
-   * Build and probe side are assigned as follows (depending only on JoinMode, except for inner joins where input
-   * relation sizes are considered):
+   * The hash join works best when the table being probed is larger than the side for which the hash table is built
+   * (i.e., the build side). As consequence, when we are to freely determine the build side, we chose the smaller
+   * input table. For other cases, we cannot freely decide.
    *
-   * JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
-   * JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
-   * JoinMode::FullOuter    Not supported by JoinHash
-   * JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
+   * Build and probe side are assigned as follows:
+   *   JoinMode::Inner        The smaller table becomes the build side, the bigger the probe side
+   *   JoinMode::Left/Right   The outer table becomes the probe side, the inner table becomes the build side
+   *   JoinMode::FullOuter    Not supported by JoinHash
+   *   JoinMode::Semi/Anti*   The left table becomes the probe side, the right table becomes the build side
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
@@ -203,14 +211,14 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+          _radix_bits = calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(),
+                                                                  probe_input_table->row_count(), _mode);
         }
 
-        // It needs to be ensured that the build partition does not get too large, because the
-        // used offsets in the hash map might otherwise overflow. Since radix partitioning aims
-        // to avoid large build partitions, this should never happen. Nonetheless, we better
-        // assert since the effects of overflows will probably hard to debug.
+        // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
+        // hash maps might otherwise overflow. Since radix partitioning aims to avoid large build partitions, this
+        // should never happen. Nonetheless, we better assert since the effects of overflows will probably be hard to
+        // debug.
         const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
         Assert(static_cast<uint32_t>(static_cast<double>(build_input_table->row_count()) / std::pow(2, *_radix_bits)) <
                    max_partition_size,
@@ -226,7 +234,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     });
   });
 
-  DebugAssert(_radix_bits, "Radix bits are not set.");
+  Assert(_radix_bits, "Radix bits are not set.");
   join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
@@ -279,12 +287,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * Keep/Discard NULLs from build and probe columns as follows
      *
      * JoinMode::Inner              Discard NULLs from both columns
-     * JoinMode::Left/Right         Discard NULLs from the build column (the inner relation), but keep them on the probe
-     *                              column (the outer relation)
+     * JoinMode::Left/Right         Discard NULLs from the build column (the inner table), but keep them on the probe
+     *                              column (the outer table)
      * JoinMode::FullOuter          Not supported by JoinHash
      * JoinMode::Semi               Discard NULLs from both columns
-     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the right relation), but keep them on the probe
-     *                              column (the left relation)
+     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the right table), but keep them on the probe
+     *                              column (the left table)
      * JoinMode::AntiNullAsTrue     Keep NULLs from both columns
      */
 
@@ -318,7 +326,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *
      * Bloom filters can be used to skip rows that will not find a join partner. They are not shown here.
      *
-     *           Build Relation                       Probe Relation
+     *            Build Table                          Probe Table
      *                 |                                    |
      *        materialize_input()                  materialize_input()
      *                 |                                    |
@@ -445,7 +453,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     Timer timer_hash_map_building;
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
@@ -473,6 +481,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
+    radix_build_column.clear();
+
     /**
      * 4. Probe step
      */
@@ -482,7 +492,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);
 
-    // simple heuristic: half of the rows of the probe relation will match
+    // simple heuristic: half of the rows of the probe side will match
     const size_t result_rows_per_partition =
         _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
     for (size_t i = 0; i < partition_count; i++) {
@@ -528,9 +538,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
-    // After probing, the partitioned columns are not needed anymore.
-    radix_build_column.clear();
     radix_probe_column.clear();
+    hash_tables.clear();
 
     /**
      * 5. Write output Table
@@ -660,10 +669,8 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
-  stream << separator << "Radix bits:" << separator << radix_bits;
-  if (!left_input_is_build_side) {
-    stream << "." << separator << "Input sides have been flipped.";
-  }
+  stream << separator << "Radix bits: " << radix_bits << ".";
+  stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
 }  // namespace opossum
