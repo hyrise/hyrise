@@ -118,13 +118,6 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
     ChunkEncoder::encode_all_chunks(sorted_table, SegmentEncodingSpec(EncodingType::Dictionary));
     const auto table_name =  "aggregate_maxdiff" + std::to_string(max_date_diff);
 
-    if (max_date_diff == 10) {
-      const auto w = std::make_shared<TableWrapper>(sorted_table);
-      w->execute();
-      auto exporter = std::make_shared<Export>(w, table_name, FileType::Csv);
-      exporter->execute();
-    }
-
     const auto calibration_wrapper = std::make_shared<CalibrationTableWrapper>(sorted_table, table_name);
     tables.push_back(calibration_wrapper);
   }

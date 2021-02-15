@@ -8,10 +8,12 @@ import pandas as pd
 
 from tpch_benchmark import TPCHBenchmark
 from tpcds_benchmark import TPCDSBenchmark
+from calibration_benchmark import CalibrationBenchmark
 
 AVAILABLE_BENCHMARKS = {
   "tpch": TPCHBenchmark(),
-  "tpcds": TPCDSBenchmark()
+  "tpcds": TPCDSBenchmark(),
+  "calibration": CalibrationBenchmark(),
 }
 
 
@@ -57,28 +59,32 @@ def run_benchmark(benchmark, config_name, chunk_size):
   with open(f"{data_path}/aggregates.csv.json") as aggregate_json:
     column_information = json.load(aggregate_json)
   column_names = list(map(lambda x: x['name'], column_information['columns']))
-  print(f"column names: {column_names}")
 
   aggregates = pd.read_csv(f"{data_path}/aggregates.csv", names=column_names)
   INPUT_COLUMN_SORTED_COLUMN = 'INPUT_COLUMN_SORTED'
-  GROUP_COLUMNS = 'GROUP_COLUMNS'
-  GROUP_COLUMN_NAMES = 'GROUP_COLUMN_NAMES'
-  aggregates = aggregates[aggregates.apply(lambda x: not (x[GROUP_COLUMNS] == 1 and pd.isnull(x[GROUP_COLUMN_NAMES])), axis=1)]
-  aggregates[INPUT_COLUMN_SORTED_COLUMN] = aggregates.apply(actual_aggregate_ordering_information, args=(sort_order, correlations,), axis=1)
-  aggregates.to_csv(f"{data_path}/aggregates.csv", header=False)
+  if benchmark.name() != "calibration":
+    GROUP_COLUMNS = 'GROUP_COLUMNS'
+    GROUP_COLUMN_NAMES = 'GROUP_COLUMN_NAMES'
+    aggregates = aggregates[aggregates.apply(lambda x: not (x[GROUP_COLUMNS] == 1 and pd.isnull(x[GROUP_COLUMN_NAMES])), axis=1)]
+    aggregates[INPUT_COLUMN_SORTED_COLUMN] = aggregates.apply(actual_aggregate_ordering_information, args=(sort_order, correlations,), axis=1)
+  else:
+    aggregates[INPUT_COLUMN_SORTED_COLUMN] = 0.5 # we only generate such aggregates at the moment
+  aggregates.to_csv(f"{data_path}/aggregates.csv", header=False, index=False)
 
   #visualization_file_pattern = benchmark.visualization_pattern()
-  import glob
-  import shutil
-  target_path = f"{data_path}/sf{benchmark.scale()}-runs{benchmark.max_runs()}/{config_name}"
-  
-  if not os.path.exists(target_path):
-    os.makedirs(target_path)
+  if benchmark.name() != "calibration":
+    import glob
+    import shutil
+    target_path = f"{data_path}/sf{benchmark.scale()}-runs{benchmark.max_runs()}/{config_name}"
 
-  for file in glob.glob(data_path + "/*.csv*"):
-    shutil.move(file, target_path + '/' + os.path.basename(file))
+    if not os.path.exists(target_path):
+      os.makedirs(target_path)
 
-  shutil.copyfile('clustering_config.json', f'{target_path}/clustering_config.json')
+    for file in glob.glob(data_path + "/*.csv*"):
+      shutil.move(file, target_path + '/' + os.path.basename(file))
+
+    shutil.copyfile('clustering_config.json', f'{target_path}/clustering_config.json')
+
 
 def actual_aggregate_ordering_information(row, sort_order, correlations):
   group_columns = row['GROUP_COLUMNS']
@@ -95,13 +101,9 @@ def actual_aggregate_ordering_information(row, sort_order, correlations):
 
   def correlates(group_column, clustering_columns, correlations):
     correlated_columns = correlations.get(group_column, {})
-    if group_column == 'l_orderkey':
-      print("following columns are correlated to l_orderkey: " + ",".join(correlated_columns))
     for column in correlated_columns:
       if column in clustering_columns:
-        print(f"{group_column} is correlated to the clustered column {column}")
         return True
-    print(f"{group_column} is not correlated to any of the clustered columns [{','.join(clustering_columns)}]")
     return False
 
   if 'lineitem' in sort_order:

@@ -192,7 +192,10 @@ void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_
       auto optimized_aggregate = aggregate_node->deep_copy();
       optimized_aggregate = optimizer->optimize(std::move(optimized_aggregate));
 
-      _generated_lqps.push_back(optimized_aggregate);
+      constexpr size_t NUM_AGGREGATE_EXECUTIONS = 5;
+      for (auto execution = 0ul; execution < NUM_AGGREGATE_EXECUTIONS; execution++) {
+        _generated_lqps.push_back(optimized_aggregate);
+      }
     }
   }
 }
