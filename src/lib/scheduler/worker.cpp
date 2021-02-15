@@ -158,9 +158,10 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
         continue;
       }
 
-      // Give other tasks a certain chance of being executed, too. Anectotal evidence says that this is a good idea.
-      // For some reason, this keeps the memory consumption of TPC-H Q6 low even if the scheduler is overcommitted.
-      // Because generating random numbers is somewhat expensive, we keep a list of random numbers and reuse them.
+      // Give other tasks, i.e., tasks that are unrelated to what we are currently waiting on, a certain chance of being
+      // executed, too. Anectotal evidence says that this is a good idea. For some reason, this keeps the memory
+      // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
+      // somewhat expensive, we keep a list of random numbers and reuse them.
       // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
       _next_random = (_next_random + 1) % _random.size();
       if (_random[_next_random] <= 20) {
