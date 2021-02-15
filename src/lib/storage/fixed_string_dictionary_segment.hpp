@@ -75,4 +75,6 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
+extern template class FixedStringDictionarySegment<pmr_string>;
+
 }  // namespace opossum

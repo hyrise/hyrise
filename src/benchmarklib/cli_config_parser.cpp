@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "boost/algorithm/string.hpp"
+#include <boost/algorithm/string.hpp>
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
