@@ -75,7 +75,6 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
     std::cout << "- Clustering with '" << magic_enum::enum_name(cluster_config) << "' configuration" << std::endl;
   }
-  
 
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
