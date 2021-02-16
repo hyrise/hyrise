@@ -514,8 +514,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             auto previous_max = _expected_result_size.load();
             while (previous_max < id_map.size()) {
-              // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in parallel.
-              // How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
+              // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
+              // parallel. How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
               if (_expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
                 break;
               }
