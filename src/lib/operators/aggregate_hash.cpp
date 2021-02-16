@@ -240,6 +240,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
     ++chunk_offset;
   };
 
+  // Pass true_type into get_or_add_result to enable certain optimizations:
   // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
   // indexes, see get_or_add_result for details. Furthermore, if we use the immediate key shortcut (which uses the same
   // code path as caching), we need to pass true_type so that the aggregate keys are checked for immediate access values.
@@ -513,6 +514,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             auto previous_max = _expected_result_size.load();
             while (previous_max < id_map.size()) {
+              // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in parallel.
               // How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
               if (_expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
                 break;
@@ -669,8 +671,9 @@ void AggregateHash::_aggregate() {
             results.resize(1);
             results[0].aggregate_count += input_chunk_size;
 
-            // We need to set a RowID because the default value (NULL_ROW_ID) would later be skipped. This RowID would
-            // otherwise be used to recreate the GROUP BY values, but as we are not grouping, it will be ignored.
+            // We need to set any RowID because the default value (NULL_ROW_ID) would later be skipped. As we are not
+            // reconstructing the GROUP BY values later, the exact value of this row_id does not matter, as long as it
+            // not NULL_ROW_ID.
             results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
