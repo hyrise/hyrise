@@ -240,10 +240,10 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
     ++chunk_offset;
   };
 
-  // Pass true_type into get_or_add_result to enable certain optimizations:
-  // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
-  // indexes, see get_or_add_result for details. Furthermore, if we use the immediate key shortcut (which uses the same
-  // code path as caching), we need to pass true_type so that the aggregate keys are checked for immediate access values.
+  // Pass true_type into get_or_add_result to enable certain optimizations: If we have more than one aggregate function
+  // (and thus more than one context), it makes sense to cache the results indexes, see get_or_add_result for details.
+  // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
+  // true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment,
                                     [&](const auto& position) { process_position(std::true_type{}, position); });
@@ -319,8 +319,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
 
-            // Track the minimum and maximum key for the immediate key optimization. Search this cpp file for the last use
-            // of `min_key` for a longer explanation.
+            // Track the minimum and maximum key for the immediate key optimization. Search this cpp file for the last
+            // use of `min_key` for a longer explanation.
             auto min_key = std::numeric_limits<AggregateKeyEntry>::max();
             auto max_key = uint64_t{0};
 
