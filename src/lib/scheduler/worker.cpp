@@ -140,22 +140,28 @@ void Worker::join() {
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
 void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  // This lambda checks if all tasks from the vector have been executed. If they are, it causes _wait_for_tasks to
-  // return. If there are remaining tasks, it primarily tries to execute these. If they cannot be executed, the
-  // worker performs work for others (i.e., executes tasks from the queue).
-  auto check_own_tasks = [&]() {
+  // This lambda checks if all tasks from the vector (our "own" tasks) have been executed. If they are, it causes
+  // _wait_for_tasks to return. If there are remaining tasks, it primarily tries to execute these. If they cannot be
+  // executed, the worker performs work for others (i.e., executes tasks from the queue).
+  auto all_own_tasks_done = [&]() {
     auto all_done = true;
     // Note: If we found a task that has not yet been executed, we reset this loop and start from the beginning.
     // As such, both all_done and it may be reset outside of the following line.
-    for (auto it = tasks.begin(); it != tasks.end(); ++it) {
+    auto it = tasks.begin();
+    while (it != tasks.end()) {
       const auto& task = *it;
       if (task->is_done()) {
+        ++it;
         continue;
       }
 
-      // Task is not yet done - check if it is ready for execution
       if (!task->is_ready()) {
+        // Task is not yet done - check if it is ready for execution
         all_done = false;
+
+        // Task cannot be executed. We could stop here and simply return all_own_tasks_done == false. Instead, we
+        // continue in the list of tasks and check if there are any other tasks that we could work on.
+        ++it;
         continue;
       }
 
@@ -175,6 +181,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       if (!successfully_assigned) {
         // Some other worker has already started to work on this task - pick a different one.
         all_done = false;
+        ++it;
         continue;
       }
 
@@ -185,13 +192,13 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       // Reset loop so that we re-visit tasks that may have finished in the meantime. We need to decrement `it` because
       // it will be incremented when the loop iteration finishes.
       all_done = true;
-      it = tasks.begin() - 1;
+      it = tasks.begin();
     }
     return all_done;
   };
 
-  while (!check_own_tasks()) {
-    // Run any job. this could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
+  while (!all_own_tasks_done()) {
+    // Run any job. This could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
     // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
     _work();
   }
