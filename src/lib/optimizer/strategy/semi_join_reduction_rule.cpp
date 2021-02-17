@@ -44,6 +44,14 @@ bool is_unfiltered(const std::shared_ptr<AbstractLQPNode>& node) {
   return false;
 }
 
+bool is_unfiltered_2(const std::shared_ptr<const StoredTableNode>& node, const std::shared_ptr<JoinNode>& join_node) {
+  if (node->outputs()[0] == join_node) return true;
+
+  if (node->outputs()[0]->outputs()[0] == join_node) return true;
+
+  return false;
+}
+
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
@@ -71,8 +79,8 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         const auto left_original_node = std::dynamic_pointer_cast<const StoredTableNode>(left_column->original_node.lock());
         const auto right_original_node = std::dynamic_pointer_cast<const StoredTableNode>(right_column->original_node.lock());
 
-        if (check_is_ind(left_original_node->table_name, right_original_node->table_name) && is_unfiltered(join_node->right_input())) return LQPVisitation::VisitInputs;
-        if (check_is_ind(right_original_node->table_name, left_original_node->table_name) && is_unfiltered(join_node->left_input())) return LQPVisitation::VisitInputs;
+        if (check_is_ind(left_original_node->table_name, right_original_node->table_name) && is_unfiltered_2(right_original_node, join_node)) return LQPVisitation::VisitInputs;
+        if (check_is_ind(right_original_node->table_name, left_original_node->table_name) && is_unfiltered_2(left_original_node, join_node)) return LQPVisitation::VisitInputs;
       }
     }
 
