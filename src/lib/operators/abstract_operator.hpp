@@ -188,6 +188,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
+  enum class OperatorState : uint8_t {
+    Created = 0,
+    Running = 1,
+    Executed = 2,
+    Cleared = 3
+  };
+
+  std::atomic<OperatorState> _state;
+
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
@@ -215,9 +224,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _left_input;
   std::shared_ptr<const AbstractOperator> _right_input;
-
-  bool _executed = false;
-  std::atomic<bool> _execution_started = false;
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
