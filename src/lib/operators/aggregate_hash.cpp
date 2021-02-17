@@ -613,7 +613,7 @@ void AggregateHash::_aggregate() {
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
-       * As the grouping happens as part of the aggregation but no aggregate function exists , we use
+       * As the grouping happens as part of the aggregation but no aggregate function exists, we use
        * `AggregateFunction::Min` as a fake aggregate function whose result will be discarded. From here on, the steps
        * are the same as they are for a regular grouped aggregate.
        */
@@ -625,11 +625,12 @@ void AggregateHash::_aggregate() {
       auto& result_ids = *context->result_ids;
       auto& results = context->results;
 
+      // Add value or combination of values is added to the list of distinct value(s). This is done by calling
+      // get_or_add_result, which adds the corresponding entry in the list of GROUP BY values.
       if (_use_immediate_key_shortcut) {
         for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-          // Make sure the value or combination of values is added to the list of distinct value(s). As we are able to
-          // use immediate keys, pass true_type so that the combined caching/immediate key code path is enabled in
-          // get_or_add_result.
+          // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
+          // is enabled in get_or_add_result.
           get_or_add_result(std::true_type{}, result_ids, results,
                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                             RowID{chunk_id, chunk_offset});
