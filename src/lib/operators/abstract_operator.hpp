@@ -70,11 +70,20 @@ enum class OperatorType {
  *  an operator registers as a consumer at all of its input operators. After having executed, an operator deregisters
  *  automatically.
  *
- *  WARNING on handling Subqueries:
- *   This abstract class handles consumer registration/deregistration for input operators only. Operators that consume
- *   subqueries, such as TableScan and Projection, have to register and deregister as consumers for those manually.
- *   It is crucial to call register_consumer() from the constructor, before the execution starts, to prevent subquery
- *   results from being cleared too early. Otherwise, operators may need to re-execute, which is illegal.
+ *     WARNING on handling Subqueries:
+ *      This abstract class handles consumer registration/deregistration for input operators only.
+ *      Operators consuming subqueries, such as TableScan and Projection, have to register and deregister as
+ *      consumers manually. For example:
+ *
+ *        1. Projection::Projection
+ *            - Collect uncorrelated subqueries from each expression's arguments.
+ *            - Call register_consumer() and store pointers for all uncorrelated subqueries.
+ *        2. Projection::_on_execute
+ *            - Compute uncorrelated subqueries using ExpressionEvaluator::populate_uncorrelated_subquery_results_cache
+ *            - Call deregister_consumer() for each uncorrelated subquery.
+ *
+ *      It is crucial to call register_consumer() from the constructor, before the execution starts, to prevent subquery
+ *      results from being cleared too early. Otherwise, operators may need to re-execute, which is illegal.
  *
  * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
  */

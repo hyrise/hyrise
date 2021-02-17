@@ -39,8 +39,11 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     for (const auto& subquery_expression : pqp_subquery_expressions) {
       if (subquery_expression->is_correlated()) continue;
 
-      // Register as consumer and keep a pointer to the subquery so that we can deregister ourselves later without
-      // having to traverse the PQP again
+      /**
+       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
+       * 1. register as a consumer and
+       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
+       */
       subquery_expression->pqp->register_consumer();
       _uncorrelated_subquery_expressions.push_back(subquery_expression);
     }

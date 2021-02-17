@@ -53,10 +53,9 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
   for (const auto& subquery_expression : pqp_subquery_expressions) {
     if (subquery_expression->is_correlated()) continue;
     /**
-     * Uncorrelated subqueries will be resolved after TableScan::create_impl got called. Therefore, we
-     * 1. register as a consumer.
-     * 2. We also store a pointer because we may want to populate the ExpressionEvaluator's cache with the results of
-     *    these uncorrelated subqueries.
+     * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
+     * 1. register as a consumer and
+     * 2. store pointers to eventually call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
      */
     subquery_expression->pqp->register_consumer();
     _uncorrelated_subquery_expressions.push_back(subquery_expression);
