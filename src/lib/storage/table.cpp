@@ -341,8 +341,8 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
 
     for (const auto& existing_constraint : _table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
-                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
+      Assert(existing_constraint.key_type() != KeyConstraintType::PRIMARY_KEY ||
+                 table_key_constraint.key_type() != KeyConstraintType::PRIMARY_KEY,
              "Another primary key already exists for this table.");
 
       // Ensure there is only one key constraint per column set.

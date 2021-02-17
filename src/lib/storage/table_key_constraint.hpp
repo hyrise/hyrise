@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
+enum class KeyConstraintType { PRIMARY_KEY, UNIQUE, FOREIGN_KEY };
 
 /**
  * Container class to define uniqueness constraints for tables.
@@ -12,9 +12,11 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
-  TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type);
+TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type, std::optional<std::shared_ptr<TableKeyConstraint>> init_foreign_table_constraint = std::nullopt);
 
   KeyConstraintType key_type() const;
+
+  std::optional<std::shared_ptr<TableKeyConstraint>> foreign_table_constraint;
 
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
