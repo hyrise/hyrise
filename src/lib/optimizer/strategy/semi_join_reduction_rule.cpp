@@ -1,13 +1,49 @@
 #include "semi_join_reduction_rule.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
+
+bool check_is_ind(const std::string& left_table_name, const std::string& right_table_name) {
+  const auto& left_table = Hyrise::get().storage_manager.get_table(left_table_name);
+  const auto& right_table = Hyrise::get().storage_manager.get_table(right_table_name);
+  const auto& left_table_key_constraints = left_table->soft_key_constraints();
+  const auto& right_table_key_constraints = right_table->soft_key_constraints();
+
+  for (const TableKeyConstraint& table_key_constraint_left : left_table_key_constraints) {
+    if (table_key_constraint_left.key_type() != KeyConstraintType::FOREIGN_KEY) continue;
+
+    Assert(table_key_constraint_left.foreign_table_constraint && (*table_key_constraint_left.foreign_table_constraint)->key_type() == KeyConstraintType::PRIMARY_KEY, "Referenced constraint must exist and be of type PrimaryKey!");
+    const auto referenced_primary_key = *(table_key_constraint_left.foreign_table_constraint);
+
+    for (const TableKeyConstraint& table_key_constraint_right : right_table_key_constraints) {
+      if (table_key_constraint_right == *referenced_primary_key) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool is_unfiltered(const std::shared_ptr<AbstractLQPNode>& node) {
+  if (std::dynamic_pointer_cast<const StoredTableNode>(node)) return true;
+
+  if (std::dynamic_pointer_cast<const ValidateNode>(node) && std::dynamic_pointer_cast<const StoredTableNode>(node->left_input())) return true;
+
+  return false;
+}
+
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
@@ -26,6 +62,19 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
+
+    if (join_node->join_predicates().size() == 1) {
+      const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicates()[0]);
+      const auto left_column = std::dynamic_pointer_cast<LQPColumnExpression>(predicate_expression->left_operand());
+      const auto right_column = std::dynamic_pointer_cast<LQPColumnExpression>(predicate_expression->right_operand());
+      if (left_column && right_column) {
+        const auto left_original_node = std::dynamic_pointer_cast<const StoredTableNode>(left_column->original_node.lock());
+        const auto right_original_node = std::dynamic_pointer_cast<const StoredTableNode>(right_column->original_node.lock());
+
+        if (check_is_ind(left_original_node->table_name, right_original_node->table_name) && is_unfiltered(join_node->right_input())) return LQPVisitation::VisitInputs;
+        if (check_is_ind(right_original_node->table_name, left_original_node->table_name) && is_unfiltered(join_node->left_input())) return LQPVisitation::VisitInputs;
+      }
+    }
 
     // As multi-predicate joins are expensive, we do not want to create semi join reductions that use them. Instead, we
     // look at each predicate of the join independently. We can do this as a JoinNode's predicates are conjunctive.
