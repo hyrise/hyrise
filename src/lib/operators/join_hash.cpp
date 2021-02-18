@@ -93,8 +93,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
     std::stringstream performance_warning;
-    performance_warning << "Build side larger than probe side in hash join (join mode: " // << magic_enum::enum_name(mode)
-                        << ").";
+    performance_warning << "Build side larger than probe side in hash join.";
     PerformanceWarning(performance_warning.str());
   }
 
