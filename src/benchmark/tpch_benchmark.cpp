@@ -45,7 +45,11 @@ int main(int argc, char* argv[]) {
     ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
                "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
-               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")); // NOLINT
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
+                   "by the TPC-H data generator. With --clustering=\"TPCHPruning\", the two largest tables 'lineitem' "
+                   "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning.",
+                   cxxopts::value<std::string>()->default_value("None")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;

@@ -5,17 +5,15 @@
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
-#include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

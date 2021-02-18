@@ -326,9 +326,13 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
-  // Allowed as per TPC-H Specification, paragraph 1.5.2. Currently not used though.
-  // Using lineitem's shipdate column significantly improves pruning, but is offset by added runtime of the aggregation
-  // in Q18 on the orderkey.
+  if (_benchmark_config->clustering_configuration == ClusteringConfiguration::TPCHPruning) {
+    // This clustering improve the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
+    // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
+    // Allowed as per TPC-H Specification, paragraph 1.5.2.
+    return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+  }
+
   return {};
 }
 
