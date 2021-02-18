@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <vector>
 
@@ -33,7 +34,12 @@ namespace opossum {
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
 Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _queue(queue), _id(id), _cpu_id(cpu_id) {}
+    : _queue(queue), _id(id), _cpu_id(cpu_id) {
+  // Generate a random distribution from 0-99 for later use, see below
+  _random.resize(100);
+  std::iota(_random.begin(), _random.end(), 0);
+  std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
+}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -90,6 +96,12 @@ void Worker::_work() {
     }
   }
 
+  const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
+  if (!successfully_assigned) {
+    // Some other worker has already started to work on this task - pick a different one.
+    return;
+  }
+
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
@@ -114,7 +126,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
     Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
     _next_task = task;
   } else {
-    _queue->push(task, static_cast<uint32_t>(SchedulePriority::High));
+    _queue->push(task, static_cast<uint32_t>(SchedulePriority::Default));
   }
 }
 
@@ -128,17 +140,66 @@ void Worker::join() {
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
 void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  auto tasks_completed = [&tasks]() {
-    // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
-    for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
-      if (!(*it)->is_done()) {
+  // This lambda checks if all tasks from the vector (our "own" tasks) have been executed. If they are, it causes
+  // _wait_for_tasks to return. If there are remaining tasks, it primarily tries to execute these. If they cannot be
+  // executed, the worker performs work for others (i.e., executes tasks from the queue).
+  auto all_own_tasks_done = [&]() {
+    auto all_done = true;
+    // Note: If we found a task that has not yet been executed, we reset this loop and start from the beginning.
+    // As such, both all_done and it may be reset outside of the following line.
+    auto it = tasks.begin();
+    while (it != tasks.end()) {
+      const auto& task = *it;
+      if (task->is_done()) {
+        ++it;
+        continue;
+      }
+
+      if (!task->is_ready()) {
+        // Task is not yet done - check if it is ready for execution
+        all_done = false;
+
+        // Task cannot be executed. We could stop here and simply return all_own_tasks_done == false. Instead, we
+        // continue in the list of tasks and check if there are any other tasks that we could work on.
+        ++it;
+        continue;
+      }
+
+      // Give other tasks, i.e., tasks that are unrelated to what we are currently waiting on, a certain chance of being
+      // executed, too. Anectotal evidence says that this is a good idea. For some reason, this keeps the memory
+      // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
+      // somewhat expensive, we keep a list of random numbers and reuse them.
+      // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
+      _next_random = (_next_random + 1) % _random.size();
+      if (_random[_next_random] <= 50) {
         return false;
       }
+
+      // Run one of our own tasks. First, let everyone know that we are about to execute it. This is necessary because
+      // the task is already in a queue and some other worker might pull it at the same time.
+      const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
+      if (!successfully_assigned) {
+        // Some other worker has already started to work on this task - pick a different one.
+        all_done = false;
+        ++it;
+        continue;
+      }
+
+      // Actually execute it.
+      task->execute();
+      ++_num_finished_tasks;
+
+      // Reset loop so that we re-visit tasks that may have finished in the meantime. We need to decrement `it` because
+      // it will be incremented when the loop iteration finishes.
+      all_done = true;
+      it = tasks.begin();
     }
-    return true;
+    return all_done;
   };
 
-  while (!tasks_completed()) {
+  while (!all_own_tasks_done()) {
+    // Run any job. This could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
+    // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
     _work();
   }
 }
