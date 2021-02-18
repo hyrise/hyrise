@@ -45,9 +45,15 @@ bool is_unfiltered(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 bool is_unfiltered_2(const std::shared_ptr<const StoredTableNode>& node, const std::shared_ptr<JoinNode>& join_node) {
-  if (node->outputs()[0] == join_node) return true;
+  for (const auto& output : node->outputs()) {
+    std::cout << output->description(AbstractLQPNode::DescriptionMode::Detailed) << std::endl;
+    if (output == join_node) return true;
+    
+    std::cout << output->outputs()[0]->description(AbstractLQPNode::DescriptionMode::Detailed) << std::endl;
+    if (output->type == LQPNodeType::Validate && output->outputs()[0] == join_node) return true;
+  }
 
-  if (node->outputs()[0]->outputs()[0] == join_node) return true;
+  std::cout << "False for " << join_node << " and " << node << std::endl;
 
   return false;
 }
@@ -79,8 +85,12 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         const auto left_original_node = std::dynamic_pointer_cast<const StoredTableNode>(left_column->original_node.lock());
         const auto right_original_node = std::dynamic_pointer_cast<const StoredTableNode>(right_column->original_node.lock());
 
-        if (check_is_ind(left_original_node->table_name, right_original_node->table_name) && is_unfiltered_2(right_original_node, join_node)) return LQPVisitation::VisitInputs;
-        if (check_is_ind(right_original_node->table_name, left_original_node->table_name) && is_unfiltered_2(left_original_node, join_node)) return LQPVisitation::VisitInputs;
+        // std::cout << "Check: " << left_original_node->table_name << " " << right_original_node->table_name << " " << join_node << " " << right_original_node << " " << left_original_node << std::endl;
+
+        // if (check_is_ind(left_original_node->table_name, right_original_node->table_name) && is_unfiltered_2(right_original_node, join_node)) { std::cout << "found" << std::endl; return LQPVisitation::VisitInputs; }
+        // if (check_is_ind(right_original_node->table_name, left_original_node->table_name) && is_unfiltered_2(left_original_node, join_node)) { std::cout << "found" << std::endl; return LQPVisitation::VisitInputs; }
+        if (check_is_ind(left_original_node->table_name, right_original_node->table_name)) return LQPVisitation::VisitInputs;
+        if (check_is_ind(right_original_node->table_name, left_original_node->table_name)) return LQPVisitation::VisitInputs;
       }
     }
 
