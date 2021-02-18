@@ -356,7 +356,7 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
   // (1) Gather PredicateNodes. Group adjacent PredicateNodes, when there are no other nodes in between.
   // (1.1) Collect all leaf nodes
   auto node_queue = std::queue<std::shared_ptr<AbstractLQPNode>>();
-  for (const auto& leaf_node : lqp_find_leafs(lqp_root)) {
+  for (const auto& leaf_node : lqp_find_leaves(lqp_root)) {
     node_queue.push(leaf_node);
   }
   // (1.2) Visit the LQP bottom-up from the leaf nodes

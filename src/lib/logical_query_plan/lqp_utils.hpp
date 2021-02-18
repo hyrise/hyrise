@@ -214,7 +214,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
  *         Optionally, the template parameter can be set to return leaf nodes of type @tparam LQPNode only.
  */
 template <class LQPNode = AbstractLQPNode>
-std::vector<std::shared_ptr<LQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp) {
+std::vector<std::shared_ptr<LQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
   static_assert(std::is_same<LQPNode, AbstractLQPNode>::value || std::is_base_of<AbstractLQPNode, LQPNode>::value,
                 "The given type LQPNode must be derived from AbstractLQPNode");
   std::vector<std::shared_ptr<LQPNode>> leaf_nodes;

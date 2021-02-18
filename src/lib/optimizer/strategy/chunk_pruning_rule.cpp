@@ -29,7 +29,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       predicate_chains_by_stored_table_node;
 
   // (1) Collect StoredTableNodes
-  const auto stored_table_nodes = lqp_find_leafs<StoredTableNode>(lqp_root);
+  const auto stored_table_nodes = lqp_find_leaves<StoredTableNode>(lqp_root);
   for (const auto& stored_table_node : stored_table_nodes) {
     predicate_chains_by_stored_table_node.emplace(stored_table_node, std::vector<PredicateChain>{});
   }
