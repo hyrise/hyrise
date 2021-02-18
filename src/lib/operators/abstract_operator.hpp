@@ -101,6 +101,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
 
+  /**
+   * @return true if the operator finished execution, regardless of whether the results have already been cleared.
+   */
   bool executed() const;
 
   /**
@@ -210,6 +213,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const AbstractOperator> _right_input;
 
   bool _executed = false;
+  std::atomic<bool> _execution_started = false;
+
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 

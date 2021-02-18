@@ -68,6 +68,9 @@ void AbstractOperator::execute() {
   if (_executed) return;
   Assert(!_output, "Unexpected re-execution of an operator.");
 
+  auto execution_already_started = _execution_started.exchange(true);
+  Assert(!execution_already_started, "Operator is already being executed.");
+
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
     Assert(!_right_input || _right_input->executed(), "Right input has not yet been executed");
