@@ -176,10 +176,10 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
         // Update helper variables
         if (!position.is_null()) {
-          aggregator(ColumnType{new_value}, value_count, accumulator);
+          aggregator(new_value, value_count, accumulator);
           value_count++;
           if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
-            unique_values.insert(ColumnType{new_value});
+            unique_values.insert(new_value);
           } else if constexpr (aggregate_function == AggregateFunction::Any) {
             // Gathering the group's first value for ANY() is sufficient
             return;
