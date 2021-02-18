@@ -44,7 +44,7 @@ AbstractOperator::~AbstractOperator() {
     bool aborted = transaction_context ? transaction_context->aborted() : false;
     bool left_has_executed = _left_input ? _left_input->executed() : false;
     bool right_has_executed = _right_input ? _right_input->executed() : false;
-    Assert(executed() || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
+    Assert(_executed || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
 }
@@ -52,7 +52,8 @@ AbstractOperator::~AbstractOperator() {
 OperatorType AbstractOperator::type() const { return _type; }
 
 bool AbstractOperator::executed() const {
-  return _state == OperatorState::Executed || _state == OperatorState::Cleared;
+  DebugAssert(_executed || !_output, "Did not expect to see an output for an unexecuted operator.");
+  return _executed;
 }
 
 void AbstractOperator::execute() {
@@ -64,12 +65,8 @@ void AbstractOperator::execute() {
    *    b) because there are no more consumers that need the operator's result.
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
-  if (executed()) return;
-
-  {
-    OperatorState previous_state = _state.exchange(OperatorState::Running);
-    Assert(previous_state == OperatorState::Created, "Cannot execute operator because of illegal state.");
-  }
+  if (_executed) return;
+  Assert(!_output, "Unexpected re-execution of an operator.");
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
@@ -106,10 +103,8 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  {
-    OperatorState previous_state = _state.exchange(OperatorState::Executed);
-    Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.");
-  }
+  _executed = true;
+
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
   if (_right_input) mutable_right_input()->deregister_consumer();
@@ -170,12 +165,12 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  Assert(_state == OperatorState::Executed, "Empty output because operator did not execute yet.");
+  Assert(_executed, "Empty output because operator did not execute yet.");
   return _output;
 }
 
 void AbstractOperator::clear_output() {
-  Assert(_state == OperatorState::Executed, "Unexpected call of clear_output() since operator did not execute yet.");
+  Assert(_executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
   if (!_never_clear_output) _output = nullptr;
 }
@@ -260,7 +255,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  DebugAssert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
+  DebugAssert(!_executed, "Setting parameters on operators that have already executed is illegal.");
   if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
