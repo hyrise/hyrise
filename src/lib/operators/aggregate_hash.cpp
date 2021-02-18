@@ -800,7 +800,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
-      // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+      // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+      // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
       if (result.row_id.is_null()) continue;
       pos_list.emplace_back(result.row_id);
     }
@@ -860,7 +861,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+    // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
     if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 0) {
@@ -881,7 +883,8 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
   values.reserve(results.size());
 
   for (const auto& result : results) {
-    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+    // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
     if (result.row_id.is_null()) continue;
 
     values.emplace_back(result.aggregate_count);
@@ -896,7 +899,8 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
   values.reserve(results.size());
 
   for (const auto& result : results) {
-    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+    // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
     if (result.row_id.is_null()) continue;
 
     values.emplace_back(result.accumulator.size());
@@ -912,7 +916,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+    // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
     if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 0) {
@@ -943,7 +948,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   null_values.reserve(results.size());
 
   for (const auto& result : results) {
-    // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+    // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
     if (result.row_id.is_null()) continue;
 
     if (result.aggregate_count > 1) {
@@ -1109,7 +1115,8 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     auto pos_list = RowIDPosList{};
     pos_list.reserve(results.size());
     for (const auto& result : results) {
-      // NULL means that this result was overallocated (see get_or_add_result) and must be ignored
+      // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+      // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
       if (result.row_id.is_null()) continue;
       pos_list.emplace_back(result.row_id);
     }
