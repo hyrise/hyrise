@@ -340,6 +340,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                 };
 
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                  // Single GROUP BY column
                   if (position.is_null()) {
                     keys[chunk_offset] = 0;
                   } else {
@@ -351,6 +352,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                     max_key = std::max(max_key, key);
                   }
                 } else {
+                  // Multiple GROUP BY columns
                   if (position.is_null()) {
                     keys[chunk_offset][group_column_index] = 0;
                   } else {
@@ -368,7 +370,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               // the values as immediate indexes into the list of results. To handle smaller gaps, we include cases up
               // to a certain threshold, but at some point these gaps make the approach less beneficial than a proper
               // hash-based approach. Both min_key and max_key do not correspond to the original int32_t value, but are
-              // the result of the int_to_uint transformation. As such, they are guaranteed to be positive.
+              // the result of the int_to_uint transformation. As such, they are guaranteed to be positive. This
+              // shortcut only works if we are aggregating with a single GROUP BY column (i.e., when we use
+              // AggregateKeyEntry) - otherwise, we cannot establish a 1:1 mapping from keys_per_chunk to the result id.
               // TODO(anyone): Find a reasonable threshold.
               if (max_key > 0 &&
                   static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
@@ -512,6 +516,10 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               });
             }
 
+            // We will see at least `id_map.size()` different groups. We can use this knowledge to preallocate memory
+            // for the results. Estimating the number of groups for multiple GROUP BY columns is somewhat hard, so we
+            // simply take the number of groups created by the GROUP BY column with the highest number of distinct
+            // values.
             auto previous_max = _expected_result_size.load();
             while (previous_max < id_map.size()) {
               // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
