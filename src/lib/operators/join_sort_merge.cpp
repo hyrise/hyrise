@@ -953,17 +953,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
 
     // Do not allow merge of the partitions, to keep the sort order.
-    constexpr auto allow_partition_merge = false;
+    constexpr auto ALLOW_PARTITION_MERGE = false;
     auto output_chunks =
         write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                            OutputColumnOrder::LeftFirstRightSecond, allow_partition_merge);
+                            OutputColumnOrder::LeftFirstRightSecond, ALLOW_PARTITION_MERGE);
 
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
-    for (auto chunk : output_chunks) {
+    for (auto &chunk : output_chunks) {
       if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
           _mode == JoinMode::Inner) {
         chunk->finalize();
