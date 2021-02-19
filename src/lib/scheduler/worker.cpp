@@ -171,7 +171,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       // somewhat expensive, we keep a list of random numbers and reuse them.
       // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
       _next_random = (_next_random + 1) % _random.size();
-      if (_random[_next_random] <= 25) {
+      if (_random[_next_random] <= 20) {
         return false;
       }
 

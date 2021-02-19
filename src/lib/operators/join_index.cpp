@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <magic_enum.hpp>
-
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
