@@ -1,8 +1,8 @@
-"65535_100000_sorted","65535_100000_int_Dictionary_0","int","Ascending",63196
-"65535_100000_sorted","65535_100000_long_Dictionary_0","long","Ascending",63215
-"65535_100000_sorted","65535_100000_float_Dictionary_0","float","Ascending",63030
-"65535_100000_sorted","65535_100000_double_Dictionary_0","double","Ascending",63264
-"65535_100000_sorted","65535_100000_string_Dictionary_0","string","Ascending",63377
+"65535_100000_sorted","65535_100000_int_Dictionary_0","int","Ascending",63174
+"65535_100000_sorted","65535_100000_long_Dictionary_0","long","Ascending",63158
+"65535_100000_sorted","65535_100000_float_Dictionary_0","float","Ascending",63306
+"65535_100000_sorted","65535_100000_double_Dictionary_0","double","Ascending",63191
+"65535_100000_sorted","65535_100000_string_Dictionary_0","string","Ascending",63104
 "65535_6000000_sorted","65535_6000000_int_Dictionary_0","int","Ascending",300001
 "65535_6000000_sorted","65535_6000000_long_Dictionary_0","long","Ascending",300001
 "65535_6000000_sorted","65535_6000000_float_Dictionary_0","float","Ascending",300001
@@ -32,7 +32,7 @@
 "aggregate_maxdiff180","id","int","No",1500000
 "aggregate_maxdiff180","date","string","Ascending",2551
 "aggregate_maxdiff180","quantity","float","No",100
-"65535_300000","65535_300000_int_Dictionary_0","int","No",189709
-"65535_300000","65535_300000_float_Dictionary_1","float","No",189765
-"65535_65535","65535_65535_int_Dictionary_0","int","No",41371
-"65535_65535","65535_65535_float_Dictionary_1","float","No",41369
+"semi_join_300000","semi_join_300000_int_Dictionary_0","int","No",189779
+"semi_join_300000","semi_join_300000_float_Dictionary_1","float","No",189644
+"semi_join_65535","semi_join_65535_int_Dictionary_0","int","No",41289
+"semi_join_65535","semi_join_65535_float_Dictionary_1","float","No",41472
