@@ -1,0 +1,169 @@
+{
+    "columns": [
+        {
+            "name": "JOIN_ID",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "JOIN_IMPLEMENTATION",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "JOIN_MODE",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "INPUT_ROWS_LEFT",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "INPUT_ROWS_RIGHT",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "INPUT_COLUMNS_LEFT",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "INPUT_COLUMNS_RIGHT",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ESTIMATED_INPUT_ROWS_LEFT",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "ESTIMATED_INPUT_ROWS_RIGHT",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "ESTIMATED_LEFT_DISTINCT_VALUES",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "ESTIMATED_RIGHT_DISTINCT_VALUES",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "OUTPUT_ROWS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "OUTPUT_COLUMNS",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ESTIMATED_CARDINALITY",
+            "nullable": false,
+            "type": "float"
+        },
+        {
+            "name": "RUNTIME_NS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "LEFT_TABLE_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "LEFT_COLUMN_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "LEFT_COLUMN_TYPE",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "RIGHT_TABLE_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "RIGHT_COLUMN_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "RIGHT_COLUMN_TYPE",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "PROBE_SIDE_FLIP",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "LEFT_INPUT_COLUMN_SORTED",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "RIGHT_INPUT_COLUMN_SORTED",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "QUERY_HASH",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "LEFT_INPUT_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_INPUT_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "LEFT_TABLE_PRUNED_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_TABLE_PRUNED_CHUNKS",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "LEFT_TABLE_ROW_COUNT",
+            "nullable": false,
+            "type": "long"
+        },
+        {
+            "name": "RIGHT_TABLE_ROW_COUNT",
+            "nullable": false,
+            "type": "long"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": ","
+    }
+}
