@@ -43,7 +43,9 @@ class WhatIfModel(DisjointClustersModel):
             def correlates_to_clustering_column(column):
                 return len(clustering_columns_correlated_to(column)) > 0
 
-            if row['COLUMN_NAME'] in clustering_columns:
+            if row['OPERATOR_IMPLEMENTATION'] != "ColumnBetween":
+                return 0 # ColumnVsValue has no all-match-shortcut
+            elif row['COLUMN_NAME'] in clustering_columns:
                 return 1
             elif correlates_to_clustering_column(row['COLUMN_NAME']):
                 return 1
