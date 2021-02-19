@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <magic_enum.hpp>
-
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
