@@ -92,9 +92,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       other join operators might be more efficient. We emit performance warning in this case. In the future, the
       optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
-    std::stringstream performance_warning;
-    performance_warning << "Build side larger than probe side in hash join.";
-    PerformanceWarning(performance_warning.str());
+    PerformanceWarning("Build side larger than probe side in hash join");
   }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
