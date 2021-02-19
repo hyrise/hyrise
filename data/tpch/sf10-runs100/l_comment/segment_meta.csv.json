@@ -1,0 +1,39 @@
+{
+    "columns": [
+        {
+            "name": "TABLE_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "COLUMN_NAME",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "CHUNK_ID",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "ENCODING_TYPE",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "COMPRESSION_TYPE",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": ","
+    }
+}

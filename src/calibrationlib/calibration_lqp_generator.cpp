@@ -21,8 +21,8 @@ using opossum::expression_functional::is_not_null_;
 using opossum::expression_functional::is_null_;
 using opossum::expression_functional::less_than_;
 using opossum::expression_functional::like_;
-using opossum::expression_functional::not_in_;
 using opossum::expression_functional::min_;
+using opossum::expression_functional::not_in_;
 using opossum::expression_functional::sum_;
 
 namespace opossum {
@@ -39,47 +39,19 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
   Fail("Not implemented yet: Only TableScans are currently supported.");
 }
 
-void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables) {
-  auto semi_join_build_table_large = _generate_semi_join_build_table(300'000);
-  auto semi_join_build_table_small = _generate_semi_join_build_table(Chunk::DEFAULT_SIZE);
-
+void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables,
+                                             const float scale_factor) {
+  const auto table_size = static_cast<size_t>(scale_factor * 6'000'000);
+  const auto table_suffix = std::to_string(table_size) + "_sorted";
   for (const auto& table : tables) {
-    if (table->get_name().find("aggregate") != std::string::npos) {
-      continue;
-    }
-
-    if (table->get_name() == std::string("65535_6000000_sorted")) {
-      _generate_semi_joins(table, semi_join_build_table_large);
-      _generate_semi_joins(table, semi_join_build_table_small);
+    if (table->get_name().find(table_suffix) != std::string::npos) {
+      for (const auto& other_table : tables) {
+        if (table->get_name().find("semi_join") != std::string::npos) {
+          _generate_semi_joins(table, other_table);
+        }
+      }
     }
   }
-  tables.emplace_back(semi_join_build_table_large);
-  tables.emplace_back(semi_join_build_table_small);
-}
-
-std::shared_ptr<const CalibrationTableWrapper> CalibrationLQPGenerator::_generate_semi_join_build_table(
-    const size_t row_count) const {
-  std::set<DataType> data_types = {DataType::Int, DataType::Float};
-  auto data_distribution = ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(row_count));
-  auto column_count = 0;
-  std::vector<ColumnSpecification> column_specs;
-  std::vector<ColumnDataDistribution> column_data_distributions;
-  const std::string table_name = std::to_string(Chunk::DEFAULT_SIZE) + "_" + std::to_string(row_count);
-
-  for (const auto data_type : data_types) {
-    std::stringstream column_name_stringstream;
-    column_name_stringstream << data_type << "_" << EncodingType::Dictionary << "_" << column_count;
-    auto column_name = table_name + "_" + column_name_stringstream.str();
-    column_data_distributions.emplace_back(data_distribution);
-    column_specs.emplace_back(
-        ColumnSpecification(data_distribution, data_type, SegmentEncodingSpec(EncodingType::Dictionary), column_name));
-    ++column_count;
-  }
-
-  const auto table_generator = std::make_shared<SyntheticTableGenerator>();
-  const auto table = table_generator->generate_table(column_specs, row_count, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table(table_name, table);
-  return std::make_shared<const CalibrationTableWrapper>(table, table_name, column_data_distributions);
 }
 
 void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
@@ -165,7 +137,8 @@ void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const C
   }
 }
 
-void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers) {
+void CalibrationLQPGenerator::generate_aggregates(
+    const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers) {
   auto optimizer = std::make_shared<Optimizer>();
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
@@ -177,8 +150,9 @@ void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_
     const auto table_node = StoredTableNode::make(table_wrapper->get_name());
     const auto validate_node = ValidateNode::make(table_node);
 
-    const auto group_by_column_expression = std::make_shared<LQPColumnExpression>(table_node, ColumnID{0}); // id
-    const auto aggregate_column_expression = std::make_shared<LQPColumnExpression>(table_node, ColumnID{2}); // quantity
+    const auto group_by_column_expression = std::make_shared<LQPColumnExpression>(table_node, ColumnID{0});  // id
+    const auto aggregate_column_expression =
+        std::make_shared<LQPColumnExpression>(table_node, ColumnID{2});  // quantity
 
     constexpr size_t MAX_AGGREGATE_COUNT = 5;
     for (size_t aggregate_count = 1; aggregate_count <= MAX_AGGREGATE_COUNT; aggregate_count++) {
@@ -187,7 +161,9 @@ void CalibrationLQPGenerator::generate_aggregates(const std::vector<std::shared_
         aggregate_expressions.push_back(sum_(aggregate_column_expression));
       }
 
-      const auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<AbstractExpression>>{group_by_column_expression}, aggregate_expressions, validate_node);
+      const auto aggregate_node =
+          AggregateNode::make(std::vector<std::shared_ptr<AbstractExpression>>{group_by_column_expression},
+                              aggregate_expressions, validate_node);
 
       auto optimized_aggregate = aggregate_node->deep_copy();
       optimized_aggregate = optimizer->optimize(std::move(optimized_aggregate));
@@ -206,7 +182,6 @@ void CalibrationLQPGenerator::_generate_table_scans(
   if (table_wrapper->get_name().find("aggregate") != std::string::npos) {
     return;
   }
-
 
   // selectivity resolution determines in how many LQPs with a different selectivity are generated
   // increase this value for providing more training data to the model
