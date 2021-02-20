@@ -83,6 +83,7 @@ using RadixContainer = std::vector<Partition<T>>;
 // in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
 template <typename HashedType>
 class PosHashTable {
+ public:
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
   using Offset = uint32_t;
 
@@ -102,7 +103,6 @@ class PosHashTable {
     std::vector<size_t> offsets;
   };
 
- public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _mode(mode),
         _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
@@ -211,11 +211,12 @@ class PosHashTable {
 
 // The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
 // `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
-// (1) Dynamically check whether bloom filters are worth the memory and computational costs This could be based on the
+// (1) Dynamically check whether bloom filters are worth the memory and computational costs. This could be based on the
 //     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
 // (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
-// (3) Check whether using multiple hash functions (k>1) brings any improvement.
+// (3) Evaluate whether using multiple hash functions (k>1) brings any improvement. In a first experiment, however, we
+//     saw no benefits for single-threaded TPC-H SF 10.
 // (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
 //     intermediary results. When a bloom filter-supported partitioning has been done (i.e., partitioning has not
 //     been skipped), we do not need to use a bloom filter in the build phase anymore.
