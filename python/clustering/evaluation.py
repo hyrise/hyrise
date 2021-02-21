@@ -149,6 +149,12 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
   
   result['TOTAL_ERROR'] = result['RUNTIME_CLUSTERED'] - result['RUNTIME_ESTIMATE']
   result['RELATIVE_ERROR'] = result['RUNTIME_CLUSTERED'] / result['RUNTIME_ESTIMATE']
+
+  # add some nicely formatted columns to display the data
+  result['RUNTIME_BASE_MS'] = result['RUNTIME_BASE'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+  result['RUNTIME_ESTIMATE_MS'] = result['RUNTIME_ESTIMATE'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+  result['RUNTIME_CLUSTERED_MS'] = result['RUNTIME_CLUSTERED'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
+  result['TOTAL_ERROR_MS'] = result['TOTAL_ERROR'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
   
   return result
 
