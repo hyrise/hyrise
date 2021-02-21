@@ -46,17 +46,85 @@ void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const C
   for (const auto& table : tables) {
     if (table->get_name().find(table_suffix) != std::string::npos) {
       for (const auto& other_table : tables) {
-        if (table->get_name().find("semi_join") != std::string::npos) {
+        if (other_table->get_name().find("semi_join") != std::string::npos) {
           _generate_semi_joins(table, other_table);
+        }
+      }
+    }
+
+    if (table->get_name().find("unordered_probe") != std::string::npos) {
+      for (const auto& other_table : tables) {
+        if (other_table->get_name().find("ordered_build") != std::string::npos) {
+          _generate_semi_join_unordered_probe(table, other_table);
+        }
+        if (other_table->get_name().find("semi_join") != std::string::npos) {
+          _generate_semi_join_unordered_probe(table, other_table);
         }
       }
     }
   }
 }
 
+void CalibrationLQPGenerator::_generate_semi_join_unordered_probe(
+    const std::shared_ptr<const CalibrationTableWrapper>& left,
+    const std::shared_ptr<const CalibrationTableWrapper>& right) {
+  constexpr uint32_t probe_selectivity_resolution = 10;
+  const auto left_stored_table_node = StoredTableNode::make(left->get_name());
+  const auto right_stored_table_node = StoredTableNode::make(right->get_name());
+  const auto& left_table = left->get_table();
+  const auto& right_table = right->get_table();
+  const auto column_data_types = left_table->column_data_types();
+  const std::vector<std::string> left_column_names = left_table->column_names();
+  const std::vector<std::string> right_column_names = right_table->column_names();
+  resolve_data_type(column_data_types[0], [&](const auto column_data_type) {
+    using ColumnDataType = typename decltype(column_data_type)::type;
+    if (std::is_same<ColumnDataType, int32_t>::value || std::is_same<ColumnDataType, float>::value) {
+      const auto left_scan_column = left_stored_table_node->get_column(left_column_names[1]);
+      const auto right_column_id = ColumnID{0};
+      const auto right_column = right_stored_table_node->get_column(right_column_names[right_column_id]);
+
+      const auto probe_distribution = left->get_column_data_distribution(ColumnID{1});
+      // clang-format off
+        const auto probe_step_size = (probe_distribution.max_value - probe_distribution.min_value) / probe_selectivity_resolution;  // NOLINT
+      // clang-format on
+
+      const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, ColumnID{0});
+      const auto right_column_expression =
+          std::make_shared<LQPColumnExpression>(right_stored_table_node, right_column_id);
+      const auto join_predicate = std::make_shared<BinaryPredicateExpression>(
+          PredicateCondition::Equals, left_column_expression, right_column_expression);
+
+      if (OperatorJoinPredicate::from_expression(*join_predicate, *left_stored_table_node, *right_stored_table_node)) {
+        if (JoinHash::supports({JoinMode::Semi, PredicateCondition::Equals, left_table->column_data_type(ColumnID{0}),
+                                right_table->column_data_type(right_column_id), false})) {
+          for (uint32_t selectivity_step = 0; selectivity_step <= probe_selectivity_resolution; selectivity_step++) {
+            // in this for-loop we iterate up and go from 100% selectivity to 0% by increasing the lower_bound in steps
+            // for any step there
+
+            // Get value for current iteration
+            // the cursor is a int representation of where the column has to be cut in this iteration
+            const auto step_cursor = static_cast<uint32_t>(selectivity_step * probe_step_size);
+            const ColumnDataType probe_lower_bound =
+                SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
+
+            //scan after join
+            auto join_node_data = JoinNode::make(JoinMode::Semi, join_predicate, JoinType::Hash, left_stored_table_node,
+                                                 ValidateNode::make(right_stored_table_node));
+            auto scan_after_join = _get_predicate_node_based_on(left_scan_column, probe_lower_bound, join_node_data);
+            auto optimized_lqp = scan_after_join->deep_copy();
+            optimized_lqp = _optimizer->optimize(std::move(optimized_lqp));
+            _generated_lqps.emplace_back(optimized_lqp);
+          }
+        }
+      }
+    }
+  });
+}
+
 void CalibrationLQPGenerator::_generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
                                                    const std::shared_ptr<const CalibrationTableWrapper>& right) {
-  constexpr uint32_t probe_selectivity_resolution = 100;
+  // we want steps of one chunk for the probe side
+  const auto probe_selectivity_resolution = left->get_table()->chunk_count();
   constexpr uint32_t build_selectivity_resolution = 5;
   const auto left_stored_table_node = StoredTableNode::make(left->get_name());
   const auto right_stored_table_node = StoredTableNode::make(right->get_name());
