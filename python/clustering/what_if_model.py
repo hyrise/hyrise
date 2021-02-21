@@ -35,14 +35,14 @@ class WhatIfModel(DisjointClustersModel):
         # Assumption: early out does not happen because in most cases, chunks with no matches get pruned before the shortcut could apply
         scans['NONE_MATCH_RATIO'] = 0
 
-        # Assumption: for range queries on clustered columns, pruning yields a range where all chunks (except the two bounding chunks) match completely
-        def compute_all_match_ratio(row):
-            def clustering_columns_correlated_to(column):
-                return [clustering_column for clustering_column in clustering_columns if column in self.correlations.get(clustering_column, {})]
+        def clustering_columns_correlated_to(column):
+            return [clustering_column for clustering_column in clustering_columns if column in self.correlations.get(clustering_column, {})]
 
-            def correlates_to_clustering_column(column):
+        def correlates_to_clustering_column(column):
                 return len(clustering_columns_correlated_to(column)) > 0
 
+        # Assumption: for range queries on clustered columns, pruning yields a range where all chunks (except the two bounding chunks) match completely
+        def compute_all_match_ratio(row):
             if row['OPERATOR_IMPLEMENTATION'] != "ColumnBetween":
                 return 0 # ColumnVsValue has no all-match-shortcut
             elif row['COLUMN_NAME'] in clustering_columns:
@@ -63,20 +63,27 @@ class WhatIfModel(DisjointClustersModel):
             assert unprunable_part > 0, "no unprunable part"
 
             # Pruning: Set input size of first scan to reflect pruned chunks
+            #          Reduce the number of input chunks for all scans
             estimated_pruned_table_size = min(self.table_size, self.round_up_to_next_multiple(unprunable_part * self.table_size, self.target_chunksize))
             scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] = np.int64(estimated_pruned_table_size)
-            scans.loc[query_scans.iloc[0].name, 'INPUT_CHUNKS'] = np.int64(estimated_pruned_table_size / self.target_chunksize)
+            for i in range(len(query_scans)):
+                scans.loc[query_scans.iloc[i].name, 'INPUT_CHUNKS'] = min(scans.loc[query_scans.iloc[i].name, 'INPUT_CHUNKS'], np.int64(estimated_pruned_table_size / self.target_chunksize))
 
             # Pruning: if there are multiple scans and the first occurs on a clustering column, the scan is likely moved up in the PQP (i.e., executed later)
             # Consequence: Currently first scan will be performed on a reference segment, currently second scan on currently first scan's segment type
             first_scan_column_name = scans.loc[query_scans.iloc[0].name, 'COLUMN_NAME']
-            if len(query_scans) > 1 and first_scan_column_name in clustering_columns:
+            if len(query_scans) > 1 and (first_scan_column_name in clustering_columns  or correlates_to_clustering_column(first_scan_column_name)):
                 first_scan_segment_type = scans.loc[query_scans.iloc[0].name, 'COLUMN_TYPE']
-                scans.loc[query_scans.iloc[1].name, 'COLUMN_TYPE'] = first_scan_segment_type
+                first_scan_output_rows = scans.loc[query_scans.iloc[0].name, 'OUTPUT_ROWS']
                 scans.loc[query_scans.iloc[0].name, 'COLUMN_TYPE'] = "REFERENCE"
+                for i in range(1, len(query_scans)):
+                    if scans.loc[query_scans.iloc[i].name, 'INPUT_ROWS'] == first_scan_output_rows:
+                        scans.loc[query_scans.iloc[i].name, 'COLUMN_TYPE'] = first_scan_segment_type
 
                 # The originally first scan will be executed last, so its input size will be reduced by the other scans
                 for i in range(1, len(query_scans)):
+                    # TODO: actually, we should sum up the selectivities of or-scans, rather than multiplying them individually.
+                    # The current implementation may lead to underestimated input sizes, but usually those scans are already rather fast, so maybe it does not matter.
                     scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= scans.loc[query_scans.iloc[i].name, 'SELECTIVITY_LEFT']
 
         return scans
