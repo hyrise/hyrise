@@ -63,12 +63,12 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
     }
   }
 
-  const auto& aggregate_table_wrappers = _generate_aggregate_tables(_config->scale_factor);
+  const auto& aggregate_table_wrappers = _generate_aggregate_tables();
   for (const auto& aggregate_table_wrapper : aggregate_table_wrappers) {
     table_wrappers.push_back(aggregate_table_wrapper);
   }
 
-  const auto& join_table_wrappers = _generate_semi_join_tables(_config->scale_factor);
+  const auto& join_table_wrappers = _generate_semi_join_tables();
   for (const auto& join_table_wrapper : join_table_wrappers) {
     table_wrappers.push_back(join_table_wrapper);
   }
@@ -76,8 +76,8 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
   return table_wrappers;
 }
 
-std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_aggregate_tables(
-    const float scale_factor) const {
+std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_aggregate_tables()
+    const {
   std::cout << "  - Generating aggregate tables" << std::endl;
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
 
@@ -85,7 +85,7 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
       {"id", DataType::Int, false}, {"date", DataType::String, false}, {"quantity", DataType::Float, false}};
   const std::vector<uint64_t> max_date_diffs = {10, 20, 30, 40, 50, 60, 90, 180};
   std::srand(42);
-  const auto table_size = static_cast<size_t>(1'500'000 * scale_factor);
+  const auto table_size = static_cast<size_t>(1'500'000 * _config->scale_factor);
 
   constexpr size_t NUM_DIFFERENT_DATES = 2550;  // l_shipdate covers dates from 1992 to 1998, i.e., 7 years ~ 2550 days
   for (const auto max_date_diff : max_date_diffs) {
@@ -137,15 +137,18 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
   return tables;
 }
 
-std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_semi_join_tables(
-    const float scale_factor) const {
-  std::cout << "\t-Generating semi join build tables" << std::endl;
+std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::_generate_semi_join_tables()
+    const {
+  std::cout << "  - Generating semi join tables" << std::endl;
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> tables;
 
-  tables.emplace_back(_generate_semi_join_table(static_cast<size_t>(300'000 * scale_factor)));
+  tables.emplace_back(_generate_semi_join_table(static_cast<size_t>(300'000 * _config->scale_factor)));
   tables.emplace_back(_generate_semi_join_table(Chunk::DEFAULT_SIZE));
+  tables.emplace_back(_generate_semi_join_sorted_table(static_cast<size_t>(750 * _config->scale_factor)));
+  tables.emplace_back(
+      _generate_semi_join_unordered_probe_table(static_cast<size_t>(6'000'000 * _config->scale_factor)));
 
-  std::cout << "  - Generated semi join build tables" << std::endl;
+  std::cout << "  - Generated semi join tables" << std::endl;
   return tables;
 }
 
@@ -171,6 +174,87 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
   const auto table = table_generator->generate_table(column_specs, row_count, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   return std::make_shared<const CalibrationTableWrapper>(table, table_name, column_data_distributions);
+}
+
+std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_semi_join_unordered_probe_table(
+    const size_t row_count) const {
+  const auto num_unique_values = _config->scale_factor * 10'000;
+  auto value_data_distribution =
+      ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(num_unique_values));
+  auto other_data_distribution = ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(row_count));
+  const auto num_occurences = row_count / static_cast<size_t>(num_unique_values);
+  std::srand(42);
+  const auto column_definitions =
+      TableColumnDefinitions{{"join_values", DataType::Int, false}, {"sorted_values", DataType::Int, false}};
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  for (int32_t join_value{0}; join_value < num_unique_values; ++join_value) {
+    for (size_t occurence{0}; occurence < num_occurences; ++occurence) {
+      const auto sorting_value = static_cast<int32_t>(std::rand() % row_count);
+      table->append({join_value, sorting_value});
+    }
+  }
+
+  const std::string table_name = "unordered_probe_" + std::to_string(row_count);
+  std::vector<ColumnDataDistribution> column_data_distributions = {value_data_distribution, other_data_distribution};
+  const auto wrapper = std::make_shared<TableWrapper>(table);
+  wrapper->execute();
+  auto sort = std::make_shared<Sort>(
+      wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Ascending}},
+      table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+  sort->execute();
+  auto sorted_table =
+      std::make_shared<Table>(table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    Segments segments;
+    const auto chunk = sort->get_output()->get_chunk(chunk_id);
+    Assert(chunk, "chunk disappeared");
+    for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
+      segments.push_back(chunk->get_segment(column_id));
+    }
+    const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+    sorted_table->append_chunk(segments, mvcc_data);
+    sorted_table->last_chunk()->finalize();
+    sorted_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
+  }
+
+  ChunkEncoder::encode_all_chunks(sorted_table, SegmentEncodingSpec(EncodingType::Dictionary));
+  return std::make_shared<const CalibrationTableWrapper>(sorted_table, table_name, column_data_distributions);
+}
+
+std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_semi_join_sorted_table(
+    const size_t row_count) const {
+  auto data_distribution = ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(row_count));
+  auto column_spec = ColumnSpecification(data_distribution, DataType::Int,
+                                         SegmentEncodingSpec(EncodingType::Dictionary), "join_values_sorted");
+  const auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  const auto table = table_generator->generate_table({column_spec}, row_count, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  const std::string table_name = "ordered_build_" + std::to_string(row_count);
+
+  const auto wrapper = std::make_shared<TableWrapper>(table);
+  wrapper->execute();
+  auto sort = std::make_shared<Sort>(
+      wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},
+      table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+  sort->execute();
+  auto sorted_table =
+      std::make_shared<Table>(table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    Segments segments;
+    const auto chunk = sort->get_output()->get_chunk(chunk_id);
+    Assert(chunk, "chunk disappeared");
+    for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
+      segments.push_back(chunk->get_segment(column_id));
+    }
+    const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+    sorted_table->append_chunk(segments, mvcc_data);
+    sorted_table->last_chunk()->finalize();
+    sorted_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
+  }
+
+  ChunkEncoder::encode_all_chunks(sorted_table, SegmentEncodingSpec(EncodingType::Dictionary));
+  return std::make_shared<const CalibrationTableWrapper>(sorted_table, table_name,
+                                                         std::vector<ColumnDataDistribution>{data_distribution});
 }
 
 std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_sorted_table(

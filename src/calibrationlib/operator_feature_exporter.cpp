@@ -186,8 +186,12 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
   const auto aggregate_node = std::static_pointer_cast<const AggregateNode>(node);
   bool input_sorted = false;
   pmr_string column_type = "";
+  bool is_count_star = false;
 
-  if (op->groupby_column_ids().size() == 1) {
+  const auto aggregate_columns = static_cast<int32_t>(op->aggregates().size());
+  const auto group_columns = static_cast<int32_t>(op->groupby_column_ids().size());
+
+  if (group_columns == 1) {
     const auto group_by_expression = aggregate_node->node_expressions.at(0);
     if (group_by_expression->type == ExpressionType::LQPColumn) {
       const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(group_by_expression);
@@ -198,13 +202,17 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
       const auto column_name = table_column_information.column_name;
 
       if (table_name != "") {
-        input_sorted = _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name});;
+        input_sorted = _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name});
       }
     }
   }
 
-  switch (op->left_input()->type()) {
+  if (aggregate_columns == 1) {
+    const auto& aggregate_expression = op->aggregates().at(0);
+    is_count_star = AggregateExpression::is_count_star(*aggregate_expression);
+  }
 
+  switch (op->left_input()->type()) {
     case OperatorType::GetTable:
     case OperatorType::Aggregate:
       column_type = "DATA";
@@ -213,9 +221,6 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
     default:
       column_type = "REFERENCE";
   }
-
-  const auto aggregate_columns = static_cast<int32_t>(op->aggregates().size());
-  const auto group_columns = static_cast<int32_t>(op->groupby_column_ids().size());
 
   std::string group_column_names;
   for (auto group_by_column_index = 0; group_by_column_index < group_columns; group_by_column_index++) {
@@ -248,7 +253,8 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
                                                       operator_info.left_input_chunks,
                                                       group_columns,
                                                       aggregate_columns,
-                                                      pmr_string{group_column_names}};
+                                                      pmr_string{group_column_names},
+                                                      static_cast<int32_t>(is_count_star)};
   _aggregate_output_table->append(output_row);
 }
 

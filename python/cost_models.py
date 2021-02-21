@@ -390,6 +390,7 @@ def get_aggregate_scores(model_types, train_data, test_data, implementation, ohe
         "INPUT_CHUNKS",
         "GROUP_COLUMNS",
         "AGGREGATE_COLUMNS",
+        "IS_COUNT_STAR",
         "RUNTIME_NS",
     ]
 
