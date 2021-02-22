@@ -8,7 +8,8 @@ namespace opossum {
 
 class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
-  TPCCBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses);
+  TPCCBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                          const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;

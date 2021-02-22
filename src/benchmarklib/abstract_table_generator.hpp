@@ -11,6 +11,7 @@
 namespace opossum {
 
 class BenchmarkConfig;
+class HyriseEnvironmentRef;
 
 struct BenchmarkTableInfo {
   BenchmarkTableInfo() = default;
@@ -52,7 +53,7 @@ class AbstractTableGenerator {
   explicit AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config);
   virtual ~AbstractTableGenerator() = default;
 
-  void generate_and_store();
+  void generate_and_store(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
 
   /**
    * @return A table_name -> TableEntry mapping

@@ -15,7 +15,7 @@ class MetaPluginsTest : public BaseTest {
 
   void SetUp() override {
     Hyrise::reset();
-    meta_plugins_table = std::make_shared<MetaPluginsTable>();
+    meta_plugins_table = std::make_shared<MetaPluginsTable>(_hyrise_env);
     const auto column_definitions = meta_plugins_table->column_definitions();
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     table->append({pmr_string{build_dylib_path("libhyriseTestPlugin")}});
@@ -46,7 +46,7 @@ TEST_F(MetaPluginsTest, IsMutable) {
 }
 
 TEST_F(MetaPluginsTest, TableGeneration) {
-  Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  _hyrise_env->plugin_manager()->load_plugin(build_dylib_path("libhyriseTestPlugin"));
   const auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false}}, TableType::Data, 5);
   expected_table->append({pmr_string{"hyriseTestPlugin"}});
@@ -64,36 +64,41 @@ TEST_F(MetaPluginsTest, Insert) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
 
-  EXPECT_EQ(Hyrise::get().plugin_manager.loaded_plugins().size(), 0);
+  EXPECT_EQ(_hyrise_env->plugin_manager()->loaded_plugins().size(), 0);
 
   insert_into(meta_plugins_table, mock_manipulation_values->get_row(0));
 
   const auto meta_table = generate_meta_table(meta_plugins_table);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, table_wrapper->get_output());
-  EXPECT_EQ(Hyrise::get().plugin_manager.loaded_plugins().at(0), "hyriseTestPlugin");
+  EXPECT_EQ(_hyrise_env->plugin_manager()->loaded_plugins().at(0), "hyriseTestPlugin");
 }
 
 TEST_F(MetaPluginsTest, Delete) {
-  Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  _hyrise_env->plugin_manager()->load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   auto values = std::vector<AllTypeVariant>();
   values.push_back(AllTypeVariant{pmr_string{"hyriseTestPlugin"}});
 
   delete_from(meta_plugins_table, values);
 
-  EXPECT_EQ(Hyrise::get().plugin_manager.loaded_plugins().size(), 0);
+  EXPECT_EQ(_hyrise_env->plugin_manager()->loaded_plugins().size(), 0);
 }
 
 TEST_F(MetaPluginsTest, RepeatedInsert) {
   SQLPipelineBuilder{"INSERT INTO meta_plugins VALUES ('" + build_dylib_path("libhyriseTestPlugin") + "')"}
+      .with_hyrise_env(_hyrise_env)
       .create_pipeline()
       .get_result_table();
   EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);
 
-  SQLPipelineBuilder{"DELETE FROM meta_plugins WHERE name ='hyriseTestPlugin'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"DELETE FROM meta_plugins WHERE name ='hyriseTestPlugin'"}
+      .with_hyrise_env(_hyrise_env)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 0);
 
   SQLPipelineBuilder{"INSERT INTO meta_plugins VALUES ('" + build_dylib_path("libhyriseTestPlugin") + "')"}
+      .with_hyrise_env(_hyrise_env)
       .create_pipeline()
       .get_result_table();
   EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);

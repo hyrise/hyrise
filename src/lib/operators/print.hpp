@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * PrintFlags::Mvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
  * PrintFlags::IgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
@@ -32,7 +34,8 @@ class Print : public AbstractReadOnlyOperator {
                     std::ostream& out = std::cout);
 
   // Convenience method to print the result of an SQL query
-  static void print(const std::string& sql, const PrintFlags flags = PrintFlags::None, std::ostream& out = std::cout);
+  static void print(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& sql,
+                    const PrintFlags flags = PrintFlags::None, std::ostream& out = std::cout);
 
  protected:
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max,

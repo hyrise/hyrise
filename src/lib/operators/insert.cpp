@@ -72,8 +72,11 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 
 namespace opossum {
 
-Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
+Insert::Insert(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& target_table_name,
+               const std::shared_ptr<const AbstractOperator>& values_to_insert)
+    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert),
+      _hyrise_env(hyrise_env),
+      _target_table_name(target_table_name) {}
 
 const std::string& Insert::name() const {
   static const auto name = std::string{"Insert"};
@@ -81,7 +84,7 @@ const std::string& Insert::name() const {
 }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
+  _target_table = _hyrise_env->storage_manager()->get_table(_target_table_name);
 
   Assert(_target_table->target_chunk_size() > 0, "Expected target chunk size of target table to be greater than zero");
   for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
@@ -276,7 +279,7 @@ void Insert::_on_rollback_records() {
 std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Insert>(_target_table_name, copied_left_input);
+  return std::make_shared<Insert>(_hyrise_env, _target_table_name, copied_left_input);
 }
 
 void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

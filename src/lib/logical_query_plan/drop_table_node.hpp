@@ -5,12 +5,16 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public AbstractNonQueryNode {
  public:
-  DropTableNode(const std::string& init_table_name, bool init_if_exists);
+  DropTableNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_table_name,
+                bool init_if_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const bool if_exists;
 

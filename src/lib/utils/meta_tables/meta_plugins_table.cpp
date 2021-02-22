@@ -6,7 +6,8 @@
 
 namespace opossum {
 
-MetaPluginsTable::MetaPluginsTable() : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false}}) {}
+MetaPluginsTable::MetaPluginsTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env)
+    : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false}}), _hyrise_env(hyrise_env) {}
 
 const std::string& MetaPluginsTable::name() const {
   static const auto name = std::string{"plugins"};
@@ -20,7 +21,7 @@ bool MetaPluginsTable::can_delete() const { return true; }
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& plugin : Hyrise::get().plugin_manager.loaded_plugins()) {
+  for (const auto& plugin : _hyrise_env->plugin_manager()->loaded_plugins()) {
     output_table->append({pmr_string{plugin}});
   }
 
@@ -29,12 +30,12 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
 
 void MetaPluginsTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   const auto file_name = std::string{boost::get<pmr_string>(values.at(0))};
-  Hyrise::get().plugin_manager.load_plugin(file_name);
+  _hyrise_env->plugin_manager()->load_plugin(file_name);
 }
 
 void MetaPluginsTable::_on_remove(const std::vector<AllTypeVariant>& values) {
   const auto plugin_name = std::string{boost::get<pmr_string>(values.at(0))};
-  Hyrise::get().plugin_manager.unload_plugin(plugin_name);
+  _hyrise_env->plugin_manager()->unload_plugin(plugin_name);
 }
 
 }  // namespace opossum

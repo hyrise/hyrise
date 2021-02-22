@@ -23,13 +23,13 @@ class PQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
     table_a = load_table("resources/test_data/tbl/int_float.tbl");
-    Hyrise::get().storage_manager.add_table("int_float", table_a);
+    _hyrise_env->storage_manager()->add_table("int_float", table_a);
     a_a = PQPColumnExpression::from_table(*table_a, "a");
     a_b = PQPColumnExpression::from_table(*table_a, "b");
 
     // Build a Subquery returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
     const auto parameter_a = placeholder_(ParameterID{2});
-    const auto get_table_a = std::make_shared<GetTable>("int_float");
+    const auto get_table_a = std::make_shared<GetTable>(_hyrise_env, "int_float");
     const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add_(a_a, parameter_a)));
     const auto limit_a = std::make_shared<Limit>(projection_a, value_(1));
     pqp_single_value_one_parameter = limit_a;
@@ -38,7 +38,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
         std::make_shared<PQPSubqueryExpression>(pqp_single_value_one_parameter, DataType::Int, false, parameters_a);
 
     // Build a Subquery returning a TABLE and taking NO PARAMETERS
-    const auto get_table_b = std::make_shared<GetTable>("int_float");
+    const auto get_table_b = std::make_shared<GetTable>(_hyrise_env, "int_float");
     const auto table_scan_b = std::make_shared<TableScan>(get_table_b, greater_than_(a_a, 5));
     pqp_table = table_scan_b;
     subquery_table = std::make_shared<PQPSubqueryExpression>(pqp_table);

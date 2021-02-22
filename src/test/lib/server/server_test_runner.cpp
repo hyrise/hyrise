@@ -20,10 +20,8 @@ namespace opossum {
 class ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    _hyrise_env->storage_manager()->add_table("table_a", _table_a);
 
     auto server_runner = [](Server& server) { server.run(); };
 
@@ -54,7 +52,7 @@ class ServerTestRunner : public BaseTest {
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
-      boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
+      boost::asio::ip::address(), 0, _hyrise_env, SendExecutionInfo::No);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -81,7 +79,7 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
 
 TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", 2);
-  Hyrise::get().storage_manager.add_table("all_types_table", all_types_table);
+  _hyrise_env->storage_manager()->add_table("all_types_table", all_types_table);
 
   pqxx::connection connection{_connection_string};
 
@@ -114,8 +112,8 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 
   transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("another_table"));
+  EXPECT_TABLE_EQ_ORDERED(_hyrise_env->storage_manager()->get_table("another_table"), _table_a);
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyImport) {
@@ -183,7 +181,7 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
 
   // Get reference table without deleted row
-  auto get_table = std::make_shared<GetTable>("table_a");
+  auto get_table = std::make_shared<GetTable>(_hyrise_env, "table_a");
   auto validate = std::make_shared<Validate>(get_table);
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   validate->set_transaction_context(transaction_context);
@@ -194,8 +192,8 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   // Re-import the tables and compare them with the expected one
   transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
   transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
-  const auto table_b = Hyrise::get().storage_manager.get_table("table_b");
-  const auto table_c = Hyrise::get().storage_manager.get_table("table_c");
+  const auto table_b = _hyrise_env->storage_manager()->get_table("table_b");
+  const auto table_c = _hyrise_env->storage_manager()->get_table("table_c");
 
   EXPECT_TABLE_EQ_ORDERED(table_b, expected_table);
   EXPECT_TABLE_EQ_ORDERED(table_c, expected_table);
@@ -429,7 +427,8 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   // Also similar to StressTest.TestTransactionConflicts, only that we go through the server
   auto initial_sum = int64_t{};
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
@@ -478,7 +477,8 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   // Verify results
   auto final_sum = int64_t{};
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }

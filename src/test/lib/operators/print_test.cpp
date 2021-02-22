@@ -21,9 +21,9 @@ class OperatorsPrintTest : public BaseTest {
     column_definitions.emplace_back("column_1", DataType::Int, true);
     column_definitions.emplace_back("column_2", DataType::String, false);
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
-    Hyrise::get().storage_manager.add_table(_table_name, _t);
+    _hyrise_env->storage_manager()->add_table(_table_name, _t);
 
-    _gt = std::make_shared<GetTable>(_table_name);
+    _gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
     _gt->execute();
   }
 
@@ -79,13 +79,13 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 
 TEST_F(OperatorsPrintTest, FilledTable) {
   const size_t chunk_count = 117;
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = _hyrise_env->storage_manager()->get_table(_table_name);
   for (size_t i = 0; i < _chunk_size * chunk_count; i++) {
     // char 97 is an 'a'. Modulo 26 to stay within the alphabet.
     tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto pr = std::make_shared<Print>(gt, PrintFlags::None, output);
@@ -116,7 +116,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = _hyrise_env->storage_manager()->get_table(_table_name);
 
   {
     auto pr_wrap = std::make_shared<PrintWrapper>(_gt);
@@ -133,7 +133,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
   {
-    auto gt_post_append = std::make_shared<GetTable>(_table_name);
+    auto gt_post_append = std::make_shared<GetTable>(_hyrise_env, _table_name);
     gt_post_append->execute();
 
     auto pr_wrap = std::make_shared<PrintWrapper>(gt_post_append);
@@ -166,7 +166,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValue) {
 
 TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(_gt);
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = _hyrise_env->storage_manager()->get_table(_table_name);
 
   pmr_string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
   auto input = AllTypeVariant{cell_string};
@@ -310,9 +310,9 @@ TEST_F(OperatorsPrintTest, SegmentType) {
 
 TEST_F(OperatorsPrintTest, SQL) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
-  Hyrise::get().storage_manager.add_table("t", table);
+  _hyrise_env->storage_manager()->add_table("t", table);
 
-  Print::print("SELECT * FROM t WHERE a <= 1234", PrintFlags::None, output);
+  Print::print(_hyrise_env, "SELECT * FROM t WHERE a <= 1234", PrintFlags::None, output);
 
   auto expected_output =
       "=== Columns\n"
@@ -329,7 +329,7 @@ TEST_F(OperatorsPrintTest, SQL) {
 }
 
 TEST_F(OperatorsPrintTest, EmptyTable) {
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = _hyrise_env->storage_manager()->get_table(_table_name);
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 

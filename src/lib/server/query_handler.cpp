@@ -9,16 +9,20 @@ namespace opossum {
 
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
+    const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (hyrise_env->storage_manager()->has_prepared_plan("")) hyrise_env->storage_manager()->drop_prepared_plan("");
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far");
 
   auto execution_info = ExecutionInformation();
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transaction_context).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}
+                          .with_hyrise_env(hyrise_env)
+                          .with_transaction_context(transaction_context)
+                          .create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
 
@@ -44,18 +48,19 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
   return {execution_info, sql_pipeline.transaction_context()};
 }
 
-void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query) {
+void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query,
+                                       const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
   // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
   // destination is issued
   // https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
+  if (hyrise_env->storage_manager()->has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
-    Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
+    hyrise_env->storage_manager()->drop_prepared_plan(statement_name);
   }
 
-  auto pipeline = SQLPipelineBuilder{query}.create_pipeline();
+  auto pipeline = SQLPipelineBuilder{query}.with_hyrise_env(hyrise_env).create_pipeline();
   const auto& lqps = pipeline.get_unoptimized_logical_plans();
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
@@ -70,14 +75,15 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
   const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids_of_value_placeholders);
 
-  Hyrise::get().storage_manager.add_prepared_plan(statement_name, prepared_plan);
+  hyrise_env->storage_manager()->add_prepared_plan(statement_name, prepared_plan);
 }
 
-std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const PreparedStatementDetails& statement_details) {
-  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
+std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(
+    const PreparedStatementDetails& statement_details, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) {
+  AssertInput(hyrise_env->storage_manager()->has_prepared_plan(statement_details.statement_name),
               "The specified statement does not exist.");
 
-  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
+  const auto prepared_plan = hyrise_env->storage_manager()->get_prepared_plan(statement_details.statement_name);
 
   auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{statement_details.parameters.size()};
   for (auto parameter_idx = size_t{0}; parameter_idx < statement_details.parameters.size(); ++parameter_idx) {

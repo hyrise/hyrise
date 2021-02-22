@@ -1,5 +1,6 @@
 #include "meta_table_manager.hpp"
 
+#include "hyrise.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -14,18 +15,19 @@
 
 namespace opossum {
 
-MetaTableManager::MetaTableManager() {
-  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {std::make_shared<MetaTablesTable>(),
-                                                                       std::make_shared<MetaColumnsTable>(),
-                                                                       std::make_shared<MetaChunksTable>(),
-                                                                       std::make_shared<MetaChunkSortOrdersTable>(),
-                                                                       std::make_shared<MetaLogTable>(),
-                                                                       std::make_shared<MetaSegmentsTable>(),
-                                                                       std::make_shared<MetaSegmentsAccurateTable>(),
-                                                                       std::make_shared<MetaPluginsTable>(),
-                                                                       std::make_shared<MetaSettingsTable>(),
-                                                                       std::make_shared<MetaSystemInformationTable>(),
-                                                                       std::make_shared<MetaSystemUtilizationTable>()};
+MetaTableManager::MetaTableManager(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) {
+  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
+      std::make_shared<MetaTablesTable>(hyrise_env),
+      std::make_shared<MetaColumnsTable>(hyrise_env),
+      std::make_shared<MetaChunksTable>(hyrise_env),
+      std::make_shared<MetaChunkSortOrdersTable>(hyrise_env),
+      std::make_shared<MetaLogTable>(),
+      std::make_shared<MetaSegmentsTable>(hyrise_env),
+      std::make_shared<MetaSegmentsAccurateTable>(hyrise_env),
+      std::make_shared<MetaPluginsTable>(hyrise_env),
+      std::make_shared<MetaSettingsTable>(),
+      std::make_shared<MetaSystemInformationTable>(),
+      std::make_shared<MetaSystemUtilizationTable>()};
 
   _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {

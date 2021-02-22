@@ -7,10 +7,14 @@
 
 namespace opossum {
 
-Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
+Session::Session(boost::asio::io_service& io_service, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                 const SendExecutionInfo send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
-      _send_execution_info(send_execution_info) {}
+      _hyrise_env(hyrise_env),
+      _send_execution_info(send_execution_info) {
+  Assert(_hyrise_env, "Session created without storage");
+}
 
 std::shared_ptr<Socket> Session::socket() { return _socket; }
 
@@ -108,7 +112,7 @@ void Session::_handle_simple_query() {
   ExecutionInformation execution_information;
 
   std::tie(execution_information, _transaction_context) =
-      QueryHandler::execute_pipeline(query, _send_execution_info, _transaction_context);
+      QueryHandler::execute_pipeline(query, _send_execution_info, _hyrise_env, _transaction_context);
 
   if (!execution_information.error_message.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
@@ -133,7 +137,7 @@ void Session::_handle_simple_query() {
 
 void Session::_handle_parse_command() {
   const auto [statement_name, query] = _postgres_protocol_handler->read_parse_packet();
-  QueryHandler::setup_prepared_plan(statement_name, query);
+  QueryHandler::setup_prepared_plan(statement_name, query, _hyrise_env);
 
   _postgres_protocol_handler->send_status_message(PostgresMessageType::ParseComplete);
 
@@ -157,8 +161,7 @@ void Session::_handle_bind_command() {
   // this nullptr gets replaced by the correct pqp. Before executing the prepared statement we make a check for errors.
   _portals.emplace(parameters.portal, nullptr);
 
-  const auto pqp = QueryHandler::bind_prepared_plan(parameters);
-
+  const auto pqp = QueryHandler::bind_prepared_plan(parameters, _hyrise_env);
   _portals[parameters.portal] = pqp;
   _postgres_protocol_handler->send_status_message(PostgresMessageType::BindComplete);
 

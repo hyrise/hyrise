@@ -8,6 +8,7 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class TransactionContext;
 
 /**
@@ -27,7 +28,8 @@ class TransactionContext;
  */
 class ChangeMetaTable : public AbstractReadWriteOperator {
  public:
-  explicit ChangeMetaTable(const std::string& table_name, const MetaTableChangeType& change_type,
+  explicit ChangeMetaTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& table_name,
+                           const MetaTableChangeType& change_type,
                            const std::shared_ptr<const AbstractOperator>& values_to_modify,
                            const std::shared_ptr<const AbstractOperator>& modification_values);
 
@@ -43,6 +45,7 @@ class ChangeMetaTable : public AbstractReadWriteOperator {
   void _on_rollback_records() override {}
 
  private:
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _meta_table_name;
   const MetaTableChangeType _change_type;
 };

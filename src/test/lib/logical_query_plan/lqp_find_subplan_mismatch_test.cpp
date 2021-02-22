@@ -50,14 +50,14 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    _hyrise_env->storage_manager()->add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);
   }
 
   void _init_query_nodes(QueryNodes& query_nodes) const {
-    query_nodes.stored_table_node_a = StoredTableNode::make("table_a");
+    query_nodes.stored_table_node_a = StoredTableNode::make(_hyrise_env, "table_a");
     query_nodes.validate_node = ValidateNode::make();
     query_nodes.mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
     query_nodes.mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});

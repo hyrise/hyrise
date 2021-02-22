@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /*
  * This class wraps the sqlite3 library for opossum. It creates an in-memory sqlite database on construction.
  * When executing a sql query, the wrapper converts the result into an opossum Table.
@@ -34,7 +36,7 @@ class SQLiteWrapper final {
 
   class Connection final {
    public:
-    explicit Connection(const std::string& uri);
+    Connection(const std::string& uri);
 
     Connection(const Connection&) = delete;
     Connection(Connection&&) noexcept;

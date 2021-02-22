@@ -15,9 +15,11 @@
 
 namespace opossum {
 
-Update::Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
+Update::Update(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& table_to_update_name,
+               const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                const std::shared_ptr<AbstractOperator>& update_values_op)
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
+      _hyrise_env{hyrise_env},
       _table_to_update_name{table_to_update_name} {}
 
 const std::string& Update::name() const {
@@ -26,7 +28,7 @@ const std::string& Update::name() const {
 }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
-  const auto table_to_update = Hyrise::get().storage_manager.get_table(_table_to_update_name);
+  const auto table_to_update = _hyrise_env->storage_manager()->get_table(_table_to_update_name);
 
   // 0. Validate input
   DebugAssert(context, "Update needs a transaction context");
@@ -49,7 +51,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   }
 
   // 2. Insert new data with the Insert operator.
-  _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
+  _insert = std::make_shared<Insert>(_hyrise_env, _table_to_update_name, _right_input);
   _insert->set_transaction_context(context);
   _insert->execute();
   // Insert cannot fail in the MVCC sense, no check necessary
@@ -60,7 +62,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Update>(_table_to_update_name, copied_left_input, copied_right_input);
+  return std::make_shared<Update>(_hyrise_env, _table_to_update_name, copied_left_input, copied_right_input);
 }
 
 void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

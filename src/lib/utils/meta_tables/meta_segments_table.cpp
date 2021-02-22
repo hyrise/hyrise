@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-MetaSegmentsTable::MetaSegmentsTable()
+MetaSegmentsTable::MetaSegmentsTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env)
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
                                                {"chunk_id", DataType::Int, false},
                                                {"column_id", DataType::Int, false},
@@ -18,7 +18,8 @@ MetaSegmentsTable::MetaSegmentsTable()
                                                {"sequential_accesses", DataType::Long, false},
                                                {"monotonic_accesses", DataType::Long, false},
                                                {"random_accesses", DataType::Long, false},
-                                               {"dictionary_accesses", DataType::Long, false}}) {}
+                                               {"dictionary_accesses", DataType::Long, false}}),
+      _hyrise_env(hyrise_env) {}
 
 const std::string& MetaSegmentsTable::name() const {
   static const auto name = std::string{"segments"};
@@ -27,7 +28,7 @@ const std::string& MetaSegmentsTable::name() const {
 
 std::shared_ptr<Table> MetaSegmentsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-  gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Sampled);
+  gather_segment_meta_data(_hyrise_env, output_table, MemoryUsageCalculationMode::Sampled);
 
   return output_table;
 }

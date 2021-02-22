@@ -12,11 +12,13 @@
 
 namespace opossum {
 
-GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
+GetTable::GetTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& name)
+    : GetTable(hyrise_env, name, {}, {}) {}
 
-GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
-                   const std::vector<ColumnID>& pruned_column_ids)
+GetTable::GetTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& name,
+                   const std::vector<ChunkID>& pruned_chunk_ids, const std::vector<ColumnID>& pruned_column_ids)
     : AbstractReadOnlyOperator(OperatorType::GetTable),
+      _hyrise_env(hyrise_env),
       _name(name),
       _pruned_chunk_ids(pruned_chunk_ids),
       _pruned_column_ids(pruned_column_ids) {
@@ -38,7 +40,7 @@ const std::string& GetTable::name() const {
 }
 
 std::string GetTable::description(DescriptionMode description_mode) const {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+  const auto stored_table = _hyrise_env->storage_manager()->get_table(_name);
 
   const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
@@ -63,13 +65,13 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _prune
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
+  return std::make_shared<GetTable>(_hyrise_env, _name, _pruned_chunk_ids, _pruned_column_ids);
 }
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+  const auto stored_table = _hyrise_env->storage_manager()->get_table(_name);
 
   // The chunk count might change while we are in this method as other threads concurrently insert new data. MVCC
   // guarantees that rows that are inserted after this transaction was started (and thus after GetTable started to

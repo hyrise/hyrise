@@ -2,20 +2,24 @@
 
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/insert.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 // maintenance operator for the "CREATE TABLE" sql statement
 class CreateTable : public AbstractReadWriteOperator {
  public:
-  CreateTable(const std::string& init_table_name, bool init_if_not_exists,
-              const std::shared_ptr<const AbstractOperator>& input_operator);
+  CreateTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& init_table_name,
+              bool init_if_not_exists, const std::shared_ptr<const AbstractOperator>& input_operator);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
   const TableColumnDefinitions& column_definitions() const;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const bool if_not_exists;
 

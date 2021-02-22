@@ -4,11 +4,12 @@
 
 namespace opossum {
 
-MetaChunkSortOrdersTable::MetaChunkSortOrdersTable()
+MetaChunkSortOrdersTable::MetaChunkSortOrdersTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env)
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
                                                {"chunk_id", DataType::Int, false},
                                                {"column_id", DataType::Int, false},
-                                               {"order_mode", DataType::String, false}}) {}
+                                               {"order_mode", DataType::String, false}}),
+      _hyrise_env(hyrise_env) {}
 
 const std::string& MetaChunkSortOrdersTable::name() const {
   static const auto name = std::string{"chunk_sort_orders"};
@@ -21,8 +22,7 @@ const std::string& MetaChunkSortOrdersTable::name() const {
  */
 std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (const auto& [table_name, table] : _hyrise_env->storage_manager()->tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (!chunk) continue;  // Skip physically deleted chunks

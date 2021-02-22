@@ -20,19 +20,21 @@ extern "C" {
 
 namespace opossum {
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                                 const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor)
-    : AbstractBenchmarkItemRunner(config),
+    : AbstractBenchmarkItemRunner(hyrise_env, config),
       _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor) {
   _items.resize(22);
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                                 const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& items)
-    : AbstractBenchmarkItemRunner(config),
+    : AbstractBenchmarkItemRunner(hyrise_env, config),
       _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor),
       _items(items) {
@@ -69,7 +71,7 @@ std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that sort order, indexes, and constraints have made it all the way up to here
-  const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
+  const auto orders_table = _hyrise_env->storage_manager()->get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
   Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   if (_config->indexes) {

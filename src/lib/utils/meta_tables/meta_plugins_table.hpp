@@ -4,13 +4,15 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * This is a class for plugin control via a meta table.
  * Inserting loads a plugin, deleting unloads it.
  */
 class MetaPluginsTable : public AbstractMetaTable {
  public:
-  MetaPluginsTable();
+  explicit MetaPluginsTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
 
   const std::string& name() const final;
 
@@ -22,6 +24,8 @@ class MetaPluginsTable : public AbstractMetaTable {
 
   void _on_insert(const std::vector<AllTypeVariant>& values) final;
   void _on_remove(const std::vector<AllTypeVariant>& values) final;
+
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
 };
 
 }  // namespace opossum

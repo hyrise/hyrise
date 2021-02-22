@@ -11,9 +11,10 @@ namespace opossum {
 
 JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
                                                  const std::string& data_path,
+                                                 const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor),
+    : TPCHBenchmarkItemRunner(hyrise_env, config, use_prepared_statements, scale_factor),
       _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {
@@ -22,10 +23,11 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::s
 
 JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
                                                  const std::string& data_path,
+                                                 const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& items)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items),
+    : TPCHBenchmarkItemRunner(hyrise_env, config, use_prepared_statements, scale_factor, items),
       _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {

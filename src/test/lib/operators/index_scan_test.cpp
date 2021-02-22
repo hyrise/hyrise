@@ -65,7 +65,7 @@ class OperatorsIndexScanTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
     const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
     second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
-    Hyrise::get().storage_manager.add_table("index_test_table", partially_indexed_table);
+    BaseTest::_hyrise_env->storage_manager()->add_table("index_test_table", partially_indexed_table);
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
@@ -272,7 +272,7 @@ TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
 TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   // We want to make sure that all chunks are covered even if they have been added after SQL translation
 
-  const auto stored_table_node = StoredTableNode::make("index_test_table");
+  const auto stored_table_node = StoredTableNode::make(BaseTest::_hyrise_env, "index_test_table");
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("a"), 4), stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
 
@@ -294,7 +294,7 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   ASSERT_TRUE(get_table);
 
   // Add values:
-  const auto table = Hyrise::get().storage_manager.get_table("index_test_table");
+  const auto table = BaseTest::_hyrise_env->storage_manager()->get_table("index_test_table");
   table->append({4, 5});
   EXPECT_EQ(table->chunk_count(), 3);
 

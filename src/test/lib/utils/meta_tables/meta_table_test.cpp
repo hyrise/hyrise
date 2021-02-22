@@ -33,9 +33,12 @@ static_assert(false, "Unknown c++ library");
 class MetaTableTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>()};
+    return {std::make_shared<MetaTablesTable>(_hyrise_env_stable),
+            std::make_shared<MetaColumnsTable>(_hyrise_env_stable),
+            std::make_shared<MetaChunksTable>(_hyrise_env_stable),
+            std::make_shared<MetaChunkSortOrdersTable>(_hyrise_env_stable),
+            std::make_shared<MetaSegmentsTable>(_hyrise_env_stable),
+            std::make_shared<MetaSegmentsAccurateTable>(_hyrise_env_stable)};
   }
 
   static MetaTableNames meta_table_names() {
@@ -53,13 +56,11 @@ class MetaTableTest : public BaseTest {
 
  protected:
   const std::string test_file_path = "resources/test_data/tbl/meta_tables/meta_";
-  std::shared_ptr<Table> int_int;
-  std::shared_ptr<Table> int_int_int_null;
-  std::shared_ptr<const Table> mock_manipulation_values;
+  inline static std::shared_ptr<Table> int_int;
+  inline static std::shared_ptr<Table> int_int_int_null;
+  inline static std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
-
+  static void SetUpTestCase() {
     int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
     int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
 
@@ -68,8 +69,8 @@ class MetaTableTest : public BaseTest {
                                 SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                                 SegmentEncodingSpec{EncodingType::Unencoded}});
 
-    storage_manager.add_table("int_int", int_int);
-    storage_manager.add_table("int_int_int_null", int_int_int_null);
+    _hyrise_env_stable->storage_manager()->add_table("int_int", int_int);
+    _hyrise_env_stable->storage_manager()->add_table("int_int_int_null", int_int_int_null);
 
     const auto column_definitions = MetaMockTable().column_definitions();
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
@@ -79,14 +80,19 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
-
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
-    Hyrise::get().meta_table_manager.add_table(table);
+    _hyrise_env_stable->meta_table_manager()->add_table(table);
   }
+
+  static inline std::shared_ptr<HyriseEnvironmentHolder> _hyrise_env_stable_holder =
+      std::make_shared<HyriseEnvironmentHolder>();
+  static inline std::shared_ptr<HyriseEnvironmentRef> _hyrise_env_stable = _hyrise_env_stable_holder->hyrise_env_ref();
 };
 
-class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
+class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {
+ protected:
+  static void SetUpTestCase() {}
+};
 
 auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
   auto stream = std::stringstream{};
@@ -119,12 +125,18 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
 
 TEST_P(MultiMetaTablesTest, IsDynamic) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
-  SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
-  SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
+  SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
 
   if (GetParam()->name() == "chunk_sort_orders") {
-    Hyrise::get()
-        .storage_manager.get_table("int_int")
+    _hyrise_env_stable->storage_manager()
+        ->get_table("int_int")
         ->get_chunk(ChunkID{0})
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
@@ -141,9 +153,9 @@ TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
   // consumption changes) low. Instead, we simply ensure that the meta table is generated without dereferencing said
   // nullptr.
 
-  const auto int_int = Hyrise::get().storage_manager.get_table("int_int");
+  const auto int_int = _hyrise_env_stable->storage_manager()->get_table("int_int");
 
-  SQLPipelineBuilder{"DELETE FROM int_int"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"DELETE FROM int_int"}.with_hyrise_env(_hyrise_env_stable).create_pipeline().get_result_table();
   int_int->remove_chunk(ChunkID{0});
 
   generate_meta_table(GetParam());
@@ -152,6 +164,7 @@ TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
 TEST_P(MultiMetaTablesTest, SQLFeatures) {
   // TEST SQL features on meta tables
   const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM " + MetaTableManager::META_PREFIX + GetParam()->name()}
+                          .with_hyrise_env(_hyrise_env_stable)
                           .create_pipeline()
                           .get_result_table();
 
@@ -164,13 +177,25 @@ TEST_F(MetaTableTest, SingleGenerationInPipeline) {
   _add_meta_table(mock_table);
 
   EXPECT_EQ(mock_table->generate_calls(), 0);
-  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 1);
-  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='abc'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='abc'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 2);
-  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('foo')"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('foo')"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 3);
-  SQLPipelineBuilder{"UPDATE meta_mock SET mock='foo'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='foo'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 4);
 }
 
@@ -180,29 +205,53 @@ TEST_F(MetaTableTest, IsNotCached) {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
-  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 1);
-  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 2);
 
-  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 3);
   EXPECT_EQ(mock_table->insert_calls(), 1);
-  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 4);
   EXPECT_EQ(mock_table->insert_calls(), 2);
 
-  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 5);
   EXPECT_EQ(mock_table->remove_calls(), 1);
-  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 6);
   EXPECT_EQ(mock_table->remove_calls(), 2);
 
-  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 7);
   EXPECT_EQ(mock_table->update_calls(), 1);
-  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}
+      .with_hyrise_env(_hyrise_env_stable)
+      .create_pipeline()
+      .get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 8);
   EXPECT_EQ(mock_table->update_calls(), 2);
 }

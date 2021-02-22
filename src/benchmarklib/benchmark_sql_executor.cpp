@@ -8,9 +8,12 @@
 
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
+
+                                           const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                                            const std::optional<std::string>& visualize_prefix)
     : _sqlite_connection(sqlite_wrapper ? std::optional<SQLiteWrapper::Connection>{sqlite_wrapper->new_connection()}
                                         : std::optional<SQLiteWrapper::Connection>{}),
+      _hyrise_env(hyrise_env),
       _visualize_prefix(visualize_prefix) {
   if (_sqlite_connection) {
     _sqlite_connection->raw_execute_query("BEGIN TRANSACTION");
@@ -22,6 +25,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
+  pipeline_builder.with_hyrise_env(_hyrise_env);
 
   auto pipeline = pipeline_builder.create_pipeline();
 

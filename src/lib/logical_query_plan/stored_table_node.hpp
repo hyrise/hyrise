@@ -10,6 +10,7 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class LQPColumnExpression;
 class TableStatistics;
 
@@ -20,7 +21,8 @@ class TableStatistics;
  */
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& init_table_name);
+  explicit StoredTableNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env,
+                           const std::string& init_table_name);
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
 
@@ -46,6 +48,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
   std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these

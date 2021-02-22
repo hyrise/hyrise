@@ -31,8 +31,8 @@ class OperatorsDeleteTest : public BaseTest {
     _table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(_table_name, _table);
-    Hyrise::get().storage_manager.add_table(_table2_name, _table2);
+    _hyrise_env->storage_manager()->add_table(_table_name, _table);
+    _hyrise_env->storage_manager()->add_table(_table2_name, _table2);
   }
 
   std::string _table_name, _table2_name;
@@ -45,7 +45,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // Selects two out of three rows.
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto table_scan = create_table_scan(gt, ColumnID{1}, PredicateCondition::GreaterThan, 456.7f);
@@ -88,7 +88,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto t2_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto table_scan1 = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "123");
@@ -121,7 +121,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   // Get validated table which should have only one row deleted.
   auto t_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  auto gt_post_delete = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
@@ -135,7 +135,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_modification = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto table_scan = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "112233");
@@ -157,7 +157,7 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   // Get validated table which should be the original one
   auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  auto gt_post_delete = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
@@ -172,7 +172,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto t2_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto validate1 = std::make_shared<Validate>(gt);
@@ -194,7 +194,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   EXPECT_FALSE(delete_op->execute_failed());
 
   // this update tries to update the values that have been deleted in another transaction and should fail.
-  auto update_op = std::make_shared<Update>(_table_name, validate2, validate2);
+  auto update_op = std::make_shared<Update>(_hyrise_env, _table_name, validate2, validate2);
   update_op->set_transaction_context(t2_context);
   update_op->execute();
   EXPECT_TRUE(update_op->execute_failed());
@@ -215,15 +215,15 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 
     auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
-    Hyrise::get().storage_manager.add_table(table_name_for_insert, values_to_insert);
-    auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
+    _hyrise_env->storage_manager()->add_table(table_name_for_insert, values_to_insert);
+    auto insert_get_table = std::make_shared<GetTable>(_hyrise_env, table_name_for_insert);
     insert_get_table->execute();
 
-    auto insert = std::make_shared<Insert>(_table_name, insert_get_table);
+    auto insert = std::make_shared<Insert>(_hyrise_env, _table_name, insert_get_table);
     insert->set_transaction_context(context);
     insert->execute();
 
-    auto gt = std::make_shared<GetTable>(_table_name);
+    auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
     gt->execute();
 
     auto validate1 = std::make_shared<Validate>(gt);
@@ -238,7 +238,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     delete_op->set_transaction_context(context);
     delete_op->execute();
 
-    auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+    auto gt_post_delete = std::make_shared<GetTable>(_hyrise_env, _table_name);
     gt_post_delete->execute();
 
     auto validate2 = std::make_shared<Validate>(gt_post_delete);
@@ -255,13 +255,13 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
       context->commit();
     }
 
-    Hyrise::get().storage_manager.drop_table(table_name_for_insert);
+    _hyrise_env->storage_manager()->drop_table(table_name_for_insert);
   }
 
   {
     auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-    auto gt2 = std::make_shared<GetTable>(_table_name);
+    auto gt2 = std::make_shared<GetTable>(_hyrise_env, _table_name);
     gt2->execute();
 
     auto validate1 = std::make_shared<Validate>(gt2);
@@ -281,7 +281,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, _table_name);
   gt->execute();
 
   auto validate1 = std::make_shared<Validate>(gt);
@@ -303,7 +303,7 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto get_table = std::make_shared<GetTable>(_table_name);
+  auto get_table = std::make_shared<GetTable>(_hyrise_env, _table_name);
   get_table->execute();
 
   const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
@@ -332,7 +332,8 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // Create the values_to_delete table via Chunk pruning and a Table Scan
-  const auto get_table_op = std::make_shared<GetTable>("table_b", std::vector{ChunkID{1}}, std::vector<ColumnID>{});
+  const auto get_table_op =
+      std::make_shared<GetTable>(_hyrise_env, "table_b", std::vector{ChunkID{1}}, std::vector<ColumnID>{});
   get_table_op->execute();
 
   const auto table_scan = create_table_scan(get_table_op, ColumnID{0}, PredicateCondition::LessThan, 5);

@@ -39,6 +39,7 @@ class SQLPipelineBuilder final {
 
   SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
   SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer>& optimizer);
+  SQLPipelineBuilder& with_hyrise_env(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
   SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
   SQLPipelineBuilder& with_pqp_cache(const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache);
   SQLPipelineBuilder& with_lqp_cache(const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache);
@@ -54,6 +55,7 @@ class SQLPipelineBuilder final {
   const std::string _sql;
 
   UseMvcc _use_mvcc{UseMvcc::Yes};
+  std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   std::shared_ptr<TransactionContext> _transaction_context;
   std::shared_ptr<Optimizer> _optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;

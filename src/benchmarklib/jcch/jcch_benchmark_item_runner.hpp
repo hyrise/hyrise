@@ -13,11 +13,13 @@ class JCCHBenchmarkItemRunner : public TPCHBenchmarkItemRunner {
  public:
   // Constructor for a JCCHBenchmarkItemRunner containing all TPC-H queries
   JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path, const std::string& data_path,
+                          const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                           const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor);
 
   // Constructor for a JCCHBenchmarkItemRunner containing a subset of TPC-H queries
   JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path, const std::string& data_path,
+                          const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                           const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& items);
 

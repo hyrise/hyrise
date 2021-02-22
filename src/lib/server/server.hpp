@@ -29,7 +29,8 @@ namespace opossum {
 
 class Server {
  public:
-  Server(const boost::asio::ip::address& address, const uint16_t port, const SendExecutionInfo send_execution_info);
+  Server(const boost::asio::ip::address& address, const uint16_t port,
+         const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const SendExecutionInfo send_execution_info);
 
   // Start server to accept new sessions.
   void run();
@@ -53,6 +54,8 @@ class Server {
 
   std::atomic<uint64_t> _num_running_sessions{0};
   boost::asio::io_service _io_service;
+  const std::shared_ptr<HyriseEnvironmentRef>
+      _hyrise_env;  // TODO: User should be allowed to have several of these to choose from.
   boost::asio::ip::tcp::acceptor _acceptor;
   const SendExecutionInfo _send_execution_info;
   std::atomic_bool _is_initialized{false};

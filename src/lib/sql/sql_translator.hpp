@@ -18,6 +18,7 @@
 namespace opossum {
 
 class AggregateNode;
+class HyriseEnvironmentRef;
 class LQPSubqueryExpression;
 class Table;
 
@@ -54,7 +55,7 @@ class SQLTranslator final {
   /**
    * @param use_mvcc  Whether ValidateNodes should be compiled into the plan
    */
-  explicit SQLTranslator(const UseMvcc use_mvcc);
+  explicit SQLTranslator(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const UseMvcc use_mvcc);
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
@@ -121,7 +122,7 @@ class SQLTranslator final {
    * @param _meta_tables                            Contains a map of meta table names to meta tables that have already
    *                                                been loaded by other subqueries
    */
-  SQLTranslator(const UseMvcc use_mvcc,
+  SQLTranslator(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
                 const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
@@ -133,7 +134,7 @@ class SQLTranslator final {
   * @param meta_tables  Contains a map of meta table names to meta tables that have already
   *                     been loaded by other subqueries
   */
-  SQLTranslator(const UseMvcc use_mvcc,
+  SQLTranslator(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const UseMvcc use_mvcc,
                 const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
@@ -204,6 +205,7 @@ class SQLTranslator final {
   static std::string _trim_meta_table_name(const std::string& name);
 
  private:
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;

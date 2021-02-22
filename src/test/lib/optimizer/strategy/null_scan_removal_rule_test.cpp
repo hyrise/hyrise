@@ -18,11 +18,11 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
     mock_node_column = mock_node->get_column("a");
 
-    Hyrise::get().storage_manager.add_table("nullable_table",
-                                            load_table("resources/test_data/tbl/int_float_null_1.tbl", 2));
-    Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_float4_or_1.tbl", 2));
-    nullable_table_node = StoredTableNode::make("nullable_table");
-    table_node = StoredTableNode::make("table");
+    _hyrise_env->storage_manager()->add_table("nullable_table",
+                                              load_table("resources/test_data/tbl/int_float_null_1.tbl", 2));
+    _hyrise_env->storage_manager()->add_table("table", load_table("resources/test_data/tbl/int_float4_or_1.tbl", 2));
+    nullable_table_node = StoredTableNode::make(_hyrise_env, "nullable_table");
+    table_node = StoredTableNode::make(_hyrise_env, "table");
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
   }

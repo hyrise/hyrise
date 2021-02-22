@@ -14,11 +14,13 @@ namespace opossum {
 class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // Constructor for a TPCHBenchmarkItemRunner containing all TPC-H queries
-  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+  TPCHBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                          const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor);
 
   // Constructor for a TPCHBenchmarkItemRunner containing a subset of TPC-H queries
-  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+  TPCHBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                          const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& items);
 
   void on_tables_loaded() override;

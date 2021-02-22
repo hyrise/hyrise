@@ -9,15 +9,19 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * This node type represents the IMPORT / COPY FROM management command.
  */
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQueryNode {
  public:
-  ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
+  ImportNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_table_name,
+             const std::string& init_file_name, const FileType init_file_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const std::string file_name;
   const FileType file_type;

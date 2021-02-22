@@ -196,7 +196,7 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
 
   // clang-format off
   const auto insert_lqp =
-  InsertNode::make("insert_table_name",
+  InsertNode::make(_hyrise_env, "insert_table_name",
     PredicateNode::make(greater_than_(a_a, 5),
       node_a));
   // clang-format on

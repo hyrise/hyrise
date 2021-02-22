@@ -150,8 +150,8 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   const auto table_definition = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
   const auto table = Table::create_dummy_table(table_definition);
-  Hyrise::get().storage_manager.add_table("agg_table", table);
-  const auto stored_table_node = StoredTableNode::make("agg_table");
+  _hyrise_env->storage_manager()->add_table("agg_table", table);
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "agg_table");
 
   const auto col_a = lqp_column_(stored_table_node, ColumnID{0});
   const auto col_b = lqp_column_(stored_table_node, ColumnID{1});

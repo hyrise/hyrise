@@ -31,28 +31,28 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   }
 
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("a", _table_a);
-    _stored_table_a = StoredTableNode::make("a");
+    _hyrise_env->storage_manager()->add_table("a", _table_a);
+    _stored_table_a = StoredTableNode::make(_hyrise_env, "a");
     _a_a = _stored_table_a->get_column("a");
     _a_b = _stored_table_a->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("b", _table_b);
-    _stored_table_b = StoredTableNode::make("b");
+    _hyrise_env->storage_manager()->add_table("b", _table_b);
+    _stored_table_b = StoredTableNode::make(_hyrise_env, "b");
     _b_a = _stored_table_b->get_column("a");
     _b_b = _stored_table_b->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("c", _table_c);
-    _stored_table_c = StoredTableNode::make("c");
+    _hyrise_env->storage_manager()->add_table("c", _table_c);
+    _stored_table_c = StoredTableNode::make(_hyrise_env, "c");
     _c_a = _stored_table_c->get_column("a");
     _c_b = _stored_table_c->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("d", _table_d);
-    _stored_table_d = StoredTableNode::make("d");
+    _hyrise_env->storage_manager()->add_table("d", _table_d);
+    _stored_table_d = StoredTableNode::make(_hyrise_env, "d");
     _d_a = _stored_table_d->get_column("a");
     _d_b = _stored_table_d->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("e", _table_e);
-    _stored_table_e = StoredTableNode::make("e");
+    _hyrise_env->storage_manager()->add_table("e", _table_e);
+    _stored_table_e = StoredTableNode::make(_hyrise_env, "e");
     _e_a = _stored_table_e->get_column("a");
 
     _rule = std::make_shared<PredicatePlacementRule>();
@@ -163,7 +163,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       _stored_table_a));
 
   const auto input_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(_hyrise_env, "int_float",
     input_sub_lqp,
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
       input_sub_lqp));
@@ -174,7 +174,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       _stored_table_a));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(_hyrise_env, "int_float",
     expected_sub_lqp,
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
       expected_sub_lqp));

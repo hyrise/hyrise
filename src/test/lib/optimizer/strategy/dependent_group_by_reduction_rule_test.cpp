@@ -17,46 +17,44 @@ namespace opossum {
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
-
     TableColumnDefinitions column_definitions{
         {"column0", DataType::Int, false}, {"column1", DataType::Int, false}, {"column2", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
-    storage_manager.add_table("table_a", table_a);
-    stored_table_node_a = StoredTableNode::make("table_a");
+    _hyrise_env->storage_manager()->add_table("table_a", table_a);
+    stored_table_node_a = StoredTableNode::make(_hyrise_env, "table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
     column_a_1 = stored_table_node_a->get_column("column1");
     column_a_2 = stored_table_node_a->get_column("column2");
 
     table_b = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     table_b->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
-    storage_manager.add_table("table_b", table_b);
-    stored_table_node_b = StoredTableNode::make("table_b");
+    _hyrise_env->storage_manager()->add_table("table_b", table_b);
+    stored_table_node_b = StoredTableNode::make(_hyrise_env, "table_b");
     column_b_0 = stored_table_node_b->get_column("column0");
     column_b_1 = stored_table_node_b->get_column("column1");
     column_b_2 = stored_table_node_b->get_column("column2");
 
     table_c = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     table_c->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
-    storage_manager.add_table("table_c", table_c);
-    stored_table_node_c = StoredTableNode::make("table_c");
+    _hyrise_env->storage_manager()->add_table("table_c", table_c);
+    stored_table_node_c = StoredTableNode::make(_hyrise_env, "table_c");
     column_c_0 = stored_table_node_c->get_column("column0");
     column_c_1 = stored_table_node_c->get_column("column1");
     column_c_2 = stored_table_node_c->get_column("column2");
 
     table_d = std::make_shared<Table>(TableColumnDefinitions{{"column0", DataType::Int, false}}, TableType::Data, 2,
                                       UseMvcc::Yes);
-    storage_manager.add_table("table_d", table_d);
-    stored_table_node_d = StoredTableNode::make("table_d");
+    _hyrise_env->storage_manager()->add_table("table_d", table_d);
+    stored_table_node_d = StoredTableNode::make(_hyrise_env, "table_d");
     column_d_0 = stored_table_node_d->get_column("column0");
 
     table_e = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     table_e->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
     table_e->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
-    storage_manager.add_table("table_e", table_e);
-    stored_table_node_e = StoredTableNode::make("table_e");
+    _hyrise_env->storage_manager()->add_table("table_e", table_e);
+    stored_table_node_e = StoredTableNode::make(_hyrise_env, "table_e");
     column_e_0 = stored_table_node_e->get_column("column0");
     column_e_1 = stored_table_node_e->get_column("column1");
     column_e_2 = stored_table_node_e->get_column("column2");

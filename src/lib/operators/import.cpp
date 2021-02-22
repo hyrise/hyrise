@@ -10,10 +10,12 @@
 
 namespace opossum {
 
-Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<CsvMeta>& csv_meta)
+Import::Import(const std::string& init_filename, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+               const std::string& tablename, const ChunkOffset chunk_size, const FileType file_type,
+               const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
+      _hyrise_env(hyrise_env),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
@@ -50,11 +52,11 @@ std::shared_ptr<const Table> Import::_on_execute() {
       Fail("File type should have been determined previously.");
   }
 
-  if (Hyrise::get().storage_manager.has_table(_tablename)) {
-    Hyrise::get().storage_manager.drop_table(_tablename);
+  if (_hyrise_env->storage_manager()->has_table(_tablename)) {
+    _hyrise_env->storage_manager()->drop_table(_tablename);
   }
 
-  Hyrise::get().storage_manager.add_table(_tablename, table);
+  _hyrise_env->storage_manager()->add_table(_tablename, table);
 
   // must match ImportNode::output_expressions
   return nullptr;
@@ -63,7 +65,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
 std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _csv_meta);
+  return std::make_shared<Import>(filename, _hyrise_env, _tablename, _chunk_size, _file_type, _csv_meta);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

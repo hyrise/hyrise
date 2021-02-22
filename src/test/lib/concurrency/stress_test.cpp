@@ -1,4 +1,5 @@
 #include <future>
+#include <memory>
 #include <thread>
 
 #include "base_test.hpp"
@@ -22,11 +23,12 @@ TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
   auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-  Hyrise::get().storage_manager.add_table("table_a", table_a);
+  _hyrise_env->storage_manager()->add_table("table_a", table_a);
   auto initial_sum = int64_t{};
 
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
     initial_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
@@ -41,7 +43,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     int my_conflicted_increments{0};
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
       const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
-      auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+      auto pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(_hyrise_env).create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       if (status == SQLPipelineStatus::Success) {
         ++my_successful_increments;
@@ -77,7 +79,8 @@ TEST_F(StressTest, TestTransactionConflicts) {
   // Verify results
   auto final_sum = int64_t{};
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
     final_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
@@ -98,7 +101,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_b", table);
+  _hyrise_env->storage_manager()->add_table("table_b", table);
 
   const auto iterations_per_thread = 20;
 
@@ -111,6 +114,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
           SQLPipelineBuilder{
               iteration == 0 ? std::string{"INSERT INTO table_b (a, b) VALUES ("} + std::to_string(my_job_id) + ", 1)"
                              : std::string{"UPDATE table_b SET b = b + 1 WHERE a = "} + std::to_string(my_job_id)}
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       EXPECT_EQ(status, SQLPipelineStatus::Success);
@@ -140,7 +144,8 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 
   // Verify that the values in column b are correctly incremented
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
     EXPECT_EQ(*verification_table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);
   }
@@ -154,7 +159,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, true);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_c", table);
+  _hyrise_env->storage_manager()->add_table("table_c", table);
 
   const auto iterations_per_thread = 200;
 
@@ -166,6 +171,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
       // b is set to NULL by half of the jobs.
       auto pipeline = SQLPipelineBuilder{std::string{"INSERT INTO table_c (a, b) VALUES ("} +
                                          std::to_string(my_job_id) + ", " + (my_job_id % 2 ? "NULL" : "1") + ")"}
+                          .with_hyrise_env(_hyrise_env)
                           .create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       EXPECT_EQ(status, SQLPipelineStatus::Success);
@@ -194,8 +200,9 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 
   // Check that NULL values in column b are correctly set
-  auto pipeline =
-      SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}.create_pipeline();
+  auto pipeline = SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}
+                      .with_hyrise_env(_hyrise_env)
+                      .create_pipeline();
   const auto [_, verification_table] = pipeline.get_result_table();
   ASSERT_EQ(verification_table->row_count(), num_threads);
 

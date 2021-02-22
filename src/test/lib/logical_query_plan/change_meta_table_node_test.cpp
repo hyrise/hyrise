@@ -13,7 +13,7 @@ class ChangeMetaTableNodeTest : public BaseTest {
   void SetUp() override {
     _mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::String, "foo"}}));
     _change_meta_table_node =
-        ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert, _mock_node, _mock_node);
+        ChangeMetaTableNode::make(_hyrise_env, "meta_table", MetaTableChangeType::Insert, _mock_node, _mock_node);
   }
 
   std::shared_ptr<ChangeMetaTableNode> _change_meta_table_node;
@@ -26,7 +26,7 @@ TEST_F(ChangeMetaTableNodeTest, Description) {
 
 TEST_F(ChangeMetaTableNodeTest, HashingAndEqualityCheck) {
   const auto another_change_meta_table_node =
-      ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert, _mock_node, _mock_node);
+      ChangeMetaTableNode::make(_hyrise_env, "meta_table", MetaTableChangeType::Insert, _mock_node, _mock_node);
   EXPECT_EQ(*_change_meta_table_node, *another_change_meta_table_node);
 
   EXPECT_EQ(_change_meta_table_node->hash(), another_change_meta_table_node->hash());

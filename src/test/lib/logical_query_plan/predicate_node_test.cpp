@@ -13,10 +13,10 @@ namespace opossum {
 class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a",
-                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    _hyrise_env->storage_manager()->add_table("table_a",
+                                              load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
-    _table_node = StoredTableNode::make("table_a");
+    _table_node = StoredTableNode::make(_hyrise_env, "table_a");
     _i = lqp_column_(_table_node, ColumnID{0});
     _f = lqp_column_(_table_node, ColumnID{1});
 
@@ -32,7 +32,7 @@ TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description
 
 TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
-  const auto equal_table_node = StoredTableNode::make("table_a");
+  const auto equal_table_node = StoredTableNode::make(_hyrise_env, "table_a");
   const auto equal_i = equal_table_node->get_column("i");
 
   const auto other_predicate_node_a = PredicateNode::make(equals_(_i, 5), _table_node);

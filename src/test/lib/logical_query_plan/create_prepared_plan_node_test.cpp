@@ -13,7 +13,7 @@ class CreatePreparedPlanNodeTest : public BaseTest {
   void SetUp() override {
     lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
     prepared_plan = std::make_shared<PreparedPlan>(lqp, std::vector<ParameterID>{});
-    create_prepared_plan_node = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+    create_prepared_plan_node = CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan", prepared_plan);
   }
 
   std::shared_ptr<CreatePreparedPlanNode> create_prepared_plan_node;
@@ -33,13 +33,14 @@ TEST_F(CreatePreparedPlanNodeTest, HashingAndEqualityCheck) {
   const auto deep_copied_node = create_prepared_plan_node->deep_copy();
   EXPECT_EQ(*create_prepared_plan_node, *deep_copied_node);
 
-  const auto different_prepared_plan_node_a = CreatePreparedPlanNode::make("some_prepared_plan2", prepared_plan);
+  const auto different_prepared_plan_node_a =
+      CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan2", prepared_plan);
 
   const auto different_lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
   const auto different_prepared_plan =
       std::make_shared<PreparedPlan>(different_lqp, std::vector<ParameterID>{ParameterID{1}});
   const auto different_prepared_plan_node_b =
-      CreatePreparedPlanNode::make("some_prepared_plan", different_prepared_plan);
+      CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan", different_prepared_plan);
 
   EXPECT_NE(*different_prepared_plan_node_a, *create_prepared_plan_node);
   EXPECT_NE(*different_prepared_plan_node_b, *create_prepared_plan_node);

@@ -12,7 +12,7 @@ class CreateViewNodeTest : public BaseTest {
   void SetUp() override {
     _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
     _view = std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
-    _create_view_node = CreateViewNode::make("some_view", _view, false);
+    _create_view_node = CreateViewNode::make(_hyrise_env, "some_view", _view, false);
   }
 
   std::shared_ptr<CreateViewNode> _create_view_node;
@@ -27,7 +27,7 @@ TEST_F(CreateViewNodeTest, Description) {
             "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
             ")");
 
-  const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
+  const auto _create_view_node_2 = CreateViewNode::make(_hyrise_env, "some_view", _view, true);
   EXPECT_EQ(replace_addresses(_create_view_node_2->description(AbstractLQPNode::DescriptionMode::Short)),
             "[CreateView] IfNotExists Name: some_view, Columns: a FROM (\n"
             "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
@@ -38,13 +38,13 @@ TEST_F(CreateViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_create_view_node, *_create_view_node);
   EXPECT_EQ(*_create_view_node, *_create_view_node->deep_copy());
 
-  const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view, false);
+  const auto different_create_view_node_a = CreateViewNode::make(_hyrise_env, "some_view2", _view, false);
 
   const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
   const auto different_view =
       std::make_shared<LQPView>(different_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"b"}}});
-  const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view, false);
-  const auto different_create_view_node_c = CreateViewNode::make("some_view", _view, true);
+  const auto different_create_view_node_b = CreateViewNode::make(_hyrise_env, "some_view", different_view, false);
+  const auto different_create_view_node_c = CreateViewNode::make(_hyrise_env, "some_view", _view, true);
 
   EXPECT_NE(*different_create_view_node_a, *_create_view_node);
   EXPECT_NE(*different_create_view_node_b, *_create_view_node);
@@ -59,7 +59,7 @@ TEST_F(CreateViewNodeTest, Copy) {
   const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
   const auto same_view =
       std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "a"}});
-  const auto same_create_view_node = CreateViewNode::make("some_view", _view, false);
+  const auto same_create_view_node = CreateViewNode::make(_hyrise_env, "some_view", _view, false);
 
   EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
 }

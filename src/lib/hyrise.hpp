@@ -39,10 +39,10 @@ class Hyrise : public Singleton<Hyrise> {
   // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
   // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
   // could not work without the StorageManager still in place.
-  StorageManager storage_manager;
-  PluginManager plugin_manager;
+  // StorageManager storage_manager; - removed
+  // PluginManager plugin_manager; - removed
   TransactionManager transaction_manager;
-  MetaTableManager meta_table_manager;
+  // MetaTableManager meta_table_manager; - removed
   SettingsManager settings_manager;
   LogManager log_manager;
   Topology topology;
@@ -63,6 +63,35 @@ class Hyrise : public Singleton<Hyrise> {
   // (Re-)setting the scheduler requires more than just replacing the pointer. To make sure that set_scheduler is used,
   // the scheduler is private.
   std::shared_ptr<AbstractScheduler> _scheduler;
+};
+
+class HyriseEnvironmentRef {
+  friend class HyriseEnvironmentHolder;
+
+ public:
+  std::shared_ptr<StorageManager> storage_manager() const;
+  std::shared_ptr<PluginManager> plugin_manager() const;
+  std::shared_ptr<MetaTableManager> meta_table_manager() const;
+
+ private:
+  HyriseEnvironmentRef() noexcept;
+
+  std::weak_ptr<StorageManager> _storage_manager;
+  std::weak_ptr<PluginManager> _plugin_manager;
+  std::weak_ptr<MetaTableManager> _meta_table_manager;
+};
+
+class HyriseEnvironmentHolder {
+ public:
+  HyriseEnvironmentHolder();
+  const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env_ref();
+
+ private:
+  // We do not allow users to retrieve these pointers in order to preserve destruction order.
+  std::shared_ptr<HyriseEnvironmentRef> _hyrise_env_ref;
+  std::shared_ptr<StorageManager> _storage_manager;
+  std::shared_ptr<PluginManager> _plugin_manager;
+  std::shared_ptr<MetaTableManager> _meta_table_manager;
 };
 
 }  // namespace opossum

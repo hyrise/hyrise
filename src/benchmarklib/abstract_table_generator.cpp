@@ -28,7 +28,7 @@ BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table)
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
-void AbstractTableGenerator::generate_and_store() {
+void AbstractTableGenerator::generate_and_store(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) {
   Timer timer;
 
   std::cout << "- Loading/Generating tables " << std::endl;
@@ -244,7 +244,6 @@ void AbstractTableGenerator::generate_and_store() {
    */
   {
     std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
-    auto& storage_manager = Hyrise::get().storage_manager;
     auto threads = std::vector<std::thread>{};
     for (auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
@@ -252,8 +251,8 @@ void AbstractTableGenerator::generate_and_store() {
 
       threads.emplace_back([&] {
         Timer per_table_timer;
-        if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
-        storage_manager.add_table(table_name, table_info.table);
+        if (hyrise_env->storage_manager()->has_table(table_name)) hyrise_env->storage_manager()->drop_table(table_name);
+        hyrise_env->storage_manager()->add_table(table_name, table_info.table);
         const auto output =
             std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
         std::cout << output << std::flush;

@@ -9,8 +9,10 @@
 
 namespace opossum {
 
-void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+void gather_segment_meta_data(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                              const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
+  auto storage_manager = hyrise_env->storage_manager();
+  for (const auto& [table_name, table] : storage_manager->tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (!chunk) continue;  // Skip physically deleted chunks

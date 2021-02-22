@@ -29,7 +29,7 @@ class ChangeMetaTableTest : public BaseTest {
     right_input->execute();
 
     meta_mock_table = std::make_shared<MetaMockTable>();
-    Hyrise::get().meta_table_manager.add_table(meta_mock_table);
+    _hyrise_env->meta_table_manager()->add_table(meta_mock_table);
 
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
@@ -44,7 +44,7 @@ class ChangeMetaTableTest : public BaseTest {
 
 TEST_F(ChangeMetaTableTest, Insert) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, right_input);
+      std::make_shared<ChangeMetaTable>(_hyrise_env, "meta_mock", MetaTableChangeType::Insert, left_input, right_input);
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -57,7 +57,7 @@ TEST_F(ChangeMetaTableTest, Insert) {
 
 TEST_F(ChangeMetaTableTest, Delete) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Delete, left_input, right_input);
+      std::make_shared<ChangeMetaTable>(_hyrise_env, "meta_mock", MetaTableChangeType::Delete, left_input, right_input);
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -70,7 +70,7 @@ TEST_F(ChangeMetaTableTest, Delete) {
 
 TEST_F(ChangeMetaTableTest, Update) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Update, left_input, right_input);
+      std::make_shared<ChangeMetaTable>(_hyrise_env, "meta_mock", MetaTableChangeType::Update, left_input, right_input);
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -84,7 +84,7 @@ TEST_F(ChangeMetaTableTest, Update) {
 
 TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, right_input);
+      std::make_shared<ChangeMetaTable>(_hyrise_env, "meta_mock", MetaTableChangeType::Insert, left_input, right_input);
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 

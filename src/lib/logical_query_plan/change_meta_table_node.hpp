@@ -9,6 +9,7 @@
 namespace opossum {
 
 class AbstractExpression;
+class HyriseEnvironmentRef;
 
 /*
  * Node type to represent modifications of a meta table.
@@ -19,10 +20,12 @@ class AbstractExpression;
  */
 class ChangeMetaTableNode : public EnableMakeForLQPNode<ChangeMetaTableNode>, public AbstractNonQueryNode {
  public:
-  explicit ChangeMetaTableNode(const std::string& init_table_name, const MetaTableChangeType& init_change_type);
+  explicit ChangeMetaTableNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env,
+                               const std::string& init_table_name, const MetaTableChangeType& init_change_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const MetaTableChangeType change_type;
 

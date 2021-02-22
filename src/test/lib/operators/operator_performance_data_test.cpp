@@ -280,11 +280,11 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   const auto table = load_table("resources/test_data/tbl/int_float.tbl");
 
   // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  _hyrise_env->storage_manager()->add_table(table_name, table);
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
 
-  auto gt = std::make_shared<GetTable>(table_name);
+  auto gt = std::make_shared<GetTable>(_hyrise_env, table_name);
   gt->execute();
 
   auto table_scan_1 = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "123");

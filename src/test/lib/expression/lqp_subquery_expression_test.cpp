@@ -22,13 +22,13 @@ namespace opossum {
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    _hyrise_env->storage_manager()->add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
-    int_float_node_a = StoredTableNode::make("int_float");
+    int_float_node_a = StoredTableNode::make(_hyrise_env, "int_float");
     a = int_float_node_a->get_column("a");
     b = int_float_node_a->get_column("b");
 
-    int_float_node_a_2 = StoredTableNode::make("int_float");
+    int_float_node_a_2 = StoredTableNode::make(_hyrise_env, "int_float");
     a_2 = int_float_node_a_2->get_column("a");
 
     // clang-format off

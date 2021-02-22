@@ -31,12 +31,12 @@ class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     table = load_table("resources/test_data/tbl/int_int_int.tbl");
-    Hyrise::get().storage_manager.add_table("a", table);
-    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
+    _hyrise_env->storage_manager()->add_table("a", table);
+    ChunkEncoder::encode_all_chunks(_hyrise_env->storage_manager()->get_table("a"));
 
     rule = std::make_shared<IndexScanRule>();
 
-    stored_table_node = StoredTableNode::make("a");
+    stored_table_node = StoredTableNode::make(_hyrise_env, "a");
     a = stored_table_node->get_column("a");
     b = stored_table_node->get_column("b");
     c = stored_table_node->get_column("c");

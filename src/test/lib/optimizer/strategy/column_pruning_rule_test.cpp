@@ -340,13 +340,12 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -382,13 +381,12 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
     column_definitions.emplace_back("column1", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
   const auto column1 = stored_table_node->get_column("column1");
 
@@ -428,13 +426,12 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     column_definitions.emplace_back("column1", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
   const auto column1 = stored_table_node->get_column("column1");
 
@@ -468,13 +465,12 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEqui) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -509,11 +505,10 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -555,13 +550,12 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutMatchingUniqueConstraint
     column_definitions.emplace_back("column1", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -595,13 +589,12 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    _hyrise_env->storage_manager()->add_table("table", table);
 
     table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
   }
 
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -637,7 +630,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
     node_a);
 
   const auto lqp =
-  UpdateNode::make("dummy",
+  UpdateNode::make(_hyrise_env, "dummy",
     select_rows_lqp,
     ProjectionNode::make(expression_vector(a, add_(b, 1), c),
       select_rows_lqp));
@@ -653,7 +646,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
 
   // clang-format off
   const auto lqp =
-  InsertNode::make("dummy",
+  InsertNode::make(_hyrise_env, "dummy",
     PredicateNode::make(greater_than_(a, 5),
       node_a));
   // clang-format on
@@ -702,7 +695,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
     node_a);
 
   const auto lqp =
-  ChangeMetaTableNode::make("dummy", MetaTableChangeType::Update,
+	ChangeMetaTableNode::make(_hyrise_env, "dummy", MetaTableChangeType::Update,
     select_rows_lqp,
     ProjectionNode::make(expression_vector(a, add_(b, 1), c),
       select_rows_lqp));

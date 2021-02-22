@@ -16,7 +16,7 @@ class UpdateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-    _update_node = UpdateNode::make("table_a", _mock_node, _mock_node);
+    _update_node = UpdateNode::make(_hyrise_env, "table_a", _mock_node, _mock_node);
   }
 
   std::shared_ptr<UpdateNode> _update_node;
@@ -32,11 +32,11 @@ TEST_F(UpdateNodeTest, HashingAndEqualityCheck) {
 
   const auto other_mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Long, "a"}}));
 
-  const auto other_update_node_a = UpdateNode::make("table_a", _mock_node, _mock_node);
-  const auto other_update_node_b = UpdateNode::make("table_b", _mock_node, _mock_node);
-  const auto other_update_node_c = UpdateNode::make("table_a", other_mock_node, _mock_node);
-  const auto other_update_node_d = UpdateNode::make("table_a", _mock_node, other_mock_node);
-  const auto other_update_node_e = UpdateNode::make("table_a", other_mock_node, other_mock_node);
+  const auto other_update_node_a = UpdateNode::make(_hyrise_env, "table_a", _mock_node, _mock_node);
+  const auto other_update_node_b = UpdateNode::make(_hyrise_env, "table_b", _mock_node, _mock_node);
+  const auto other_update_node_c = UpdateNode::make(_hyrise_env, "table_a", other_mock_node, _mock_node);
+  const auto other_update_node_d = UpdateNode::make(_hyrise_env, "table_a", _mock_node, other_mock_node);
+  const auto other_update_node_e = UpdateNode::make(_hyrise_env, "table_a", other_mock_node, other_mock_node);
 
   EXPECT_EQ(*_update_node, *other_update_node_a);
   EXPECT_NE(*_update_node, *other_update_node_b);

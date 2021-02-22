@@ -39,7 +39,8 @@ class BenchmarkRunner : public Noncopyable {
   // Defines the interval in which the system utilization is collected
   static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::milliseconds{1000};
 
-  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+  BenchmarkRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const BenchmarkConfig& config,
+                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
 
   void run();
@@ -75,6 +76,7 @@ class BenchmarkRunner : public Noncopyable {
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;

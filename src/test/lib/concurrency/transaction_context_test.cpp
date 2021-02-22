@@ -26,7 +26,7 @@ class TransactionContextTest : public BaseTest {
   void SetUp() override {
     auto t = load_table("resources/test_data/tbl/float_int.tbl");
     // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(table_name, t);
+    _hyrise_env->storage_manager()->add_table(table_name, t);
   }
 
   TransactionManager& manager() { return Hyrise::get().transaction_manager; }
@@ -102,7 +102,7 @@ TEST_F(TransactionContextTest, CommitShouldIncreaseCommitIDIfReadWrite) {
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
-  const auto get_table_op = std::make_shared<GetTable>(table_name);
+  const auto get_table_op = std::make_shared<GetTable>(_hyrise_env, table_name);
   const auto validate_op = std::make_shared<Validate>(get_table_op);
   const auto delete_op = std::make_shared<Delete>(validate_op);
   delete_op->set_transaction_context_recursively(context);
@@ -120,7 +120,7 @@ TEST_F(TransactionContextTest, CommitShouldNotIncreaseCommitIDIfReadOnly) {
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
-  const auto get_table_op = std::make_shared<GetTable>(table_name);
+  const auto get_table_op = std::make_shared<GetTable>(_hyrise_env, table_name);
   const auto validate_op = std::make_shared<Validate>(get_table_op);
   validate_op->set_transaction_context_recursively(context);
   get_table_op->execute();

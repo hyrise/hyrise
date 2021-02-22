@@ -11,10 +11,10 @@ namespace opossum {
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    _hyrise_env->storage_manager()->add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    _hyrise_env->storage_manager()->add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
 
-    _stored_table_node_left = StoredTableNode::make("t_a");
+    _stored_table_node_left = StoredTableNode::make(_hyrise_env, "t_a");
     _stored_table_node_left->set_pruned_chunk_ids({ChunkID{2}});
     _stored_table_node_left->set_pruned_column_ids({ColumnID{0}});
     _stored_table_node_right = std::static_pointer_cast<StoredTableNode>(_stored_table_node_left->deep_copy());
@@ -66,7 +66,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentCol
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentColumns) {
-  _stored_table_node_right = StoredTableNode::make("t_b");
+  _stored_table_node_right = StoredTableNode::make(_hyrise_env, "t_b");
   _stored_table_node_right->set_pruned_chunk_ids({ChunkID{2}});
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);

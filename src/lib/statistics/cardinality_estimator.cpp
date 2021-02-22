@@ -171,7 +171,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp);
 
-      const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto stored_table =
+          stored_table_node->hyrise_env->storage_manager()->get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
 
       if (stored_table_node->table_statistics) {

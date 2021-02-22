@@ -8,8 +8,9 @@
 
 namespace opossum {
 
-TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses)
-    : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
+TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                                 const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses)
+    : AbstractBenchmarkItemRunner(hyrise_env, config), _num_warehouses(num_warehouses) {}
 
 const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
   static const std::vector<BenchmarkItemID> items{BenchmarkItemID{0}, BenchmarkItemID{1}, BenchmarkItemID{2},

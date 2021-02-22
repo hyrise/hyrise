@@ -58,7 +58,7 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
     if (!stored_table_node) return LQPVisitation::VisitInputs;
 
     // Checks for condition 6
-    const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+    const auto& table = stored_table_node->hyrise_env->storage_manager()->get_table(stored_table_node->table_name);
     const auto original_column_id = column->original_column_id;
     const auto table_column_definition = table->column_definitions()[original_column_id];
     if (table_column_definition.nullable == true) return LQPVisitation::VisitInputs;

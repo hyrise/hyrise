@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 // The session class implements the communication flow and stores session-specific information such as portals. Those
 // portals are required by the PostgreSQL message protocol for the execution of prepared statements. However, named
 // portals used for CURSOR operations are currently not supported by Hyrise. For further documentation see here:
@@ -14,7 +16,8 @@ namespace opossum {
 // Example usage can be found here: https://stackoverflow.com/questions/52479293/postgresql-refcursor-and-portal-name
 class Session {
  public:
-  explicit Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info);
+  explicit Session(boost::asio::io_service& io_service, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                   const SendExecutionInfo send_execution_info);
 
   // Start new session.
   void run();
@@ -48,6 +51,7 @@ class Session {
 
   const std::shared_ptr<Socket> _socket;
   const std::shared_ptr<PostgresProtocolHandler<Socket>> _postgres_protocol_handler;
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const SendExecutionInfo _send_execution_info;
   bool _terminate_session = false;
   bool _sync_send_after_error = false;

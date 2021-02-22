@@ -32,9 +32,9 @@ class OperatorsValidateTest : public BaseTest {
     const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(_table2_name, _test_table2);
+    _hyrise_env->storage_manager()->add_table(_table2_name, _test_table2);
 
-    _gt = std::make_shared<GetTable>(_table2_name);
+    _gt = std::make_shared<GetTable>(_hyrise_env, _table2_name);
     _gt->execute();
 
     _table_wrapper = std::make_shared<TableWrapper>(_test_table);

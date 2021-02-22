@@ -140,7 +140,8 @@ namespace opossum {
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
 // in-memory databases"
 SQLiteWrapper::SQLiteWrapper()
-    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +  // NOLINT
+    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) + "+" +
+           std::to_string(time(nullptr)) +  // NOLINT
            "?mode=memory&cache=shared"},
       main_connection{_uri} {
   Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread-safety");
@@ -148,9 +149,9 @@ SQLiteWrapper::SQLiteWrapper()
 
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
   // Explicity set parallel mode. On Linux it seems to be the default, on Mac, it seems to make a difference.
-  const auto ret =
-      sqlite3_open_v2(uri.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,  // NOLINT
-                      nullptr);
+  const auto ret = sqlite3_open_v2(uri.c_str(), &db,
+                                   SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,  // NOLINT
+                                   nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
     Fail("Cannot open database: " + std::string(sqlite3_errmsg(db)));
@@ -330,7 +331,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
               // clang-tidy doesn't like SQLITE_TRANSIENT
               // clang-format off
               sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);  // NOLINT
-              // clang-format on
+                  // clang-format on
             } break;
             case DataType::Null:
               Fail("SQLiteWrapper: column type not supported.");

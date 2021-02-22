@@ -38,12 +38,22 @@ template <typename ParamType>
 class BaseTestWithParam
     : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  public:
+  BaseTestWithParam() {
+    _hyrise_env_holder = std::make_shared<HyriseEnvironmentHolder>();
+    _hyrise_env = _hyrise_env_holder->hyrise_env_ref();
+  }
+
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
    * safely without preventing the BaseTest-cleanup from happening.
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
   ~BaseTestWithParam() override { Hyrise::reset(); }
+
+ protected:
+  static inline std::shared_ptr<HyriseEnvironmentHolder> _hyrise_env_holder =
+      std::make_shared<HyriseEnvironmentHolder>();
+  static inline std::shared_ptr<HyriseEnvironmentRef> _hyrise_env = _hyrise_env_holder->hyrise_env_ref();
 };
 
 using BaseTest = BaseTestWithParam<void>;

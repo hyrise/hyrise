@@ -9,7 +9,7 @@ class QueryHandlerTest : public BaseTest {
  protected:
   void SetUp() override {
     const auto& table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", table_a);
+    _hyrise_env->storage_manager()->add_table("table_a", table_a);
   }
 };
 
@@ -17,7 +17,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   const std::string query = "SELECT 1;";
 
   const auto [execution_information, transaction_context] =
-      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
   EXPECT_TRUE(execution_information.error_message.empty());
   EXPECT_EQ(execution_information.result_table->column_count(), 1);
@@ -27,16 +27,16 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
 }
 
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {
-  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
+  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?", _hyrise_env);
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_prepared_plan("test_statement"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_prepared_plan("test_statement"));
 }
 
 TEST_F(QueryHandlerTest, BindParameters) {
-  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a = ?");
+  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a = ?", _hyrise_env);
   const auto specification = PreparedStatementDetails{"test_statement", "", {12345}};
 
-  const auto bound_plan = QueryHandler::bind_prepared_plan(specification);
+  const auto bound_plan = QueryHandler::bind_prepared_plan(specification, _hyrise_env);
   EXPECT_EQ(bound_plan->type(), OperatorType::Validate);
 
   const auto get_table = std::dynamic_pointer_cast<const GetTable>(bound_plan->left_input()->left_input());
@@ -49,9 +49,9 @@ TEST_F(QueryHandlerTest, BindParameters) {
 }
 
 TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
-  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
+  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?", _hyrise_env);
   const auto specification = PreparedStatementDetails{"test_statement", "", {123}};
-  const auto pqp = QueryHandler::bind_prepared_plan(specification);
+  const auto pqp = QueryHandler::bind_prepared_plan(specification, _hyrise_env);
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   pqp->set_transaction_context_recursively(transaction_context);
@@ -62,20 +62,20 @@ TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
 }
 
 TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
-  QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE a > ?");
-  const auto old_plan = Hyrise::get().storage_manager.get_prepared_plan("");
+  QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE a > ?", _hyrise_env);
+  const auto old_plan = _hyrise_env->storage_manager()->get_prepared_plan("");
 
   // New unnamed statement invalidates existing prepared plan
-  QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE b > ?");
-  const auto new_plan = Hyrise::get().storage_manager.get_prepared_plan("");
+  QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE b > ?", _hyrise_env);
+  const auto new_plan = _hyrise_env->storage_manager()->get_prepared_plan("");
 
   EXPECT_NE(old_plan->hash(), new_plan->hash());
 
   // Simple queries invalidate an existing plan as well
   const std::string query = "SELECT 1;";
-  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_prepared_plan(""));
 }
 
 }  // namespace opossum

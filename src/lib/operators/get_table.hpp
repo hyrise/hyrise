@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 // Operator to retrieve a table from the StorageManager by specifying its name. Depending on how the operator was
 // constructed, chunks and columns may be pruned if they are irrelevant for the final result. The returned table is NOT
 // the same table as stored in the StorageManager. If that stored table is changed (most importantly: if a chunk is
@@ -21,11 +23,11 @@ namespace opossum {
 class GetTable : public AbstractReadOnlyOperator {
  public:
   // Convenience constructor without pruning info
-  explicit GetTable(const std::string& name);
+  explicit GetTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& name);
 
   // Constructor with pruning info
-  GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
-           const std::vector<ColumnID>& pruned_column_ids);
+  GetTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& name,
+           const std::vector<ChunkID>& pruned_chunk_ids, const std::vector<ColumnID>& pruned_column_ids);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
@@ -43,6 +45,7 @@ class GetTable : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   // name of the table to retrieve
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _name;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;

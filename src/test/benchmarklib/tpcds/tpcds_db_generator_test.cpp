@@ -99,13 +99,13 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
                                                               {"web_sales", 719620},
                                                               {"web_site", 30}};
 
-  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
+  EXPECT_EQ(_hyrise_env->storage_manager()->tables().size(), 0);
 
-  TPCDSTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
+  TPCDSTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store(_hyrise_env);
 
   for (const auto& [name, size] : expected_sizes) {
     SCOPED_TRACE("checking table " + std::string{name});
-    EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
+    EXPECT_EQ(_hyrise_env->storage_manager()->get_table(name)->row_count(), size);
   }
 
   Hyrise::reset();

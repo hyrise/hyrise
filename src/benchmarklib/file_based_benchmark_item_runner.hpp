@@ -15,7 +15,8 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
 
-  FileBasedBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
+  FileBasedBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                               const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
                                const std::unordered_set<std::string>& filename_blacklist = {},
                                const std::optional<std::unordered_set<std::string>>& query_subset = {});
 

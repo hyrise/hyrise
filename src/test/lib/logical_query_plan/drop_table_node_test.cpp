@@ -6,7 +6,7 @@ namespace opossum {
 
 class DropTableNodeTest : public BaseTest {
  public:
-  void SetUp() override { drop_table_node = DropTableNode::make("some_table", false); }
+  void SetUp() override { drop_table_node = DropTableNode::make(_hyrise_env, "some_table", false); }
 
   std::shared_ptr<DropTableNode> drop_table_node;
 };
@@ -16,7 +16,7 @@ TEST_F(DropTableNodeTest, Description) { EXPECT_EQ(drop_table_node->description(
 TEST_F(DropTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*drop_table_node, *drop_table_node);
 
-  const auto different_drop_table_node = DropTableNode::make("some_table2", false);
+  const auto different_drop_table_node = DropTableNode::make(_hyrise_env, "some_table2", false);
   EXPECT_NE(*different_drop_table_node, *drop_table_node);
   EXPECT_NE(different_drop_table_node->hash(), drop_table_node->hash());
 }

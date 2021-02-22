@@ -10,7 +10,7 @@ class ResultSerializerTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", 2);
-    Hyrise::get().storage_manager.add_table("_test_table", _test_table);
+    _hyrise_env->storage_manager()->add_table("_test_table", _test_table);
 
     _mocked_socket = std::make_shared<MockSocket>();
     _protocol_handler =

@@ -131,11 +131,11 @@ void SQLiteTestRunner::SetUp() {
         ChunkEncoder::encode_all_chunks(reloaded_table, table_cache_entry.chunk_encoding_spec);
       }
 
-      Hyrise::get().storage_manager.add_table(table_name, reloaded_table);
+      _hyrise_env->storage_manager()->add_table(table_name, reloaded_table);
       table_cache_entry.table = reloaded_table;
 
     } else {
-      Hyrise::get().storage_manager.add_table(table_name, table_cache_entry.table);
+      _hyrise_env->storage_manager()->add_table(table_name, table_cache_entry.table);
     }
   }
 }
@@ -168,7 +168,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
                encoding_type_to_string.left.at(encoding_type));
 
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();

@@ -27,11 +27,11 @@ class TPCCTest : public BaseTest {
       const auto generated_table = table_info.table;
       auto isolated_table =
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
-      Hyrise::get().storage_manager.add_table(table_name, isolated_table);
+      _hyrise_env->storage_manager()->add_table(table_name, isolated_table);
 
       auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
       table_wrapper->execute();
-      auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+      auto insert = std::make_shared<Insert>(_hyrise_env, table_name, table_wrapper);
       auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       insert->set_transaction_context(transaction_context);
       insert->execute();
@@ -41,7 +41,7 @@ class TPCCTest : public BaseTest {
 
   std::shared_ptr<const Table> get_validated(const std::string& table_name,
                                              const std::shared_ptr<TransactionContext>& transaction_context) {
-    auto get_table = std::make_shared<GetTable>(table_name);
+    auto get_table = std::make_shared<GetTable>(_hyrise_env, table_name);
     get_table->execute();
 
     auto validate = std::make_shared<Validate>(get_table);
@@ -94,7 +94,7 @@ TEST_F(TPCCTest, Delivery) {
   auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto delivery = TPCCDelivery{NUM_WAREHOUSES, sql_executor};
   EXPECT_TRUE(delivery.execute());
 
@@ -118,6 +118,7 @@ TEST_F(TPCCTest, Delivery) {
           SQLPipelineBuilder{std::string{"SELECT * FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(delivery.w_id) +
                              " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = 2101"}
               .with_transaction_context(old_transaction_context)
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -134,6 +135,7 @@ TEST_F(TPCCTest, Delivery) {
                                          std::to_string(delivery.w_id) + " AND O_D_ID = " + std::to_string(d_id) +
                                          " AND O_ID = 2101)"}
                           .with_transaction_context(old_transaction_context)
+                          .with_hyrise_env(_hyrise_env)
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -148,6 +150,7 @@ TEST_F(TPCCTest, Delivery) {
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT * FROM NEW_ORDER WHERE NO_W_ID = "} + std::to_string(delivery.w_id) +
                              " AND NO_D_ID = " + std::to_string(d_id) + " AND NO_O_ID = 2101"}
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -160,6 +163,7 @@ TEST_F(TPCCTest, Delivery) {
     {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT * FROM \"ORDER\" WHERE O_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND O_ID = 2101"}
+                          .with_hyrise_env(_hyrise_env)
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -175,6 +179,7 @@ TEST_F(TPCCTest, Delivery) {
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT * FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(delivery.w_id) +
                              " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = 2101"}
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -193,6 +198,7 @@ TEST_F(TPCCTest, Delivery) {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_DELIVERY_CNT FROM CUSTOMER WHERE C_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND C_D_ID = " + std::to_string(d_id) +
                                          " AND C_ID = " + std::to_string(c_id)}
+                          .with_hyrise_env(_hyrise_env)
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -205,10 +211,11 @@ TEST_F(TPCCTest, Delivery) {
 
 TEST_F(TPCCTest, NewOrder) {
   auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  const auto old_order_line_size = static_cast<int>(Hyrise::get().storage_manager.get_table("ORDER_LINE")->row_count());
+  const auto old_order_line_size =
+      static_cast<int>(_hyrise_env->storage_manager()->get_table("ORDER_LINE")->row_count());
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   // Generate random NewOrders until we have one without unused item IDs and where both local and remote order lines
   // occur
@@ -232,6 +239,7 @@ TEST_F(TPCCTest, NewOrder) {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
                                        std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
                         .with_transaction_context(old_transaction_context)
+                        .with_hyrise_env(_hyrise_env)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -243,6 +251,7 @@ TEST_F(TPCCTest, NewOrder) {
     // Fetch current D_NEXT_O_ID and compare with old one
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
                                        std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
+                        .with_hyrise_env(_hyrise_env)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -257,13 +266,14 @@ TEST_F(TPCCTest, NewOrder) {
   verify_table_sizes(new_sizes);
 
   // Verify NEW_ORDER entry
-  const auto new_order_row = Hyrise::get().storage_manager.get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
+  const auto new_order_row =
+      _hyrise_env->storage_manager()->get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
   EXPECT_EQ(new_order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});  // NO_O_ID
   EXPECT_EQ(new_order_row[1], AllTypeVariant{new_order.d_id});               // NO_D_ID
   EXPECT_EQ(new_order_row[2], AllTypeVariant{new_order.w_id});               // NO_W_ID
 
   // Verify ORDER entry
-  const auto order_row = Hyrise::get().storage_manager.get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
+  const auto order_row = _hyrise_env->storage_manager()->get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
   EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});               // O_ID
   EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});                            // O_D_ID
   EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});                            // O_W_ID
@@ -278,7 +288,7 @@ TEST_F(TPCCTest, NewOrder) {
     const auto ol_i_id = order_lines[line_idx].ol_i_id;
 
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
-    const auto order_line_row = Hyrise::get().storage_manager.get_table("ORDER_LINE")->get_row(row_idx);
+    const auto order_line_row = _hyrise_env->storage_manager()->get_table("ORDER_LINE")->get_row(row_idx);
     EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});         // OL_O_ID
     EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});                      // OL_D_ID
     EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});                      // OL_W_ID
@@ -294,6 +304,7 @@ TEST_F(TPCCTest, NewOrder) {
     if (ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT I_PRICE FROM ITEM WHERE I_ID = "} + std::to_string(ol_i_id)}
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -310,6 +321,7 @@ TEST_F(TPCCTest, NewOrder) {
                                          std::to_string(new_order.d_id) + " FROM STOCK WHERE S_W_ID = " +
                                          std::to_string(ol_supply_w_id) + " AND S_I_ID = " + std::to_string(ol_i_id)}
                           .with_transaction_context(old_transaction_context)
+                          .with_hyrise_env(_hyrise_env)
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
@@ -322,7 +334,7 @@ TEST_F(TPCCTest, NewOrder) {
 }
 
 TEST_F(TPCCTest, NewOrderUnusedItemId) {
-  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   // Generate random NewOrders until we have one with an unused item ID
   while (new_order.order_lines.back().ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
@@ -340,7 +352,7 @@ TEST_F(TPCCTest, NewOrderUnusedItemId) {
 
   // None of the tables should have been visibly modified
   for (const auto& [table_name, table_info] : tables) {
-    auto get_table = std::make_shared<GetTable>(table_name);
+    auto get_table = std::make_shared<GetTable>(_hyrise_env, table_name);
     get_table->execute();
     auto validate = std::make_shared<Validate>(get_table);
     validate->set_transaction_context(new_transaction_context);
@@ -354,7 +366,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
   // We will cover customer selection by ID in OrderStatusCustomerById
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
   // Generate random payments until we have one that identified the customer by name
   while (!payment.select_customer_by_name) {
@@ -368,6 +380,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT W_YTD, W_NAME FROM WAREHOUSE WHERE W_ID = "} +
                                        std::to_string(payment.w_id)}
+                        .with_hyrise_env(_hyrise_env)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -382,6 +395,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_YTD, D_NAME FROM DISTRICT WHERE D_W_ID = "} +
                                        std::to_string(payment.w_id) + " AND D_ID = " + std::to_string(payment.d_id)}
+                        .with_hyrise_env(_hyrise_env)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -397,6 +411,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
         SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT FROM CUSTOMER WHERE C_W_ID = "} +
                            std::to_string(payment.w_id) + " AND C_D_ID = " + std::to_string(payment.d_id) +
                            " AND C_ID = " + std::to_string(payment.c_id)}
+            .with_hyrise_env(_hyrise_env)
             .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -416,6 +431,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
                                        " AND H_C_ID = " + std::to_string(payment.c_id) +
                                        " AND H_C_W_ID = " + std::to_string(payment.c_w_id) +
                                        " AND H_C_D_ID = " + std::to_string(payment.c_d_id)}
+                        .with_hyrise_env(_hyrise_env)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
@@ -432,7 +448,7 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   // We have covered customer selection by name in PaymentCustomerByName
   // As Order-Status has no externally visible changes, we create a new order and test for correct return values
 
-  BenchmarkSQLExecutor new_order_sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor new_order_sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, new_order_sql_executor};
   while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::UNUSED_ITEM_ID) {
     // Make sure that we do not have a TPCCNewOrder with an invalid ITEM_ID which will be rolled back
@@ -440,7 +456,7 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   }
   EXPECT_TRUE(new_order.execute());
 
-  BenchmarkSQLExecutor order_status_sql_executor{nullptr, std::nullopt};
+  BenchmarkSQLExecutor order_status_sql_executor{nullptr, _hyrise_env, std::nullopt};
   auto order_status = TPCCOrderStatus{NUM_WAREHOUSES, order_status_sql_executor};
   order_status.w_id = new_order.w_id;
   order_status.d_id = new_order.d_id;

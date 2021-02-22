@@ -8,7 +8,7 @@ namespace opossum {
 
 class DropViewNodeTest : public BaseTest {
  public:
-  void SetUp() override { _drop_view_node = DropViewNode::make("some_view", false); }
+  void SetUp() override { _drop_view_node = DropViewNode::make(_hyrise_env, "some_view", false); }
 
   std::shared_ptr<DropViewNode> _drop_view_node;
 };
@@ -18,8 +18,8 @@ TEST_F(DropViewNodeTest, Description) { EXPECT_EQ(_drop_view_node->description()
 TEST_F(DropViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_drop_view_node, *_drop_view_node);
 
-  const auto same_drop_view_node = DropViewNode::make("some_view", false);
-  const auto different_drop_view_node = DropViewNode::make("some_view2", false);
+  const auto same_drop_view_node = DropViewNode::make(_hyrise_env, "some_view", false);
+  const auto different_drop_view_node = DropViewNode::make(_hyrise_env, "some_view2", false);
 
   EXPECT_EQ(*_drop_view_node, *same_drop_view_node);
   EXPECT_NE(*_drop_view_node, *different_drop_view_node);

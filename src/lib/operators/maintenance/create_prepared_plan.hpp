@@ -5,9 +5,12 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 class CreatePreparedPlan : public AbstractReadOnlyOperator {
  public:
-  CreatePreparedPlan(const std::string& prepared_plan_name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  CreatePreparedPlan(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& prepared_plan_name,
+                     const std::shared_ptr<PreparedPlan>& prepared_plan);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
@@ -25,6 +28,7 @@ class CreatePreparedPlan : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
  private:
+  const std::shared_ptr<HyriseEnvironmentRef>& _hyrise_env;
   const std::string _prepared_plan_name;
   const std::shared_ptr<PreparedPlan> _prepared_plan;
 };

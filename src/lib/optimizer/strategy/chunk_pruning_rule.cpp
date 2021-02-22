@@ -59,7 +59,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   /**
    * A chain of predicates followed by a stored table node was found.
    */
-  auto table = Hyrise::get().storage_manager.get_table(stored_table->table_name);
+  auto table = stored_table->hyrise_env->storage_manager()->get_table(stored_table->table_name);
 
   std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {

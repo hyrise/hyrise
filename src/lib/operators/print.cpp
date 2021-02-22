@@ -60,8 +60,9 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, const Print
   Print(in, flags, out).execute();
 }
 
-void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
-  auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+void Print::print(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& sql,
+                  const PrintFlags flags, std::ostream& out) {
+  auto pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(hyrise_env).create_pipeline();
   const auto [status, result_tables] = pipeline.get_result_tables();
   Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful");
   Assert(result_tables.size() == 1, "Expected exactly one result table");

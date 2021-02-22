@@ -46,10 +46,10 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   expected_table->append({4.4f});
 
   const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, GetParam());
+  auto importer = std::make_shared<Import>(reference_filename, _hyrise_env, "a", Chunk::DEFAULT_SIZE, GetParam());
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(_hyrise_env->storage_manager()->get_table("a"), expected_table);
 }
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
@@ -62,19 +62,19 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
 
   const auto reference_filename =
       reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a");
+  auto importer = std::make_shared<Import>(reference_filename, _hyrise_env, "a");
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(_hyrise_env->storage_manager()->get_table("a"), expected_table);
 }
 
 TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
   const auto reference_filename =
       reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a");
+  auto importer = std::make_shared<Import>(reference_filename, _hyrise_env, "a");
   importer->execute();
 
-  auto table = Hyrise::get().storage_manager.get_table("a");
+  auto table = _hyrise_env->storage_manager()->get_table("a");
 
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
@@ -83,48 +83,49 @@ TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {
-  auto importer = std::make_shared<Import>("not_existing_file.tbl", "a");
+  auto importer = std::make_shared<Import>("not_existing_file.tbl", _hyrise_env, "a");
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportTest, UnknownFileExtension) {
-  EXPECT_THROW(std::make_shared<Import>("not_existing_file.mp3", "a"), std::exception);
+  EXPECT_THROW(std::make_shared<Import>("not_existing_file.mp3", _hyrise_env, "a"), std::exception);
 }
 
 TEST_F(OperatorsImportTest, ReplaceExistingTable) {
   auto old_table = load_table("resources/test_data/tbl/float.tbl");
-  Hyrise::get().storage_manager.add_table("a", old_table);
+  _hyrise_env->storage_manager()->add_table("a", old_table);
 
   auto expected_table = load_table("resources/test_data/tbl/int.tbl");
-  auto importer = std::make_shared<Import>("resources/test_data/tbl/int.tbl", "a");
+  auto importer = std::make_shared<Import>("resources/test_data/tbl/int.tbl", _hyrise_env, "a");
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(_hyrise_env->storage_manager()->get_table("a"), expected_table);
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {
-  auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", "a", ChunkOffset{20});
+  auto importer =
+      std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", _hyrise_env, "a", ChunkOffset{20});
   importer->execute();
 
   // check if chunk_size property is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), 20U);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->target_chunk_size(), 20U);
 
   // check if actual chunk_size is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 20U);
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->size(), 20U);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->get_chunk(ChunkID{0})->size(), 20U);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->get_chunk(ChunkID{1})->size(), 20U);
 }
 
 TEST_F(OperatorsImportTest, TargetChunkSize) {
-  auto importer =
-      std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a", Chunk::DEFAULT_SIZE);
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", _hyrise_env,
+                                           "a", Chunk::DEFAULT_SIZE);
   importer->execute();
 
   // check if chunk_size property is correct (target chunk size)
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), Chunk::DEFAULT_SIZE);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->target_chunk_size(), Chunk::DEFAULT_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 100U);
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->chunk_count(), ChunkID{1});
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->get_chunk(ChunkID{0})->size(), 100U);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("a")->chunk_count(), ChunkID{1});
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
@@ -133,7 +134,7 @@ TEST_F(OperatorsImportTest, TargetChunkSize) {
     expected_table->append({458.7f, 12345});
   }
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(_hyrise_env->storage_manager()->get_table("a"), expected_table);
 }
 
 }  // namespace opossum

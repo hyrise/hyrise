@@ -76,24 +76,24 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
 }
 
 TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("part"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("supplier"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("partsupp"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("customer"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("orders"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("nation"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("region"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("part"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("supplier"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("partsupp"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("customer"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("orders"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("nation"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("region"));
 
   // Small scale factor
-  TPCHTableGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
+  TPCHTableGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store(_hyrise_env);
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("part"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("supplier"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("partsupp"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("customer"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("orders"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("part"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("supplier"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("partsupp"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("customer"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("orders"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("nation"));
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_table("region"));
 
   Hyrise::reset();
 }

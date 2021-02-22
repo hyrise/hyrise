@@ -159,8 +159,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
-                                    stored_table_node->pruned_column_ids());
+  return std::make_shared<GetTable>(stored_table_node->hyrise_env, stored_table_node->table_name,
+                                    stored_table_node->pruned_chunk_ids(), stored_table_node->pruned_column_ids());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
@@ -223,7 +223,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
               "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto table = stored_table_node->hyrise_env->storage_manager()->get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
   auto pruned_table_chunk_id = ChunkID{0};
@@ -425,7 +425,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-  return std::make_shared<Insert>(insert_node->table_name, input_operator);
+  return std::make_shared<Insert>(insert_node->hyrise_env, insert_node->table_name, input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
@@ -442,7 +442,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
   const auto input_operator_left = translate_node(node->left_input());
   const auto input_operator_right = translate_node(node->right_input());
 
-  return std::make_shared<Update>(update_node->table_name, input_operator_left, input_operator_right);
+  return std::make_shared<Update>(update_node->hyrise_env, update_node->table_name, input_operator_left,
+                                  input_operator_right);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
@@ -486,15 +487,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_no
   const auto input_operator_left = translate_node(node->left_input());
   const auto input_operator_right = translate_node(node->right_input());
   const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
-  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
-                                           input_operator_left, input_operator_right);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node->hyrise_env, change_meta_table_node->table_name,
+                                           change_meta_table_node->change_type, input_operator_left,
+                                           input_operator_right);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
-  return std::make_shared<CreateView>(create_view_node->view_name, create_view_node->view,
+  return std::make_shared<CreateView>(create_view_node->hyrise_env, create_view_node->view_name, create_view_node->view,
                                       create_view_node->if_not_exists);
 }
 
@@ -502,7 +504,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
-  return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
+  return std::make_shared<DropView>(drop_view_node->hyrise_env, drop_view_node->view_name, drop_view_node->if_exists);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
@@ -510,8 +512,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
   const auto input_node = create_table_node->left_input();
-  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->if_not_exists,
-                                       translate_node(input_node));
+  return std::make_shared<CreateTable>(create_table_node->hyrise_env, create_table_node->table_name,
+                                       create_table_node->if_not_exists, translate_node(input_node));
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
@@ -525,15 +527,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
-  return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
+  return std::make_shared<DropTable>(drop_table_node->hyrise_env, drop_table_node->table_name,
+                                     drop_table_node->if_exists);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
-  return std::make_shared<Import>(import_node->file_name, import_node->table_name, Chunk::DEFAULT_SIZE,
-                                  import_node->file_type);
+  return std::make_shared<Import>(import_node->file_name, import_node->hyrise_env, import_node->table_name,
+                                  Chunk::DEFAULT_SIZE, import_node->file_type);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
@@ -548,7 +551,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
-  return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->name,
+  return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->hyrise_env, create_prepared_plan_node->name,
                                               create_prepared_plan_node->prepared_plan);
 }
 

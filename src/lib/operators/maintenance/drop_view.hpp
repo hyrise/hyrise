@@ -9,12 +9,17 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 // maintenance operator for the "CREATE VIEW" sql statement
 class DropView : public AbstractReadOnlyOperator {
  public:
-  DropView(const std::string& init_view_name, bool init_if_exists);
+  DropView(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_view_name,
+           bool init_if_exists);
 
   const std::string& name() const override;
+
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string view_name;
   const bool if_exists;
 

@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /*
  * This operator reads a file, creates a table from that input and adds it to the storage manager.
  * Supported file types are .tbl, .csv and Opossum .bin files.
@@ -27,9 +29,9 @@ class Import : public AbstractReadOnlyOperator {
    * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
    * @param csv_meta       Optional. A specific meta config, used instead of filename + '.json'
    */
-  explicit Import(const std::string& init_filename, const std::string& tablename,
-                  const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const FileType file_type = FileType::Auto,
-                  const std::optional<CsvMeta>& csv_meta = std::nullopt);
+  explicit Import(const std::string& init_filename, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                  const std::string& tablename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                  const FileType file_type = FileType::Auto, const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   const std::string& name() const final;
   const std::string filename;
@@ -44,6 +46,7 @@ class Import : public AbstractReadOnlyOperator {
 
  private:
   // Name for adding the table to the StorageManager
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _tablename;
   const ChunkOffset _chunk_size;
   FileType _file_type;

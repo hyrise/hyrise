@@ -8,6 +8,7 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class Table;
 
 class MetaTableManager : public Noncopyable {
@@ -15,6 +16,8 @@ class MetaTableManager : public Noncopyable {
   static inline const auto META_PREFIX = std::string{"meta_"};
 
   static bool is_meta_table_name(const std::string& name);
+
+  MetaTableManager(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
 
   // Returns a sorted list of all meta table names (without prefix)
   const std::vector<std::string>& table_names() const;
@@ -37,8 +40,6 @@ class MetaTableManager : public Noncopyable {
 
  protected:
   friend class Hyrise;
-
-  MetaTableManager();
 
   static std::string _trim_table_name(const std::string& table_name);
 

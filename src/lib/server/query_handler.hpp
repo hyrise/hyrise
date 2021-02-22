@@ -26,11 +26,14 @@ class QueryHandler {
  public:
   static std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> execute_pipeline(
       const std::string& query, const SendExecutionInfo send_execution_info,
+      const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
       const std::shared_ptr<TransactionContext>& transaction_context);
 
-  static void setup_prepared_plan(const std::string& statement_name, const std::string& query);
+  static void setup_prepared_plan(const std::string& statement_name, const std::string& query,
+                                  const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
 
-  static std::shared_ptr<AbstractOperator> bind_prepared_plan(const PreparedStatementDetails& statement_details);
+  static std::shared_ptr<AbstractOperator> bind_prepared_plan(const PreparedStatementDetails& statement_details,
+                                                              const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env);
 
   static std::shared_ptr<const Table> execute_prepared_plan(const std::shared_ptr<AbstractOperator>& physical_plan);
 

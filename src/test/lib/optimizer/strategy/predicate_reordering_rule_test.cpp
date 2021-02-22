@@ -110,9 +110,9 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", 2);
-  Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
+  _hyrise_env->storage_manager()->add_table("table_a", std::move(table_a));
 
-  auto stored_table_node = StoredTableNode::make("table_a");
+  auto stored_table_node = StoredTableNode::make(_hyrise_env, "table_a");
 
   {
     // clang-format off

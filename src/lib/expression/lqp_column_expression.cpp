@@ -39,7 +39,8 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
   switch (original_node_locked->type) {
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
-      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto storage_manager = stored_table_node->hyrise_env->storage_manager();
+      const auto table = storage_manager->get_table(stored_table_node->table_name);
       output << table->column_name(original_column_id);
       return output.str();
     }
@@ -75,7 +76,8 @@ DataType LQPColumnExpression::data_type() const {
   switch (original_node_locked->type) {
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
-      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto storage_manager = stored_table_node->hyrise_env->storage_manager();
+      const auto table = storage_manager->get_table(stored_table_node->table_name);
       return table->column_data_type(original_column_id);
     }
 

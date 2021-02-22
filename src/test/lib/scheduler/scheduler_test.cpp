@@ -226,9 +226,9 @@ TEST_F(SchedulerTest, MultipleOperators) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-  Hyrise::get().storage_manager.add_table("table", test_table);
+  _hyrise_env->storage_manager()->add_table("table", test_table);
 
-  auto gt = std::make_shared<GetTable>("table");
+  auto gt = std::make_shared<GetTable>(_hyrise_env, "table");
   auto a = PQPColumnExpression::from_table(*test_table, ColumnID{0});
   auto ts = std::make_shared<TableScan>(gt, greater_than_equals_(a, 1234));
 

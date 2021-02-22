@@ -43,7 +43,7 @@ class OperatorDeepCopyTest : public BaseTest {
     _table_wrapper_d->execute();
 
     _test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("aNiceTestTable", _test_table);
+    _hyrise_env->storage_manager()->add_table("aNiceTestTable", _test_table);
   }
 
   std::shared_ptr<Table> _test_table;
@@ -123,7 +123,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyPrint) {
 
 TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
   // build and execute get table
-  auto get_table = std::make_shared<GetTable>("aNiceTestTable");
+  auto get_table = std::make_shared<GetTable>(_hyrise_env, "aNiceTestTable");
   get_table->execute();
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), _test_table);
 
@@ -207,13 +207,13 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
-  Hyrise::get().storage_manager.add_table("table_3int", table);
+  _hyrise_env->storage_manager()->add_table("table_3int", table);
 
   const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
   const TableColumnDefinitions column_definitions = {
       {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
-  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().with_hyrise_env(_hyrise_env).create_pipeline();
   const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
@@ -222,7 +222,10 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   expected_first->append({10, 10, 10});
   EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
 
-  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}
+      .with_hyrise_env(_hyrise_env)
+      .create_pipeline()
+      .get_result_table();
 
   const auto copied_plan = sql_pipeline.get_physical_plans()[0]->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);

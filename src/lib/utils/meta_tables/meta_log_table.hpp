@@ -6,7 +6,7 @@ namespace opossum {
 
 class MetaLogTable : public AbstractMetaTable {
  public:
-  MetaLogTable();
+  explicit MetaLogTable();
 
   const std::string& name() const final;
 

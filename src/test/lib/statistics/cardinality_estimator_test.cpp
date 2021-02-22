@@ -842,8 +842,8 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  Hyrise::get().storage_manager.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
-  EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
+  _hyrise_env->storage_manager()->add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make(_hyrise_env, "t")), 3);
 }
 
 TEST_F(CardinalityEstimatorTest, Validate) {
@@ -886,27 +886,27 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto create_table_lqp = CreateTableNode::make("t", false, node_a);
+  const auto create_table_lqp = CreateTableNode::make(_hyrise_env, "t", false, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});
-  const auto create_prepared_plan_lqp = CreatePreparedPlanNode::make("t", prepared_plan);
+  const auto create_prepared_plan_lqp = CreatePreparedPlanNode::make(_hyrise_env, "t", prepared_plan);
   EXPECT_EQ(estimator.estimate_cardinality(create_prepared_plan_lqp), 0.0f);
 
   const auto lqp_view = std::make_shared<LQPView>(
       node_a, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "x"}, {ColumnID{1}, "y"}});
-  const auto create_view_lqp = CreateViewNode::make("v", lqp_view, false);
+  const auto create_view_lqp = CreateViewNode::make(_hyrise_env, "v", lqp_view, false);
   EXPECT_EQ(estimator.estimate_cardinality(create_view_lqp), 0.0f);
 
-  const auto update_lqp = UpdateNode::make("t", node_a, node_b);
+  const auto update_lqp = UpdateNode::make(_hyrise_env, "t", node_a, node_b);
   EXPECT_EQ(estimator.estimate_cardinality(update_lqp), 0.0f);
 
-  const auto insert_lqp = InsertNode::make("t", node_a);
+  const auto insert_lqp = InsertNode::make(_hyrise_env, "t", node_a);
   EXPECT_EQ(estimator.estimate_cardinality(insert_lqp), 0.0f);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0f);
-  EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);
-  EXPECT_EQ(estimator.estimate_cardinality(DropTableNode::make("t", false)), 0.0f);
+  EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make(_hyrise_env, "v", false)), 0.0f);
+  EXPECT_EQ(estimator.estimate_cardinality(DropTableNode::make(_hyrise_env, "t", false)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DummyTableNode::make()), 0.0f);
 }
 

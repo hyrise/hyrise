@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+PluginManager::PluginManager(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) : _hyrise_env(hyrise_env) {}
+
 bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const {
   const auto& plugin_ref = *plugin;
   for (const auto& [_, plugin_handle_wrapper] : _plugins) {
@@ -49,10 +51,10 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
          "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
          "for your plugin!");
 
-  using PluginGetter = AbstractPlugin* (*)();
+  using PluginGetter = AbstractPlugin* (*)(const std::shared_ptr<HyriseEnvironmentRef>&);
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);
 
-  auto plugin = std::unique_ptr<AbstractPlugin>(plugin_get());
+  auto plugin = std::unique_ptr<AbstractPlugin>(plugin_get(_hyrise_env));
   PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, std::move(plugin)};
   plugin = nullptr;
 

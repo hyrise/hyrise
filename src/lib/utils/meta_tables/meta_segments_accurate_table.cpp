@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-MetaSegmentsAccurateTable::MetaSegmentsAccurateTable()
+MetaSegmentsAccurateTable::MetaSegmentsAccurateTable(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env)
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
                                                {"chunk_id", DataType::Int, false},
                                                {"column_id", DataType::Int, false},
@@ -19,7 +19,8 @@ MetaSegmentsAccurateTable::MetaSegmentsAccurateTable()
                                                {"sequential_accesses", DataType::Long, false},
                                                {"monotonic_accesses", DataType::Long, false},
                                                {"random_accesses", DataType::Long, false},
-                                               {"dictionary_accesses", DataType::Long, false}}) {}
+                                               {"dictionary_accesses", DataType::Long, false}}),
+      _hyrise_env(hyrise_env) {}
 
 const std::string& MetaSegmentsAccurateTable::name() const {
   static const auto name = std::string{"segments_accurate"};
@@ -30,7 +31,7 @@ std::shared_ptr<Table> MetaSegmentsAccurateTable::_on_generate() const {
   PerformanceWarning("Accurate segment information are expensive to gather. Use with caution.");
 
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-  gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Full);
+  gather_segment_meta_data(_hyrise_env, output_table, MemoryUsageCalculationMode::Full);
 
   return output_table;
 }

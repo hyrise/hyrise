@@ -32,9 +32,9 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
 class SQLPipeline : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
-  SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
-              const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
-              const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+  SQLPipeline(const std::string& sql, const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+              const std::shared_ptr<TransactionContext>& transaction_context, const UseMvcc use_mvcc,
+              const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
               const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
   // Returns the original SQL string
@@ -105,6 +105,8 @@ class SQLPipeline : public Noncopyable {
   std::string _sql;
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
+
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
 
   // Either created during execution (if auto-commit) or set by set_transaction_context
   std::shared_ptr<TransactionContext> _transaction_context;

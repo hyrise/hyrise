@@ -16,9 +16,10 @@ class SQLiteAddIndicesTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column_1", DataType::Int, false);
     column_definitions.emplace_back("column_2", DataType::String, false);
-    Hyrise::get().storage_manager.add_table("table_1", std::make_shared<Table>(column_definitions, TableType::Data, 2));
+    _hyrise_env->storage_manager()->add_table("table_1",
+                                              std::make_shared<Table>(column_definitions, TableType::Data, 2));
 
-    stored_table = Hyrise::get().storage_manager.get_table("table_1");
+    stored_table = _hyrise_env->storage_manager()->get_table("table_1");
     stored_table->append({13, "Hello,"});
     stored_table->append({37, "world"});
 
@@ -37,7 +38,7 @@ TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
   const auto schema_file_path = "resources/test_data/sqlite_add_index_schema.sql";
   const auto create_index_file_path = "resources/test_data/sqlite_add_index_create_index.sql";
-  add_indices_to_sqlite(schema_file_path, create_index_file_path, sqlite_wrapper);
+  add_indices_to_sqlite(_hyrise_env, schema_file_path, create_index_file_path, sqlite_wrapper);
   sqlite_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM table_1");
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
   sqlite_wrapper->main_connection.raw_execute_query("DROP INDEX index_1;");

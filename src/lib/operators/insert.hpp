@@ -10,6 +10,7 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class TransactionContext;
 
 /**
@@ -21,7 +22,7 @@ class TransactionContext;
  */
 class Insert : public AbstractReadWriteOperator {
  public:
-  explicit Insert(const std::string& target_table_name,
+  explicit Insert(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& target_table_name,
                   const std::shared_ptr<const AbstractOperator>& values_to_insert);
 
   const std::string& name() const override;
@@ -36,6 +37,7 @@ class Insert : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _target_table_name;
 
   // Ranges of rows to which the inserted values are written

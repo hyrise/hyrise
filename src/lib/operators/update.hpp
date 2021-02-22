@@ -10,6 +10,7 @@
 namespace opossum {
 
 class Delete;
+class HyriseEnvironmentRef;
 class Insert;
 
 /**
@@ -26,7 +27,8 @@ class Insert;
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
+  explicit Update(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& table_to_update_name,
+                  const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                   const std::shared_ptr<AbstractOperator>& update_values_op);
 
   const std::string& name() const override;
@@ -45,6 +47,7 @@ class Update : public AbstractReadWriteOperator {
   void _on_rollback_records() override {}
 
  protected:
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _table_to_update_name;
   std::shared_ptr<Delete> _delete;
   std::shared_ptr<Insert> _insert;

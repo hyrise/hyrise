@@ -15,7 +15,7 @@ class CreatePreparedPlanTest : public BaseTest {
  protected:
   void SetUp() override {
     prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
-    create_prepared_plan = std::make_shared<CreatePreparedPlan>("prepared_plan_a", prepared_plan);
+    create_prepared_plan = std::make_shared<CreatePreparedPlan>(_hyrise_env, "prepared_plan_a", prepared_plan);
   }
 
   std::shared_ptr<PreparedPlan> prepared_plan;
@@ -38,11 +38,10 @@ TEST_F(CreatePreparedPlanTest, DeepCopy) {
 }
 
 TEST_F(CreatePreparedPlanTest, Execute) {
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan("prepared_plan_a"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_prepared_plan("prepared_plan_a"));
   create_prepared_plan->execute();
-  const auto& sm = Hyrise::get().storage_manager;
-  EXPECT_TRUE(sm.has_prepared_plan("prepared_plan_a"));
-  EXPECT_EQ(sm.get_prepared_plan("prepared_plan_a"), prepared_plan);
+  EXPECT_TRUE(_hyrise_env->storage_manager()->has_prepared_plan("prepared_plan_a"));
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_prepared_plan("prepared_plan_a"), prepared_plan);
 
   const auto copy = create_prepared_plan->deep_copy();
   EXPECT_ANY_THROW(copy->execute());

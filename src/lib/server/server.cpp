@@ -12,8 +12,10 @@ namespace opossum {
 
 // Specified port (default: 5432) will be opened after initializing the _acceptor
 Server::Server(const boost::asio::ip::address& address, const uint16_t port,
-               const SendExecutionInfo send_execution_info)
-    : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)), _send_execution_info(send_execution_info) {
+               const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const SendExecutionInfo send_execution_info)
+    : _hyrise_env(hyrise_env),
+      _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)),
+      _send_execution_info(send_execution_info) {
   std::cout << "Server started at " << server_address() << " and port " << server_port() << std::endl
             << "Run 'psql -h localhost " << server_address() << "' to connect to the server" << std::endl;
 }
@@ -37,7 +39,7 @@ void Server::_accept_new_session() {
   // Create a new session. This will also open a new data socket in order to communicate with the client
   // For more information on TCP ports + Asio see:
   // https://www.gamedev.net/forums/topic/586557-boostasio-allowing-multiple-connections-to-a-single-server-socket/
-  auto new_session = std::make_shared<Session>(_io_service, _send_execution_info);
+  auto new_session = std::make_shared<Session>(_io_service, _hyrise_env, _send_execution_info);
   _acceptor.async_accept(*(new_session->socket()),
                          boost::bind(&Server::_start_session, this, new_session, boost::asio::placeholders::error));
 }

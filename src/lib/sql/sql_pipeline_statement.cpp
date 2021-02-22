@@ -29,13 +29,17 @@
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                                           const UseMvcc use_mvcc,
+                                           const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                           const std::shared_ptr<Optimizer>& optimizer,
+
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
       lqp_cache(init_lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
+      _hyrise_env(hyrise_env),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
@@ -84,7 +88,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   const auto started = std::chrono::high_resolution_clock::now();
 
-  SQLTranslator sql_translator{_use_mvcc};
+  Assert(_hyrise_env, "SQLPipelineStatement::get_unoptimized_logical_plan without storage");
+  SQLTranslator sql_translator{_hyrise_env, _use_mvcc};
 
   auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots = translation_result.lqp_nodes;
@@ -314,40 +319,39 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
 void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
-  const auto& storage_manager = Hyrise::get().storage_manager;
-
   /**
    * Only look at the root operator, because as of now DDL operators are always at the root.
    */
 
+  Assert(_hyrise_env, "SQLPipelineStatement::_precheck_ddl_operators without storage");
   switch (pqp->type()) {
     case OperatorType::CreatePreparedPlan: {
       const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
-      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
+      AssertInput(!_hyrise_env->storage_manager()->has_prepared_plan(create_prepared_plan->prepared_plan_name()),
                   "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
       break;
     }
     case OperatorType::CreateTable: {
       const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
-      AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
+      AssertInput(create_table->if_not_exists || !_hyrise_env->storage_manager()->has_table(create_table->table_name),
                   "Table '" + create_table->table_name + "' already exists.");
       break;
     }
     case OperatorType::CreateView: {
       const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
-      AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
+      AssertInput(create_view->if_not_exists() || !_hyrise_env->storage_manager()->has_view(create_view->view_name()),
                   "View '" + create_view->view_name() + "' already exists.");
       break;
     }
     case OperatorType::DropTable: {
       const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
-      AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
+      AssertInput(drop_table->if_exists || _hyrise_env->storage_manager()->has_table(drop_table->table_name),
                   "There is no table '" + drop_table->table_name + "'.");
       break;
     }
     case OperatorType::DropView: {
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
-      AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
+      AssertInput(drop_view->if_exists || _hyrise_env->storage_manager()->has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
       break;
     }

@@ -8,12 +8,14 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class LQPView;
 
 // maintenance operator for the "CREATE VIEW" sql statement
 class CreateView : public AbstractReadOnlyOperator {
  public:
-  CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view, bool if_not_exists);
+  CreateView(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& view_name,
+             const std::shared_ptr<LQPView>& view, bool if_not_exists);
 
   const std::string& name() const override;
 
@@ -29,6 +31,7 @@ class CreateView : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
+  const std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   const std::string _view_name;
   const std::shared_ptr<LQPView> _view;
   const bool _if_not_exists;

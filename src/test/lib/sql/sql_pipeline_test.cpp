@@ -41,10 +41,10 @@ class SQLPipelineTest : public BaseTest {
 
     // We reload table_a every time since it is modified during the test case.
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    _hyrise_env->storage_manager()->add_table("table_a", _table_a);
 
-    Hyrise::get().storage_manager.add_table("table_a_multi", _table_a_multi);
-    Hyrise::get().storage_manager.add_table("table_b", _table_b);
+    _hyrise_env->storage_manager()->add_table("table_a_multi", _table_a_multi);
+    _hyrise_env->storage_manager()->add_table("table_b", _table_b);
 
     _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
@@ -72,14 +72,14 @@ class SQLPipelineTest : public BaseTest {
 };
 
 TEST_F(SQLPipelineTest, SimpleCreation) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 1u);
@@ -87,21 +87,25 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}
+                          .with_transaction_context(context)
+                          .with_hyrise_env(_hyrise_env)
+                          .create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationMulti) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.disable_mvcc().create_pipeline();
+  auto sql_pipeline =
+      SQLPipelineBuilder{_multi_statement_query}.disable_mvcc().with_hyrise_env(_hyrise_env).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);
@@ -109,21 +113,26 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_transaction_context(context).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}
+                          .with_transaction_context(context)
+                          .with_hyrise_env(_hyrise_env)
+                          .create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
-  EXPECT_THROW(auto sql_pipeline = SQLPipelineBuilder{_multi_statement_invalid}.create_pipeline(), std::exception);
+  EXPECT_THROW(
+      auto sql_pipeline = SQLPipelineBuilder{_multi_statement_invalid}.with_hyrise_env(_hyrise_env).create_pipeline(),
+      std::exception);
 }
 
 TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   try {
-    auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.create_pipeline();
+    auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.with_hyrise_env(_hyrise_env).create_pipeline();
     // Fail if the previous command did not throw an exception
     FAIL();
   } catch (const std::exception& e) {
@@ -139,27 +148,36 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
+  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
+                      .with_optimizer(optimizer)
+                      .with_mvcc(UseMvcc::Yes)
+                      .with_hyrise_env(_hyrise_env)
+                      .create_pipeline());
   EXPECT_NO_THROW(
-      SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a).with_mvcc(UseMvcc::No).create_pipeline());
-  EXPECT_NO_THROW(
-      SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
+      SQLPipelineBuilder(_select_query_a).with_mvcc(UseMvcc::No).with_hyrise_env(_hyrise_env).create_pipeline());
+  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
+                      .with_optimizer(optimizer)
+                      .with_mvcc(UseMvcc::Yes)
+                      .with_hyrise_env(_hyrise_env)
+                      .create_pipeline());
 
   // With transaction context
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
                       .with_transaction_context(transaction_context)
                       .with_optimizer(optimizer)
                       .with_mvcc(UseMvcc::Yes)
+                      .with_hyrise_env(_hyrise_env)
                       .create_pipeline());
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
                       .with_transaction_context(transaction_context)
                       .with_optimizer(optimizer)
                       .with_mvcc(UseMvcc::Yes)
+                      .with_hyrise_env(_hyrise_env)
                       .create_pipeline());
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& parsed_sql_statements = sql_pipeline.get_parsed_sql_statements();
 
   EXPECT_EQ(parsed_sql_statements.size(), 1u);
@@ -167,12 +185,12 @@ TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatementsExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_NO_THROW(sql_pipeline.get_parsed_sql_statements());
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatementsMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& parsed_sql_statements = sql_pipeline.get_parsed_sql_statements();
 
   EXPECT_EQ(parsed_sql_statements.size(), 2u);
@@ -181,21 +199,21 @@ TEST_F(SQLPipelineTest, GetParsedSQLStatementsMultiple) {
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPs) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqps.size(), 1u);
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPsMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqps.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   sql_pipeline.get_unoptimized_logical_plans();
   const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
@@ -204,7 +222,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   try {
     sql_pipeline.get_unoptimized_logical_plans();
@@ -218,7 +236,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPExecutionRequired) {
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQP) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& lqps = sql_pipeline.get_optimized_logical_plans();
 
@@ -226,14 +244,14 @@ TEST_F(SQLPipelineTest, GetOptimizedLQP) {
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPsMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& lqps = sql_pipeline.get_optimized_logical_plans();
 
   EXPECT_EQ(lqps.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   sql_pipeline.get_unoptimized_logical_plans();
   const auto& lqps = sql_pipeline.get_optimized_logical_plans();
@@ -242,7 +260,7 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   try {
     sql_pipeline.get_optimized_logical_plans();
@@ -256,21 +274,21 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlans) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 1u);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlansMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
 
@@ -287,7 +305,7 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
   try {
     sql_pipeline.get_physical_plans();
     // Fail if this did not throw an exception
@@ -300,21 +318,21 @@ TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
 }
 
 TEST_F(SQLPipelineTest, GetTasks) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 1u);
 }
 
 TEST_F(SQLPipelineTest, GetTasksMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetTasksTwice) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   sql_pipeline.get_tasks();
   const auto& tasks = sql_pipeline.get_tasks();
@@ -323,7 +341,7 @@ TEST_F(SQLPipelineTest, GetTasksTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   try {
     sql_pipeline.get_tasks();
@@ -337,7 +355,7 @@ TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTable) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
@@ -345,7 +363,7 @@ TEST_F(SQLPipelineTest, GetResultTable) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTablesMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -355,7 +373,7 @@ TEST_F(SQLPipelineTest, GetResultTablesMultiple) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -364,7 +382,7 @@ TEST_F(SQLPipelineTest, GetResultTableMultiple) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
 
@@ -383,7 +401,7 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
-  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
@@ -391,7 +409,7 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
-  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_join_query}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
@@ -402,7 +420,7 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 }
 
 TEST_F(SQLPipelineTest, CleanupWithScheduler) {
-  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_join_query}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
@@ -416,14 +434,14 @@ TEST_F(SQLPipelineTest, CleanupWithScheduler) {
 
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
   auto sql = "SELECT a + not_a_column FROM table_a";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 150";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -445,7 +463,10 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
       "UPDATE table_a SET a = 1 WHERE a = 1234";
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}
+                          .with_transaction_context(transaction_context)
+                          .with_hyrise_env(_hyrise_env)
+                          .create_pipeline();
 
   const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
@@ -477,7 +498,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
       "UPDATE table_a SET a = 1 WHERE a = 1234";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
@@ -500,7 +521,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
@@ -524,45 +545,59 @@ TEST_F(SQLPipelineTest, GetTimes) {
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
-  EXPECT_FALSE(SQLPipelineBuilder{_select_query_a}.create_pipeline().requires_execution());
-  EXPECT_FALSE(SQLPipelineBuilder{_join_query}.create_pipeline().requires_execution());
-  EXPECT_FALSE(SQLPipelineBuilder{_multi_statement_query}.create_pipeline().requires_execution());
-  EXPECT_TRUE(SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline().requires_execution());
+  EXPECT_FALSE(SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
+  EXPECT_FALSE(SQLPipelineBuilder{_join_query}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
+  EXPECT_FALSE(
+      SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
+  EXPECT_TRUE(SQLPipelineBuilder{_multi_statement_dependent}
+                  .with_hyrise_env(_hyrise_env)
+                  .create_pipeline()
+                  .requires_execution());
 
   const std::string create_view_single = "CREATE VIEW blub AS SELECT * FROM foo;";
-  EXPECT_FALSE(SQLPipelineBuilder{create_view_single}.create_pipeline().requires_execution());
+  EXPECT_FALSE(
+      SQLPipelineBuilder{create_view_single}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 
   const std::string create_view_multi_reverse = "SELECT * FROM blub; " + create_view_single;
-  EXPECT_TRUE(SQLPipelineBuilder{create_view_multi_reverse}.create_pipeline().requires_execution());
+  EXPECT_TRUE(SQLPipelineBuilder{create_view_multi_reverse}
+                  .with_hyrise_env(_hyrise_env)
+                  .create_pipeline()
+                  .requires_execution());
 
   const std::string create_view_multi_middle = create_view_multi_reverse + " SELECT * FROM foo;";
-  EXPECT_TRUE(SQLPipelineBuilder{create_view_multi_reverse}.create_pipeline().requires_execution());
+  EXPECT_TRUE(SQLPipelineBuilder{create_view_multi_reverse}
+                  .with_hyrise_env(_hyrise_env)
+                  .create_pipeline()
+                  .requires_execution());
 
   const std::string create_table_single = "CREATE TABLE foo2 (c int);";
-  EXPECT_FALSE(SQLPipelineBuilder{create_table_single}.create_pipeline().requires_execution());
+  EXPECT_FALSE(
+      SQLPipelineBuilder{create_table_single}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 
   const std::string create_table_multi = create_table_single + "SELECT * FROM foo2;";
-  EXPECT_TRUE(SQLPipelineBuilder{create_table_multi}.create_pipeline().requires_execution());
+  EXPECT_TRUE(
+      SQLPipelineBuilder{create_table_multi}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 
   const std::string drop_table_single = "DROP TABLE foo;";
-  EXPECT_FALSE(SQLPipelineBuilder{drop_table_single}.create_pipeline().requires_execution());
+  EXPECT_FALSE(
+      SQLPipelineBuilder{drop_table_single}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 
   const std::string drop_table_multi = "SELECT * FROM foo; " + drop_table_single;
-  EXPECT_TRUE(SQLPipelineBuilder{drop_table_multi}.create_pipeline().requires_execution());
+  EXPECT_TRUE(SQLPipelineBuilder{drop_table_multi}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 
   const std::string multi_no_exec =
       "SELECT * FROM foo; INSERT INTO foo VALUES (2); SELECT * FROM blub; DELETE FROM foo WHERE a = 2;";
-  EXPECT_FALSE(SQLPipelineBuilder{multi_no_exec}.create_pipeline().requires_execution());
+  EXPECT_FALSE(SQLPipelineBuilder{multi_no_exec}.with_hyrise_env(_hyrise_env).create_pipeline().requires_execution());
 }
 
 TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
   // Tests that the string passed into the pipeline is correctly split into the statement substrings
-  auto select_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto select_pipeline = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& select_strings = select_pipeline.get_sql_per_statement();
   EXPECT_EQ(select_strings.size(), 1u);
   EXPECT_EQ(select_strings.at(0), _select_query_a);
 
-  auto dependent_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto dependent_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& dependent_strings = dependent_pipeline.get_sql_per_statement();
   EXPECT_EQ(dependent_strings.size(), 2u);
   // "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
@@ -571,7 +606,7 @@ TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
 
   // Add newlines, tabd and weird spacing
   auto spacing_sql = "\n\t\n SELECT\na, b, c,d,e FROM\t(SELECT * FROM foo);    \t  ";
-  auto spacing_pipeline = SQLPipelineBuilder{spacing_sql}.create_pipeline();
+  auto spacing_pipeline = SQLPipelineBuilder{spacing_sql}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& spacing_strings = spacing_pipeline.get_sql_per_statement();
   EXPECT_EQ(spacing_strings.size(), 1u);
   EXPECT_EQ(spacing_strings.at(0),
@@ -584,7 +619,7 @@ TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
     AND bar.y = 25
   ORDER BY foo.x ASC
   )";
-  auto multi_line_pipeline = SQLPipelineBuilder{multi_line_sql}.create_pipeline();
+  auto multi_line_pipeline = SQLPipelineBuilder{multi_line_sql}.with_hyrise_env(_hyrise_env).create_pipeline();
   const auto& multi_line_strings = multi_line_pipeline.get_sql_per_statement();
   EXPECT_EQ(multi_line_strings.size(), 1u);
   EXPECT_EQ(multi_line_strings.at(0),
@@ -592,11 +627,14 @@ TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
 }
 
 TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
-  auto sql_pipeline1 = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline1 = SQLPipelineBuilder{_select_query_a}.with_hyrise_env(_hyrise_env).create_pipeline();
   sql_pipeline1.get_result_table();
 
   // INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a
-  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.with_pqp_cache(_pqp_cache).create_pipeline();
+  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}
+                           .with_pqp_cache(_pqp_cache)
+                           .with_hyrise_env(_hyrise_env)
+                           .create_pipeline();
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
@@ -604,7 +642,8 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   EXPECT_TRUE(_pqp_cache->has(_select_query_a));
   EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 
-  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_pqp_cache(_pqp_cache).create_pipeline();
+  auto sql_pipeline3 =
+      SQLPipelineBuilder{_select_query_a}.with_pqp_cache(_pqp_cache).with_hyrise_env(_hyrise_env).create_pipeline();
   sql_pipeline3.get_result_table();
 
   // Make sure the cache hasn't changed
@@ -620,14 +659,16 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto local_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // No caches
-  const auto sql_pipeline_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  const auto sql_pipeline_0 =
+      SQLPipelineBuilder{"SELECT * FROM table_a"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_FALSE(sql_pipeline_0.pqp_cache);
   EXPECT_FALSE(sql_pipeline_0.lqp_cache);
 
   // Default caches
   Hyrise::get().default_pqp_cache = default_pqp_cache;
   Hyrise::get().default_lqp_cache = default_lqp_cache;
-  const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  const auto sql_pipeline_1 =
+      SQLPipelineBuilder{"SELECT * FROM table_a"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
   EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);
 
@@ -635,34 +676,42 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
                                   .with_pqp_cache(local_pqp_cache)
                                   .with_lqp_cache(local_lqp_cache)
+                                  .with_hyrise_env(_hyrise_env)
                                   .create_pipeline();
   EXPECT_EQ(sql_pipeline_2.pqp_cache, local_pqp_cache);
   EXPECT_EQ(sql_pipeline_2.lqp_cache, local_lqp_cache);
 
   // No caches
-  const auto sql_pipeline_3 =
-      SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
+  const auto sql_pipeline_3 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                  .with_pqp_cache(nullptr)
+                                  .with_lqp_cache(nullptr)
+                                  .with_hyrise_env(_hyrise_env)
+                                  .create_pipeline();
   EXPECT_FALSE(sql_pipeline_3.pqp_cache);
   EXPECT_FALSE(sql_pipeline_3.lqp_cache);
 }
 
 TEST_F(SQLPipelineTest, PrecheckDDLOperators) {
-  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  auto sql_pipeline_1 =
+      SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
 
-  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  auto sql_pipeline_2 =
+      SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
 
-  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
 
-  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
 
-  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline();
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
 
-  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
+  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}
+                            .with_hyrise_env(_hyrise_env)
+                            .create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
 }
 
@@ -673,7 +722,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
 
   {
     const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
-    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.with_hyrise_env(_hyrise_env).create_pipeline();
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
@@ -681,7 +730,10 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   EXPECT_EQ(_table_a->row_count(), 4);
 
   const auto sql = "INSERT INTO table_a (a, b) VALUES (1, 2.0); UPDATE table_a SET a = a + 1 WHERE b < 457";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}
+                          .with_transaction_context(transaction_context)
+                          .with_hyrise_env(_hyrise_env)
+                          .create_pipeline();
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
@@ -691,7 +743,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
 
   const auto verify_table_contents = []() {
     const auto verification_sql = "SELECT a FROM table_a WHERE b < 457";
-    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.create_pipeline();
+    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.with_hyrise_env(_hyrise_env).create_pipeline();
     const auto [verification_status, verification_table] = verification_pipeline.get_result_table();
     EXPECT_EQ(verification_status, SQLPipelineStatus::Success);
     EXPECT_EQ(verification_table->get_value<int32_t>("a", 0), 100);

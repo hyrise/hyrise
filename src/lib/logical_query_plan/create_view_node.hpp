@@ -8,15 +8,19 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * This node type represents the CREATE VIEW management command.
  */
 class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public AbstractNonQueryNode {
  public:
-  CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view, bool init_if_not_exists);
+  CreateViewNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_view_name,
+                 const std::shared_ptr<LQPView>& init_view, bool init_if_not_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string view_name;
   const std::shared_ptr<LQPView> view;
   const bool if_not_exists;

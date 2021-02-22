@@ -9,8 +9,9 @@
 
 namespace opossum {
 
-AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
-    : _config(config) {}
+AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                                         const std::shared_ptr<BenchmarkConfig>& config)
+    : _hyrise_env(hyrise_env), _config(config) {}
 
 void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
     const std::filesystem::path& expected_results_directory_path) {
@@ -64,7 +65,7 @@ std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRun
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
+  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, _hyrise_env, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }

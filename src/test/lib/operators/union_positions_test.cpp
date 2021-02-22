@@ -19,11 +19,11 @@ class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
     _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
-    Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
+    _hyrise_env->storage_manager()->add_table("10_ints", _table_10_ints);
 
     _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
-    Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
-    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    _hyrise_env->storage_manager()->add_table("int_float4", _table_int_float4);
+    _hyrise_env->storage_manager()->add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
     _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
@@ -39,7 +39,7 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
    * Scan '10_ints' so that some values get excluded. UnionPositions the result with itself, and it should not change
    */
 
-  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "10_ints");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
 
@@ -63,7 +63,7 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
    * should be discarded
    */
 
-  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "10_ints");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 10));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 200));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -81,7 +81,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
    * This tests the actual functionality UnionPositions is intended for.
    */
 
-  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "10_ints");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 20));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 100));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -96,7 +96,7 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
    * If one of the input tables is empty, an early result should be produced
    */
 
-  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "int_float4");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -112,7 +112,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
    * If one of the input tables is empty, an early result should be produced
    */
 
-  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "int_float4");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -130,7 +130,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
    * This tests the actual functionality UnionPositions is intended for.
    */
 
-  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto get_table_op = std::make_shared<GetTable>(_hyrise_env, "int_float4");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 12345));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_float_column_1_non_nullable, 400));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -173,8 +173,8 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    *
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("int_float4");
-  auto get_table_b_op = std::make_shared<GetTable>("int_int");
+  auto get_table_a_op = std::make_shared<GetTable>(_hyrise_env, "int_float4");
+  auto get_table_b_op = std::make_shared<GetTable>(_hyrise_env, "int_int");
   auto join =
       std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});

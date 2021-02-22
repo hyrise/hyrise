@@ -15,7 +15,7 @@ class CreateTableNodeTest : public BaseTest {
     column_definitions.emplace_back("a", DataType::Int, false);
     column_definitions.emplace_back("b", DataType::Float, true);
     input_node = std::make_shared<StaticTableNode>(Table::create_dummy_table(column_definitions));
-    create_table_node = CreateTableNode::make("some_table", false, input_node);
+    create_table_node = CreateTableNode::make(_hyrise_env, "some_table", false, input_node);
   }
 
   TableColumnDefinitions column_definitions;
@@ -25,7 +25,7 @@ class CreateTableNodeTest : public BaseTest {
 
 TEST_F(CreateTableNodeTest, Description) {
   EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table'");
-  auto create_table_node_2 = CreateTableNode::make("some_table", true, input_node);
+  auto create_table_node_2 = CreateTableNode::make(_hyrise_env, "some_table", true, input_node);
   EXPECT_EQ(create_table_node_2->description(), "[CreateTable] IfNotExists Name: 'some_table'");
 }
 
@@ -35,14 +35,15 @@ TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = create_table_node->deep_copy();
   EXPECT_EQ(*create_table_node, *deep_copy_node);
 
-  const auto different_create_table_node_a = CreateTableNode::make("some_table2", false, input_node);
-  const auto different_create_table_node_b = CreateTableNode::make("some_table", true, input_node);
+  const auto different_create_table_node_a = CreateTableNode::make(_hyrise_env, "some_table2", false, input_node);
+  const auto different_create_table_node_b = CreateTableNode::make(_hyrise_env, "some_table", true, input_node);
 
   TableColumnDefinitions different_column_definitions;
   different_column_definitions.emplace_back("a", DataType::Int, false);
   const auto different_input_node =
       std::make_shared<StaticTableNode>(Table::create_dummy_table(different_column_definitions));
-  const auto different_create_table_node_c = CreateTableNode::make("some_table", false, different_input_node);
+  const auto different_create_table_node_c =
+      CreateTableNode::make(_hyrise_env, "some_table", false, different_input_node);
 
   EXPECT_NE(*different_create_table_node_a, *create_table_node);
   EXPECT_NE(*different_create_table_node_b, *create_table_node);

@@ -32,47 +32,46 @@ namespace opossum {
 class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
-
     auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
     ChunkEncoder::encode_all_chunks(compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("compressed", compressed_table);
+    _hyrise_env->storage_manager()->add_table("compressed", compressed_table);
 
     auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u);
     ChunkEncoder::encode_all_chunks(long_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("long_compressed", long_compressed_table);
+    _hyrise_env->storage_manager()->add_table("long_compressed", long_compressed_table);
 
     auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", 5u);
     ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
-    storage_manager.add_table("run_length_compressed", run_length_compressed_table);
+    _hyrise_env->storage_manager()->add_table("run_length_compressed", run_length_compressed_table);
 
     auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
     ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("string_compressed", string_compressed_table);
+    _hyrise_env->storage_manager()->add_table("string_compressed", string_compressed_table);
 
     auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
     ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
                                     SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-    storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
+    _hyrise_env->storage_manager()->add_table("fixed_string_compressed", fixed_string_compressed_table);
 
     auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("int_float4", int_float4);
+    _hyrise_env->storage_manager()->add_table("int_float4", int_float4);
 
-    for (const auto& [name, table] : storage_manager.tables()) {
+    for (const auto& [name, table] : _hyrise_env->storage_manager()->tables()) {
       generate_chunk_pruning_statistics(table);
     }
 
     _rule = std::make_shared<ChunkPruningRule>();
 
-    storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", 10u));
+    _hyrise_env->storage_manager()->add_table("uncompressed",
+                                              load_table("resources/test_data/tbl/int_float2.tbl", 10u));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;
 };
 
 TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node =
       std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
@@ -102,7 +101,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   auto predicate_node =
@@ -120,7 +119,7 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
 TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
   // If a temporary table is used more than once, only prune for the predicates that apply to all paths
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "int_float4");
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
@@ -147,7 +146,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
 TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
   // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "int_float4");
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
@@ -172,7 +171,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 }
 
 TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node =
       std::make_shared<PredicateNode>(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
@@ -187,13 +186,13 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
-  auto table = Hyrise::get().storage_manager.get_table("uncompressed");
+  auto table = _hyrise_env->storage_manager()->get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_TRUE(chunk->pruning_statistics());
   chunk->set_pruning_statistics(std::nullopt);
   EXPECT_FALSE(chunk->pruning_statistics());
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "uncompressed");
 
   auto predicate_node =
       std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
@@ -208,7 +207,7 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
 }
 
 TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node_0 =
       std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
@@ -227,7 +226,7 @@ TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -249,7 +248,7 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node =
       std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
@@ -264,7 +263,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
   predicate_node->set_left_input(stored_table_node);
@@ -278,7 +277,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
 }
 
 TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
   predicate_node->set_left_input(stored_table_node);
@@ -292,7 +291,7 @@ TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("long_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "long_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
   predicate_node->set_left_input(stored_table_node);
@@ -306,7 +305,7 @@ TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("run_length_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "run_length_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
   predicate_node->set_left_input(stored_table_node);
@@ -320,7 +319,7 @@ TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   auto predicate_node =
       std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
@@ -345,7 +344,7 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, StringPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("string_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "string_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
@@ -359,7 +358,7 @@ TEST_F(ChunkPruningRuleTest, StringPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("fixed_string_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "fixed_string_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
@@ -373,7 +372,7 @@ TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   const auto a = stored_table_node->get_column("a");
   const auto b = stored_table_node->get_column("b");
@@ -402,7 +401,7 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
   //               as long as the predicate_condition is >= and not >).
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>(_hyrise_env, "compressed");
 
   // clang-format off
   auto input_lqp =

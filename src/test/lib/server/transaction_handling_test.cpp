@@ -10,13 +10,13 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
   const std::string query = "BEGIN; CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1); COMMIT;";
 
   auto [execution_information, transaction_ctx] =
-      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
   // begin and commit transaction statements are executed successfully
   EXPECT_TRUE(execution_information.error_message.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
   EXPECT_EQ(execution_information.custom_command_complete_message.value(), "COMMIT");
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("users")->row_count(), 1);
+  EXPECT_EQ(_hyrise_env->storage_manager()->get_table("users")->row_count(), 1);
 }
 
 TEST_F(TransactionHandlingTest, RollbackTransaction) {
@@ -26,7 +26,7 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
       "BEGIN; INSERT INTO users(id) VALUES (3);"
       "ROLLBACK; SELECT * FROM users;";
 
-  auto [execution_information, _] = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+  auto [execution_information, _] = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
   // rollback transaction statement is executed successfully
   // in this case the second insert into the table gets rolled back
@@ -43,7 +43,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
 
     auto execution_information = execution_info_transaction_context_pair.first;
 
@@ -58,7 +58,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     std::string query = "BEGIN; INSERT INTO users(id) VALUES (2);";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
     transaction_ctx = execution_info_transaction_context_pair.second;
 
@@ -73,7 +73,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     std::string query = "ROLLBACK;";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
 
     // now that the user rolled back,
@@ -97,7 +97,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
 
     auto execution_information = execution_info_transaction_context_pair.first;
     EXPECT_TRUE(execution_information.error_message.empty());
@@ -110,7 +110,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     std::string query = "BEGIN; DELETE FROM users WHERE id = 1;";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
     EXPECT_TRUE(execution_information.error_message.empty());
 
@@ -122,7 +122,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     std::string query_2 = "SELECT * FROM users;";
 
     auto execution_info_transaction_context_pair_2 =
-        QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, nullptr);
+        QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
     auto execution_information_2 = execution_info_transaction_context_pair_2.first;
 
@@ -137,7 +137,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     std::string query = "COMMIT;";
 
     auto execution_info_transaction_context_pair =
-        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+        QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
     EXPECT_TRUE(execution_information.error_message.empty());
   }
@@ -147,7 +147,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     std::string query_2 = "SELECT * FROM users;";
 
     auto execution_info_transaction_context_pair_2 =
-        QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, nullptr);
+        QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, _hyrise_env, nullptr);
 
     auto execution_information_2 = execution_info_transaction_context_pair_2.first;
 
@@ -161,38 +161,45 @@ TEST_F(TransactionHandlingTest, InvalidTransactionTransitions) {
   {
     auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     std::string query = "BEGIN";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx),
+                 InvalidInputException);
   }
 
   {
     auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     std::string query = "COMMIT; COMMIT";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, transaction_ctx),
+                 InvalidInputException);
   }
 
   {
     std::string query = "BEGIN; BEGIN";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr),
+                 InvalidInputException);
   }
 
   {
     std::string query = "COMMIT";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr),
+                 InvalidInputException);
   }
 
   {
     std::string query = "BEGIN; COMMIT; COMMIT";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr),
+                 InvalidInputException);
   }
 
   {
     std::string query = "BEGIN; ROLLBACK; COMMIT";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr),
+                 InvalidInputException);
   }
 
   {
     std::string query = "BEGIN; ROLLBACK; BEGIN; COMMIT; ROLLBACK;";
-    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr), InvalidInputException);
+    EXPECT_THROW(QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, _hyrise_env, nullptr),
+                 InvalidInputException);
   }
 }
 

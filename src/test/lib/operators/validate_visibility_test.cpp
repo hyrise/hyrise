@@ -21,9 +21,9 @@ class OperatorsValidateVisibilityTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 
-    Hyrise::get().storage_manager.add_table(table_name, t);
+    _hyrise_env->storage_manager()->add_table(table_name, t);
 
-    gt = std::make_shared<GetTable>(table_name);
+    gt = std::make_shared<GetTable>(_hyrise_env, table_name);
     gt->execute();
 
     validate = std::make_shared<Validate>(gt);

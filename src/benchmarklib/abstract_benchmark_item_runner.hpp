@@ -19,7 +19,8 @@ namespace opossum {
 // Parameters can be randomized for some benchmarks (e.g., TPC-H).
 class AbstractBenchmarkItemRunner {
  public:
-  explicit AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config);
+  explicit AbstractBenchmarkItemRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                       const std::shared_ptr<BenchmarkConfig>& config);
 
   virtual ~AbstractBenchmarkItemRunner() = default;
 
@@ -59,6 +60,7 @@ class AbstractBenchmarkItemRunner {
   // Returns true if the execution was successful (see execute_item)
   virtual bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
+  std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   std::shared_ptr<BenchmarkConfig> _config;
   std::vector<std::shared_ptr<const Table>> _dedicated_expected_results;
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;

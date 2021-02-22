@@ -17,10 +17,12 @@ namespace opossum {
 
 class Table;
 class AbstractLQPNode;
+class MetaTableManager;
+class PluginManager;
 
 // The StorageManager is a class that maintains all tables
 // by mapping table names to table instances.
-class StorageManager : public Noncopyable {
+class StorageManager : public std::enable_shared_from_this<StorageManager> {
  public:
   /**
    * @defgroup Manage Tables, this is only thread-safe for operations on tables with different names
@@ -60,8 +62,11 @@ class StorageManager : public Noncopyable {
   // For debugging purposes mostly, dump all tables as csv
   void export_all_tables_as_csv(const std::string& path);
 
- protected:
   StorageManager() = default;
+  StorageManager(const StorageManager&) = delete;
+  void operator=(const StorageManager&) = delete;
+
+ protected:
   friend class Hyrise;
 
   // We preallocate maps to prevent costly re-allocation.

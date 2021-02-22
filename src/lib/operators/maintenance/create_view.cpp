@@ -10,8 +10,10 @@
 
 namespace opossum {
 
-CreateView::CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view, const bool if_not_exists)
+CreateView::CreateView(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& view_name,
+                       const std::shared_ptr<LQPView>& view, const bool if_not_exists)
     : AbstractReadOnlyOperator(OperatorType::CreateView),
+      _hyrise_env(hyrise_env),
       _view_name(view_name),
       _view(view),
       _if_not_exists(if_not_exists) {}
@@ -27,15 +29,15 @@ bool CreateView::if_not_exists() const { return _if_not_exists; }
 std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<CreateView>(_view_name, _view->deep_copy(), _if_not_exists);
+  return std::make_shared<CreateView>(_hyrise_env, _view_name, _view->deep_copy(), _if_not_exists);
 }
 
 void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> CreateView::_on_execute() {
   // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception
-  if (!_if_not_exists || !Hyrise::get().storage_manager.has_view(_view_name)) {
-    Hyrise::get().storage_manager.add_view(_view_name, _view);
+  if (!_if_not_exists || !_hyrise_env->storage_manager()->has_view(_view_name)) {
+    _hyrise_env->storage_manager()->add_view(_view_name, _view);
   }
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }

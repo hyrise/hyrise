@@ -16,9 +16,9 @@ class QueryPlanCacheTest : public BaseTest {
   void SetUp() override {
     // Load tables.
     auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
+    _hyrise_env->storage_manager()->add_table("table_a", std::move(table_a));
     auto table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_b", std::move(table_b));
+    _hyrise_env->storage_manager()->add_table("table_b", std::move(table_b));
 
     _query_plan_cache_hits = 0;
 
@@ -26,7 +26,7 @@ class QueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    auto pipeline = SQLPipelineBuilder{query}.with_pqp_cache(cache).create_pipeline();
+    auto pipeline = SQLPipelineBuilder{query}.with_pqp_cache(cache).with_hyrise_env(_hyrise_env).create_pipeline();
     pipeline.get_result_table();
 
     if (pipeline.metrics().statement_metrics.at(0)->query_plan_cache_hit) {
@@ -50,7 +50,7 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
   EXPECT_FALSE(cache->has(Q2));
 
   // Execute a query and cache its plan.
-  auto pipeline = SQLPipelineBuilder{Q1}.disable_mvcc().create_pipeline();
+  auto pipeline = SQLPipelineBuilder{Q1}.disable_mvcc().with_hyrise_env(_hyrise_env).create_pipeline();
   pipeline.get_result_table();
   cache->set(Q1, pipeline.get_physical_plans().at(0));
 
@@ -95,7 +95,7 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
 // that supports retrieving the cache frequency count.
 TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // Create pipeline and pass pqp cache. Verify that this does not change default_pqp_cache.
-  auto sql_pipeline = SQLPipelineBuilder{Q1}.with_pqp_cache(cache).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{Q1}.with_pqp_cache(cache).with_hyrise_env(_hyrise_env).create_pipeline();
   EXPECT_EQ(Hyrise::get().default_pqp_cache, nullptr);
 
   // Setting default_pqp_cache and verify it's set.
@@ -104,7 +104,7 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
 
   // Create new pipeline, without setting a cache (default cache set previously). Execute pipeline and check if
   // frequency of query is as expected.
-  auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline();
+  auto new_sql_pipeline = SQLPipelineBuilder{Q1}.with_hyrise_env(_hyrise_env).create_pipeline();
   new_sql_pipeline.get_result_table();
   EXPECT_EQ(1, query_frequency(Q1));
 }

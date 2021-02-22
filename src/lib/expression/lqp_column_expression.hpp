@@ -21,6 +21,7 @@ class LQPColumnExpression : public AbstractExpression {
   // StoredTableNode::output_expressions). If the original_node is not referenced by any shared_ptr anymore, it is
   // deleted. As a result, the weak_ptr expires. It should not be accessed anymore. Thus, if original_node.lock() is
   // a nullptr, the LQP is defective.
+
   const std::weak_ptr<const AbstractLQPNode> original_node;
   const ColumnID original_column_id;
 

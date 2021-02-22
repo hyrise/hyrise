@@ -4,6 +4,7 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
 class PreparedPlan;
 
 /**
@@ -11,10 +12,12 @@ class PreparedPlan;
  */
 class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNode>, public AbstractNonQueryNode {
  public:
-  CreatePreparedPlanNode(const std::string& init_name, const std::shared_ptr<PreparedPlan>& init_prepared_plan);
+  CreatePreparedPlanNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_name,
+                         const std::shared_ptr<PreparedPlan>& init_prepared_plan);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   std::string name;
   std::shared_ptr<PreparedPlan> prepared_plan;
 

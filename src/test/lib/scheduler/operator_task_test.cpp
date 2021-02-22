@@ -22,17 +22,17 @@ class OperatorTaskTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", _test_table_a);
+    _hyrise_env->storage_manager()->add_table("table_a", _test_table_a);
 
     _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
+    _hyrise_env->storage_manager()->add_table("table_b", _test_table_b);
   }
 
   std::shared_ptr<Table> _test_table_a, _test_table_b;
 };
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
-  auto gt = std::make_shared<GetTable>("table_a");
+  auto gt = std::make_shared<GetTable>(_hyrise_env, "table_a");
   auto tasks = OperatorTask::make_tasks_from_operator(gt);
 
   auto result_task = tasks.back();
@@ -42,7 +42,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
-  auto gt = std::make_shared<GetTable>("table_a");
+  auto gt = std::make_shared<GetTable>(_hyrise_env, "table_a");
   auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
@@ -61,8 +61,8 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
-  auto gt_a = std::make_shared<GetTable>("table_a");
-  auto gt_b = std::make_shared<GetTable>("table_b");
+  auto gt_a = std::make_shared<GetTable>(_hyrise_env, "table_a");
+  auto gt_b = std::make_shared<GetTable>(_hyrise_env, "table_b");
   auto join = std::make_shared<JoinHash>(
       gt_a, gt_b, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
@@ -83,7 +83,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
-  auto gt_a = std::make_shared<GetTable>("table_a");
+  auto gt_a = std::make_shared<GetTable>(_hyrise_env, "table_a");
   auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   auto b = PQPColumnExpression::from_table(*_test_table_a, "b");
   auto scan_a = std::make_shared<TableScan>(gt_a, greater_than_equals_(a, 1234));

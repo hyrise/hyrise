@@ -4,14 +4,18 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 // maintenance operator for the "DROP TABLE" sql statement
 class DropTable : public AbstractReadOnlyOperator {
  public:
-  DropTable(const std::string& init_table_name, bool init_if_exists);
+  DropTable(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_table_name,
+            bool init_if_exists);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const bool if_exists;
 

@@ -13,16 +13,19 @@
 
 namespace opossum {
 
-void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
+void add_indices_to_sqlite(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const std::string& schema_file_path,
+                           const std::string& create_indices_file_path,
                            std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
   Assert(sqlite_wrapper, "sqlite_wrapper should be set");
+
+  auto storage_manager = hyrise_env->storage_manager();
 
   std::cout << "- Adding indexes to SQLite" << std::endl;
   Timer timer;
 
   // SQLite does not support adding primary keys to non-empty tables, so we rename the table, create an empty one from
   // the provided schema and copy the data.
-  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
+  for (const auto& table_name : storage_manager->table_names()) {
     // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
     // "..._unindexed" name.
     const auto escaped_table_name = std::string{"\""} + table_name + "\"";
@@ -48,7 +51,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   }
 
   // Copy over data
-  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
+  for (const auto& table_name : storage_manager->table_names()) {
     Timer per_table_time;
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 

@@ -9,11 +9,15 @@
 
 namespace opossum {
 
-CreateTable::CreateTable(const std::string& init_table_name, const bool init_if_not_exists,
+CreateTable::CreateTable(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env,
+                         const std::string& init_table_name, const bool init_if_not_exists,
                          const std::shared_ptr<const AbstractOperator>& input_operator)
     : AbstractReadWriteOperator(OperatorType::CreateTable, input_operator),
+      hyrise_env(init_hyrise_env),
       table_name(init_table_name),
-      if_not_exists(init_if_not_exists) {}
+      if_not_exists(init_if_not_exists) {
+  Assert(init_hyrise_env, "CreateTable node without a storage");
+}
 
 const std::string& CreateTable::name() const {
   static const auto name = std::string{"CreateTable"};
@@ -55,13 +59,13 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
   const auto column_definitions = _left_input->get_output()->column_definitions();
 
   // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
-  if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
+  if (!if_not_exists || !hyrise_env->storage_manager()->has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-    Hyrise::get().storage_manager.add_table(table_name, table);
+    hyrise_env->storage_manager()->add_table(table_name, table);
 
     // Insert table data (if no data is present, insertion makes no difference)
-    _insert = std::make_shared<Insert>(table_name, _left_input);
+    _insert = std::make_shared<Insert>(hyrise_env, table_name, _left_input);
     _insert->set_transaction_context(context);
     _insert->execute();
   }
@@ -71,7 +75,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<CreateTable>(table_name, if_not_exists, copied_left_input);
+  return std::make_shared<CreateTable>(hyrise_env, table_name, if_not_exists, copied_left_input);
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

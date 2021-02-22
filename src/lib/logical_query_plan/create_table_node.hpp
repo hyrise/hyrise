@@ -8,15 +8,19 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * This node type represents the CREATE TABLE management command.
  */
 class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public AbstractNonQueryNode {
  public:
-  CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists);
+  CreateTableNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_table_name,
+                  const bool init_if_not_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
   const bool if_not_exists;
 

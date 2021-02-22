@@ -26,10 +26,11 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
+BenchmarkRunner::BenchmarkRunner(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env, const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
-    : _config(config),
+    : _hyrise_env(hyrise_env),
+      _config(config),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
@@ -53,7 +54,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     Hyrise::get().set_scheduler(scheduler);
   }
 
-  _table_generator->generate_and_store();
+  _table_generator->generate_and_store(_hyrise_env);
 
   _benchmark_item_runner->on_tables_loaded();
 
@@ -65,7 +66,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
     // Load the data into SQLite
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    for (const auto& [table_name, table] : _hyrise_env->storage_manager()->tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
       sqlite_wrapper->create_sqlite_table(*table, table_name);
@@ -435,7 +436,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   // Gather information on the table size
   auto table_size = size_t{0};
-  for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
+  for (const auto& table_pair : _hyrise_env->storage_manager()->tables()) {
     table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
@@ -454,11 +455,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                         {"summary", std::move(summary)},
                         {"table_generation", _table_generator->metrics}};
 
-  if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
+  if (_hyrise_env->storage_manager()->has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
 
-  if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
+  if (_hyrise_env->storage_manager()->has_table("benchmark_segments_log")) {
     report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
   }
 

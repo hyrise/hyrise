@@ -15,6 +15,7 @@ class BenchmarkSQLExecutor {
   // @param visualize_prefix    Prefix for the filename of the generated query plans (e.g., "TPC-H_6-").
   //                            The suffix will be "LQP/PQP-<statement_idx>.<extension>"
   BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
+                       const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
                        const std::optional<std::string>& visualize_prefix);
 
   ~BenchmarkSQLExecutor();
@@ -45,6 +46,7 @@ class BenchmarkSQLExecutor {
   void _visualize(SQLPipeline& pipeline);
 
   std::optional<SQLiteWrapper::Connection> _sqlite_connection;
+  std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
   bool _sqlite_transaction_open{false};
 
   const std::optional<std::string> _visualize_prefix;

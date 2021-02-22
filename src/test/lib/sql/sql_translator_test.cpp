@@ -54,17 +54,17 @@ class SQLTranslatorTest : public BaseTest {
   }
 
   void SetUp() override {
-    stored_table_node_int_float = StoredTableNode::make("int_float");
-    stored_table_node_int_string = StoredTableNode::make("int_string");
-    stored_table_node_int_float2 = StoredTableNode::make("int_float2");
-    stored_table_node_int_float5 = StoredTableNode::make("int_float5");
-    stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
+    stored_table_node_int_float = StoredTableNode::make(_hyrise_env, "int_float");
+    stored_table_node_int_string = StoredTableNode::make(_hyrise_env, "int_string");
+    stored_table_node_int_float2 = StoredTableNode::make(_hyrise_env, "int_float2");
+    stored_table_node_int_float5 = StoredTableNode::make(_hyrise_env, "int_float5");
+    stored_table_node_int_int_int = StoredTableNode::make(_hyrise_env, "int_int_int");
 
-    Hyrise::get().storage_manager.add_table("int_float", int_float);
-    Hyrise::get().storage_manager.add_table("int_string", int_string);
-    Hyrise::get().storage_manager.add_table("int_float2", int_float2);
-    Hyrise::get().storage_manager.add_table("int_float5", int_float5);
-    Hyrise::get().storage_manager.add_table("int_int_int", int_int_int);
+    _hyrise_env->storage_manager()->add_table("int_float", int_float);
+    _hyrise_env->storage_manager()->add_table("int_string", int_string);
+    _hyrise_env->storage_manager()->add_table("int_float2", int_float2);
+    _hyrise_env->storage_manager()->add_table("int_float5", int_float5);
+    _hyrise_env->storage_manager()->add_table("int_int_int", int_int_int);
 
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
@@ -85,7 +85,7 @@ class SQLTranslatorTest : public BaseTest {
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+    const auto translation_result = SQLTranslator{_hyrise_env, use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
     Assert(lqps.size() == 1, "Expected just one LQP");
@@ -656,7 +656,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "alias_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
 }
@@ -682,7 +682,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "alias_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
 }
@@ -705,7 +705,7 @@ TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInV
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "alias_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
 }
@@ -1734,7 +1734,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  SQLTranslator sql_translator{UseMvcc::No};
+  SQLTranslator sql_translator{_hyrise_env, UseMvcc::No};
 
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).lqp_nodes.at(0);
 
@@ -1833,8 +1833,8 @@ TEST_F(SQLTranslatorTest, UseMvcc) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_parser_result(parser_result).lqp_nodes.at(0);
-  const auto lqp_b = SQLTranslator{UseMvcc::Yes}.translate_parser_result(parser_result).lqp_nodes.at(0);
+  const auto lqp_a = SQLTranslator{_hyrise_env, UseMvcc::No}.translate_parser_result(parser_result).lqp_nodes.at(0);
+  const auto lqp_b = SQLTranslator{_hyrise_env, UseMvcc::Yes}.translate_parser_result(parser_result).lqp_nodes.at(0);
 
   EXPECT_FALSE(lqp_is_validated(lqp_a));
   EXPECT_TRUE(lqp_is_validated(lqp_b));
@@ -1913,7 +1913,7 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW TABLES");
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
   EXPECT_EQ(translation_info.cacheable, false);
@@ -1923,7 +1923,7 @@ TEST_F(SQLTranslatorTest, ShowTables) {
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW COLUMNS int_float");
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("columns");
   const auto static_table_node = StaticTableNode::make(meta_table);
   const auto table_name_column =
       std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("table_name"));
@@ -1942,7 +1942,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTable) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables");
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
   EXPECT_EQ(translation_info.cacheable, false);
@@ -1954,7 +1954,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
       sql_to_lqp_helper("SELECT table_name FROM (SELECT table_name, column_count FROM " +
                         MetaTableManager::META_PREFIX + "tables) as subquery");
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
 
   const auto table_name_column =
@@ -2009,7 +2009,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
       sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
                         MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name");
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
   const auto table_name_column =
       std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("table_name"));
@@ -2035,7 +2035,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
    ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
      DummyTableNode::make()));
   // clang-format on
@@ -2048,7 +2048,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
     ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
         DummyTableNode::make()));
   // clang-format on
@@ -2061,7 +2061,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
     ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2074,7 +2074,7 @@ TEST_F(SQLTranslatorTest, InsertNull) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
     ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2088,7 +2088,7 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
     PredicateNode::make(greater_than_(int_float2_a, 5),
       stored_table_node_int_float2));
   // clang-format on
@@ -2101,7 +2101,7 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(_hyrise_env, "int_float",
     ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2114,7 +2114,7 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
 
   // clang-format off
   const auto expected_lqp =
-  ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
+	ChangeMetaTableNode::make(_hyrise_env, "meta_plugins", MetaTableChangeType::Insert,
     DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
@@ -2135,7 +2135,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
   const auto expected_lqp =
   DeleteNode::make(
     ValidateNode::make(
-      StoredTableNode::make("int_float")));
+      StoredTableNode::make(_hyrise_env, "int_float")));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2159,12 +2159,12 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("plugins");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("plugins");
   const auto select_node = StaticTableNode::make(meta_table);
 
   // clang-format off
   const auto expected_lqp =
-   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
+   ChangeMetaTableNode::make(_hyrise_env,"meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
                         select_node),
     DummyTableNode::make());
@@ -2187,7 +2187,7 @@ TEST_F(SQLTranslatorTest, UpdateUnconditional) {
     stored_table_node_int_float);
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(_hyrise_env, "int_float",
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(int_float_a, add_(int_float_b, value_(1))),
       row_subquery_lqp));
@@ -2207,7 +2207,7 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
       stored_table_node_int_float));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(_hyrise_env, "int_float",
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(int_float_a, cast_(3.2, DataType::Float)),
       row_subquery_lqp));
@@ -2227,7 +2227,7 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
       stored_table_node_int_float));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(_hyrise_env, "int_float",
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(cast_(int_float_b, DataType::Int), cast_(3, DataType::Float)),
       row_subquery_lqp));
@@ -2240,7 +2240,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("settings");
+  const auto meta_table = _hyrise_env->meta_table_manager()->generate_table("settings");
   const auto select_node = StaticTableNode::make(meta_table);
 
   // clang-format off
@@ -2254,7 +2254,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
                                                                 meta_table->column_id_by_name("description")));
 
   const auto expected_lqp =
-  ChangeMetaTableNode::make("meta_settings", MetaTableChangeType::Update,
+  ChangeMetaTableNode::make(_hyrise_env,"meta_settings", MetaTableChangeType::Update,
     row_subquery_lqp,
     ProjectionNode::make(expressions,
       row_subquery_lqp));
@@ -2286,7 +2286,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("my_first_view", view, false);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "my_first_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
 }
@@ -2306,7 +2306,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("my_second_view", view, false);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "my_second_view", view, false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2328,7 +2328,7 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("my_first_view", view, true);
+  const auto expected_lqp = CreateViewNode::make(_hyrise_env, "my_first_view", view, true);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
 }
@@ -2337,7 +2337,7 @@ TEST_F(SQLTranslatorTest, DropView) {
   const auto query = "DROP VIEW my_third_view";
   auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
-  const auto lqp = DropViewNode::make("my_third_view", false);
+  const auto lqp = DropViewNode::make(_hyrise_env, "my_third_view", false);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -2346,7 +2346,7 @@ TEST_F(SQLTranslatorTest, DropViewIfExists) {
   const auto query = "DROP VIEW IF EXISTS my_third_view";
   auto [result_node, translation_info] = sql_to_lqp_helper(query);
 
-  const auto lqp = DropViewNode::make("my_third_view", true);
+  const auto lqp = DropViewNode::make(_hyrise_env, "my_third_view", true);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -2363,7 +2363,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                                                          {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
+  const auto expected_lqp = CreateTableNode::make(_hyrise_env, "a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2380,7 +2380,7 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
                                                          {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  const auto expected_lqp = CreateTableNode::make("a_table", true, static_table_node);
+  const auto expected_lqp = CreateTableNode::make(_hyrise_env, "a_table", true, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2388,8 +2388,8 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("CREATE TABLE a_table AS SELECT * FROM int_float");
 
-  const auto stored_table_node = StoredTableNode::make("int_float");
-  const auto expected_lqp = CreateTableNode::make("a_table", false, stored_table_node);
+  const auto stored_table_node = StoredTableNode::make(_hyrise_env, "int_float");
+  const auto expected_lqp = CreateTableNode::make(_hyrise_env, "a_table", false, stored_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2397,7 +2397,7 @@ TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
 TEST_F(SQLTranslatorTest, DropTable) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE a_table");
 
-  const auto expected_lqp = DropTableNode::make("a_table", false);
+  const auto expected_lqp = DropTableNode::make(_hyrise_env, "a_table", false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2405,7 +2405,7 @@ TEST_F(SQLTranslatorTest, DropTable) {
 TEST_F(SQLTranslatorTest, DropTableIfExists) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE IF EXISTS a_table");
 
-  const auto expected_lqp = DropTableNode::make("a_table", true);
+  const auto expected_lqp = DropTableNode::make(_hyrise_env, "a_table", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2422,7 +2422,7 @@ TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{});
 
-  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2442,7 +2442,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
 
-  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2475,7 +2475,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubquery) {
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
 
-  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make(_hyrise_env, "some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2500,7 +2500,7 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_plan = std::make_shared<PreparedPlan>(
       prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
-  Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
+  _hyrise_env->storage_manager()->add_prepared_plan("some_prepared_plan", prepared_plan);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
@@ -2527,7 +2527,7 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
-  Hyrise::get().storage_manager.add_prepared_plan("another_prepared_plan", prepared_plan);
+  _hyrise_env->storage_manager()->add_prepared_plan("another_prepared_plan", prepared_plan);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE another_prepared_plan ()");
 
@@ -2913,27 +2913,27 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl';");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Auto);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Tbl);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Csv);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
@@ -2978,22 +2978,22 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
 TEST_F(SQLTranslatorTest, ImportStatement) {
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Tbl);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Csv);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make(_hyrise_env, "a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }

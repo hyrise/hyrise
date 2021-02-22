@@ -17,6 +17,11 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Opt
   return *this;
 }
 
+SQLPipelineBuilder& SQLPipelineBuilder::with_hyrise_env(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env) {
+  _hyrise_env = hyrise_env;
+  return *this;
+}
+
 SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
     const std::shared_ptr<TransactionContext>& transaction_context) {
   _transaction_context = transaction_context;
@@ -40,7 +45,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvc
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache);
+  auto pipeline = SQLPipeline(_sql, _hyrise_env, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache);
   DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
                 reinterpret_cast<uintptr_t>(this));
   return pipeline;

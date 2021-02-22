@@ -23,6 +23,8 @@ class PluginManager : public Noncopyable {
   friend class SingletonTest;
 
  public:
+  PluginManager(const std::shared_ptr<HyriseEnvironmentRef>&);
+
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
@@ -31,13 +33,13 @@ class PluginManager : public Noncopyable {
   ~PluginManager();
 
  protected:
-  PluginManager() = default;
   friend class Hyrise;
 
   const PluginManager& operator=(const PluginManager&) = delete;
   PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
+  std::shared_ptr<HyriseEnvironmentRef> _hyrise_env;
 
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();

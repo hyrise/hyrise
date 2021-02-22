@@ -26,13 +26,13 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),
-            std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),
-            std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(),
-            std::make_shared<MetaSegmentsAccurateTable>(),
-            std::make_shared<MetaPluginsTable>(),
+    return {std::make_shared<MetaTablesTable>(_hyrise_env),
+            std::make_shared<MetaColumnsTable>(_hyrise_env),
+            std::make_shared<MetaChunksTable>(_hyrise_env),
+            std::make_shared<MetaChunkSortOrdersTable>(_hyrise_env),
+            std::make_shared<MetaSegmentsTable>(_hyrise_env),
+            std::make_shared<MetaSegmentsAccurateTable>(_hyrise_env),
+            std::make_shared<MetaPluginsTable>(_hyrise_env),
             std::make_shared<MetaSettingsTable>(),
             std::make_shared<MetaLogTable>(),
             std::make_shared<MetaSystemInformationTable>(),
@@ -84,17 +84,16 @@ TEST_F(MetaTableManagerTest, ListAllTables) {
   auto table_names = MetaTableManagerTest::meta_table_names();
   std::sort(table_names.begin(), table_names.end());
 
-  EXPECT_EQ(Hyrise::get().meta_table_manager.table_names(), table_names);
+  EXPECT_EQ(_hyrise_env->meta_table_manager()->table_names(), table_names);
 }
 
 TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   const auto mock_table = std::make_shared<MetaMockTable>();
-  auto& mtm = Hyrise::get().meta_table_manager;
 
-  Hyrise::get().meta_table_manager.add_table(mock_table);
-  mtm.insert_into(mock_table->name(), mock_manipulation_values);
-  mtm.delete_from(mock_table->name(), mock_manipulation_values);
-  mtm.update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
+  _hyrise_env->meta_table_manager()->add_table(mock_table);
+  _hyrise_env->meta_table_manager()->insert_into(mock_table->name(), mock_manipulation_values);
+  _hyrise_env->meta_table_manager()->delete_from(mock_table->name(), mock_manipulation_values);
+  _hyrise_env->meta_table_manager()->update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
 
   EXPECT_EQ(mock_table->insert_calls(), 1);
   EXPECT_EQ(mock_table->remove_calls(), 1);
@@ -103,22 +102,21 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
 
 TEST_F(MetaTableManagerTest, RetrieveAddedTable) {
   const auto mock_table = std::make_shared<MetaMockTable>();
-  Hyrise::get().meta_table_manager.add_table(mock_table);
+  _hyrise_env->meta_table_manager()->add_table(mock_table);
 
   // Check that added table can be retrieved
-  const auto mock_table2 = Hyrise::get().meta_table_manager.get_table("mock");
+  const auto mock_table2 = _hyrise_env->meta_table_manager()->get_table("mock");
   EXPECT_EQ(mock_table, std::static_pointer_cast<MetaMockTable>(mock_table2));
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {
-  EXPECT_TRUE(Hyrise::get().meta_table_manager.has_table(GetParam()->name()));
+  EXPECT_TRUE(_hyrise_env->meta_table_manager()->has_table(GetParam()->name()));
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, ForwardsMutationInfo) {
   const auto& table = GetParam();
-  const auto& mtm = Hyrise::get().meta_table_manager;
-  EXPECT_EQ(mtm.can_insert_into(table->name()), table->can_insert());
-  EXPECT_EQ(mtm.can_delete_from(table->name()), table->can_delete());
-  EXPECT_EQ(mtm.can_update(table->name()), table->can_update());
+  EXPECT_EQ(_hyrise_env->meta_table_manager()->can_insert_into(table->name()), table->can_insert());
+  EXPECT_EQ(_hyrise_env->meta_table_manager()->can_delete_from(table->name()), table->can_delete());
+  EXPECT_EQ(_hyrise_env->meta_table_manager()->can_update(table->name()), table->can_update());
 }
 }  // namespace opossum

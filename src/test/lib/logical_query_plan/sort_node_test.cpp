@@ -14,10 +14,10 @@ namespace opossum {
 class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a",
-                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    _hyrise_env->storage_manager()->add_table("table_a",
+                                              load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
-    _table_node = StoredTableNode::make("table_a");
+    _table_node = StoredTableNode::make(_hyrise_env, "table_a");
 
     _a_i = _table_node->get_column("i");
     _a_f = _table_node->get_column("f");

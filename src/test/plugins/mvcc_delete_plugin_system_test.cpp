@@ -49,11 +49,11 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
       begin_value += CHUNK_SIZE;
     }
-    Hyrise::get().storage_manager.add_table(_t_name_test, _table);
+    _hyrise_env->storage_manager()->add_table(_t_name_test, _table);
 
     // For some dummy inserts later on, we load an int table
     auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
-    Hyrise::get().storage_manager.add_table(_t_name_ints, t);
+    _hyrise_env->storage_manager()->add_table(_t_name_ints, t);
   }
 
  protected:
@@ -70,7 +70,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-    const auto gt = std::make_shared<GetTable>(_t_name_test);
+    const auto gt = std::make_shared<GetTable>(_hyrise_env, _t_name_test);
     gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
@@ -80,7 +80,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto where = std::make_shared<TableScan>(validate, expr);
     where->set_transaction_context(transaction_context);
 
-    const auto update = std::make_shared<Update>(_t_name_test, where, where);
+    const auto update = std::make_shared<Update>(_hyrise_env, _t_name_test, where, where);
     update->set_transaction_context(transaction_context);
 
     gt->execute();
@@ -103,7 +103,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
   void validate_table() {
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-    const auto gt = std::make_shared<GetTable>(_t_name_test);
+    const auto gt = std::make_shared<GetTable>(_hyrise_env, _t_name_test);
     gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
@@ -138,8 +138,8 @@ class MvccDeletePluginSystemTest : public BaseTest {
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (1) Load the MvccDeletePlugin
-  auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
+  auto pm = _hyrise_env->plugin_manager();
+  pm->load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
 
   // (2) Validate start conditions
   validate_table();
@@ -257,6 +257,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       // We perform some dummy updates so that the table is unmodified and the validation routine does not complain
       auto pipeline =
           SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = -1"}}
+              .with_hyrise_env(_hyrise_env)
               .create_pipeline();
 
       // Execute and verify update transaction
@@ -315,5 +316,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   validate_table();
 
   // (17) Unload the plugin
-  Hyrise::get().plugin_manager.unload_plugin("hyriseMvccDeletePlugin");
+  _hyrise_env->plugin_manager()->unload_plugin("hyriseMvccDeletePlugin");
 }

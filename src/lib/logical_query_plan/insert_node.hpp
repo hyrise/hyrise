@@ -8,15 +8,18 @@
 
 namespace opossum {
 
+class HyriseEnvironmentRef;
+
 /**
  * Node type to represent insertion of rows into a table.
  */
 class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractNonQueryNode {
  public:
-  explicit InsertNode(const std::string& init_table_name);
+  explicit InsertNode(const std::shared_ptr<HyriseEnvironmentRef>& init_hyrise_env, const std::string& init_table_name);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<HyriseEnvironmentRef> hyrise_env;
   const std::string table_name;
 
  protected:

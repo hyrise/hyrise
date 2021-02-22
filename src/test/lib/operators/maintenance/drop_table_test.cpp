@@ -13,7 +13,7 @@ namespace opossum {
 class DropTableTest : public BaseTest {
  public:
   void SetUp() override {
-    drop_table = std::make_shared<DropTable>("t", false);
+    drop_table = std::make_shared<DropTable>(_hyrise_env, "t", false);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
@@ -32,22 +32,22 @@ TEST_F(DropTableTest, NameAndDescription) {
 }
 
 TEST_F(DropTableTest, Execute) {
-  Hyrise::get().storage_manager.add_table("t", table);
+  _hyrise_env->storage_manager()->add_table("t", table);
   drop_table->execute();
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("t"));
 }
 
 TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
 
 TEST_F(DropTableTest, ExecuteWithIfExists) {
-  Hyrise::get().storage_manager.add_table("t", table);
-  auto drop_table_if_exists_1 = std::make_shared<DropTable>("t", true);
+  _hyrise_env->storage_manager()->add_table("t", table);
+  auto drop_table_if_exists_1 = std::make_shared<DropTable>(_hyrise_env, "t", true);
   drop_table_if_exists_1->execute();
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("t"));
 
-  auto drop_table_if_exists_2 = std::make_shared<DropTable>("t", true);
+  auto drop_table_if_exists_2 = std::make_shared<DropTable>(_hyrise_env, "t", true);
   EXPECT_NO_THROW(drop_table_if_exists_2->execute());
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(_hyrise_env->storage_manager()->has_table("t"));
 }
 
 }  // namespace opossum

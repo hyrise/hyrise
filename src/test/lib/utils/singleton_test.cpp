@@ -10,11 +10,7 @@ namespace opossum {
 
 class SingletonTest : public BaseTest {
  protected:
-  std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
-    auto& pm = Hyrise::get().plugin_manager;
-
-    return pm._plugins;
-  }
+  std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() { return _hyrise_env->plugin_manager()->_plugins; }
 };
 
 TEST_F(SingletonTest, SingleInstance) {

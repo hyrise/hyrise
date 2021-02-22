@@ -32,6 +32,8 @@ class MvccDeletePlugin : public AbstractPlugin {
   friend class MvccDeletePluginSystemTest;
 
  public:
+  MvccDeletePlugin(const std::shared_ptr<HyriseEnvironmentRef>&);
+
   std::string description() const final;
 
   void start() final;
@@ -57,7 +59,8 @@ class MvccDeletePlugin : public AbstractPlugin {
   void _logical_delete_loop();
   void _physical_delete_loop();
 
-  static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
+  static bool _try_logical_delete(const std::shared_ptr<HyriseEnvironmentRef>& hyrise_env,
+                                  const std::string& table_name, ChunkID chunk_id,
                                   const std::shared_ptr<TransactionContext>& transaction_context);
   static void _delete_chunk_physically(const std::shared_ptr<Table>& table, ChunkID chunk_id);
 
