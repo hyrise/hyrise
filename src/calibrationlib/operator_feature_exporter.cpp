@@ -208,8 +208,9 @@ void OperatorFeatureExporter::_export_aggregate(const std::shared_ptr<const Abst
   }
 
   if (aggregate_columns == 1) {
-    const auto& aggregate_expression = op->aggregates().at(0);
-    is_count_star = AggregateExpression::is_count_star(*aggregate_expression);
+    const auto& aggregate_expression = op->aggregates()[0];
+    const auto& column_expression = std::static_pointer_cast<PQPColumnExpression>(aggregate_expression->argument());
+    is_count_star = aggregate_expression->aggregate_function == AggregateFunction::Count && column_expression->column_id == INVALID_COLUMN_ID;
   }
 
   switch (op->left_input()->type()) {
