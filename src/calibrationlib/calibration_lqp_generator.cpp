@@ -250,6 +250,15 @@ void CalibrationLQPGenerator::_generate_table_scans(
   if (table_wrapper->get_name().find("aggregate") != std::string::npos) {
     return;
   }
+  if (table_wrapper->get_name().find("semi_join") != std::string::npos) {
+    return;
+  }
+  if (table_wrapper->get_name().find("unordered_probe") != std::string::npos) {
+    return;
+  }
+  if (table_wrapper->get_name().find("ordered_build") != std::string::npos) {
+    return;
+  }
 
   // selectivity resolution determines in how many LQPs with a different selectivity are generated
   // increase this value for providing more training data to the model
