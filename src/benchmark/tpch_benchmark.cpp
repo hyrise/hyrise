@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("10"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
     ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
       Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'");
     }
 
-    std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration)
-              << "' configuration" << std::endl;
+    std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration"
+              << std::endl;
   }
 
   std::vector<BenchmarkItemID> item_ids;
@@ -180,12 +180,15 @@ int main(int argc, char* argv[]) {
     std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << std::endl;
 
     // Create the table generator and item runner
-    table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, clustering_configuration, config);
+    table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor,
+                                                           clustering_configuration, config);
     item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_skewed, jcch_dbgen_path, jcch_data_path, config,
-                                                            use_prepared_statements, scale_factor, clustering_configuration, item_ids);
+                                                            use_prepared_statements, scale_factor,
+                                                            clustering_configuration, item_ids);
   } else {
     table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, clustering_configuration, config);
-    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, clustering_configuration, item_ids);
+    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
+                                                            clustering_configuration, item_ids);
   }
 
   auto benchmark_runner =

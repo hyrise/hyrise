@@ -117,12 +117,13 @@ std::unordered_map<TPCHTable, std::string> tpch_table_names = {
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        uint32_t chunk_size)
-    : TPCHTableGenerator(scale_factor, clustering_configuration,
-                         create_benchmark_config_with_chunk_size(chunk_size)) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor), _clustering_configuration(clustering_configuration) {}
+    : AbstractTableGenerator(benchmark_config),
+      _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
@@ -336,6 +337,8 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
     return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
   }
 
+  // Even though the generated TPC-H data is sorted by the primary keys, we do neither set the table to be clustered
+  // or chunks to be sorted for any table. As of now, we do not automatically recognize these flags.
   return {};
 }
 

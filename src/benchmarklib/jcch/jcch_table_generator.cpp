@@ -13,7 +13,7 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
                          create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
-                                       ClusteringConfiguration clustering_configuration, 
+                                       ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config),
       TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),

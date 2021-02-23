@@ -7,7 +7,6 @@
 #include "abstract_benchmark_item_runner.hpp"
 #include "tpch_constants.hpp"
 
-
 namespace opossum {
 
 // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
