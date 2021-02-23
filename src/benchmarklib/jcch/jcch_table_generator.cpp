@@ -8,13 +8,15 @@
 namespace opossum {
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
-                                       uint32_t chunk_size)
-    : JCCHTableGenerator(dbgen_path, data_path, scale_factor, create_benchmark_config_with_chunk_size(chunk_size)) {}
+                                       ClusteringConfiguration clustering_configuration, uint32_t chunk_size)
+    : JCCHTableGenerator(dbgen_path, data_path, scale_factor, clustering_configuration,
+                         create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
+                                       ClusteringConfiguration clustering_configuration, 
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config),
-      TPCHTableGenerator(scale_factor, benchmark_config),
+      TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),
       FileBasedTableGenerator(benchmark_config, data_path),
       _dbgen_path(dbgen_path) {}
 

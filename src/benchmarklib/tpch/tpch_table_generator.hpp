@@ -10,6 +10,7 @@
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "tpch_constants.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -30,10 +31,10 @@ extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
 class TPCHTableGenerator : virtual public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
-  explicit TPCHTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHTableGenerator in a benchmark
-  explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+  explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -42,6 +43,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
-  float _scale_factor;
+  const float _scale_factor;
+  const ClusteringConfiguration _clustering_configuration;
 };
 }  // namespace opossum

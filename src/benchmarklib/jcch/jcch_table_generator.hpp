@@ -1,6 +1,7 @@
 #pragma once
 
 #include "file_based_table_generator.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
@@ -17,10 +18,11 @@ class JCCHTableGenerator : virtual public AbstractTableGenerator,
  public:
   // Convenience constructor for creating a JCCHTableGenerator without a benchmarking context
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
-                              uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+                              ClusteringConfiguration clustering_configuration, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a JCCHTableGenerator in a benchmark
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
+                              ClusteringConfiguration clustering_configuration,
                               const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;

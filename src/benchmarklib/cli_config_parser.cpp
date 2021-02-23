@@ -61,21 +61,6 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   }
   std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
-  auto cluster_config = ClusteringConfiguration::None;
-  if (parse_result.count("clustering")) {
-    auto cluster_config_str = parse_result["clustering"].as<std::string>();
-    boost::replace_all(cluster_config_str, "-", "");
-    boost::replace_all(cluster_config_str, " ", "");
-    boost::to_lower(cluster_config_str);
-    if (cluster_config_str == "tpchpruning") {
-      cluster_config = ClusteringConfiguration::TPCHPruning;
-    } else if (cluster_config_str != "none") {
-      throw std::runtime_error("Invalid clustering config: '" + cluster_config_str + "'");
-    }
-
-    std::cout << "- Clustering with '" << magic_enum::enum_name(cluster_config) << "' configuration" << std::endl;
-  }
-
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
     Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
@@ -148,7 +133,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   }
 
   return BenchmarkConfig{
-      benchmark_mode,       cluster_config,      chunk_size,          *encoding_config, indexes, max_runs,
+      benchmark_mode,       chunk_size,          *encoding_config, indexes, max_runs,
       timeout_duration,     warmup_duration,     output_file_path,    enable_scheduler, cores,   clients,
       enable_visualization, verify,              cache_binary_tables, metrics};
 }

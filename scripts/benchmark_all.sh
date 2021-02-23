@@ -11,7 +11,7 @@ then
   exit 1
 fi
 
-benchmarks='hyriseBenchmarkTPCH'
+benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 num_mt_clients=50
 
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
@@ -74,18 +74,18 @@ do
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
-    ( ${build_folder}/$benchmark --dont_cache_binary_tables -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( ${build_folder}/$benchmark -s .01 --dont_cache_binary_tables  -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
       echo "Running $benchmark for $commit... (single-threaded, SF 10)"
-      ( ${build_folder}/$benchmark -s 10 --dont_cache_binary_tables  -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.log"
+      ( ${build_folder}/$benchmark -s 10 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
-    ( ${build_folder}/$benchmark --scheduler --dont_cache_binary_tables  --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 

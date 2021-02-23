@@ -534,7 +534,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"encoding", config.encoding_config.to_json()},
       {"indexes", config.indexes},
       {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
-      {"clustering", magic_enum::enum_name(config.clustering_configuration)},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
