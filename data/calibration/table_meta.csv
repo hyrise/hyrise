@@ -10,3 +10,5 @@
 "aggregate_maxdiff180",5999740,65535
 "semi_join_300000",300000,65535
 "semi_join_65535",65535,65535
+"ordered_build_750",750,65535
+"unordered_probe_6000000",6000000,65535

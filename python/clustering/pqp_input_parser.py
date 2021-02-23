@@ -228,6 +228,7 @@ class PQPInputParser(object):
     self.aggregates['RUNTIME_NS'] = self.aggregates['RUNTIME_NS'].astype(np.int64)
     self.aggregates['AGGREGATE_COLUMNS'] = self.aggregates['AGGREGATE_COLUMNS'].astype(np.int64)
     self.aggregates['GROUP_COLUMNS'] = self.aggregates['GROUP_COLUMNS'].astype(np.int64)
+    self.aggregates['IS_COUNT_STAR'] = self.aggregates.apply(lambda x: 1 if x['AGGREGATE_COLUMNS'] == 1 and "count(*)" in x['DESCRIPTION'].lower() else 0 , axis=1)
 
   """Extract interesting table names. Currently fixed to columns which are used in scans or joins"""
   def get_table_names(self):
