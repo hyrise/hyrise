@@ -12,8 +12,15 @@ std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(
     const UncompressedVectorInfo& meta_info) {
  
   const auto max_value = _find_max_value(vector);
-  const uint32_t upper_bound = log2(max_value +1) + 1;
-  uint32_t b = std::min(upper_bound, std::max(compact::vector<unsigned int, 32>::required_bits(max_value), 1u));
+  uint32_t b_1;
+  if (max_value <= 0) {
+    b_1 = 1;
+  } else if (max_value == 1) {
+    b_1 = 1;
+  } else {
+    b_1 = std::ceil(log2(max_value + 1));
+  }
+  uint32_t b = std::min(b_1, std::max(compact::vector<unsigned int, 32>::required_bits(max_value), 1u));
 
   auto data = pmr_bitpacking_vector<uint32_t>(b, alloc);
   for (int i = 0; i < vector.size(); i++) {
