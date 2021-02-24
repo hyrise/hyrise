@@ -48,7 +48,6 @@ class ChunkPruningRule : public AbstractRule {
       std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
 
  private:
-
   /**
    * Caches intermediate results.
    * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
