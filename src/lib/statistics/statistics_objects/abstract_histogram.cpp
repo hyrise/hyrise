@@ -734,6 +734,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
+    std::cout << "Selectivity: " << selectivity << std::endl;
 
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
