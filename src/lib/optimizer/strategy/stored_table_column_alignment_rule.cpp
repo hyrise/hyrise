@@ -49,8 +49,10 @@ ColumnPruningAgnosticMultiSet collect_stored_table_nodes(const std::vector<std::
   // Iterate over the given LQPs and store all StoredTableNodes in multiple sets/groups: Nodes of the same set/group
   // share the same table name and the same pruned ChunkIDs.
   for (const auto& lqp : lqps) {
-    const auto stored_table_nodes = lqp_find_leaves<StoredTableNode>(lqp);
-    grouped_stored_table_nodes.insert(stored_table_nodes.begin(), stored_table_nodes.end());
+    const auto nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::StoredTable);
+    std::for_each(nodes.begin(), nodes.end(), [&](const auto& node) {
+      grouped_stored_table_nodes.insert(std::static_pointer_cast<StoredTableNode>(node));
+    });
   }
   return grouped_stored_table_nodes;
 }

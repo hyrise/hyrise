@@ -182,7 +182,41 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   EXPECT_EQ(roots[2], subquery_a_lqp);
 }
 
-TEST_F(LQPUtilsTest, LQPFindLeafs) {
+TEST_F(LQPUtilsTest, LQPFindNodesByType) {
+  auto dummy_table_node = DummyTableNode::make();
+  auto literal = add_(value_(1), value_(2));
+  // clang-format off
+  auto lqp =
+  JoinNode::make(JoinMode::Semi, equals_(b_y, literal),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
+      UnionNode::make(SetOperationMode::All,
+        PredicateNode::make(greater_than_(a_a, 700),
+          node_a),
+        PredicateNode::make(less_than_(a_b, 123),
+          node_a)),
+      node_b),
+    ProjectionNode::make(expression_vector(literal),
+      dummy_table_node));
+
+  // We do not expect duplicate nodes in the output
+  const auto mock_nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::Mock);
+  ASSERT_EQ(mock_nodes.size(), 2);
+  EXPECT_EQ(mock_nodes.at(0), node_b);
+  EXPECT_EQ(mock_nodes.at(1), node_a);
+
+  const auto dummy_table_nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::DummyTable);
+  ASSERT_EQ(dummy_table_nodes.size(), 1);
+  EXPECT_EQ(dummy_table_nodes.at(0), dummy_table_node);
+
+  const auto predicate_nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::Predicate);
+  ASSERT_EQ(predicate_nodes.size(), 2);
+
+  const auto stored_table_nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::StoredTable);
+  EXPECT_TRUE(stored_table_nodes.empty());
+}
+
+TEST_F(LQPUtilsTest, LQPFindLeaves) {
+  // Based on LQPFindNodesByType test
   auto dummy_table_node = DummyTableNode::make();
   auto literal = add_(value_(1), value_(2));
   // clang-format off
@@ -199,28 +233,11 @@ TEST_F(LQPUtilsTest, LQPFindLeafs) {
       dummy_table_node));
   // clang-format on
 
-  {  // Check whether we find all leaf nodes
-    const auto leaf_nodes = lqp_find_leaves(lqp);
-    ASSERT_EQ(leaf_nodes.size(), 3);
-    EXPECT_EQ(leaf_nodes.at(0), node_b);
-    EXPECT_EQ(leaf_nodes.at(1), dummy_table_node);
-    EXPECT_EQ(leaf_nodes.at(2), node_a);
-  }
-
-  {  // Check whether we can filter by specific node types
-    const auto mock_nodes = lqp_find_leaves<MockNode>(lqp);
-    const auto dummy_table_nodes = lqp_find_leaves<DummyTableNode>(lqp);
-    ASSERT_EQ(mock_nodes.size(), 2);
-    EXPECT_EQ(mock_nodes.at(0), node_b);
-    EXPECT_EQ(mock_nodes.at(1), node_a);
-    ASSERT_EQ(dummy_table_nodes.size(), 1);
-    EXPECT_EQ(dummy_table_nodes.at(0), dummy_table_node);
-  }
-
-  {  // Check whether we return leaf nodes only
-    const auto predicate_nodes = lqp_find_leaves<PredicateNode>(lqp);
-    EXPECT_TRUE(predicate_nodes.empty());
-  }
+  const auto leaf_nodes = lqp_find_leaves(lqp);
+  ASSERT_EQ(leaf_nodes.size(), 3);
+  EXPECT_EQ(leaf_nodes.at(0), node_b);
+  EXPECT_EQ(leaf_nodes.at(1), dummy_table_node);
+  EXPECT_EQ(leaf_nodes.at(2), node_a);
 }
 
 TEST_F(LQPUtilsTest, LQPFindModifiedTables) {

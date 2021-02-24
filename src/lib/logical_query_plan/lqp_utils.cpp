@@ -345,6 +345,33 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   return root_nodes;
 }
 
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                     const LQPNodeType type) {
+  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->type == type) {
+      nodes.emplace_back(node);
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  return nodes;
+}
+
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->input_count() > 0) {
+      return LQPVisitation::VisitInputs;
+    } else {
+      nodes.emplace_back(node);
+    }
+    return LQPVisitation::DoNotVisitInputs;
+  });
+
+  return nodes;
+}
+
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::unordered_set<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
