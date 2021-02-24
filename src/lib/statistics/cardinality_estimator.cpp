@@ -335,7 +335,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto row_count = Cardinality{
           std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
 
-      const auto selectivity = row_count / input_table_statistics->row_count;
+      auto selectivity = Selectivity{1};
+      if (input_table_statistics->row_count > 0) {
+        selectivity = row_count / input_table_statistics->row_count;
+      }
 
       auto output_column_statistics =
           std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};

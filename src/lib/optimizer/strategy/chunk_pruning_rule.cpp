@@ -47,7 +47,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     // (3.1) Determine set of pruned chunks per predicate chain
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
-    for (auto& predicate_chain : predicate_chains) {
+    for (const auto& predicate_chain : predicate_chains) {
       auto exclusions = _compute_exclude_list(*table, predicate_chain, stored_table_node);
       pruned_chunk_id_sets.emplace_back(std::move(exclusions));
     }
