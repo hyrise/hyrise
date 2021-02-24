@@ -48,8 +48,13 @@ class ChunkPruningRule : public AbstractRule {
       std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
 
  private:
-  // Caches intermediate results
-  mutable std::unordered_map<std::shared_ptr<PredicateNode>, std::set<ChunkID>> _excluded_chunk_ids_by_predicate_node;
+
+  /**
+   * Caches intermediate results.
+   * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
+   */
+  mutable std::unordered_map<std::shared_ptr<PredicateNode>, std::set<ChunkID>>
+      _excluded_chunk_ids_by_predicate_node_cache;
 };
 
 }  // namespace opossum

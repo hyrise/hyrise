@@ -41,7 +41,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   // (3) Set pruned chunks for each StoredTableNode
-  for (auto [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
+  for (const auto& [stored_table_node, predicate_chains] : predicate_chains_by_stored_table_node) {
     if (predicate_chains.empty()) continue;
 
     // (3.1) Determine set of pruned chunks per predicate chain
@@ -49,14 +49,14 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
     for (auto& predicate_chain : predicate_chains) {
       auto exclusions = _compute_exclude_list(*table, predicate_chain, stored_table_node);
-      pruned_chunk_id_sets.emplace_back(exclusions);
+      pruned_chunk_id_sets.emplace_back(std::move(exclusions));
     }
 
-    // (3.2) Calculate the intersect of pruned chunks across predicate chains
-    std::set<ChunkID> pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
+    // (3.2) Calculate the intersection of pruned chunks across predicate chains
+    auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
     if (pruned_chunk_ids.empty()) continue;
 
-    // (3.2) Set pruned chunk ids
+    // (3.3) Set pruned chunk ids
     DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
                 "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
     // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted
@@ -69,13 +69,11 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   std::set<ChunkID> global_excluded_chunk_ids;
   for (const auto& predicate_node : predicate_chain) {
-    /**
-     * Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
-     */
+    // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
     std::set<ChunkID> local_excluded_chunk_ids;
 
-    auto excluded_chunk_ids_iter = _excluded_chunk_ids_by_predicate_node.find(predicate_node);
-    if (excluded_chunk_ids_iter != _excluded_chunk_ids_by_predicate_node.end()) {
+    auto excluded_chunk_ids_iter = _excluded_chunk_ids_by_predicate_node_cache.find(predicate_node);
+    if (excluded_chunk_ids_iter != _excluded_chunk_ids_by_predicate_node_cache.end()) {
       // Shortcut: The given PredicateNode is part of multiple predicate chains and the set of excluded chunks
       //           has already been calculated.
       local_excluded_chunk_ids = excluded_chunk_ids_iter->second;
@@ -167,7 +165,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     }
 
     // Cache result
-    _excluded_chunk_ids_by_predicate_node.emplace(predicate_node, local_excluded_chunk_ids);
+    _excluded_chunk_ids_by_predicate_node_cache.emplace(predicate_node, local_excluded_chunk_ids);
     // Add to global excluded list because we collect excluded chunks for the whole predicate chain
     global_excluded_chunk_ids.insert(local_excluded_chunk_ids.begin(), local_excluded_chunk_ids.end());
   }
@@ -256,12 +254,12 @@ std::vector<PredicateChain> ChunkPruningRule::_find_predicate_chains_recursively
      */
     auto predicate_chain_continues = true;
     switch (current_node->type) {
-      // clang-format off
       case LQPNodeType::Alias:
       case LQPNodeType::Sort:
       case LQPNodeType::StoredTable:
       case LQPNodeType::Validate:
-      case LQPNodeType::Projection:   break;
+      case LQPNodeType::Projection:
+        break;
       case LQPNodeType::Predicate: {
         const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
 
@@ -300,7 +298,6 @@ std::vector<PredicateChain> ChunkPruningRule::_find_predicate_chains_recursively
       default:
         // For all other types of nodes, we finalize the predicate chain.
         predicate_chain_continues = false;
-        // clang-format on
     }
 
     if (!predicate_chain_continues) {
