@@ -240,8 +240,8 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
     }
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics),
-                                           std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
+  return std::make_shared<TableStatistics>(
+      std::move(column_statistics), std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
 }
 
 std::vector<PredicateChain> ChunkPruningRule::_find_predicate_chains_recursively(
