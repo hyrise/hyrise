@@ -225,7 +225,10 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
 
-  const auto scale = 1 - (static_cast<float>(num_rows_pruned) / old_statistics.row_count);
+  auto scale = 1.0f;
+  if (old_statistics.row_count > 0) {
+    scale = 1 - (static_cast<float>(num_rows_pruned) / old_statistics.row_count);
+  }
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
       column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
@@ -238,7 +241,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
   }
 
   return std::make_shared<TableStatistics>(std::move(column_statistics),
-                                           old_statistics.row_count - static_cast<float>(num_rows_pruned));
+                                           std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
 }
 
 std::vector<PredicateChain> ChunkPruningRule::_find_predicate_chains_recursively(
