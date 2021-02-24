@@ -6,13 +6,16 @@ tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/
 try {
   node {
     stage ("Start") {
-      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-      if (env.CHANGE_ID) {
+      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team) or the Jenkins admin user
+      def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
+      def jenkinsUserName = cause ? cause['userId'] : null
+
+      if (jenkinsUserName != "admin" && env.BRANCH_NAME != "master") {
         try {
           withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
             env.PR_CREATED_BY = pullRequest.createdBy
             sh '''
-              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "204"
             '''
           }
         } catch (error) {
