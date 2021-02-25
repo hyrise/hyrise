@@ -291,7 +291,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
 
   return std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
-                                     input_table.uses_mvcc());
+                                 input_table.uses_mvcc());
 }
 
 // returns the singleton dummy table used for literal projections
