@@ -45,7 +45,6 @@ parser.add_argument('--output', '-o', type=str)
 parser.add_argument('--clients', type=int, default=1)
 parser.add_argument('--cores', type=int, default=1)
 parser.add_argument('--scale', '-s', type=float, default=10)
-parser.add_argument('--runs', '-r', type=int, default=10000)
 
 # TODO add -s, print in context, use for choice of DB (Hyrise, too)
 args = parser.parse_args()
@@ -74,7 +73,7 @@ report = {'benchmarks': [], 'context': {'benchmark_mode': 'Ordered', 'build_type
 def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=False):
   connection = psycopg2.connect("host=localhost port={}".format(args.port))
   cursor = connection.cursor()
-  
+
   if is_warmup:
     for query in queries:
       query = query.replace('[stream]', str(thread_id))
@@ -86,7 +85,6 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
     return
 
   runs = []
-  executions = 0
   while True:
     item_start_time = time.time()
 
@@ -102,16 +100,13 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
       query = query.replace('[stream]', str(thread_id))
       cursor.execute(query)
 
-    executions += 1
-
     item_end_time = time.time()
-    if ((item_end_time - start_time) > timeout) or (query_id != 'shuffled' and executions > args.runs):
+    if ((item_end_time - start_time) < timeout):
+      runs.append(item_end_time - item_start_time)
+    else:
       cursor.close()
       connection.close()
       break
-    else:
-      runs.append(item_end_time - item_start_time)
-      
 
   successful_runs.extend(runs)
 
