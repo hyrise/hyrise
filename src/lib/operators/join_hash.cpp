@@ -124,7 +124,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL;
+      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL * semi_join_ratio;
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
