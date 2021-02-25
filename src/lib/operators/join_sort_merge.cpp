@@ -950,11 +950,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    std::cout << "left join column id = " << left_join_column << std::endl;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
-    std::cout << "right join column id = " << right_join_column << " ... " << _sort_merge_join.left_input_table()->column_count() << " + " <<
-                                                             _sort_merge_join._primary_predicate.column_ids.second << std::endl;
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
         continue;

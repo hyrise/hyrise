@@ -79,17 +79,16 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       auto sort_definitions = std::vector<SortColumnDefinition>{};
       sort_definitions.reserve(sorted_by.size());
 
-      for (auto column_id : _column_ids) {
-        std::cout << "col id " << column_id << std::endl;
-      }
-
-      // Adapt column ids
+      // Adapt column ids of chunk sort definitions
       for (const auto& sort_definition : sorted_by) {
-        std::cout << "sorted by " << sort_definition.column << std::endl;
+        // Note, in edge cases an input table might be sorted by a column that is apparently not part of the input
+        // table. This can happen when an expression occurs multiple times (e.g., `SELECT a as a1, a as a2`, see issue
+        // #2321 for more details). We thus check first, if the sorted column is part of the input table.
         const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
-        Assert(it != _column_ids.cend(), "Chunk is sorted by an invalid column ID.");
-        const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
-        sort_definitions.emplace_back(SortColumnDefinition(index, sort_definition.sort_mode));
+        if (it != _column_ids.cend()) {
+          const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
+          sort_definitions.emplace_back(SortColumnDefinition(index, sort_definition.sort_mode));
+        }
       }
 
       output_chunk->set_individually_sorted_by(sort_definitions);

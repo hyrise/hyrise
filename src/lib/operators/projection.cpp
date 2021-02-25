@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "operators/print.hpp"
-
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -113,10 +111,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(chunk_count);
 
-  for (auto expression : expressions) {
-    std::cout << "EXP" << *expression << std::endl;
-  }
-
   const auto expression_count = expressions.size();
   const auto forwarded_pqp_columns = _determine_forwarded_columns(output_table_type);
 
@@ -217,15 +211,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
   auto projection_result_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
 
-  // Create a mapping from input columns to output columns for future use. This is necessary as the order may have been
-  // changed. The mapping only contains input column IDs that are forwarded to the output without modfications.
-  auto input_column_to_output_column = std::unordered_map<ColumnID, std::vector<ColumnID>>{};
+  // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
+  // changed. The mapping only contains column IDs that are forwarded without modfications.
+  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};    
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       if (forwarded_pqp_columns.contains(expression)) {
         const auto& original_id = pqp_column_expression->column_id;
-        input_column_to_output_column[original_id].push_back(expression_id);
+        output_column_to_input_column[expression_id] = original_id;
       }
     }
   }
@@ -274,20 +268,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // Forward sorted_by flags, mapping column ids
     const auto& sorted_by = input_chunk->individually_sorted_by();
-    for (const auto& [column_id, mode] : sorted_by) {
-      std::cout << "INPUT: sorted is " << column_id << " with mode " << mode << std::endl;
-    }
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
       for (const auto& [column_id, mode] : sorted_by) {
-        if (!input_column_to_output_column.contains(column_id)) {
+        const auto iter = std::find_if(output_column_to_input_column.begin(), output_column_to_input_column.end(), [column_id=column_id](const auto entry)
+                                                 { return column_id == entry.second; });
+        if (iter == output_column_to_input_column.end()) {
           continue;  // column is not present in output expression list
         }
-        for (const auto projected_column_id : input_column_to_output_column[column_id]) {
-          transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
-          std::cout << "OUTPUT: sorted is " << projected_column_id << " with mode " << mode << std::endl;
-        }
+        const auto projected_column_id = iter->first;
+        transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
         chunk->set_individually_sorted_by(transformed);
@@ -301,8 +292,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   auto ret = std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());
-
-  // Print::print(ret);
 
   return ret;
 }
