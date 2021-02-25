@@ -81,9 +81,10 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
 
       // Adapt column ids of chunk sort definitions
       for (const auto& sort_definition : sorted_by) {
-        // Note, in edge cases an input table might be sorted by a column that is apparently not part of the input
-        // table. This can happen when an expression occurs multiple times (e.g., `SELECT a as a1, a as a2`, see issue
-        // #2321 for more details). We thus check first, if the sorted column is part of the input table.
+        // In some edge cases an input table might be sorted by a column that is not part of the input table. This can
+        // happen when an expression occurs multiple times (e.g., `SELECT a as a1, a as a2`) and the LQP translator
+        // references the first occurrence twice (see issue #2321 for more details). We thus check, if the sorted
+        // column is part of the input table.
         const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
         if (it != _column_ids.cend()) {
           const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
