@@ -68,11 +68,13 @@ while True:
     break
 
 # todo clients, cores, scheduler
-report = {'benchmarks': [], 'context': {'benchmark_mode': 'Ordered', 'build_type': 'Release', 'GIT-HASH': '', 'DBMS': args.dbms, 'chunk_size': 0, 'clients': args.clients, 'compiler': '', 'cores': args.cores, 'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'encoding': '', 'indexes': '', 'max_duration': args.time*1e9, 'max_runs': -1, 'scale_factor': args.scale, 'time_unit': 'ns', 'use_prepared_statements': False, 'using_scheduler': True, 'verify': False, 'warmup_duration': 0}}
+report = {'benchmarks': [], 'context': {'benchmark_mode': 'Ordered', 'build_type': 'Release', 'GIT-HASH': '', 'DBMS': "hyrise", 'chunk_size': 0, 'clients': args.clients, 'compiler': '', 'cores': args.cores, 'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'encoding': '', 'indexes': '', 'max_duration': args.time*1e9, 'max_runs': -1, 'scale_factor': args.scale, 'time_unit': 'ns', 'use_prepared_statements': False, 'using_scheduler': True, 'verify': False, 'warmup_duration': 0}}
 
 def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=False):
   connection = psycopg2.connect("host=localhost port={}".format(args.port))
   cursor = connection.cursor()
+
+  runs = []
   
   if is_warmup:
     for query in queries:
@@ -87,7 +89,6 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
   while True:
     item_start_time = time.time()
 
-
     if query_id == 'shuffled':
       shuffled_queries = queries.copy()
       random.shuffle(shuffled_queries)
@@ -100,13 +101,15 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
       query = query.replace('[stream]', str(thread_id))
       cursor.execute(query)
 
-
-    if(time.time() - start_time < timeout):
-      successful_runs.append({'duration': (time.time() - item_start_time) * 1e9})
+    item_end_time = time.time()
+    if ((item_end_time - start_time) < timeout):
+      runs.append(item_end_time - item_start_time)
     else:
       cursor.close()
       connection.close()
       break
+
+  successful_runs.extend(runs)
 
 print("Warming up (complete single-threaded TPC-H run) ...", end="")
 sys.stdout.flush()
@@ -118,10 +121,13 @@ main_connection = psycopg2.connect("host=localhost port={}".format(args.port))
 main_cursor = main_connection.cursor()
 main_cursor.execute("INSERT INTO meta_plugins(name) VALUES ('{}');".format(os.path.join(args.server_path, plugin_filename)))
 
-for radix_ache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
+result_csv = open('benchmarking_results.csv', 'w')
+result_csv.write('ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
+
+for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
   for semi_join_ratio in [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
     
-    main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_ache_usage_ratio))
+    main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_cache_usage_ratio))
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
     
 
@@ -161,11 +167,9 @@ for radix_ache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
       print('\r' + ' ' * 80, end='')
       print('\r{}: {} iter/s'.format(query_name, len(successful_runs) / args.time))
 
-      report['benchmarks'].append({'name': query_name, 'successful_runs': successful_runs, 'unsuccessful_runs': [], 'items_per_second': len(successful_runs) / args.time})
+      for successful_run in successful_runs:
+        result_csv.write('{},{},{},{}\n'.format(query_name, radix_cache_usage_ratio, semi_join_ratio, successful_run))
 
-      if args.output:
-        with open(args.output, 'w+') as f:
-          f.write(json.dumps(report))
-
+result_csv.close()
 main_cursor.close()
 main_connection.close()
