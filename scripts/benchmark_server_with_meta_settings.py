@@ -122,12 +122,14 @@ main_cursor = main_connection.cursor()
 main_connection.autocommit = True
 main_cursor.execute("INSERT INTO meta_plugins(name) VALUES ('{}');".format(os.path.join(args.server_path, plugin_filename)))
 
-result_csv_filename = 'benchmarking_results__{}_clients__sf_{}__{}_cores.csv'.format(args.clients, args.scale_factor, args.cores)
+result_csv_filename = 'benchmarking_results__sf_{}__{}_cores__{}_clients.csv'.format(args.scale, args.cores, args.clients)
 result_csv = open(result_csv_filename, 'w')
-result_csv.write('SCALE_FACTOR,CLIENTS,CORES,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
+result_csv.write('SCALE_FACTOR,CORES,CLIENTS,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
 
 for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
   for semi_join_ratio in [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+
+    print("Running with RadixCacheUsageRatio of {} and SemiJoinRatio of {}.".format(radix_cache_usage_ratio, semi_join_ratio))
 
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_cache_usage_ratio))
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
@@ -166,10 +168,10 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
           time.sleep(1)
 
       print('\r' + ' ' * 80, end='')
-      print('\r{}: {} iter/s'.format(query_name, len(successful_runs) / args.time))
+      print('\r{}: {:.04f} iter/s'.format(query_name, len(successful_runs) / timeout))
 
       for successful_run in successful_runs:
-        result_csv.write('{},{},{},{}\n'.format(query_name, radix_cache_usage_ratio, semi_join_ratio, successful_run))
+        result_csv.write('{},{},{},{},{},{},{}\n'.format(args.scale, args.cores, args.clients, query_name, radix_cache_usage_ratio, semi_join_ratio, successful_run))
 
 result_csv.close()
 main_cursor.close()
