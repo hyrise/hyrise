@@ -118,12 +118,13 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
   // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
-  // slightly skewed data distributions and aim for a fill level of 80%.
+  // slightly skewed data distributions and aim for a fill level of 85%.
+  constexpr HASH_MAP_FILL_LEVEL = 0.85;
   const auto complete_hash_map_size =
-      // number of items in map
+      // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(uint32_t)) * semi_join_ratio / 0.8;
+      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL;
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 

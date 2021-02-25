@@ -63,7 +63,7 @@ print("Starting Hyrise server...")
 hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=1)
 time.sleep(5)
 while True:
-  hyrise_server_process.stdout.readline()
+  line = hyrise_server_process.stdout.readline()
   if b'Server started at' in line:
     break
 
