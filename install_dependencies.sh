@@ -56,6 +56,13 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     elif [[ "$unamestr" == 'Linux' ]]; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
+
+            for packet in autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip systemtap systemtap-sdt-dev valgrind
+            do
+                echo $packet
+                sudo apt-get install --no-install-recommends -y $packet
+            done
+
             if sudo apt-get update >/dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
                 if [[ "$(lsb_release -sr)" < "20.04" ]]; then
