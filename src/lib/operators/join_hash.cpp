@@ -109,6 +109,10 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   auto semi_join_ratio = 1.0;
   semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());
 
+  if (HYRISE_DEBUG) {
+    std::cout << "using radix l2 " << radix_ache_usage_ratio << " and semi of " << semi_join_ratio << std::endl;
+  }
+
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
   // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
   constexpr auto L2_CACHE_SIZE = 1'024'000;                                // bytes

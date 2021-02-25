@@ -119,17 +119,18 @@ sys.stdout.flush()
 
 main_connection = psycopg2.connect("host=localhost port={}".format(args.port))
 main_cursor = main_connection.cursor()
+main_connection.autocommit = True
 main_cursor.execute("INSERT INTO meta_plugins(name) VALUES ('{}');".format(os.path.join(args.server_path, plugin_filename)))
 
-result_csv = open('benchmarking_results.csv', 'w')
-result_csv.write('ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
+result_csv_filename = 'benchmarking_results__{}_clients__sf_{}__{}_cores.csv'.format(args.clients, args.scale_factor, args.cores)
+result_csv = open(result_csv_filename, 'w')
+result_csv.write('SCALE_FACTOR,CLIENTS,CORES,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
 
 for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
   for semi_join_ratio in [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
-    
+
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_cache_usage_ratio))
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
-    
 
     for query_id in ['shuffled'] + list(range(1, 23)):
       query_name = 'TPC-H {:02}'.format(query_id) if query_id != 'shuffled' else 'shuffled'
