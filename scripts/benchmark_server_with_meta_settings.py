@@ -45,6 +45,7 @@ parser.add_argument('--output', '-o', type=str)
 parser.add_argument('--clients', type=int, default=1)
 parser.add_argument('--cores', type=int, default=1)
 parser.add_argument('--scale', '-s', type=float, default=10)
+parser.add_argument('--runs', '-r', type=float, default=10)
 
 # TODO add -s, print in context, use for choice of DB (Hyrise, too)
 args = parser.parse_args()
@@ -75,6 +76,7 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
   cursor = connection.cursor()
 
   runs = []
+  executions = 0
   
   if is_warmup:
     for query in queries:
@@ -101,8 +103,10 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
       query = query.replace('[stream]', str(thread_id))
       cursor.execute(query)
 
+    executions += 1
+
     item_end_time = time.time()
-    if ((item_end_time - start_time) < timeout):
+    if ((item_end_time - start_time) < timeout) and not (query_id != 'shuffled' and executions > args.runs):
       runs.append(item_end_time - item_start_time)
     else:
       cursor.close()
@@ -134,7 +138,10 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_cache_usage_ratio))
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
 
-    for query_id in ['shuffled'] + list(range(1, 23)):
+    benchmark_items = list(range(1, 23))
+    if args.clients > 1:
+      benchmark_items += ['shuffled']
+    for query_id in benchmark_items:
       query_name = 'TPC-H {:02}'.format(query_id) if query_id != 'shuffled' else 'shuffled'
       print('Benchmarking {}...'.format(query_name), end='', flush=True)
 
