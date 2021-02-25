@@ -213,7 +213,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
   // changed. The mapping only contains column IDs that are forwarded without modfications.
-  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};    
+  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
@@ -272,8 +272,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
       for (const auto& [column_id, mode] : sorted_by) {
-        const auto iter = std::find_if(output_column_to_input_column.begin(), output_column_to_input_column.end(), [column_id=column_id](const auto entry)
-                                                 { return column_id == entry.second; });
+        const auto iter = std::find_if(output_column_to_input_column.begin(), output_column_to_input_column.end(),
+                                       [column_id = column_id](const auto entry) { return column_id == entry.second; });
         if (iter == output_column_to_input_column.end()) {
           continue;  // column is not present in output expression list
         }
@@ -291,7 +291,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
 
   auto ret = std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
-                                 input_table.uses_mvcc());
+                                     input_table.uses_mvcc());
 
   return ret;
 }
