@@ -609,7 +609,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   EXPECT_EQ(*projection_op->expressions[0], *PQPColumnExpression::from_table(*table_int_float, "a"));
 }
 
-TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
+TEST_F(LQPTranslatorTest, DISABLED_JoinNodeToJoinHash) {
   /**
    * Build LQP and translate to PQP
    */
@@ -691,7 +691,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*")));
 }
 
-TEST_F(LQPTranslatorTest, JoinAndPredicates) {
+TEST_F(LQPTranslatorTest, DISABLED_JoinAndPredicates) {
   /**
    * Build LQP and translate to PQP
    */
