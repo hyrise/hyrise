@@ -45,7 +45,7 @@ parser.add_argument('--output', '-o', type=str)
 parser.add_argument('--clients', type=int, default=1)
 parser.add_argument('--cores', type=int, default=1)
 parser.add_argument('--scale', '-s', type=float, default=10)
-parser.add_argument('--runs', '-r', type=float, default=10)
+parser.add_argument('--runs', '-r', type=int, default=10000)
 
 # TODO add -s, print in context, use for choice of DB (Hyrise, too)
 args = parser.parse_args()
