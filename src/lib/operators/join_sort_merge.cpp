@@ -203,10 +203,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join.left_input_table()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
+    const auto max_sort_items_count = 256'000 / sizeof(T);
+    size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
+    size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
     return static_cast<size_t>(
-        std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
+        std::pow(2, std::ceil(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
   }
 
   /**
@@ -491,16 +492,93 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
-    if (start_index >= values->size()) {
+  size_t _run_length(size_t start_index, const MaterializedSegment<T>& values) {
+    if (start_index >= values.size()) {
       return 0;
     }
 
-    auto start_position = values->begin() + start_index;
-    auto result = std::upper_bound(start_position, values->end(), *start_position,
+
+    constexpr auto LINEAR_SEARCH_ITEMS = 128;
+
+    const auto begin = values.begin() + start_index;
+    const auto run_value = begin->value;
+
+    auto end = begin + LINEAR_SEARCH_ITEMS;
+    if (values.end() < end) {
+      end = values.end();
+    }
+
+    ///////////////////
+    /*
+    std::cout << "values" << std::endl;
+    for (const auto el : values) {
+      std::cout << el.value << "-";
+    }
+    std::cout << std::endl;
+    std::cout << "run check" << std::endl;
+    auto begin2 = begin;
+    const auto end2 = end;
+    while (begin2 != end2) {
+      std::cout << begin2->value << "-";
+      ++begin2;
+    }
+    std::cout << std::endl;
+    */
+    ///////////////////
+
+    const auto linear_search_result = std::find_if(begin, end, [&](const auto& v) { return v.value > run_value; });
+    if (linear_search_result != end) {
+      // Match found within the linearly scanned part
+      //std::cout << "return1 " << std::distance(begin, linear_search_result) << std::endl;
+      return std::distance(begin, linear_search_result);
+    }
+ 
+    if (linear_search_result == values.end()) {
+      Assert(linear_search_result == end, "nope");
+      Assert(values.end() == end, "nope");
+      // No larger value found than start value: all values match.
+      //std::cout << "return1 " << std::distance(begin, end) << std::endl;
+      return std::distance(begin, end);
+    }
+
+    const auto binary_search_result = std::upper_bound(end, values.end(), *end,
+                                                       [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
+    //std::cout << "return3 " << std::distance(begin, binary_search_result) << std::endl;
+    return std::distance(begin, binary_search_result);
+
+
+
+
+
+
+
+
+
+    /*
+    const auto start_position = values.cbegin() + start_index;
+    
+    const auto max_offset = values.size() - start_index;
+    const auto start_value = start_position->value;
+
+    // Values are sorted. Thus, the run will probably end in the beginning of the value vector. Thus, we do no need to
+    // do a binary search. The iteration should not come at a cost, since it loads data into the cache which will be 
+    // proccessed anyways. Moreover, the loop is likely to be vetorized by the compiler.
+    auto offset = size_t{start_index};
+    for (; offset < 256 && offset <= max_offset; ++offset) {
+      if (values[offset].value > start_value) {
+        return offset;
+      } 
+    }
+    // If the run end is not in the first linearly searched items, use a binary search. Note: an exponential would
+    // actually be an even better fit.
+    auto result = std::upper_bound(values.cbegin() + offset, values.cend(), *start_position,
                                    [](const auto& a, const auto& b) { return a.value < b.value; });
+    
+    //auto result = std::upper_bound(values.cbegin() + start_index, values.cend(), *start_position,
+     //                              [](const auto& a, const auto& b) { return a.value < b.value; });
 
     return result - start_position;
+    */
   }
 
   /**
@@ -522,8 +600,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _join_cluster(size_t cluster_number,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
-    auto& left_cluster = (*_sorted_left_table)[cluster_number];
-    auto& right_cluster = (*_sorted_right_table)[cluster_number];
+    auto& left_cluster = *(*_sorted_left_table)[cluster_number];
+    auto& right_cluster = *(*_sorted_right_table)[cluster_number];
 
     size_t left_run_start = 0;
     size_t right_run_start = 0;
@@ -531,12 +609,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
 
-    const size_t left_size = left_cluster->size();
-    const size_t right_size = right_cluster->size();
+    const size_t left_size = left_cluster.size();
+    const size_t right_size = right_cluster.size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_cluster)[left_run_start].value;
-      auto& right_value = (*right_cluster)[right_run_start].value;
+      auto& left_value = left_cluster[left_run_start].value;
+      auto& right_value = right_cluster[right_run_start].value;
 
       auto compare_result = _compare(left_value, right_value);
 

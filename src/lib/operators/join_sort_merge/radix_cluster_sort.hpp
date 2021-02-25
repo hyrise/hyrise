@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/sort/sort.hpp>
+
 #include "column_materializer.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
@@ -319,7 +321,8 @@ class RadixClusterSort {
   **/
   void _sort_clusters(std::unique_ptr<MaterializedSegmentList<T>>& clusters) {
     for (auto cluster : *clusters) {
-      std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
+      //std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
+      boost::sort::pdqsort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
   }
 
