@@ -54,13 +54,13 @@ print("Found benchmarking plugin {}".format(plugin_filename))
 
 hyrise_server_process = None
 def cleanup():
-  print("Shutting {} down Hyrise.")
+  print("Shutting down Hyrise.")
   hyrise_server_process.kill()
   time.sleep(10)
 atexit.register(cleanup)
 
 print("Starting Hyrise server...")
-hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=1)
+hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=0)
 time.sleep(5)
 while True:
   line = hyrise_server_process.stdout.readline()
@@ -111,16 +111,16 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
 
   successful_runs.extend(runs)
 
-print("Warming up (complete single-threaded TPC-H run) ...", end="")
-sys.stdout.flush()
-loop(0, 'shuffled', time.time(), [], 3600, True)
-print(" done.")
-sys.stdout.flush()
-
 main_connection = psycopg2.connect("host=localhost port={}".format(args.port))
 main_cursor = main_connection.cursor()
 main_connection.autocommit = True
 main_cursor.execute("INSERT INTO meta_plugins(name) VALUES ('{}');".format(os.path.join(args.server_path, plugin_filename)))
+
+print("Warming up (complete single-threaded TPC-H run) ...", end="")
+sys.stdout.flush()
+loop(0, 'shuffled', time.time(), [], 600, True)
+print(" done.")
+sys.stdout.flush()
 
 result_csv_filename = 'benchmarking_results__sf_{}__{}_cores__{}_clients.csv'.format(args.scale, args.cores, args.clients)
 result_csv = open(result_csv_filename, 'w')
@@ -141,7 +141,7 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
       successful_runs = []
       start_time = time.time()
 
-      timeout = args.time if query_id != 'shuffled' else max(3600, args.time)
+      timeout = args.time if query_id != 'shuffled' else max(1200, args.time)
 
       threads = []
       for thread_id in range (0, args.clients):
