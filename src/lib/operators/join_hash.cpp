@@ -78,7 +78,7 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
-  if ((build_relation_size + probe_relation_size) < 5'000) {
+  if ((build_side_size + probe_side_size) < 5'000) {
     return size_t{0};
   }
   /*
@@ -103,25 +103,16 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
     PerformanceWarning("Build side larger than probe side in hash join");
   }
 
-  auto cache_usage_value = 0.5;
-  if (const char* env_p = std::getenv("CACHE_USAGE")) {
-    cache_usage_value = std::atof(env_p);
-    if (HYRISE_DEBUG)
-      std::cout << "Using a cache usage factor of " << cache_usage_value << std::endl;
-  }
-  auto semi_adaption_factor = 1.0;
-  if (const char* env_p = std::getenv("SEMI_ADAPTION_FACTOR")) {
-    if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
-      semi_adaption_factor = std::atof(env_p);
-      if (HYRISE_DEBUG)
-        std::cout << "Using a semi join adaption factor of " << semi_adaption_factor << std::endl;
-    }
-  }
+  auto radix_ache_usage_ratio = 0.5;
+  radix_ache_usage_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::RadixCacheUsageRatio")->get());
+
+  auto semi_join_ratio = 1.0;
+  semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
   // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
-  const auto l2_cache_size = 1'024'000;                                // bytes
-  const auto l2_cache_max_usable = l2_cache_size * cache_usage_value;  // use 50% of the L2 cache size
+  constexpr auto L2_CACHE_SIZE = 1'024'000;                                // bytes
+  const auto l2_cache_max_usable = L2_CACHE_SIZE * radix_ache_usage_ratio;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -132,9 +123,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       // number of items in map
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(uint32_t)) * semi_adaption_factor / 0.8;
+      static_cast<double>(sizeof(uint32_t)) * semi_join_ratio / 0.8;
 
-  const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
+  const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
   return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
