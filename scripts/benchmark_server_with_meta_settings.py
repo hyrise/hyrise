@@ -74,9 +74,6 @@ report = {'benchmarks': [], 'context': {'benchmark_mode': 'Ordered', 'build_type
 def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=False):
   connection = psycopg2.connect("host=localhost port={}".format(args.port))
   cursor = connection.cursor()
-
-  runs = []
-  executions = 0
   
   if is_warmup:
     for query in queries:
@@ -88,6 +85,8 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
     connection.close()
     return
 
+  runs = []
+  executions = 0
   while True:
     item_start_time = time.time()
 
@@ -106,12 +105,13 @@ def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=Fa
     executions += 1
 
     item_end_time = time.time()
-    if ((item_end_time - start_time) < timeout) and not (query_id != 'shuffled' and executions > args.runs):
-      runs.append(item_end_time - item_start_time)
-    else:
+    if ((item_end_time - start_time) > timeout) or (query_id != 'shuffled' and executions > args.runs):
       cursor.close()
       connection.close()
       break
+    else:
+      runs.append(item_end_time - item_start_time)
+      
 
   successful_runs.extend(runs)
 
