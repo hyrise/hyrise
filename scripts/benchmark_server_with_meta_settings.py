@@ -126,16 +126,16 @@ result_csv = open(result_csv_filename, 'w')
 result_csv.write('SCALE_FACTOR,CORES,CLIENTS,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
 
 for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
-  for semi_join_ratio in [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+  for semi_join_ratio in [0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
     print("Running with RadixCacheUsageRatio of {} and SemiJoinRatio of {}.".format(radix_cache_usage_ratio, semi_join_ratio))
 
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_cache_usage_ratio))
     main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
 
-    benchmark_items = list(range(1, 23))
+    benchmark_items = list(range(2, 5)) + list(range(7,23))
     if args.clients > 1:
-      benchmark_items += ['shuffled']
+      benchmark_items = ['shuffled']
     for query_id in benchmark_items:
       query_name = 'TPC-H {:02}'.format(query_id) if query_id != 'shuffled' else 'shuffled'
       print('Benchmarking {}...'.format(query_name), end='', flush=True)
