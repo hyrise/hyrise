@@ -125,8 +125,8 @@ result_csv_filename = 'benchmarking_results__sf_{}__{}_cores__{}_clients.csv'.fo
 result_csv = open(result_csv_filename, 'w')
 result_csv.write('SCALE_FACTOR,CORES,CLIENTS,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
 
-for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
-  for semi_join_ratio in [0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9]:
+  for semi_join_ratio in [0.001, 0.005, 0.01, 0.02, 0.3]:
 
     print("Running with RadixCacheUsageRatio of {} and SemiJoinRatio of {}.".format(radix_cache_usage_ratio, semi_join_ratio))
 
