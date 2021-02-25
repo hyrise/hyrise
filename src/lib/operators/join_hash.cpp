@@ -119,7 +119,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
   // slightly skewed data distributions and aim for a fill level of 85%.
-  constexpr HASH_MAP_FILL_LEVEL = 0.85;
+  constexpr auto HASH_MAP_FILL_LEVEL = 0.85;
   const auto complete_hash_map_size =
       // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
