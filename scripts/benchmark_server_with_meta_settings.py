@@ -49,6 +49,9 @@ parser.add_argument('--scale', '-s', type=float, default=10)
 # TODO add -s, print in context, use for choice of DB (Hyrise, too)
 args = parser.parse_args()
 
+plugin_filename = list(Path(os.path.join(args.server_path, 'lib')).glob('libBenchmarkingPlugin.*'))[0]
+print("Found benchmarking plugin {}".format(plugin_filename))
+
 hyrise_server_process = None
 def cleanup():
   print("Shutting {} down Hyrise.")
@@ -111,14 +114,16 @@ loop(0, 'shuffled', time.time(), [], 3600, True)
 print(" done.")
 sys.stdout.flush()
 
+main_connection = psycopg2.connect("host=localhost port={}".format(args.port))
+main_cursor = main_connection.cursor()
+main_cursor.execute("INSERT INTO meta_plugins(name) VALUES ('{}');".format(os.path.join(args.server_path, plugin_filename)))
+
 for radix_ache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
   for semi_join_ratio in [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
-    connection = psycopg2.connect("host=localhost port={}".format(args.port))
-    cursor = connection.cursor()
-    cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_ache_usage_ratio))
-    cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
-    cursor.close()
-    connection.close()
+    
+    main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::RadixCacheUsageRatio'".format(radix_ache_usage_ratio))
+    main_cursor.execute("UPDATE meta_settings SET value = '{}' WHERE name = 'Plugin::Benchmarking::SemiJoinRatio'".format(semi_join_ratio))
+    
 
     for query_id in ['shuffled'] + list(range(1, 23)):
       query_name = 'TPC-H {:02}'.format(query_id) if query_id != 'shuffled' else 'shuffled'
@@ -161,3 +166,6 @@ for radix_ache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2]:
       if args.output:
         with open(args.output, 'w+') as f:
           f.write(json.dumps(report))
+
+main_cursor.close()
+main_connection.close()
