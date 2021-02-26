@@ -67,7 +67,7 @@ tee = subprocess.Popen(['/usr/bin/tee', 'hyrise_server.log'], stdin=subprocess.P
 hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=tee.stdin, bufsize=0)
 time.sleep(5)
 while True:
-  line = hyrise_server_process.stdout.readline()
+  line = tee.stdout.readline()
   if b'Server started at' in line:
     break
 
