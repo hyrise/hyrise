@@ -61,15 +61,12 @@ atexit.register(cleanup)
 
 print("Starting Hyrise server...")
 server_log = open('hyrise_server.log', 'w')
-hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=server_log, stderr=server_log, bufsize=0)
+hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=0)
 time.sleep(5)
 while True:
   line = hyrise_server_process.stdout.readline()
   if b'Server started at' in line:
     break
-
-# todo clients, cores, scheduler
-report = {'benchmarks': [], 'context': {'benchmark_mode': 'Ordered', 'build_type': 'Release', 'GIT-HASH': '', 'DBMS': "hyrise", 'chunk_size': 0, 'clients': args.clients, 'compiler': '', 'cores': args.cores, 'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'encoding': '', 'indexes': '', 'max_duration': args.time*1e9, 'max_runs': -1, 'scale_factor': args.scale, 'time_unit': 'ns', 'use_prepared_statements': False, 'using_scheduler': True, 'verify': False, 'warmup_duration': 0}}
 
 def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=False):
   connection = psycopg2.connect("host=localhost port={}".format(args.port))
