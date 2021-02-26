@@ -60,7 +60,8 @@ def cleanup():
 atexit.register(cleanup)
 
 print("Starting Hyrise server...")
-hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=0)
+server_log = open('hyrise_server.log', 'w')
+hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=server_log, stderr=server_log, bufsize=0)
 time.sleep(5)
 while True:
   line = hyrise_server_process.stdout.readline()
