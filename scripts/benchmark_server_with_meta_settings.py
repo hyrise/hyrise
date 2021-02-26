@@ -53,15 +53,18 @@ plugin_filename = list(Path(os.path.join(args.server_path, 'lib')).glob('libBenc
 print("Found benchmarking plugin {}".format(plugin_filename))
 
 hyrise_server_process = None
+tee = None
 def cleanup():
   print("Shutting down Hyrise.")
   hyrise_server_process.kill()
+  tee.stdin.close()
   time.sleep(10)
 atexit.register(cleanup)
 
 print("Starting Hyrise server...")
 server_log = open('hyrise_server.log', 'w')
-hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=0)
+tee = subprocess.Popen(['/usr/bin/tee', 'hyrise_server.log'], stdin=subprocess.PIPE)
+hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=tee.stdin, bufsize=0)
 time.sleep(5)
 while True:
   line = hyrise_server_process.stdout.readline()
