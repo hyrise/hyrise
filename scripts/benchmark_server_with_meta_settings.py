@@ -171,7 +171,7 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9]:
           time.sleep(1)
 
       print('\r' + ' ' * 80, end='')
-      print('\r{}: {:.04f} iter/s'.format(query_name, len(successful_runs) / timeout))
+      print('\r{}: {:.04f} s in average'.format(query_name, sum(successful_runs) / len(successful_runs)))
 
       for successful_run in successful_runs:
         result_csv.write('{},{},{},{},{},{},{}\n'.format(args.scale, args.cores, args.clients, query_name, radix_cache_usage_ratio, semi_join_ratio, successful_run))
