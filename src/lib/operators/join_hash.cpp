@@ -78,7 +78,8 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
-  if ((build_side_size + probe_side_size) < 5'000) {
+  if ((build_side_size + probe_side_size) < 10'000) {
+    // 
     return size_t{0};
   }
   /*
@@ -138,7 +139,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
                                      sizeof(std::vector<size_t>) + build_side_size * sizeof(size_t);
 
   auto aggregated_size_build_side = hash_map_size;
-  if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+  if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
     aggregated_size_build_side += static_cast<double>(unified_pos_list_size) * semi_join_ratio;
   }
 
