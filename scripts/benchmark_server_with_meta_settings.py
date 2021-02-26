@@ -53,23 +53,40 @@ plugin_filename = list(Path(os.path.join(args.server_path, 'lib')).glob('libBenc
 print("Found benchmarking plugin {}".format(plugin_filename))
 
 hyrise_server_process = None
-tee = None
 def cleanup():
   print("Shutting down Hyrise.")
   hyrise_server_process.kill()
-  tee.stdin.close()
   time.sleep(10)
 atexit.register(cleanup)
 
 print("Starting Hyrise server...")
-server_log = open('hyrise_server.log', 'w')
-tee = subprocess.Popen(['/usr/bin/tee', 'hyrise_server.log'], stdin=subprocess.PIPE)
-hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=tee.stdin, bufsize=0)
+hyrise_server_process = subprocess.Popen(['numactl', '-C', "+0-+{}".format(args.cores - 1), '{}/hyriseServer'.format(args.server_path), '-p', str(args.port), '--benchmark_data=TPC-H:{}'.format(str(args.scale))], stdout=subprocess.PIPE, bufsize=0, universal_newlines=True)
 time.sleep(5)
-while True:
-  line = tee.stdout.readline()
-  if b'Server started at' in line:
-    break
+
+server_has_started = False
+
+def log_and_check_server_start():
+  log_file = open('hyrise_server.log', 'w')
+  while hyrise_server_process.poll() is None:
+     line = hyrise_server_process.stderr.readline()
+     if line:
+        log_file.write(line)
+     line = hyrise_server_process.stdout.readline()
+     if line:
+        print(line)
+        if b'Server started at' in line:
+          server_has_started = True
+        log_file.write(line)
+
+logger_thread = threading.Thread(target=log_and_check_server_start)
+logger_thread.start()
+
+t = time.time()
+while not server_has_started:
+  time.sleep(1)
+  if (time.time() - t) > 600:
+    sys.exit("Server start timed out.")
+print("Server started successfully.")
 
 def loop(thread_id, query_id, start_time, successful_runs, timeout, is_warmup=False):
   connection = psycopg2.connect("host=localhost port={}".format(args.port))
