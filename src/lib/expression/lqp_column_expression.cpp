@@ -1,6 +1,6 @@
 #include "lqp_column_expression.hpp"
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"

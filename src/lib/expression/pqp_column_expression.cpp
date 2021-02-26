@@ -1,6 +1,6 @@
 #include "pqp_column_expression.hpp"
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "storage/table.hpp"
 

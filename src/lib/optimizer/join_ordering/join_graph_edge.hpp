@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "boost/dynamic_bitset.hpp"
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "utils/assert.hpp"
 
