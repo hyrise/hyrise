@@ -65,26 +65,24 @@ time.sleep(5)
 
 server_has_started = False
 
-def log_and_check_server_start():
+def log_and_check_server_start(pipe):
+  global server_has_started
   log_file = open('hyrise_server.log', 'w')
-  while hyrise_server_process.poll() is None:
-     line = hyrise_server_process.stderr.readline()
-     if line:
-        log_file.write(line)
-     line = hyrise_server_process.stdout.readline()
-     if line:
-        print(line)
-        if b'Server started at' in line:
-          server_has_started = True
-        log_file.write(line)
+  for line in iter(pipe.readline, ''):
+    if line:
+      if 'Server started at' in line:
+        server_has_started = True
+      log_file.write('{}:\t{}'.format(datetime.datetime.now(), line))
+  pipe.close()
 
-logger_thread = threading.Thread(target=log_and_check_server_start)
+logger_thread = threading.Thread(target=log_and_check_server_start, args=(hyrise_server_process.stdout, ))
+logger_thread.daemon = True
 logger_thread.start()
 
 t = time.time()
 while not server_has_started:
-  time.sleep(1)
-  if (time.time() - t) > 600:
+  time.sleep(2)
+  if (time.time() - t) > (args.scale * 60):
     sys.exit("Server start timed out.")
 print("Server started successfully.")
 
@@ -143,8 +141,8 @@ result_csv_filename = 'benchmarking_results__sf_{}__{}_cores__{}_clients.csv'.fo
 result_csv = open(result_csv_filename, 'w')
 result_csv.write('SCALE_FACTOR,CORES,CLIENTS,ITEM,RADIX_CACHE_USAGE_RATIO,SEMI_JOIN_RATIO,RUNTIME_S\n')
 
-for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9]:
-  for semi_join_ratio in [0.001, 0.005, 0.01, 0.02, 0.3]:
+for radix_cache_usage_ratio in [0.1, 0,25, 0.5, 1.0, 1.5]:
+  for semi_join_ratio in [0.5, 1.0, 1.5]:
 
     print("Running with RadixCacheUsageRatio of {} and SemiJoinRatio of {}.".format(radix_cache_usage_ratio, semi_join_ratio))
 
@@ -161,7 +159,7 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9]:
       successful_runs = []
       start_time = time.time()
 
-      timeout = args.time if query_id != 'shuffled' else max(1200, args.time)
+      timeout = args.time if query_id != 'shuffled' else max(300, args.time)
 
       threads = []
       for thread_id in range (0, args.clients):
@@ -196,3 +194,8 @@ for radix_cache_usage_ratio in [0.1, 0.3, 0.5, 0.7, 0.9]:
 result_csv.close()
 main_cursor.close()
 main_connection.close()
+
+cleanup()
+hyrise_server_process.wait()
+logger_thread.join()
+
