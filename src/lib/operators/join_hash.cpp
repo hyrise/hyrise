@@ -79,7 +79,8 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
   if ((build_side_size + probe_side_size) < 10'000) {
-    // 
+    // Rough estimate for early exists. We assume the worst case of a rather small L2 cache of 128 KB and a string
+    // column with 24 bytes per entry. This means we can keep 5'000 rows in the L2 cache.
     return size_t{0};
   }
   /*
@@ -139,7 +140,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
                                      sizeof(std::vector<size_t>) + build_side_size * sizeof(size_t);
 
   auto aggregated_size_build_side = hash_map_size;
-  if (mode == JoinMode::Semi || mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
+  if (mode != JoinMode::Semi && mode != JoinMode::AntiNullAsTrue && mode != JoinMode::AntiNullAsFalse) {
     aggregated_size_build_side += static_cast<double>(unified_pos_list_size) * semi_join_ratio;
   }
 
