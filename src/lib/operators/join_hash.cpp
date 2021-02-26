@@ -103,20 +103,20 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
     PerformanceWarning("Build side larger than probe side in hash join");
   }
 
-  auto radix_ache_usage_ratio = 0.5;
-  radix_ache_usage_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::RadixCacheUsageRatio")->get());
+  auto radix_cache_usage_ratio = 0.5;
+  radix_cache_usage_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::RadixCacheUsageRatio")->get());
 
   auto semi_join_ratio = 1.0;
   semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());
 
   if (HYRISE_DEBUG) {
-    std::cout << "using radix l2 " << radix_ache_usage_ratio << " and semi of " << semi_join_ratio << std::endl;
+    std::cout << "using radix l2 " << radix_cache_usage_ratio << " and semi of " << semi_join_ratio << std::endl;
   }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
   // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
   constexpr auto L2_CACHE_SIZE = 1'024'000;                                // bytes
-  const auto l2_cache_max_usable = L2_CACHE_SIZE * radix_ache_usage_ratio;  // use 50% of the L2 cache size
+  const auto l2_cache_max_usable = L2_CACHE_SIZE * radix_cache_usage_ratio;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
@@ -124,14 +124,25 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
   // slightly skewed data distributions and aim for a fill level of 85%.
   constexpr auto HASH_MAP_FILL_LEVEL = 0.85;
-  const auto complete_hash_map_size =
+  const auto hash_map_size =
       // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL * semi_join_ratio;
+      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL;
 
-  const auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
+  // The goal of radix partitioning is to have the hash table fitting in the L2 cache at the time of probing. We thus
+  // estimate the size of the unified pos lit, which is built after the initial hash map building and before the actual
+  // probing. Again we estimate the worst case of a build side with entirely distinct values. Note, this list is not
+  // required for semi/anti* joins.
+  const auto unified_pos_list_size = sizeof(std::vector<RowID>) + build_side_size * sizeof(RowID) +
+                                     sizeof(std::vector<size_t>) + build_side_size * sizeof(size_t);
 
+  auto aggregated_size_build_side = hash_map_size;
+  if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+    aggregated_size_build_side += static_cast<double>(unified_pos_list_size) * semi_join_ratio;
+  }
+
+  const auto cluster_count = std::max(1.0, aggregated_size_build_side / l2_cache_max_usable);
   return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
 
