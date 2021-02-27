@@ -111,10 +111,6 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   auto semi_join_ratio = 1.0;
   semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());
 
-  if (HYRISE_DEBUG) {
-    std::cout << "using radix l2 " << radix_cache_usage_ratio << " and semi of " << semi_join_ratio << std::endl;
-  }
-
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
   // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
   constexpr auto L2_CACHE_SIZE = 1'024'000;                                // bytes
@@ -145,7 +141,10 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   }
 
   const auto cluster_count = std::max(1.0, aggregated_size_build_side / l2_cache_max_usable);
-  return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+  auto cc = static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+  std::cout << "using a bit count of " << cc << std::endl;
+  return cc;
+  //return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
@@ -227,10 +226,11 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
-        if (!_radix_bits) {
+        //if (!_radix_bits) {
+	  // disabled, as PQP cache makes the whole setting stuff unused otherwise as radix is stored in the cached PQP
           _radix_bits = calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(),
                                                                   probe_input_table->row_count(), _mode);
-        }
+        //}
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
         // hash maps might otherwise overflow. Since radix partitioning aims to avoid large build partitions, this
