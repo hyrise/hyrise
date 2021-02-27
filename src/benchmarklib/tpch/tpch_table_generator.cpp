@@ -331,14 +331,12 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
-    // This clustering improve the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
+    // This clustering improves the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
     // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
     // Allowed as per TPC-H Specification, paragraph 1.5.2.
     return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
   }
 
-  // Even though the generated TPC-H data is sorted by the primary keys, we do neither set the table to be clustered
-  // or chunks to be sorted for any table. As of now, we do not automatically recognize these flags.
   // Even though the generated TPC-H data is implicitly sorted by the primary keys, we do neither set the corresponding
   // flags in the table nor in the chunks. This is done on purpose, as the non-clustered mode is designed to pass as
   // little extra information into Hyrise as possible. In the future, these sort orders might be automatically
