@@ -81,6 +81,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   if ((build_side_size + probe_side_size) < 10'000) {
     // Rough estimate for early exists. We assume the worst case of a rather small L2 cache of 128 KB and a string
     // column with 24 bytes per entry. This means we can keep 5'000 rows in the L2 cache.
+    std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << std::endl;
     return size_t{0};
   }
   /*
@@ -106,10 +107,14 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   }
 
   auto radix_cache_usage_ratio = 0.5;
-  radix_cache_usage_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::RadixCacheUsageRatio")->get());
+  if (Hyrise::get().settings_manager.has_setting("Plugin::Benchmarking::RadixCacheUsageRatio")) {
+    radix_cache_usage_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::RadixCacheUsageRatio")->get());
+  }
 
   auto semi_join_ratio = 1.0;
-  semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());
+  if (Hyrise::get().settings_manager.has_setting("Plugin::Benchmarking::SemiJoinRatio")) {
+    semi_join_ratio = std::stod(Hyrise::get().settings_manager.get_setting("Plugin::Benchmarking::SemiJoinRatio")->get());  
+  }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
   // be different (e.g., an AMD EPYC 7F72 CPU has an L2 cache size of 512 KB and Apple's M1 has 128 KB).
@@ -118,20 +123,16 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
 
   // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
-  // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
-  // slightly skewed data distributions and aim for a fill level of 85%.
-  constexpr auto HASH_MAP_FILL_LEVEL = 0.85;
   const auto hash_map_size =
       // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1) / HASH_MAP_FILL_LEVEL;
+      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1);
 
   // The goal of radix partitioning is to have the hash table fitting in the L2 cache at the time of probing. We thus
-  // estimate the size of the unified pos lit, which is built after the initial hash map building and before the actual
-  // probing. Again we estimate the worst case of a build side with entirely distinct values. Note, this list is not
-  // required for semi/anti* joins.
+  // estimate the size of the unified pos list which is built after the initial hash map building and before the actual
+  // probing. We estimate the worst case of a build side with entirely distinct values. Note, this list is not required
+  // for semi/anti* joins.
   const auto unified_pos_list_size = sizeof(std::vector<RowID>) + build_side_size * sizeof(RowID) +
                                      sizeof(std::vector<size_t>) + build_side_size * sizeof(size_t);
 
@@ -141,8 +142,8 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   }
 
   const auto cluster_count = std::max(1.0, aggregated_size_build_side / l2_cache_max_usable);
-  auto cc = static_cast<size_t>(std::ceil(std::log2(cluster_count)));
-  std::cout << "using a bit count of " << cc << std::endl;
+  auto cc = static_cast<size_t>(std::round(std::log2(cluster_count)));
+  std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << ". Cluster count: " << cluster_count << ". Bit count: " << cc << std::endl;
   return cc;
   //return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
@@ -153,6 +154,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash doesn't support these parameters");
+
+  std::cout << *this << std::endl;
 
   std::shared_ptr<const Table> build_input_table;
   std::shared_ptr<const Table> probe_input_table;
