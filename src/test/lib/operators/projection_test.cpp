@@ -239,7 +239,7 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
 
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
-    // Expect sort to be column a, now with ColumnID 1. Since it's projected twice, we expect two entries.
+    // Expecting column a to be sorted (now with ColumnID 1). Since it's projected twice, we expect two entries.
     const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}},
                                                                       SortColumnDefinition{ColumnID{2}}};
     
