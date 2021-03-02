@@ -74,23 +74,28 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments), input_chunk->mvcc_data());
     output_chunk->finalize();
     // The alias operator does not affect sorted_by property. If a chunk was sorted before, it still is after.
-    const auto& sorted_by = input_chunk->individually_sorted_by();
-    if (!sorted_by.empty()) {
+    const auto& input_sorted_by = input_chunk->individually_sorted_by();
+    if (!input_sorted_by.empty()) {
       auto sort_definitions = std::vector<SortColumnDefinition>{};
-      sort_definitions.reserve(sorted_by.size());
+      sort_definitions.reserve(input_sorted_by.size());
 
       // Adapt column ids of chunk sort definitions
-      for (const auto& sort_definition : sorted_by) {
+      for (const auto column_id : _column_ids) {
         // In some edge cases, an input table might be sorted by a column that is not included in the list of columns.
         // This can happen when an expression occurs repeatedly (e.g., `SELECT a as a1, a as a2`) and the LQP
         // translator references the first occurrence twice (leaving the second (sorted) occurrence unreferenced, see
-        // issue #2321 for more details). We thus check if the sorted column is part of the input table.
-        const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
-        if (it != _column_ids.cend()) {
-          const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
-          sort_definitions.emplace_back(SortColumnDefinition(index, sort_definition.sort_mode));
+        // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
+        // columns that reference the same input column as sorted.
+        const auto it = std::find_if(
+            input_sorted_by.cbegin(), input_sorted_by.cend(),
+            [column_id](const auto& sorted_information) { return column_id == sorted_information.column; });
+        if (it != input_sorted_by.cend()) {
+          const auto index = ColumnID{static_cast<uint16_t>(std::distance(input_sorted_by.cbegin(), it))};
+          sort_definitions.emplace_back(SortColumnDefinition(index, it->sort_mode));
         }
       }
+      Assert(input_sorted_by.size() == sort_definitions.size(),
+             "Sorting information lost. Mismatch between input and output table");
 
       output_chunk->set_individually_sorted_by(sort_definitions);
     }

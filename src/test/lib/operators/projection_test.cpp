@@ -240,11 +240,11 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     // Expecting column a to be sorted (now with ColumnID 1). Since it's projected twice, we expect two entries.
-    const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}},
-                                                                      SortColumnDefinition{ColumnID{2}}};
-    
+    const auto expected_sorted_by =
+        std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}};
+
     // We directly check for vector equality as an unordered_map is used in the projection
-    for (const auto sort_column : expected_sorted_by) {
+    for (const auto& sort_column : expected_sorted_by) {
       const auto iter = std::find(sorted_by.begin(), sorted_by.end(), sort_column);
       EXPECT_TRUE(iter != sorted_by.end());
     }
