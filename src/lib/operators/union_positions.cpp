@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/sort/sort.hpp>
+
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
@@ -99,10 +101,10 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
    * This is necessary for merging them.
    * PERFORMANCE NOTE: These sorts take the vast majority of time spend in this Operator
    */
-  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
-            VirtualPosListCmpContext{reference_matrix_left});
-  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
-            VirtualPosListCmpContext{reference_matrix_right});
+  boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
+                       VirtualPosListCmpContext{reference_matrix_left});
+  boost::sort::pdqsort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
+                       VirtualPosListCmpContext{reference_matrix_right});
 
   /**
    * Build result table
@@ -242,7 +244,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   add(left_input_table());
   add(right_input_table());
 
-  std::sort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
+  boost::sort::pdqsort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   const auto unique_end_iter = std::unique(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter));
 
