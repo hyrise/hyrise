@@ -80,18 +80,18 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       sort_definitions.reserve(input_sorted_by.size());
 
       // Adapt column ids of chunk sort definitions
-      for (const auto column_id : _column_ids) {
+      for (auto output_column_id = ColumnID{0}; output_column_id < input_table.column_count(); ++output_column_id) {
+        const auto column_id = _column_ids[output_column_id];
         // In some edge cases, an input table might be sorted by a column that is not included in the list of columns.
         // This can happen when an expression occurs repeatedly (e.g., `SELECT a as a1, a as a2`) and the LQP
         // translator references the first occurrence twice (leaving the second (sorted) occurrence unreferenced, see
         // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
         // columns that reference the same input column as sorted.
-        const auto it = std::find_if(
-            input_sorted_by.cbegin(), input_sorted_by.cend(),
-            [column_id](const auto& sorted_information) { return column_id == sorted_information.column; });
+        const auto it =
+            std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(),
+                         [&](const auto& sorted_information) { return column_id == sorted_information.column; });
         if (it != input_sorted_by.cend()) {
-          const auto index = ColumnID{static_cast<uint16_t>(std::distance(input_sorted_by.cbegin(), it))};
-          sort_definitions.emplace_back(SortColumnDefinition(index, it->sort_mode));
+          sort_definitions.emplace_back(SortColumnDefinition(output_column_id, it->sort_mode));
         }
       }
       Assert(input_sorted_by.size() == sort_definitions.size(),
