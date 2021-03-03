@@ -115,11 +115,15 @@ std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Customer, "customer"}, {TPCHTable::Orders, "orders"},     {TPCHTable::LineItem, "lineitem"},
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
-TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
-    : TPCHTableGenerator(scale_factor, create_benchmark_config_with_chunk_size(chunk_size)) {}
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
+                                       uint32_t chunk_size)
+    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
-TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
+                                       const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+    : AbstractTableGenerator(benchmark_config),
+      _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
@@ -326,8 +330,18 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
-  // Allowed as per TPC-H Specification, paragraph 1.5.2
-  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
+    // This clustering improves the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
+    // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
+    // Allowed as per TPC-H Specification, paragraph 1.5.2.
+    return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+  }
+
+  // Even though the generated TPC-H data is implicitly sorted by the primary keys, we do neither set the corresponding
+  // flags in the table nor in the chunks. This is done on purpose, as the non-clustered mode is designed to pass as
+  // little extra information into Hyrise as possible. In the future, these sort orders might be automatically
+  // identified with flags being set automatically.
+  return {};
 }
 
 void TPCHTableGenerator::_add_constraints(
