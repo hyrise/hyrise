@@ -232,10 +232,10 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
       std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
 
-  const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a, a_a));
-  projection_b_a_sorted->execute();
+  const auto projection_b_a_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a, a_a));
+  projection_b_a_a_sorted->execute();
 
-  const auto& result_table_sorted = projection_b_a_sorted->get_output();
+  const auto& result_table_sorted = projection_b_a_a_sorted->get_output();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
