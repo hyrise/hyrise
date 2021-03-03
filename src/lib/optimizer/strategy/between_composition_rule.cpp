@@ -349,9 +349,8 @@ void BetweenCompositionRule::_replace_predicates(
 }
 
 void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  std::unordered_set<std::shared_ptr<PredicateNode>> visited_predicate_nodes;
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
-  std::vector<std::vector<std::shared_ptr<PredicateNode>>> grouped_predicate_nodes;
+  std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_nodes_grouped_by_siblings;
 
   // (1) Gather PredicateNodes. Group adjacent PredicateNodes, when there are no other nodes in between.
   // (1.1) Collect all leaf nodes
@@ -359,15 +358,16 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
   for (const auto& leaf_node : lqp_find_leaves(lqp_root)) {
     node_queue.push(leaf_node);
   }
-  // (1.2) Visit the LQP bottom-up from the leaf nodes
+  // (1.2) Visit the whole LQP bottom-up from the leaf nodes
   while (!node_queue.empty()) {
-    auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>();
+    auto predicate_node_siblings = std::vector<std::shared_ptr<PredicateNode>>();
     auto node = node_queue.front();
     node_queue.pop();
 
     // Follow nodes upwards until
-    //  - the LQP branches or
-    //  - a chain of adjacent PredicateNodes ends.
+    //  - we see a node that has already been visited
+    //  - the LQP branches
+    //  - a PredicateNode is followed by a non-PredicateNode
     visit_lqp_upwards(node, [&](const auto& current_node) {
       if (visited_nodes.contains(current_node)) return LQPUpwardVisitation::DoNotVisitOutputs;
       visited_nodes.insert(current_node);
@@ -382,9 +382,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
 
       if (current_node->type == LQPNodeType::Predicate) {
         auto current_predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
-        predicate_nodes.push_back(current_predicate_node);
-      } else if (!predicate_nodes.empty()) {
-        // Chain of adjacent PredicateNodes has ended.
+        predicate_node_siblings.push_back(current_predicate_node);
+      } else if (!predicate_node_siblings.empty()) {
+        // There are no more PredicateNode siblings to follow.
         for (const auto& output_node : current_node->outputs()) {
           if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
         }
@@ -393,15 +393,15 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
       return LQPUpwardVisitation::VisitOutputs;
     });
 
-    if (!predicate_nodes.empty()) {
+    if (!predicate_node_siblings.empty()) {
       // In some cases, substitutions are also possible for a single PredicateNode. Think of predicates with
       // LogicalExpression and LogicalOperator::AND, for example.
-      grouped_predicate_nodes.emplace_back(std::move(predicate_nodes));
+      predicate_nodes_grouped_by_siblings.emplace_back(std::move(predicate_node_siblings));
     }
   }
 
   // (2) Replace predicates, if possible
-  for (const auto& predicate_nodes : grouped_predicate_nodes) {
+  for (const auto& predicate_nodes : predicate_nodes_grouped_by_siblings) {
     _replace_predicates(predicate_nodes);
   }
 }

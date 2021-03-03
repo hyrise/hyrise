@@ -97,7 +97,7 @@ static std::vector<PredicateChain> find_predicate_chains_by_stored_table_node_re
 
     /**
      * In case the predicate chain branches, we use recursion.
-     * We might visit nodes more than once because predicate chains may overlap.
+     * We might visit nodes more than once because predicate chains can overlap.
      */
     if (current_node->outputs().size() > 1) {
       for (auto& output_node : current_node->outputs()) {
