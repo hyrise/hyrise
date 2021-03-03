@@ -11,7 +11,7 @@ then
   exit 1
 fi
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
+benchmarks='hyriseBenchmarkTPCDS'
 num_mt_clients=50
 
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
