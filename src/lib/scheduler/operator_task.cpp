@@ -30,8 +30,12 @@ std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operato
 std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
     std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
-  // Early out: We do not want to re-run operators if they have already been executed by previous tasks.
-  if (op->executed()) return nullptr;
+  // Early out: We do not want to schedule operators for execution that have already been executed by previous tasks
+  //            because the results should already be accessible.
+  if (op->executed()) {
+    Assert(op->get_output(), "Expected executed operator to return an output.");
+    return nullptr;
+  }
 
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;

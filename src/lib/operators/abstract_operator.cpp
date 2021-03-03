@@ -168,7 +168,7 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  Assert(_executed, "Empty output because operator did not execute yet.");
+  Assert(_executed, "Trying to get_output of operator that was not executed yet.");
   return _output;
 }
 

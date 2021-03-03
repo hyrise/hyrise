@@ -61,9 +61,8 @@ enum class OperatorType {
  *     must not call get_output in their execute method.
  *  2. The execute method is called from the outside (usually by the scheduler). This is where the heavy lifting is
  *     done. By now, the input operators have already executed.
- *  3. The consumer (usually another operator) calls get_output. This should be very cheap.
- *
- *  Operators shall not be executed twice.
+ *  3. The consumers, usually other operators, call get_output. This should be very cheap.
+ *  4. The operator clears its results once the last consumer deregisters.
  *
  * CONSUMER TRACKING
  *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
@@ -72,18 +71,28 @@ enum class OperatorType {
  *
  *     WARNING on handling Subqueries:
  *      This abstract class handles consumer registration/deregistration for input operators only.
- *      Operators consuming subqueries, such as TableScan and Projection, have to register and deregister as
- *      consumers manually. For example:
+ *      Operators that consume subqueries, such as TableScan and Projection, have to register and deregister as
+ *      consumers of their subqueries manually. For example:
  *
  *        1. Projection::Projection
  *            - Collect uncorrelated subqueries from each expression's arguments.
- *            - Call register_consumer() and store pointers for all uncorrelated subqueries.
+ *            - Call register_consumer and store pointers for all uncorrelated subqueries.
  *        2. Projection::_on_execute
  *            - Compute uncorrelated subqueries using ExpressionEvaluator::populate_uncorrelated_subquery_results_cache
- *            - Call deregister_consumer() for each uncorrelated subquery.
+ *            - Call deregister_consumer for each uncorrelated subquery.
  *
- *      It is crucial to call register_consumer() from the constructor, before the execution starts, to prevent subquery
+ *      It is crucial to call register_consumer from the constructor, before the execution starts, to prevent subquery
  *      results from being cleared too early. Otherwise, operators may need to re-execute, which is illegal.
+ *
+ *      In contrast to uncorrelated subqueries, correlated subqueries are deep-copied for each row that they are
+ *      executed on, so the registration happens at execution time in the ExpressionEvaluator.
+ *
+ * AUTOMATIC CLEARING
+ *  Operators clear themselves automatically by calling clear_output when the last consumer deregisters. Note that
+ *  top-level operators do not have any consuming operators. Therefore, owning instances, such as
+ *  SQLPipelineStatement, have to call clear_output manually or register as consumers themselves.
+ *
+ *  To disable the automatic clearing in, e.g., tests, one can call never_clear_output.
  *
  * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
  */
@@ -114,11 +123,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   /**
    * Clears the operator's results by releasing the shared pointer to the result table. In case never_clear_output()
    * has been called, nothing will happen.
-   *
-   * AUTOMATIC CLEARING
-   *  This function is called automatically by the last consuming operator on deregistration. Note, however, that
-   *  top-level operators do not have any consuming operators. Therefore, owning instances, such as
-   *  SQLPipelineStatement, have to call clear_output() manually or register as consumers themselves.
    */
   void clear_output();
 
