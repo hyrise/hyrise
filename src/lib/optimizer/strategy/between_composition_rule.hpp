@@ -58,7 +58,8 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  static void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes);
+  using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+  static void _substitute_predicates_with_between_expressions(const PredicateChain& predicate_chain);
 
   static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };

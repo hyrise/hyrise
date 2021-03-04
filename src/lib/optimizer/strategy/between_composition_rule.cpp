@@ -153,16 +153,15 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
 }
 
 /**
- * Looks for BinaryPredicateExpressions in @param adjacent_predicate_nodes, a vector of adjacent PredicateNodes and
+ * Looks for BinaryPredicateExpressions in @param predicate_chain, a vector of directly connected PredicateNodes and
  * replaces them with BetweenExpressions, if possible.
  * After the substitution, obsolete BinaryPredicateExpressions are removed.
  */
-void BetweenCompositionRule::_replace_predicates(
-    const std::vector<std::shared_ptr<PredicateNode>>& adjacent_predicate_nodes) {
+void BetweenCompositionRule::_substitute_predicates_with_between_expressions(const PredicateChain& predicate_chain) {
   // Store input and output nodes of the predicate chain
-  auto predicate_chain_input_node = adjacent_predicate_nodes.front()->left_input();
-  auto predicate_chain_output_nodes = adjacent_predicate_nodes.back()->outputs();
-  const auto predicate_chain_output_input_sides = adjacent_predicate_nodes.back()->get_input_sides();
+  auto predicate_chain_input_node = predicate_chain.front()->left_input();
+  auto predicate_chain_output_nodes = predicate_chain.back()->outputs();
+  const auto predicate_chain_output_input_sides = predicate_chain.back()->get_input_sides();
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
@@ -171,7 +170,7 @@ void BetweenCompositionRule::_replace_predicates(
   auto id_counter = size_t{0};
 
   // Filter predicates with a boundary to the boundaries vector
-  for (const auto& predicate_node : adjacent_predicate_nodes) {
+  for (const auto& predicate_node : predicate_chain) {
     // A logical expression can contain multiple binary predicate expressions
     std::vector<std::shared_ptr<BinaryPredicateExpression>> expressions;
     const auto binary_predicate_expression =
@@ -350,59 +349,63 @@ void BetweenCompositionRule::_replace_predicates(
 
 void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
-  std::vector<std::vector<std::shared_ptr<PredicateNode>>> predicate_nodes_grouped_by_siblings;
+  std::vector<PredicateChain> predicate_chains;
 
-  // (1) Gather PredicateNodes. Group adjacent PredicateNodes, when there are no other nodes in between.
-  // (1.1) Collect all leaf nodes
+  // (1) Gather PredicateNodes and group them to predicate chains when there are no other nodes in between.
+  // (1.1) Collect all leaf nodes and add them to a visitation queue
   auto node_queue = std::queue<std::shared_ptr<AbstractLQPNode>>();
   for (const auto& leaf_node : lqp_find_leaves(lqp_root)) {
     node_queue.push(leaf_node);
   }
   // (1.2) Visit the whole LQP bottom-up from the leaf nodes
   while (!node_queue.empty()) {
-    auto predicate_node_siblings = std::vector<std::shared_ptr<PredicateNode>>();
     auto node = node_queue.front();
     node_queue.pop();
-
-    // Follow nodes upwards until
-    //  - we see a node that has already been visited
-    //  - the LQP branches
-    //  - a PredicateNode is followed by a non-PredicateNode
+    /**
+     * Find the next predicate chain by collecting the next set of PredicateNodes that are directly linked with each
+     * other. For this purpose, visit the LQP upwards until
+     *    - there is a node that has already been visited
+     *    - there is a non-PredicateNode that follows a PredicateNode
+     *    - the LQP branches
+     */
+    auto current_predicate_chain = PredicateChain();
     visit_lqp_upwards(node, [&](const auto& current_node) {
       if (visited_nodes.contains(current_node)) return LQPUpwardVisitation::DoNotVisitOutputs;
       visited_nodes.insert(current_node);
 
+      // Add to current predicate chain or finalize it when a non-PredicateNode follows
+      if (current_node->type == LQPNodeType::Predicate) {
+        auto current_predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
+        current_predicate_chain.push_back(current_predicate_node);
+      } else if (!current_predicate_chain.empty()) {
+        for (const auto& output_node : current_node->outputs()) {
+          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
+        }
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
+
       // Check whether LQP branches
       if (current_node->outputs().size() > 1) {
         for (const auto& output_node : current_node->outputs()) {
+          // Prepare the next iteration of visit_lqp_upwards
           if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
         }
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
-      if (current_node->type == LQPNodeType::Predicate) {
-        auto current_predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
-        predicate_node_siblings.push_back(current_predicate_node);
-      } else if (!predicate_node_siblings.empty()) {
-        // There are no more PredicateNode siblings to follow.
-        for (const auto& output_node : current_node->outputs()) {
-          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
-        }
-        return LQPUpwardVisitation::DoNotVisitOutputs;
-      }
       return LQPUpwardVisitation::VisitOutputs;
     });
 
-    if (!predicate_node_siblings.empty()) {
-      // In some cases, substitutions are also possible for a single PredicateNode. Think of predicates with
+    if (!current_predicate_chain.empty()) {
+      // In some cases, Between-substitutions are also possible for a single PredicateNode. Think of predicates with
       // LogicalExpression and LogicalOperator::AND, for example.
-      predicate_nodes_grouped_by_siblings.emplace_back(std::move(predicate_node_siblings));
+      predicate_chains.emplace_back(std::move(current_predicate_chain));
     }
   }
 
-  // (2) Replace predicates, if possible
-  for (const auto& predicate_nodes : predicate_nodes_grouped_by_siblings) {
-    _replace_predicates(predicate_nodes);
+  // (2) Replace the PredicateNodes' predicates with BetweenExpressions, if possible
+  for (const auto& predicate_chain : predicate_chains) {
+    _substitute_predicates_with_between_expressions(predicate_chain);
   }
 }
 
