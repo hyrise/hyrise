@@ -99,7 +99,12 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
    * This is necessary for merging them.
-   * PERFORMANCE NOTE: These sorts take the vast majority of time spend in this Operator
+   * Performance note: These sorts take the vast majority of time spend in this operator. Using boost's pdqsort helps
+   * a lot over std::sort, but there is probably still room for improvement (see comment above about other data
+   * structures). The reason why pdqsort can be much faster than std::sort is that is more efficient for already sorted
+   * data, which happens when no "shuffling" operators (e.g., inner joins) occur before the UnionPosition so the
+   * position lists are already sorted. For cases where the input is not sorted, pdqsort is usually still more than 20%
+   * faster than std::sort.
    */
   boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
                        VirtualPosListCmpContext{reference_matrix_left});
