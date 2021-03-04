@@ -271,12 +271,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
-      for (const auto& [column_id, mode] : sorted_by) {
-        // Full iteration as input columns can be projected repeatedly
-        for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-          if (column_id == input_column_id) {
-            transformed.emplace_back(SortColumnDefinition{output_column_id, mode});
-          }
+
+      // We need to iterate both sorted information and the output/input mapping as multiple output columns might
+      // originate from the same sorted input column.
+      for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
+        const auto iter = std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id=input_column_id](const auto sort) { return input_column_id == sort.column; });
+        if (iter != sorted_by.end()) {
+          transformed.emplace_back(SortColumnDefinition{output_column_id, iter->sort_mode});
         }
       }
       if (!transformed.empty()) {
