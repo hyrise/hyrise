@@ -91,6 +91,9 @@ class ColumnMaterializer {
     std::vector<Subsample<T>> subsamples;
     subsamples.reserve(chunk_count);
 
+    Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+    output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
@@ -132,12 +135,6 @@ class ColumnMaterializer {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample, &bloom_filter_per_chunk, &input_bloom_filter] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
       (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample, bloom_filter_per_chunk, input_bloom_filter);
-      // if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-      //   (*output)[chunk_id] =
-      //       _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
-      // } else {
-      //   (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
-      // }
     });
   }
 
@@ -202,75 +199,6 @@ class ColumnMaterializer {
     if (_sort) {
       std::sort(output.begin(), output.end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
-    }
-
-    _gather_samples_from_segment(output, subsample);
-
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
-  }
-
-  /**
-   * Specialization for dictionary segments
-   */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(
-      const DictionarySegment<T>& segment, const ChunkID chunk_id, std::unique_ptr<RowIDPosList>& null_rows_output,
-      Subsample<T>& subsample) {
-    auto output = MaterializedSegment<T>{};
-    output.reserve(segment.size());
-
-    auto base_attribute_vector = segment.attribute_vector();
-    auto dict = segment.dictionary();
-
-    if (_sort) {
-      // Works like Bucket Sort
-      // Collect for every value id, the set of rows that this value appeared in
-      // value_count is used as an inverted index
-      auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
-
-      // Reserve correct size of the vectors by assuming a uniform distribution
-      for (auto& row : rows_with_value) {
-        row.reserve(base_attribute_vector->size() / dict->size());
-      }
-
-      // Collect the rows for each value id
-      resolve_compressed_vector_type(*base_attribute_vector, [&](const auto& attribute_vector) {
-        auto chunk_offset = ChunkOffset{0u};
-        auto value_id_it = attribute_vector.cbegin();
-        auto null_value_id = segment.null_value_id();
-
-        for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
-          auto value_id = static_cast<ValueID>(*value_id_it);
-
-          if (value_id != null_value_id) {
-            rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
-          } else {
-            if (_materialize_null) {
-              null_rows_output->push_back(RowID{chunk_id, chunk_offset});
-            }
-          }
-        }
-      });
-
-      // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
-      ChunkOffset chunk_offset{0};
-      for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
-        for (auto& row_id : rows_with_value[value_id]) {
-          output.emplace_back(row_id, (*dict)[value_id]);
-          ++chunk_offset;
-        }
-      }
-    } else {
-      auto iterable = create_iterable_from_segment(segment);
-      iterable.for_each([&](const auto& position) {
-        const auto row_id = RowID{chunk_id, position.chunk_offset()};
-        if (position.is_null()) {
-          if (_materialize_null) {
-            null_rows_output->emplace_back(row_id);
-          }
-        } else {
-          output.emplace_back(row_id, position.value());
-        }
-      });
     }
 
     _gather_samples_from_segment(output, subsample);
