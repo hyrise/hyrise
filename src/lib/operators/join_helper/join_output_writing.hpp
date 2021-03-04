@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <boost/functional/hash_fwd.hpp>
+
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -19,7 +22,11 @@ using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Table>& input_table) {
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
 
-  std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
+  struct PosListsHasher {
+    size_t operator()(const PosLists& pos_lists) const { return boost::hash_range(pos_lists.begin(), pos_lists.end()); }
+  };
+
+  std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;
 
   PosListsByChunk pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
