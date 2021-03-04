@@ -706,12 +706,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
-    full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        if (_right_row_ids_emitted.find(right_row_id) != _right_row_ids_emitted.end()) {
-          _emit_combination(0, NULL_ROW_ID, right_row_id);
-        }
-      });
+    if ( not _right_row_ids_emitted.empty()) { 
+      auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
+      full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_right_row_ids_emitted.find(right_row_id) == _right_row_ids_emitted.end()) {
+            _emit_combination(0, NULL_ROW_ID, right_row_id);
+          }
+        });
+    }
   }
 
   /**
@@ -772,12 +774,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
-    full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        if (_left_row_ids_emitted.find(left_row_id) != _left_row_ids_emitted.end()) {
-          _emit_combination(0, left_row_id, NULL_ROW_ID);
-        }
-      });
+    if ( not _left_row_ids_emitted.empty()) {
+      auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
+      full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          if (_left_row_ids_emitted.find(left_row_id) == _left_row_ids_emitted.end()) {
+            _emit_combination(0, left_row_id, NULL_ROW_ID);
+          }
+        });
+    }
   }
 
   /**
