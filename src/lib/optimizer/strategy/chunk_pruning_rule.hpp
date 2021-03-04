@@ -28,7 +28,8 @@ class ChunkPruningRule : public AbstractRule {
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
-  std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<PredicateNode>>& predicate_chain,
+  using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
+  std::set<ChunkID> _compute_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                           const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
@@ -42,8 +43,7 @@ class ChunkPruningRule : public AbstractRule {
 
   static std::set<ChunkID> _intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
 
-  using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
-  static std::vector<PredicateChain> _find_predicate_chains_by_stored_table_node(
+  static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
       const std::shared_ptr<StoredTableNode>& stored_table_node);
 
  private:
