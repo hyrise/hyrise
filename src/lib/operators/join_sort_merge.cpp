@@ -6,8 +6,10 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 #include "hyrise.hpp"
@@ -146,13 +148,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   };
 
-  using RowHashTable = std::unordered_map<RowID, bool, RowHasher>;
+  using RowHashSet = std::unordered_set<RowID, RowHasher>;
   // these are used for outer joins where the primary predicate is not Equals.
-  RowHashTable _left_row_ids_emitted{};
-  RowHashTable _right_row_ids_emitted{};
 
-  std::vector<RowHashTable> _left_row_ids_emitted_per_chunk;
-  std::vector<RowHashTable> _right_row_ids_emitted_per_chunk;
+  RowHashSet _left_row_ids_emitted{};
+  RowHashSet _right_row_ids_emitted{};
+
+  std::vector<RowHashSet> _left_row_ids_emitted_per_chunk;
+  std::vector<RowHashSet> _right_row_ids_emitted_per_chunk;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -376,11 +379,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted_per_chunk[output_cluster][left_row_id] = true;
+            _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id);
           }
         });
       });
@@ -412,11 +414,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // primary predicate is <, <=, >, or >=
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id, false);
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _right_row_ids_emitted_per_chunk[output_cluster][right_row_id] = true;
+            _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id);
           }
         });
       });
@@ -458,13 +459,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id, false);
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-            _left_row_ids_emitted_per_chunk[output_cluster][left_row_id] = true;
-            _right_row_ids_emitted_per_chunk[output_cluster][right_row_id] = true;
+            _left_row_ids_emitted_per_chunk[output_cluster].emplace(left_row_id);
+            _right_row_ids_emitted_per_chunk[output_cluster].emplace(right_row_id);
           }
         });
       });
@@ -702,17 +701,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _emit_left_primary_null_combinations(0, *unmatched_range);
       unmatched_range->for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         // Mark as emitted so that it doesn't get emitted again below
-        _right_row_ids_emitted[right_row_id] = true;
+        _right_row_ids_emitted.emplace(right_row_id);
       });
     }
-
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    for (const auto& right_row_id : _right_row_ids_emitted) {
-      if (!right_row_id.second) {
-        _emit_combination(0, NULL_ROW_ID, right_row_id.first);
-      }
-    }
+    auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
+    full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        if (_right_row_ids_emitted.find(right_row_id) != _right_row_ids_emitted.end()) {
+          _emit_combination(0, NULL_ROW_ID, right_row_id);
+        }
+      });
   }
 
   /**
@@ -767,17 +766,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _emit_right_primary_null_combinations(0, *unmatched_range);
       unmatched_range->for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         // Mark as emitted so that it doesn't get emitted again below
-        _left_row_ids_emitted[left_row_id] = true;
+        _left_row_ids_emitted.emplace(left_row_id);
       });
     }
-
+    
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    for (const auto& left_row_id : _left_row_ids_emitted) {
-      if (!left_row_id.second) {
-        _emit_combination(0, left_row_id.first, NULL_ROW_ID);
-      }
-    }
+    auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
+    full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        if (_left_row_ids_emitted.find(left_row_id) != _left_row_ids_emitted.end()) {
+          _emit_combination(0, left_row_id, NULL_ROW_ID);
+        }
+      });
   }
 
   /**
@@ -787,6 +787,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
+
     // Parallel join for each cluster
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
@@ -801,8 +802,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      _left_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
-      _right_row_ids_emitted_per_chunk[cluster_id] = RowHashTable{};
+      _left_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
+      _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
       const auto merge_row_count =
           (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
@@ -831,20 +832,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      // We need to merge the maps from every cluster to one map.
-      for (auto const& map : _left_row_ids_emitted_per_chunk) {
-        for (auto const& [row_id, emitted] : map) {
-          _left_row_ids_emitted[row_id] |= emitted;
-        }
+
+      for (auto &set : _left_row_ids_emitted_per_chunk) {
+        _left_row_ids_emitted.merge(set);
       }
+
       _left_outer_non_equi_join();
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto const& map : _right_row_ids_emitted_per_chunk) {
-        for (auto const& [row_id, emitted] : map) {
-          _right_row_ids_emitted[row_id] |= emitted;
-        }
+      for (auto &set : _right_row_ids_emitted_per_chunk) {
+        _right_row_ids_emitted.merge(set);
       }
       _right_outer_non_equi_join();
     }
