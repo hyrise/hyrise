@@ -154,6 +154,24 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 }
 
+/**
+ * @returns chains of PredicateNodes that sit on top of the given @param stored_table_node.
+ */
+std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_chains_by_stored_table_node(
+    const std::shared_ptr<StoredTableNode>& stored_table_node) {
+  /**
+   * In the following, we use a recursive function to traverse the LQP upwards from stored_table_node. It returns all
+   * predicate pruning chains that filter stored_table_node.
+   * It takes the following three arguments:
+   *   1. The first argument marks the starting point of the LQP upwards-traversal. Hence, we pass stored_table_node.
+   *   2. The second argument refers to the current predicate pruning chain. Since the LQP traversal has not yet
+   *      started, we pass an empty vector.
+   *   3. The third argument refers to the StoredTableNode for which predicate pruning chains should be returned.
+   *      Therefore, we have to pass stored_table_node again.
+   */
+  return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node);
+}
+
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
@@ -332,24 +350,6 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 
   return std::make_shared<TableStatistics>(
       std::move(column_statistics), std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
-}
-
-/**
- * @returns chains of PredicateNodes that sit on top of the given @param stored_table_node.
- */
-std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_chains_by_stored_table_node(
-    const std::shared_ptr<StoredTableNode>& stored_table_node) {
-  /**
-   * In the following, we use a recursive function to traverse the LQP upwards from stored_table_node. It returns all
-   * predicate pruning chains that filter stored_table_node.
-   * It takes the following three arguments:
-   *   1. The first argument marks the starting point of the LQP upwards-traversal. Hence, we pass stored_table_node.
-   *   2. The second argument refers to the current predicate pruning chain. Since the LQP traversal has not yet
-   *      started, we pass an empty vector.
-   *   3. The third argument refers to the StoredTableNode for which predicate pruning chains should be returned.
-   *      Therefore, we have to pass stored_table_node again.
-   */
-  return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node);
 }
 
 std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
