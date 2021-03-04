@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
@@ -25,6 +27,19 @@ struct MaterializedValue {
   RowID row_id;
   T value;
 };
+
+static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
+static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
+
+// Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
+// needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
+// constructor does not do what you would expect it to, so try to avoid it.
+using BloomFilter = boost::dynamic_bitset<>;
+
+// ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
+// negation (~x). As the negation is surprisingly expensive, we create a static empty bloom filter and reference
+// it where needed. Having a bloom filter that always returns true avoids a branch in the hot loop.
+static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 template <typename T>
 using MaterializedSegment = std::vector<MaterializedValue<T>>;
@@ -49,7 +64,7 @@ struct Subsample {
  * Materializes a table for a specific segment and sorts it if required. Result is a triple of
  * materialized values, positions of NULL values, and a list of samples.
  **/
-template <typename T>
+template <typename T, typename HashedType>
 class ColumnMaterializer {
  public:
   explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
@@ -61,9 +76,12 @@ class ColumnMaterializer {
    * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
   std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>> materialize(
-      const std::shared_ptr<const Table> input, const ColumnID column_id) {
+      const std::shared_ptr<const Table> input, const ColumnID column_id, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
     const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
+
+    std::vector<BloomFilter> bloom_filter_per_chunk;
+    bloom_filter_per_chunk.resize(chunk_count);
 
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
     auto null_rows = std::make_unique<RowIDPosList>();
@@ -80,10 +98,14 @@ class ColumnMaterializer {
       subsamples.push_back(Subsample<T>(samples_to_write));
 
       jobs.push_back(
-          _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, subsamples.back()));
+          _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, subsamples.back(), bloom_filter_per_chunk, input_bloom_filter));
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+    for (bloom_filter : bloom_filter_per_chunk) {
+      output_bloom_filter |= bloom_filter;
+    }
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(samples_per_chunk * chunk_count);
@@ -99,20 +121,22 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
+  const std::hash<HashedType> _hash_function;
   std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
                                                                   std::unique_ptr<RowIDPosList>& null_rows_output,
                                                                   const ChunkID chunk_id,
                                                                   std::shared_ptr<const Table> input,
-                                                                  const ColumnID column_id, Subsample<T>& subsample) {
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample] {
+                                                                  const ColumnID column_id, Subsample<T>& subsample,
+                                                                  std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample, &bloom_filter_per_chunk, &input_bloom_filter] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
-
-      if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        (*output)[chunk_id] =
-            _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
-      } else {
-        (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
-      }
+      (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample, &bloom_filter_per_chunk, &input_bloom_filter);
+      // if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
+      //   (*output)[chunk_id] =
+      //       _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
+      // } else {
+      //   (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
+      // }
     });
   }
 
@@ -145,9 +169,12 @@ class ColumnMaterializer {
   std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const AbstractSegment& segment,
                                                                        const ChunkID chunk_id,
                                                                        std::unique_ptr<RowIDPosList>& null_rows_output,
-                                                                       Subsample<T>& subsample) {
+                                                                       Subsample<T>& subsample,
+                                                                       std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
+
+    bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
 
     segment_iterate<T>(segment, [&](const auto& position) {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
@@ -156,7 +183,16 @@ class ColumnMaterializer {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, position.value());
+        const Hash hashed_value = _hash_function(static_cast<HashedType>(position.value()));
+        auto skip = false;
+        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+          // Value in not present in input bloom filter and can be skipped
+          skip = true;
+        }
+        if (!skip) {
+          bloom_filter_per_chunk[chunk_id].get()[hashed_value & BLOOM_FILTER_MASK] = true;
+          output.emplace_back(row_id, position.value());
+        }
       }
     });
 

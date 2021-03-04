@@ -48,7 +48,7 @@ struct RadixClusterOutput {
 *          ˆ right bits are used for clustering
 *
 **/
-template <typename T>
+template <typename T, typename LeftColumnDataType, typename RightColumnDataDataType>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
@@ -330,17 +330,23 @@ class RadixClusterSort {
   RadixClusterOutput<T> execute() {
     RadixClusterOutput<T> output;
 
+    auto left_side_bloom_filter = BloomFilter{};
+    auto right_side_bloom_filter = BloomFilter{};
+
     Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    using HashedType = typename JoinHashTraits<LeftColumnDataType, RightColumnDataDataType>::HashType;
+
+
+    ColumnMaterializer<T, HashedType> left_column_materializer(!_equi_case, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =
-        left_column_materializer.materialize(_left_input_table, _left_column_id);
+        left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
-        right_column_materializer.materialize(_right_input_table, _right_column_id);
+        right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter);
     output.null_rows_right = std::move(null_rows_right);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
 
