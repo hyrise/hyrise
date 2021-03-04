@@ -193,8 +193,10 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
   }
 
+  const auto pos_lists_left_size = pos_lists_left.size();
+
   auto expected_output_chunk_count = size_t{0};
-  for (size_t partition_id = 0; partition_id < pos_lists_left.size(); ++partition_id) {
+  for (size_t partition_id = 0; partition_id < pos_lists_left_size; ++partition_id) {
     if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
       ++expected_output_chunk_count;
     }
@@ -206,7 +208,7 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
   auto output_chunk_id = size_t{0};
-  while (partition_id < pos_lists_left.size()) {
+  while (partition_id < pos_lists_left_size) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
     auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));

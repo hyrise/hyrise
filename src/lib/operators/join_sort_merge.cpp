@@ -63,10 +63,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinSortMerge doesn't support these parameters");
 
-  std::shared_ptr<const Table> left_input_table_ptr;
-  std::shared_ptr<const Table> right_input_table_ptr;
-  left_input_table_ptr = _left_input->get_output();
-  right_input_table_ptr = _right_input->get_output();
+  std::shared_ptr<const Table> left_input_table_ptr = _left_input->get_output();
+  std::shared_ptr<const Table> right_input_table_ptr = _right_input->get_output();
 
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
@@ -963,7 +961,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
                                                              _sort_merge_join._primary_predicate.column_ids.second);
 
-    for (auto &chunk : output_chunks) {
+    for (auto& chunk : output_chunks) {
       if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
           _mode == JoinMode::Inner) {
         chunk->finalize();
