@@ -16,6 +16,24 @@
 
 using namespace opossum::expression_functional;  // NOLINT
 
+namespace {
+using namespace opossum;
+
+static PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
+  if (left_inclusive && right_inclusive) {
+    return PredicateCondition::BetweenInclusive;
+  } else if (left_inclusive && !right_inclusive) {
+    return PredicateCondition::BetweenUpperExclusive;
+  } else if (!left_inclusive && right_inclusive) {
+    return PredicateCondition::BetweenLowerExclusive;
+  } else if (!left_inclusive && !right_inclusive) {
+    return PredicateCondition::BetweenExclusive;
+  }
+  Fail("Unreachable Case");
+}
+
+}  // namespace
+
 namespace opossum {
 
 /**
@@ -403,19 +421,6 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_b
       true,
       column_boundary->id,
   };
-}
-
-static PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
-  if (left_inclusive && right_inclusive) {
-    return PredicateCondition::BetweenInclusive;
-  } else if (left_inclusive && !right_inclusive) {
-    return PredicateCondition::BetweenUpperExclusive;
-  } else if (!left_inclusive && right_inclusive) {
-    return PredicateCondition::BetweenLowerExclusive;
-  } else if (!left_inclusive && !right_inclusive) {
-    return PredicateCondition::BetweenExclusive;
-  }
-  Fail("Unreachable Case");
 }
 
 }  // namespace opossum
