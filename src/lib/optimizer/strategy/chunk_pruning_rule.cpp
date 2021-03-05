@@ -104,7 +104,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
             output_node, current_predicate_pruning_chain, stored_table_node);
 
         predicate_pruning_chains.insert(predicate_pruning_chains.end(), continued_predicate_pruning_chains.begin(),
-                                continued_predicate_pruning_chains.end());
+                                        continued_predicate_pruning_chains.end());
       }
       return LQPUpwardVisitation::DoNotVisitOutputs;
     }
@@ -128,7 +128,8 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   const auto nodes = lqp_find_nodes_by_type(lqp_root, LQPNodeType::StoredTable);
   for (const auto& node : nodes) {
     const auto& stored_table_node = std::static_pointer_cast<StoredTableNode>(node);
-    predicate_pruning_chains_by_stored_table_node.emplace(stored_table_node, _find_predicate_pruning_chains_by_stored_table_node(stored_table_node));
+    predicate_pruning_chains_by_stored_table_node.emplace(
+        stored_table_node, _find_predicate_pruning_chains_by_stored_table_node(stored_table_node));
   }
   // (2) Set pruned chunks for each StoredTableNode
   for (const auto& [stored_table_node, predicate_pruning_chains] : predicate_pruning_chains_by_stored_table_node) {
