@@ -26,8 +26,8 @@ namespace opossum {
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   return (config.predicate_condition != PredicateCondition::NotEquals || config.join_mode == JoinMode::Inner) &&
-         config.left_data_type == config.right_data_type && config.join_mode != JoinMode::Semi &&
-         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
+         config.left_data_type == config.right_data_type && 
+         (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
 }
 
 /**
@@ -61,6 +61,12 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinSortMerge doesn't support these parameters");
+
+  Assert(_mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
+  Assert((_mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
+              "Sort merge join only supports Semi and Anti joins with an equality primary predicate.");
+  Assert(_mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
+         "Sort merge join does not support AntiNullAsTrue joins with secondary predicates.");
 
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
