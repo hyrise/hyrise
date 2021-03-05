@@ -48,7 +48,6 @@
 #include <boost/bimap/relation/support/data_extractor.hpp>
 #include <boost/bimap/tags/support/default_tagged.hpp>
 #include <boost/bimap/tags/tagged.hpp>
-
 #include <boost/bimap/set_of.hpp>
 #include <boost/bimap/unconstrained_set_of.hpp>
 

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "abstract_segment.hpp"
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
 #include "chunk.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
