@@ -17,7 +17,7 @@
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
-using namespace opossum;
+using namespace opossum;  // NOLINT
 
 static PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {
