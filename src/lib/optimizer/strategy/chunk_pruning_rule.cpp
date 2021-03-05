@@ -29,7 +29,7 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
  * @param stored_table_node. If the LQP branches, recursion is used to continue @param current_predicate_pruning_chain
  * for all branches.
  *
- * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains might overlap.
+ * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains can overlap.
  */
 std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table_node_recursively(
     const std::shared_ptr<AbstractLQPNode>& next_node, PredicatePruningChain current_predicate_pruning_chain,
@@ -54,14 +54,15 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
         const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
 
         // PredicateNode might not belong to the current predicate pruning chain,
-        // e.g. when it follows a JoinNode and contains LQPColumnExpressions from other StoredTableNodes.
+        // e.g. when it follows a JoinNode and references LQPColumnExpressions from other StoredTableNodes.
         auto belongs_to_predicate_pruning_chain = true;
         const auto& predicate_expression = predicate_node->predicate();
         visit_expression(predicate_expression, [&](const auto& expression) {
           if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
           const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() != stored_table_node) {
-            // PredicateNode does not filter stored_table_node, so we will not add it to the current predicate pruning chain.
+            // PredicateNode does not filter stored_table_node.
+            // Therefore, it is not added to the current predicate pruning chain.
             belongs_to_predicate_pruning_chain = false;
           }
           return ExpressionVisitation::DoNotVisitArguments;
@@ -69,23 +70,21 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
         if (belongs_to_predicate_pruning_chain) current_predicate_pruning_chain.emplace_back(predicate_node);
       } break;
       case LQPNodeType::Join: {
-        predicate_pruning_chain_continues = false;
-
-        // Check whether the predicate pruning chain continues after the join
+        // Check whether the predicate pruning chain can continue after the join
         auto join_node = std::static_pointer_cast<JoinNode>(current_node);
         for (const auto& expression : join_node->output_expressions()) {
           if (expression->type != ExpressionType::LQPColumn) continue;
           const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() == stored_table_node) {
-            // At least one column expression of stored_table_node survives the semi join.
-            // Therefore, the predicate pruning chain might continue.
+            // At least one column expression of stored_table_node survives the join.
             predicate_pruning_chain_continues = true;
             break;
           }
         }
+        predicate_pruning_chain_continues = false;
       } break;
       default:
-        // For all other types of nodes, we finalize the predicate pruning chain.
+        // For all other types of nodes, we cancel the predicate pruning chain.
         predicate_pruning_chain_continues = false;
     }
 
