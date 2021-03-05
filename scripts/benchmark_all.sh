@@ -7,7 +7,7 @@ then
   echo 'This script is used to compare the performance impact of a change. Running it takes more than an hour.'
   echo '  It compares two git revisions using various benchmarks (see below) and prints the result in a format'
   echo '  that is copyable to Github.'
-  echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh master HEAD'
+  echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh origin/master HEAD'
   exit 1
 fi
 
