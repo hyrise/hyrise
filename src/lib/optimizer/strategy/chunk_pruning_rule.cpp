@@ -71,6 +71,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       } break;
       case LQPNodeType::Join: {
         // Check whether the predicate pruning chain can continue after the join
+        predicate_pruning_chain_continues = false;
         auto join_node = std::static_pointer_cast<JoinNode>(current_node);
         for (const auto& expression : join_node->output_expressions()) {
           if (expression->type != ExpressionType::LQPColumn) continue;
@@ -81,7 +82,6 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
             break;
           }
         }
-        predicate_pruning_chain_continues = false;
       } break;
       default:
         // For all other types of nodes, we cancel the predicate pruning chain.
