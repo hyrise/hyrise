@@ -76,6 +76,9 @@ do
     echo "Running $benchmark for $commit... (single-threaded)"
     ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
+    echo "Running $benchmark for $commit... (multi-threaded)"
+    ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
@@ -83,12 +86,11 @@ do
       echo "Running $benchmark for $commit... (single-threaded, SF 1.0)"
       ( ${build_folder}/$benchmark -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
 
+      # This run needs to be executed last as loading unclustered binary data works for the Pruning clustering (tables
+      # will be sorted), but not loading clustered for the unclustered case.
       echo "Running $benchmark for $commit... (multi-threaded, SF 10.0, clustered for pruning)"
       ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -s 10 --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_s10_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_s10_clustered.log"
     fi
-
-    echo "Running $benchmark for $commit... (multi-threaded)"
-    ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
