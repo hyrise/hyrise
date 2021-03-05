@@ -18,6 +18,15 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
+/**
+ * Distinction from the ChunkPruningRule:
+ *  Both rules search for predicate chains, but of different types:
+ *   a) The ChunkPruningRule searches for chains of predicates that relate to specific StoredTableNodes. Predicate
+ *      pruning chains always start at a StoredTableNode and continue as long as a StoredTableNode's columns remain
+ *      present and become filtered.
+ *   b) The BetweenCompositionRule searches for arbitrary PredicateNodes that are directly linked. Therefore,
+ *      predicate chains can start and end in the midst of LQPs.
+ */
 void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
   std::vector<PredicateChain> predicate_chains;
