@@ -29,14 +29,19 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
  * @param stored_table_node. If the LQP branches, recursion is used to continue @param current_predicate_pruning_chain
  * for all branches.
  *
- * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains can overlap.
+ * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains can overlap
+ * in their first few nodes.
  */
 std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table_node_recursively(
     const std::shared_ptr<AbstractLQPNode>& next_node, PredicatePruningChain current_predicate_pruning_chain,
-    const std::shared_ptr<StoredTableNode>& stored_table_node) {
+    const std::shared_ptr<StoredTableNode>& stored_table_node,
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes) {
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
+    Assert(!visited_nodes.contains(current_node),
+           "Did not expect to see the same node twice.");
+    visited_nodes.insert(current_node);
     /**
      * In the following switch-statement, we
      *  (1) add PredicateNodes to the current predicate pruning chain, if applicable, and
@@ -95,13 +100,13 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
     }
 
     /**
-     * In case the predicate pruning chain branches, we use recursion.
-     * We might visit nodes more than once because predicate pruning chains can overlap.
+     * In case the predicate pruning chain branches, we use recursion to continue the predicate chain for each branch
+     * individually.
      */
     if (current_node->outputs().size() > 1) {
       for (auto& output_node : current_node->outputs()) {
         auto continued_predicate_pruning_chains = find_predicate_pruning_chains_by_stored_table_node_recursively(
-            output_node, current_predicate_pruning_chain, stored_table_node);
+            output_node, current_predicate_pruning_chain, stored_table_node, visited_nodes);
 
         predicate_pruning_chains.insert(predicate_pruning_chains.end(), continued_predicate_pruning_chains.begin(),
                                         continued_predicate_pruning_chains.end());
@@ -168,8 +173,12 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
    *      started, we pass an empty vector.
    *   3. The third argument refers to the StoredTableNode for which predicate pruning chains should be returned.
    *      Therefore, we have to pass stored_table_node again.
+   *   4. The fourth argument is used to track the visited nodes. Predicate pruning chains can branch out, but are not
+   *      expected to merge again. This is checked by tracking the visited nodes.
    */
-  return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node);
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node,
+                                                                        visited_nodes);
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
