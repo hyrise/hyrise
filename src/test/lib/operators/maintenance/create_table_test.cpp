@@ -40,6 +40,13 @@ TEST_F(CreateTableTest, NameAndDescription) {
   EXPECT_EQ(create_table->name(), "CreateTable");
   EXPECT_EQ(create_table->description(DescriptionMode::SingleLine),
             "CreateTable 't' ('a' int NOT NULL, 'b' float NULL)");
+
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  create_table->set_transaction_context(context);
+  create_table->execute();
+  context->commit();
+  dummy_table_wrapper->clear_output();
+
   EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),
             "CreateTable 't' ('a' int NOT NULL\n'b' float NULL)");
 }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+// Warning: In the past, magic_enum has led to problems with TSan. See #2154 for details.
 #include <magic_enum.hpp>
 
 #include "types.hpp"
