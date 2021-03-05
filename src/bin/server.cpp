@@ -8,6 +8,7 @@
 #include "server/server.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace {
@@ -36,11 +37,12 @@ void generate_benchmark_data(std::string argument_string) {
   config->cache_binary_tables = true;
   if (benchmark_name == "tpcc") {
     config->cache_binary_tables = false;  // Not yet supported for TPC-C
-    opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+    opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}
+        .generate_and_store();
   } else if (benchmark_name == "tpcds") {
     opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpch") {
-    opossum::TPCHTableGenerator{sizing_factor, config}.generate_and_store();
+    opossum::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
   } else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }

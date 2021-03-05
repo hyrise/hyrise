@@ -227,22 +227,27 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   }
 
   // Verify that the sorted_by flag is set when it's present in left input.
-  // sorting on column a (ColumnID 0)
+  // sorting on column a (ColumnID 0). We project column a twice to check for the edge case discussed in #2321.
   const auto sort =
       std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
 
-  const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a));
-  projection_b_a_sorted->execute();
+  const auto projection_b_a_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a, a_a));
+  projection_b_a_a_sorted->execute();
 
-  const auto& result_table_sorted = projection_b_a_sorted->get_output();
+  const auto& result_table_sorted = projection_b_a_a_sorted->get_output();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
-    ASSERT_FALSE(sorted_by.empty());
-    // Expect sort to be column a, now with ColumnID 1
-    const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};
-    EXPECT_EQ(sorted_by, expected_sorted_by);
+    // Expecting column a to be sorted (now with ColumnID 1). Since it's projected twice, we expect two entries.
+    const auto expected_sorted_by =
+        std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}};
+
+    // We directly check for vector equality as an unordered_map is used in the projection
+    for (const auto& sort_column : expected_sorted_by) {
+      const auto iter = std::find(sorted_by.begin(), sorted_by.end(), sort_column);
+      EXPECT_TRUE(iter != sorted_by.end());
+    }
   }
 }
 
