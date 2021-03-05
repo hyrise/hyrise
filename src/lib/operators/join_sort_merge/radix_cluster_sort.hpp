@@ -343,8 +343,14 @@ class RadixClusterSort {
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+
+    // We can only use the bloom filter if it is an equi join.  
+    if (!_equi_case) {
+      left_side_bloom_filter = ALL_TRUE_BLOOM_FILTER;
+    }
+
     auto [materialized_right_segments, null_rows_right, samples_right] =
-        right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter);
+        right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, left_side_bloom_filter);
     output.null_rows_right = std::move(null_rows_right);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
 

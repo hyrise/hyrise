@@ -185,7 +185,7 @@ class ColumnMaterializer {
       } else {
         const Hash hashed_value = hash_function(static_cast<T>(position.value()));
         auto skip = false;
-        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !_materialize_null) {
           // Value in not present in input bloom filter and can be skipped
           skip = true;
         }
