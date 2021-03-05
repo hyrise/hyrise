@@ -338,6 +338,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
   // For now, this does not take any sorting on a chunk- or table-level into account. In the future, this may be done
   // to further improve the accuracy of the statistics.
 
+  Assert(old_statistics.row_count >= 0, "Did not expect a negative row count.");
   const auto column_count = old_statistics.column_statistics.size();
 
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
