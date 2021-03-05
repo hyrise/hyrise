@@ -30,6 +30,9 @@ class BetweenCompositionRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
+  using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+  static void _substitute_predicates_with_between_expressions(const PredicateChain& predicate_chain);
+
   /**
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
    * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
@@ -57,9 +60,6 @@ class BetweenCompositionRule : public AbstractRule {
   };
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
-
-  using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
-  static void _substitute_predicates_with_between_expressions(const PredicateChain& predicate_chain);
 
   static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };
