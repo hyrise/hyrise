@@ -133,8 +133,38 @@ class ColumnMaterializer {
                                                                   const ColumnID column_id, Subsample<T>& subsample,
                                                                   std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample, &bloom_filter_per_chunk, &input_bloom_filter] {
-      auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
-      (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample, bloom_filter_per_chunk, input_bloom_filter);
+      auto& segment = *(input->get_chunk(chunk_id)->get_segment(column_id));
+      auto chunk_output = MaterializedSegment<T>{};
+      chunk_output.reserve(segment.size());
+
+      bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
+
+      const std::hash<T> hash_function;
+
+      segment_iterate<T>(segment, [&](const auto& position) {
+        const auto row_id = RowID{chunk_id, position.chunk_offset()};
+        if (position.is_null()) {
+          if (_materialize_null) {
+            null_rows_output->emplace_back(row_id);
+          }
+        } else {
+          const Hash hashed_value = hash_function(static_cast<T>(position.value()));
+          // If Value in not present in input bloom filter and can be skipped
+          if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] or _materialize_null) {
+            bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;
+            chunk_output.emplace_back(row_id, position.value());
+          }
+        }
+      });
+
+      if (_sort) {
+        std::sort(chunk_output.begin(), chunk_output.end(),
+                  [](const auto& left, const auto& right) { return left.value < right.value; });
+      }
+
+      _gather_samples_from_segment(chunk_output, subsample);
+
+      (*output)[chunk_id] =  std::make_shared<MaterializedSegment<T>>(std::move(chunk_output));
     });
   }
 
@@ -159,51 +189,6 @@ class ColumnMaterializer {
       // Sequential write of result
       subsample.samples.insert(subsample.samples.end(), collected_samples.begin(), collected_samples.end());
     }
-  }
-
-  /**
-   * Materialization works of all types of segments
-   */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const AbstractSegment& segment,
-                                                                       const ChunkID chunk_id,
-                                                                       std::unique_ptr<RowIDPosList>& null_rows_output,
-                                                                       Subsample<T>& subsample,
-                                                                       std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
-    auto output = MaterializedSegment<T>{};
-    output.reserve(segment.size());
-
-    bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
-
-    const std::hash<T> hash_function;
-
-    segment_iterate<T>(segment, [&](const auto& position) {
-      const auto row_id = RowID{chunk_id, position.chunk_offset()};
-      if (position.is_null()) {
-        if (_materialize_null) {
-          null_rows_output->emplace_back(row_id);
-        }
-      } else {
-        const Hash hashed_value = hash_function(static_cast<T>(position.value()));
-        auto skip = false;
-        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !_materialize_null) {
-          // Value in not present in input bloom filter and can be skipped
-          skip = true;
-        }
-        if (!skip) {
-          bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;
-          output.emplace_back(row_id, position.value());
-        }
-      }
-    });
-
-    if (_sort) {
-      std::sort(output.begin(), output.end(),
-                [](const auto& left, const auto& right) { return left.value < right.value; });
-    }
-
-    _gather_samples_from_segment(output, subsample);
-
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
  private:
