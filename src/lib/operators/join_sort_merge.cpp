@@ -326,11 +326,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // no secondary join predicates
       if (_mode == JoinMode::Semi) {
+        // left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        //   if (!_semi_row_ids_emitted.contains(left_row_id)) {
+        //     _semi_row_ids_emitted.emplace(left_row_id);
+        //     _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        //   }
+        // });
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          if (!_semi_row_ids_emitted.contains(left_row_id)) {
-            _semi_row_ids_emitted.emplace(left_row_id);
-            _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
-          }
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+            if (!_semi_row_ids_emitted.contains(left_row_id)) {
+              _semi_row_ids_emitted.emplace(left_row_id);
+              _emit_combination(output_cluster, left_row_id, right_row_id);
+            }
+          });
         });    
       } else {
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
