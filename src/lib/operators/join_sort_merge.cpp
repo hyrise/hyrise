@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <set>
 
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
@@ -26,7 +27,7 @@ namespace opossum {
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   return ((config.predicate_condition != PredicateCondition::NotEquals && config.join_mode != JoinMode::Semi) || config.join_mode == JoinMode::Inner ||
-         (config.join_mode == JoinMode::Semi && config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) ) &&
+         (config.join_mode == JoinMode::Semi && !config.secondary_predicates) ) &&
          config.left_data_type == config.right_data_type &&
          config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
@@ -64,8 +65,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
          "JoinSortMerge doesn't support these parameters");
 
   Assert(_mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
-  Assert((_mode != JoinMode::Semi) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
-              "Sort merge join only supports Semi joins with an equality primary predicate.");
+  // Assert((_mode != JoinMode::Semi) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
+  //             "Sort merge join only supports Semi joins with an equality primary predicate.");
   Assert(_mode != JoinMode::Semi || _secondary_predicates.empty(),
          "Sort merge join does not support Semi joins with secondary predicates.");
 
@@ -138,6 +139,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // these are used for outer joins where the primary predicate is not Equals.
   std::map<RowID, bool> _left_row_ids_emitted{};
   std::map<RowID, bool> _right_row_ids_emitted{};
+
+  std::set<RowID> _semi_row_ids_emitted{};
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
@@ -322,16 +325,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     } else {
       // no secondary join predicates
-      if (_mode != JoinMode::Semi) {
+      if (_mode == JoinMode::Semi) {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          if (!_semi_row_ids_emitted.contains(left_row_id)) {
+            _semi_row_ids_emitted.emplace(left_row_id);
+            _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+          }
+        });    
+      } else {
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
            _emit_combination(output_cluster, left_row_id, right_row_id);
           });
-        });
-      } else {
-        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
-        });        
+        });    
       }
     }
   }
@@ -796,7 +802,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
 
       // Avoid empty jobs for inner equi joins
-      if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _primary_predicate_condition == PredicateCondition::Equals) {
         if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
         }
