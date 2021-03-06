@@ -25,9 +25,10 @@ namespace opossum {
 **/
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
-  return (config.predicate_condition != PredicateCondition::NotEquals || config.join_mode == JoinMode::Inner) &&
-         config.left_data_type == config.right_data_type && 
-         (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
+  return ((config.predicate_condition != PredicateCondition::NotEquals && config.join_mode != JoinMode::Semi) || config.join_mode == JoinMode::Inner ||
+         (config.join_mode == JoinMode::Semi && config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) ) &&
+         config.left_data_type == config.right_data_type &&
+         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
 
 /**
@@ -63,10 +64,10 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
          "JoinSortMerge doesn't support these parameters");
 
   Assert(_mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
-  Assert((_mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
-              "Sort merge join only supports Semi and Anti joins with an equality primary predicate.");
-  Assert(_mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
-         "Sort merge join does not support AntiNullAsTrue joins with secondary predicates.");
+  Assert((_mode != JoinMode::Semi) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
+              "Sort merge join only supports Semi joins with an equality primary predicate.");
+  Assert(_mode != JoinMode::Semi || _secondary_predicates.empty(),
+         "Sort merge join does not support Semi joins with secondary predicates.");
 
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
@@ -294,7 +295,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
     _output_pos_lists_left[output_cluster]->push_back(left_row_id);
-    _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+    if (_mode != JoinMode::Semi) {
+      _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+    }
   }
 
   /**
@@ -319,11 +322,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     } else {
       // no secondary join predicates
-      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          _emit_combination(output_cluster, left_row_id, right_row_id);
+      if (_mode != JoinMode::Semi) {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+           _emit_combination(output_cluster, left_row_id, right_row_id);
+          });
         });
-      });
+      } else {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        });        
+      }
     }
   }
 
@@ -966,7 +975,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
         Segments segments;
         _add_output_segments(segments, _sort_merge_join.left_input_table(), _output_pos_lists_left[pos_list_id]);
-        _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
+
+        if (_mode != JoinMode::Semi) {
+          _add_output_segments(segments, _sort_merge_join.right_input_table(), _output_pos_lists_right[pos_list_id]);
+        }
+
         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
         if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
             _mode == JoinMode::Inner) {
@@ -1001,7 +1014,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
     if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
-        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode != JoinMode::Semi) {
       // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
       // non-equal predicates.
       result_table->set_value_clustered_by({left_join_column, right_join_column});
