@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import glob
 import json
 import os
 import sys
 
-from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize, run_benchmark
 
 
 # This test runs the binary hyriseBenchmarkJoinOrder with two different sets of arguments.
@@ -14,6 +13,7 @@ from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, 
 # During the second run, the shell output is validated using pexpect
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
+    build_dir = initialize()
 
     return_error = False
 
@@ -28,9 +28,13 @@ def main():
     arguments["--clients"] = "1"
     arguments["--scheduler"] = "false"
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    # Binary tables would be written into the table_path. In CI, this path is shared by different targets that are
+    # potentially executed concurrently. This sometimes led to issues with corrupted binary files.
+    arguments["--dont_cache_binary_tables"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
+
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
     benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
     benchmark.expect_exact("Running in single-threaded mode")
@@ -40,7 +44,7 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
-    benchmark.expect_exact("Caching tables as binary files")
+    benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Retrieving the IMDB dataset.")
     benchmark.expect_exact("IMDB setup already complete, no setup action required")
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
@@ -97,11 +101,7 @@ def main():
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
 
-    if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
-        print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
-        return_error = True
-
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
     arguments = {}
     arguments["--table_path"] = "'resources/test_data/imdb_sample/'"
@@ -114,8 +114,9 @@ def main():
     arguments["--clients"] = "4"
     arguments["--chunk_size"] = "100000"
     arguments["--verify"] = "true"
+    arguments["--dont_cache_binary_tables"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
     benchmark.expect_exact("Running in multi-threaded mode using all available cores")
     benchmark.expect_exact("4 simulated clients are scheduling items in parallel")

@@ -57,16 +57,16 @@ class MetaTableTest : public BaseTest {
   std::shared_ptr<Table> int_int_int_null;
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() {
+  void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
     int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
     int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
 
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
-                               {{EncodingType::RunLength},
-                                {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                                {EncodingType::Unencoded}});
+                               {SegmentEncodingSpec{EncodingType::RunLength},
+                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                SegmentEncodingSpec{EncodingType::Unencoded}});
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
@@ -79,10 +79,10 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
-    Hyrise::get().meta_table_manager._add(table);
+    Hyrise::get().meta_table_manager.add_table(table);
   }
 };
 
@@ -126,13 +126,27 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
     Hyrise::get()
         .storage_manager.get_table("int_int")
         ->get_chunk(ChunkID{0})
-        ->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
   const auto meta_table = generate_meta_table(GetParam());
 
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+}
+
+TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
+  // Meta tables that access stored tables without going through GetTable need to handle nullptr explicitly. We do not
+  // check the actual results in order to avoid the number of test tables (that would have to be updated if the memory
+  // consumption changes) low. Instead, we simply ensure that the meta table is generated without dereferencing said
+  // nullptr.
+
+  const auto int_int = Hyrise::get().storage_manager.get_table("int_int");
+
+  SQLPipelineBuilder{"DELETE FROM int_int"}.create_pipeline().get_result_table();
+  int_int->remove_chunk(ChunkID{0});
+
+  generate_meta_table(GetParam());
 }
 
 TEST_P(MultiMetaTablesTest, SQLFeatures) {

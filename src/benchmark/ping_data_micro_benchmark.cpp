@@ -167,7 +167,7 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
   
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->finalize();
-    added_chunk->set_sorted_by(SortColumnDefinition(sorted_table->column_id_by_name(order_by_column_name), sort_mode));
+    added_chunk->set_individually_sorted_by(SortColumnDefinition(sorted_table->column_id_by_name(order_by_column_name), sort_mode));
 
     // in case a chunk encoding spec is provided, encode chunk
     if (chunk_encoding_spec) {

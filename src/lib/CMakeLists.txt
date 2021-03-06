@@ -142,6 +142,8 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_unique_constraint.cpp
+    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
@@ -307,6 +309,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
     optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/null_scan_removal_rule.cpp
+    optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp
     optimizer/strategy/predicate_merge_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
@@ -322,6 +326,7 @@ set(
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
+    scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
@@ -417,14 +422,14 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/abstract_table_constraint.cpp
+    storage/abstract_table_constraint.hpp
+    storage/table_key_constraint.cpp
+    storage/table_key_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/constraints/abstract_table_constraint.cpp
-    storage/constraints/abstract_table_constraint.hpp
-    storage/constraints/table_key_constraint.cpp
-    storage/constraints/table_key_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -555,6 +560,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_bimap_core_override.hpp
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
@@ -651,6 +657,7 @@ set(
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
+    # Additional libraries added with target_link_libraries_system below
 )
 
 if (NOT APPLE)
@@ -716,6 +723,7 @@ if(NOT APPLE)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential

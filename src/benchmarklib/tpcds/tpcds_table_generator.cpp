@@ -63,8 +63,8 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
-      Streams[i].nInitialSeed = n_seed + skip * i;
-      Streams[i].nSeed = n_seed + skip * i;
+      Streams[i].nInitialSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
+      Streams[i].nSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
       Streams[i].nUsed = 0;
     }
   }
@@ -166,9 +166,9 @@ std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
   return nullCheck(column_id) ? std::nullopt
-                              : address.street_name2 == nullptr
-                                    ? std::optional{pmr_string{address.street_name1}}
-                                    : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+         : address.street_name2 == nullptr
+             ? std::optional{pmr_string{address.street_name1}}
+             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
 // mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
@@ -257,18 +257,18 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 
 namespace opossum {
 
-TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
+TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
-TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
+TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor,
                                          const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
     : AbstractTableGenerator(benchmark_config), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
-std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
+std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generate() {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   // try to load cached tables
@@ -311,7 +311,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   return table_info_by_name;
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) const {
+std::shared_ptr<Table> TPCDSTableGenerator::_generate_table(const std::string& table_name) const {
   if (table_name == "call_center") {
     return generate_call_center();
   } else if (table_name == "catalog_page") {
@@ -353,7 +353,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& t
   }
 }
 
-std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_generate_sales_and_returns_tables(
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_generate_sales_and_returns_tables(
     const std::string& sales_table_name) const {
   if (sales_table_name == "catalog_sales") {
     return generate_catalog_sales_and_returns();
@@ -366,7 +366,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_
   }
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_rows) const {
   auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
   call_center_count = std::min(call_center_count, max_rows);
 
@@ -413,7 +413,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
   return call_center_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_rows) const {
   auto [catalog_page_first, catalog_page_count] = prepare_for_table(CATALOG_PAGE);
   catalog_page_count = std::min(catalog_page_count, max_rows);
 
@@ -440,7 +440,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
   return catalog_page_builder.finish_table();
 }
 
-std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_catalog_sales_and_returns(
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_catalog_sales_and_returns(
     ds_key_t max_rows) const {
   auto [catalog_sales_first, catalog_sales_count] = prepare_for_table(CATALOG_SALES);
   // catalog_sales_count is NOT the actual number of catalog sales created, for each of these "master" catalog_sales
@@ -544,7 +544,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   return {catalog_sales_builder.finish_table(), catalog_returns_builder.finish_table()};
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_address(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t max_rows) const {
   auto [customer_address_first, customer_address_count] = prepare_for_table(CUSTOMER_ADDRESS);
   customer_address_count = std::min(customer_address_count, max_rows);
 
@@ -574,7 +574,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_address(ds_key_t m
   return customer_address_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows) const {
   auto [customer_first, customer_count] = prepare_for_table(CUSTOMER);
   customer_count = std::min(customer_count, max_rows);
 
@@ -602,7 +602,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows)
   return customer_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_demographics(ds_key_t max_rows) const {
   auto [customer_demographics_first, customer_demographics_count] = prepare_for_table(CUSTOMER_DEMOGRAPHICS);
   customer_demographics_count = std::min(customer_demographics_count, max_rows);
 
@@ -629,7 +629,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
   return customer_demographics_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_date_dim(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows) const {
   auto [date_first, date_count] = prepare_for_table(DATE);
   date_count = std::min(date_count, max_rows);
 
@@ -666,7 +666,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_date_dim(ds_key_t max_rows)
   return date_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_household_demographics(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_household_demographics(ds_key_t max_rows) const {
   auto [household_demographics_first, household_demographics_count] = prepare_for_table(HOUSEHOLD_DEMOGRAPHICS);
   household_demographics_count = std::min(household_demographics_count, max_rows);
 
@@ -691,7 +691,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_household_demographics(ds_k
   return household_demographics_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_income_band(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_income_band(ds_key_t max_rows) const {
   auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
   income_band_count = std::min(income_band_count, max_rows);
 
@@ -709,7 +709,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_income_band(ds_key_t max_ro
   return income_band_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_inventory(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_inventory(ds_key_t max_rows) const {
   auto [inventory_first, inventory_count] = prepare_for_table(INVENTORY);
   inventory_count = std::min(inventory_count, max_rows);
 
@@ -726,7 +726,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_inventory(ds_key_t max_rows
   return inventory_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_item(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_item(ds_key_t max_rows) const {
   auto [item_first, item_count] = prepare_for_table(ITEM);
   item_count = std::min(item_count, max_rows);
 
@@ -753,7 +753,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_item(ds_key_t max_rows) con
   return item_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows) const {
   auto [promotion_first, promotion_count] = prepare_for_table(PROMOTION);
   promotion_count = std::min(promotion_count, max_rows);
 
@@ -783,7 +783,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows
   return promotion_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_reason(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_reason(ds_key_t max_rows) const {
   auto [reason_first, reason_count] = prepare_for_table(REASON);
   reason_count = std::min(reason_count, max_rows);
 
@@ -800,7 +800,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_reason(ds_key_t max_rows) c
   return reason_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_ship_mode(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_ship_mode(ds_key_t max_rows) const {
   auto [ship_mode_first, ship_mode_count] = prepare_for_table(SHIP_MODE);
   ship_mode_count = std::min(ship_mode_count, max_rows);
 
@@ -820,7 +820,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_ship_mode(ds_key_t max_rows
   return ship_mode_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) const {
   auto [store_first, store_count] = prepare_for_table(STORE);
   store_count = std::min(store_count, max_rows);
 
@@ -860,7 +860,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
   return store_builder.finish_table();
 }
 
-std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_store_sales_and_returns(
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_store_sales_and_returns(
     ds_key_t max_rows) const {
   auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
 
@@ -942,7 +942,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   return {store_sales_builder.finish_table(), store_returns_builder.finish_table()};
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_time_dim(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_time_dim(ds_key_t max_rows) const {
   auto [time_first, time_count] = prepare_for_table(TIME);
   time_count = std::min(time_count, max_rows);
 
@@ -962,7 +962,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time_dim(ds_key_t max_rows)
   return time_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows) const {
   auto [warehouse_first, warehouse_count] = prepare_for_table(WAREHOUSE);
   warehouse_count = std::min(warehouse_count, max_rows);
 
@@ -992,7 +992,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
   return warehouse_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows) const {
   auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
   web_page_count = std::min(web_page_count, max_rows);
 
@@ -1018,7 +1018,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
   return web_page_builder.finish_table();
 }
 
-std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_web_sales_and_returns(
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_web_sales_and_returns(
     ds_key_t max_rows) const {
   auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
 
@@ -1116,7 +1116,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   return {web_sales_builder.finish_table(), web_returns_builder.finish_table()};
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows) const {
+std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows) const {
   auto [web_site_first, web_site_count] = prepare_for_table(WEB_SITE);
   web_site_count = std::min(web_site_count, max_rows);
 
@@ -1157,6 +1157,119 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows)
   }
 
   return web_site_builder.finish_table();
+}
+
+void TPCDSTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  /**
+   * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
+   * (Section 2: Logical Database Design)
+   */
+
+  // Fact Tables (7)
+  const auto& store_sales_table = table_info_by_name.at("store_sales").table;
+  store_sales_table->add_soft_key_constraint(
+      {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& store_returns_table = table_info_by_name.at("store_returns").table;
+  store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
+                                                 store_returns_table->column_id_by_name("sr_ticket_number")},
+                                                KeyConstraintType::PRIMARY_KEY});
+
+  const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
+  catalog_sales_table->add_soft_key_constraint({{catalog_sales_table->column_id_by_name("cs_item_sk"),
+                                                 catalog_sales_table->column_id_by_name("cs_order_number")},
+                                                KeyConstraintType::PRIMARY_KEY});
+
+  const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
+  catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
+                                                   catalog_returns_table->column_id_by_name("cr_order_number")},
+                                                  KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_sales_table = table_info_by_name.at("web_sales").table;
+  web_sales_table->add_soft_key_constraint(
+      {{web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_returns_table = table_info_by_name.at("web_returns").table;
+  web_returns_table->add_soft_key_constraint(
+      {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& inventory_table = table_info_by_name.at("inventory").table;
+  inventory_table->add_soft_key_constraint(
+      {{inventory_table->column_id_by_name("inv_date_sk"), inventory_table->column_id_by_name("inv_item_sk"),
+        inventory_table->column_id_by_name("inv_warehouse_sk")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  // Dimension Tables (17)
+  const auto& store_table = table_info_by_name.at("store").table;
+  store_table->add_soft_key_constraint(
+      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& call_center_table = table_info_by_name.at("call_center").table;
+  call_center_table->add_soft_key_constraint(
+      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
+  catalog_page_table->add_soft_key_constraint(
+      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_site_table = table_info_by_name.at("web_site").table;
+  web_site_table->add_soft_key_constraint(
+      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& web_page_table = table_info_by_name.at("web_page").table;
+  web_page_table->add_soft_key_constraint(
+      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& warehouse_table = table_info_by_name.at("warehouse").table;
+  warehouse_table->add_soft_key_constraint(
+      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_address_table = table_info_by_name.at("customer_address").table;
+  customer_address_table->add_soft_key_constraint(
+      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
+  customer_demographics_table->add_soft_key_constraint(
+      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& date_dim_table = table_info_by_name.at("date_dim").table;
+  date_dim_table->add_soft_key_constraint(
+      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
+  household_demographics_table->add_soft_key_constraint(
+      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& item_table = table_info_by_name.at("item").table;
+  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& income_band_table = table_info_by_name.at("income_band").table;
+  income_band_table->add_soft_key_constraint(
+      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& promotion_table = table_info_by_name.at("promotion").table;
+  promotion_table->add_soft_key_constraint(
+      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& reason_table = table_info_by_name.at("reason").table;
+  reason_table->add_soft_key_constraint(
+      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
+  ship_mode_table->add_soft_key_constraint(
+      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& time_dim_table = table_info_by_name.at("time_dim").table;
+  time_dim_table->add_soft_key_constraint(
+      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
 }  // namespace opossum

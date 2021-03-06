@@ -10,6 +10,11 @@
 
 namespace opossum {
 
+struct OptimizerRuleMetrics {
+  std::string rule_name;
+  std::chrono::nanoseconds duration;
+};
+
 class AbstractRule;
 class AbstractLQPNode;
 
@@ -32,15 +37,19 @@ class Optimizer final {
    */
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
-  std::shared_ptr<AbstractLQPNode> optimize(std::shared_ptr<AbstractLQPNode> input) const;
+  /**
+   * Returns optimized version of @param input.
+   * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
+   */
+  std::shared_ptr<AbstractLQPNode> optimize(
+      std::shared_ptr<AbstractLQPNode> input,
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 
  private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;
-
-  void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
 
 }  // namespace opossum

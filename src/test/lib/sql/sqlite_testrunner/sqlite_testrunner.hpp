@@ -68,7 +68,7 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
   inline static bool _last_run_successful{true};
 };
 
-auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLiteTestRunnerParam>& info) {
+inline auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLiteTestRunnerParam>& info) {
   const auto& query_pair = std::get<0>(info.param);
   const auto& encoding_type = std::get<1>(info.param);
 

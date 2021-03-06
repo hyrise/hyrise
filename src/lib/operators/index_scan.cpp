@@ -55,12 +55,12 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     jobs.reserve(included_chunk_ids.size());
     for (auto chunk_id : included_chunk_ids) {
       if (_in_table->get_chunk(chunk_id)) {
-        jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+        jobs.push_back(_create_job(chunk_id, output_mutex));
       }
     }
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return _out_table;
 }
@@ -74,7 +74,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
+std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
@@ -92,13 +92,12 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
 
     std::lock_guard<std::mutex> lock(output_mutex);
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
-    if (!chunk->sorted_by().empty()) {
+    if (!chunk->individually_sorted_by().empty()) {
        _out_table->last_chunk()->finalize();
-       _out_table->last_chunk()->set_sorted_by(chunk->sorted_by());
+       _out_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
     }  
   });
 
-  job_task->schedule();
   return job_task;
 }
 

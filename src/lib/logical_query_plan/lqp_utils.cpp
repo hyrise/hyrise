@@ -1,15 +1,14 @@
 #include "lqp_utils.hpp"
 
-#include <set>
-
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
@@ -83,9 +82,49 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
+void recursively_collect_subquery_expressions_by_lqp(
+    SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  if (!node) return;
+  if (!visited_nodes.emplace(node).second) return;
+
+  for (const auto& expression : node->node_expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+
+      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+        if (*lqp == *subquery_expression->lqp) {
+          subquery_expressions.emplace_back(subquery_expression);
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+      }
+      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
+
+      // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
+      recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
+                                                      visited_nodes);
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    });
+  }
+
+  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
+  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+}
+
 }  // namespace
 
 namespace opossum {
+
+SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
+  auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
+  recursively_collect_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+
+  return subqueries_by_lqp;
+}
 
 LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& lhs,
                                        const std::shared_ptr<AbstractLQPNode>& rhs) {
@@ -304,6 +343,140 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
+}
+
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                               const std::unordered_set<ColumnID>& column_ids) {
+  DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
+                  lqp_node.type == LQPNodeType::Mock,
+              "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
+
+  const auto& output_expressions = lqp_node.output_expressions();
+  auto column_expressions = ExpressionUnorderedSet{};
+  column_expressions.reserve(column_ids.size());
+
+  for (const auto& output_expression : output_expressions) {
+    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+    if (column_expression && column_ids.contains(column_expression->original_column_id) &&
+        *column_expression->original_node.lock() == lqp_node) {
+      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
+      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+    }
+  }
+
+  return column_expressions;
+}
+
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+                                         const ExpressionUnorderedSet& expressions) {
+  DebugAssert(!unique_constraints->empty(), "Invalid input: Set of unique constraints should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
+
+  // Look for a unique constraint that is based on a subset of the given expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (unique_constraint.expressions.size() <= expressions.size() &&
+        std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
+                    [&expressions](const auto unique_constraint_expression) {
+                      return expressions.contains(unique_constraint_expression);
+                    })) {
+      // Found a matching unique constraint
+      return true;
+    }
+  }
+  // Did not find a unique constraint for the given expressions
+  return false;
+}
+
+std::vector<FunctionalDependency> fds_from_unique_constraints(
+    const std::shared_ptr<const AbstractLQPNode>& lqp,
+    const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+  Assert(!unique_constraints->empty(), "Did not expect empty vector of unique constraints");
+
+  auto fds = std::vector<FunctionalDependency>{};
+
+  // Collect non-nullable output expressions
+  const auto& output_expressions = lqp->output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (!lqp->is_column_nullable(column_id)) {
+      output_expressions_non_nullable.insert(output_expressions.at(column_id));
+    }
+  }
+
+  for (const auto& unique_constraint : *unique_constraints) {
+    auto determinants = unique_constraint.expressions;
+
+    // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)
+    if (!std::all_of(determinants.cbegin(), determinants.cend(),
+                     [&output_expressions_non_nullable](const auto& determinant_expression) {
+                       return output_expressions_non_nullable.contains(determinant_expression);
+                     })) {
+      continue;
+    }
+
+    // (2) Collect the dependent output expressions
+    auto dependents = ExpressionUnorderedSet();
+    for (const auto& output_expression : output_expressions) {
+      if (determinants.contains(output_expression)) continue;
+      dependents.insert(output_expression);
+    }
+
+    // (3) Add FD to output
+    if (dependents.empty()) continue;
+    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
+                             [&determinants, &dependents](const auto& fd) {
+                               return (fd.determinants == determinants) && (fd.dependents == dependents);
+                             }) == fds.cend(),
+                "Creating duplicate functional dependencies is unexpected.");
+    fds.emplace_back(determinants, dependents);
+  }
+  return fds;
+}
+
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds) {
+  if (fds.empty()) return;
+  const auto& output_expressions = lqp->output_expressions();
+  const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+
+  // Adjust FDs: Remove dependents that are not part of the node's output expressions
+  auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
+    return !output_expressions_set.contains(fd_dependent_expression);
+  };
+  for (auto& fd : fds) {
+    std::erase_if(fd.dependents, not_part_of_output_expressions);
+  }
+
+  // Remove invalid or unnecessary FDs
+  fds.erase(std::remove_if(fds.begin(), fds.end(),
+                           [&lqp, &output_expressions_set](auto& fd) {
+                             // If there are no dependents left, we can discard the FD altogether
+                             if (fd.dependents.empty()) return true;
+
+                             /**
+                              * Remove FDs with determinant expressions that are
+                              *  a) not part of the node's output expressions
+                              *  b) are nullable
+                              */
+                             for (const auto& fd_determinant_expression : fd.determinants) {
+                               if (!output_expressions_set.contains(fd_determinant_expression) ||
+                                   lqp->is_column_nullable(lqp->get_column_id(*fd_determinant_expression))) {
+                                 return true;
+                               }
+                             }
+                             return false;
+                           }),
+            fds.end());
+
+  /**
+   * Future Work: Remove redundant FDs. For example:
+   *               - {a, b} => {c, SUM(d)}
+   *               - {a}    => {b, c}
+   *              Because we already have {a} => {c}, we do not need {a, b} => {c}. Therefore, we should change our set
+   *              of FDs to the following:
+   *               - {a, b} => {SUM(d)}
+   *               - {a}    => {b, c}
+   */
 }
 
 }  // namespace opossum

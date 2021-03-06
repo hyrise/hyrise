@@ -160,10 +160,14 @@ class SortedSegmentSearch {
     }
 
     // early out everything matches
-    if (first_value > _first_search_value && last_value < *_second_search_value) return;
+    if (first_value > _first_search_value && last_value < *_second_search_value) {
+      all_rows_matching = true;
+      return;
+    }
 
     // early out nothing matches
     if (first_value > *_second_search_value || last_value < _first_search_value) {
+      no_rows_matching = true;
       _begin = _end;
       return;
     }
@@ -300,6 +304,10 @@ class SortedSegmentSearch {
       }
     }
   }
+
+  // Flags to indicate whether a shortcut was taken to skip scanning.
+  bool no_rows_matching{false};
+  bool all_rows_matching{false};
 
  private:
   // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when

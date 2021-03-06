@@ -33,13 +33,13 @@ std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsVa
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
+  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
 
   if (!chunk_sorted_by.empty()) {
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++chunk_scans_sorted;
+        ++num_chunks_with_binary_search;
         return;
       }
     }
@@ -113,17 +113,37 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
   auto iterable = create_iterable_from_attribute_vector(segment);
 
   if (_value_matches_all(segment, search_value_id)) {
-    iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      static const auto always_true = [](const auto&) { return true; };
-      // Matches all, so include all rows except those with NULLs in the result.
-      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
-    });
+    if (_column_is_nullable) {
+      // We still have to check for NULLs
+      iterable.with_iterators(position_filter, [&](auto it, auto end) {
+        static const auto always_true = [](const auto&) { return true; };
+        _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
+      });
+    } else {
+      // No NULLs, all rows match.
+      ++num_chunks_with_all_rows_matching;
+      const auto output_size = position_filter ? position_filter->size() : segment.size();
+      const auto output_start_offset = matches.size();
+      matches.resize(matches.size() + output_size);
+
+      // Make the compiler try harder to vectorize the trivial loop below.
+      // This empty block is used to convince clang-format to keep the pragma indented.
+      // NOLINTNEXTLINE
+      {}  // clang-format off
+      #pragma omp simd
+      // clang-format on
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
+        // `matches` might already contain entries if it is called multiple times by
+        // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
+        matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
+      }
+    }
 
     return;
   }
 
   if (_value_matches_none(segment, search_value_id)) {
-    ++chunk_scans_skipped;
+    ++num_chunks_with_early_out;
     return;
   }
 

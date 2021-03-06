@@ -21,36 +21,36 @@
 
 namespace opossum {
 
-void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // we only want to follow chains of predicates
-  if (node->type != LQPNodeType::Predicate) {
-    _apply_to_inputs(node);
+  if (lqp_root->type != LQPNodeType::Predicate) {
+    _apply_to_plan_inputs_without_subqueries(lqp_root);
     return;
   }
 
-  DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
+  DebugAssert(lqp_root->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
   // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering and ValidateNodes.
-  auto current_node = node;
+  auto current_node = lqp_root;
   while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
          _is_non_filtering_node(*current_node)) {
-    if (current_node->type == LQPNodeType::Predicate) {
-      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    // Once a node has multiple outputs, we cannot use the predicate nodes above any more. Otherwise, we might prune
+    // based on the conditions found only in a single branch.
+    if (current_node->output_count() > 1) {
+      predicate_nodes.clear();
     }
 
-    // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->output_count() > 1) {
-      _apply_to_inputs(node);
-      return;
+    if (current_node->type == LQPNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
     }
 
     current_node = current_node->left_input();
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    _apply_to_inputs(node);
+    _apply_to_plan_inputs_without_subqueries(lqp_root);
     return;
   }
   const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
@@ -183,7 +183,7 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
 
     // Range filters are only available for arithmetic (non-string) types.
-    if constexpr (std::is_arithmetic_v<ColumnDataType>) {  // NOLINT
+    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (segment_statistics.range_filter) {
         if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;

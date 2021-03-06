@@ -51,6 +51,8 @@ void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
 bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
+bool AbstractTask::try_mark_as_assigned_to_worker() { return !_is_assigned_to_worker.exchange(true); }
+
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
 
@@ -89,7 +91,7 @@ void AbstractTask::execute() {
   // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
   // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
   // spawned the task are pushed down to a point where this thread is already running.
-  Assert(_is_scheduled, "Task should be have been scheduled before being executed");
+  Assert(_is_scheduled, "Task should have been scheduled before being executed");
 
   _on_execute();
 
@@ -116,15 +118,17 @@ void AbstractTask::_mark_as_scheduled() {
 void AbstractTask::_on_predecessor_done() {
   auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
-    auto worker = Worker::get_this_thread_worker();
+    auto current_worker = Worker::get_this_thread_worker();
 
-    if (worker) {
+    if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
       // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
       // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
       if (!_is_scheduled) return;
 
-      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
+      // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
+      // predecessor. This should improve cache locality and reduce the scheduling costs.
+      current_worker->execute_next(shared_from_this());
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"

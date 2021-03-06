@@ -186,13 +186,13 @@ float partially_optimize_translate_and_execute_query(const std::shared_ptr<Abstr
   const auto root_node = LogicalPlanRootNode::make(std::move(lqp_query));
 
   const auto chunk_pruning_rule = ChunkPruningRule();
-  chunk_pruning_rule.apply_to(root_node);
+  chunk_pruning_rule.apply_to_plan(root_node);
 
   const auto column_pruning_rule = ColumnPruningRule();
-  column_pruning_rule.apply_to(root_node);
+  column_pruning_rule.apply_to_plan(root_node);
 
   const auto index_scan_rule = IndexScanRule();
-  index_scan_rule.apply_to(root_node);
+  index_scan_rule.apply_to_plan(root_node);
 
   // Remove LogicalPlanRootNode
   const auto optimized_node = root_node->left_input();
@@ -302,7 +302,7 @@ int main() {
         added_chunk = sorted_table->get_chunk(chunk_id);
         added_chunk->finalize();
         // Set order by for chunk 
-        added_chunk->set_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
+        added_chunk->set_individually_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
       } else {
         // append unsorted chunk to sorted table 
         sorted_table->append_chunk(get_segments_of_chunk(single_chunk_table, ChunkID{0}));

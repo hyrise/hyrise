@@ -1,7 +1,12 @@
 #include "benchmark_runner.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <random>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
@@ -102,6 +107,14 @@ void BenchmarkRunner::run() {
       std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
     }
   }};
+
+  if (_config.metrics) {
+    // Create a table for the segment access counter log
+    SQLPipelineBuilder{
+        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        .create_pipeline()
+        .get_result_table();
+  }
 
   // Retrieve the items to be executed and prepare the result vector
   const auto& items = _benchmark_item_runner->items();
@@ -222,6 +235,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+  _snapshot_segment_access_counters("End of Benchmark");
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
@@ -249,26 +264,41 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
+    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+    if (_currently_running_clients > 0) std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    Hyrise::get().scheduler()->wait_for_all_tasks();
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
-    const auto num_successful_runs = result.successful_runs.size();
-    const auto duration_per_item =
-        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
+
+    // Compute mean by using accumulators
+    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
+        accumulator;
+    for (const auto& entry : result.successful_runs) {
+      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
+      accumulator(static_cast<double>(duration.count()));
+    }
+    const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
+    // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
+    const auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
-      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
+      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
+                << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
+                << " iter/s)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
 
-    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+    // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
+    // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
+    // unclear advantage of excluding those runs, we only take one snapshot here.
+    _snapshot_segment_access_counters(name);
   }
 }
 
@@ -353,9 +383,15 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                                                       {"statements", nlohmann::json::array()}};
 
           for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
+            nlohmann::json rule_metrics_json;
+            for (const auto& rule_duration : sql_statement_metrics->optimizer_rule_durations) {
+              rule_metrics_json[rule_duration.rule_name] += rule_duration.duration.count();
+            }
+
             auto sql_statement_metrics_json =
                 nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
                                {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+                               {"optimizer_rule_durations", rule_metrics_json},
                                {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
                                {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
                                {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
@@ -377,8 +413,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         {"name", name},
         {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
         {"successful_runs", runs_to_json(result.successful_runs)},
-        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
-        {"iterations", result.successful_runs.size()}};
+        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
@@ -386,17 +421,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+        static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
-    // want to touch this and potentially break the comparability across commits.
+    // want to touch this and potentially break the comparability across commits. Note that items_per_second only
+    // includes successful iterations.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = !result.successful_runs.empty()
-                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
-                                   : std::nanf("");
-    benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }
@@ -424,6 +456,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
+  }
+
+  if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
+    report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
   }
 
   stream << std::setw(2) << report << std::endl;
@@ -536,6 +572,26 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   }
 
   return output;
+}
+
+void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
+  if (!_config.metrics) return;
+
+  auto moment_or_timestamp = moment;
+  if (moment_or_timestamp.empty()) {
+    const auto timestamp =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
+            .count();
+    moment_or_timestamp = std::to_string(timestamp);
+  }
+
+  ++_snapshot_id;
+
+  auto sql_builder = std::stringstream{};
+  sql_builder << "INSERT INTO benchmark_segments_log SELECT " << _snapshot_id << ", '" << moment_or_timestamp + "'"
+              << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
+
+  SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
 }  // namespace opossum

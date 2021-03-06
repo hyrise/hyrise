@@ -9,7 +9,9 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "resolve_type.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
@@ -67,12 +69,12 @@ void AbstractOperator::execute() {
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
-  // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
+    // Verify that LQP (if set) and PQP match.
     if (lqp_node) {
-      [[maybe_unused]] const auto& lqp_expressions = lqp_node->output_expressions();
+      const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
-        DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
+        Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
       } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
         // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
@@ -83,16 +85,35 @@ void AbstractOperator::execute() {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
-        DebugAssert(_output->column_count() == lqp_expressions.size(),
-                    std::string{"Mismatching number of output columns for "} + name());
+        Assert(_output->column_count() == lqp_expressions.size(),
+               std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           if (_type != OperatorType::Alias) {
-            [[maybe_unused]] const auto lqp_type = lqp_expressions[column_id]->data_type();
-            [[maybe_unused]] const auto pqp_type = _output->column_data_type(column_id);
-            [[maybe_unused]] const auto pqp_name = _output->column_name(column_id);
-            DebugAssert(pqp_type == lqp_type,
-                        std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+            const auto lqp_type = lqp_expressions[column_id]->data_type();
+            const auto pqp_type = _output->column_data_type(column_id);
+            const auto pqp_name = _output->column_name(column_id);
+            Assert(pqp_type == lqp_type,
+                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
+        }
+      }
+    }
+
+    // Verify that nullability of columns and segments match for ValueSegments
+    // Only ValueSegments have an individual is_nullable attribute
+    if (_output && _output->type() == TableType::Data) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+          const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
+          resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
+            using ColumnDataType = typename decltype(data_type_t)::type;
+            using SegmentType = std::decay_t<decltype(segment)>;
+            if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
+              // If segment is nullable, the column must be nullable as well
+              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
+                     std::string{"Nullable segment found in non-nullable column "} + _output->column_name(column_id));
+            }
+          });
         }
       }
     }
@@ -193,9 +214,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                 << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-      fn_stream << "/";
-      fn_stream << *abstract_operator.performance_data;
-      fn_stream << ")";
+      fn_stream << "/" << *abstract_operator.performance_data << ")";
     }
   };
 

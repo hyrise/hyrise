@@ -14,11 +14,11 @@
  *      segment_with_iterators[_filtered]()    Calls the functor with a begin and end iterator
  *      segment_iterate[_filtered]()           Calls the functor with each value in the segment
  *
- * The *_filtered() variants of the functions take a AbstractPosList wnich allows for selective access to the values in a
- * segment.
+ * The *_filtered() variants of the functions take a AbstractPosList which allows for selective access to the values in
+ * a segment.
  *
  * The template parameter T is either (if known to the caller) the DataType of the values contained in the segment, or
- * ResolveDataTypeTag, if the type is unknown to the caller. ALWAYS pass in the DataType of the Segment if is already
+ * ResolveDataTypeTag if the type is unknown to the caller. ALWAYS pass in the DataType of the Segment if is already
  * known in order to avoid unnecessary code generation.
  *
  * The template parameter EraseTypes specifies if type erasure should be used, which reduces compile

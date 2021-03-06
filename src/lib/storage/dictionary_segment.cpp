@@ -39,10 +39,7 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
 
 template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
-  // Increasing the counter by the dictionary size is just a generalization. The real number of accesses depends
-  // on how the returned pointer will be used. One negative example is when only the size of the dictionary is
-  // requested. This will increase the counter even though no element of the dictionary was accessed.
-  access_counter[SegmentAccessCounter::AccessType::Dictionary] += _dictionary->size();
+  // We have no idea how the dictionary will be used, so we do not increment the access counters here
   return _dictionary;
 }
 
@@ -62,10 +59,10 @@ std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t DictionarySegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+size_t DictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_dictionary, mode);
   }
   return common_elements_size + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type);

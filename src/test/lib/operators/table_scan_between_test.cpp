@@ -74,14 +74,14 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     if (sort_mode) {
       for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
-        data_table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(ColumnID{0}, *sort_mode));
+        data_table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, *sort_mode));
       }
     }
 
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
       ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {data_type, DataType::Int},
-                                 {encoding, EncodingType::Unencoded});
+                                 {SegmentEncodingSpec{encoding}, SegmentEncodingSpec{EncodingType::Unencoded}});
     }
 
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);

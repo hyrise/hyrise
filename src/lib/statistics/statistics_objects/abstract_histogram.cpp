@@ -78,7 +78,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   // For a float bin [0.0, 3.0] it is obvious that only two-thirds of the bin are smaller than 2:
   // 2 - 0 / (width=3) -> 0.6666
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT(bugprone-branch-clone)
+  if constexpr (std::is_same_v<T, pmr_string>) {
     const auto repr_min = _domain.string_to_number(bin_minimum(index));
     const auto repr_max = _domain.string_to_number(bin_maximum(index));
     return repr_max - repr_min + 1u;
@@ -499,14 +499,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto maximum = bin_maximum(value_bin_id);
       const auto distinct_count = bin_distinct_count(value_bin_id);
 
-      // Do not create empty bin, if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin
       const auto new_bin_count = minimum == maximum ? bin_count() - 1 : bin_count();
 
       GenericHistogramBuilder<T> builder{new_bin_count, _domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
-      // Do not create empty bin, if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
         // TODO(anybody) Implement bin bounds trimming for strings

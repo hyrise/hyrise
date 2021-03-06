@@ -19,7 +19,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 class OperatorsDifferenceTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
 
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
@@ -87,7 +87,7 @@ TEST_F(OperatorsDifferenceTest, ForwardSortedByFlag) {
 
   const auto& result_table_unsorted = difference_unsorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
 
@@ -101,7 +101,7 @@ TEST_F(OperatorsDifferenceTest, ForwardSortedByFlag) {
 
   const auto& result_table_sorted = difference_sorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_EQ(sorted_by, sort_definition);
   }
 }

@@ -20,6 +20,9 @@ class Worker;
  * Derive and implement logic in _on_execute()
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
+  // Using friend classes is quite uncommon in Hyrise. The reason it is done here is that the _join method must
+  // absolutely not be called from anyone but the scheduler. As the interface could tempt developers to do so if that
+  // method was public, we chose this approach.
   friend class AbstractScheduler;
 
  public:
@@ -103,6 +106,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   bool try_mark_as_enqueued();
 
   /**
+   * returns true whether the caller is atomically the first to try to assign this task to a worker,
+   * false otherwise.
+   */
+  bool try_mark_as_assigned_to_worker();
+
+  /**
    * Executes the task in the current Thread, blocks until all operations are finished
    */
   void execute();
@@ -141,9 +150,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // For making sure a task gets only scheduled and enqueued once, respectively
   // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
-  // to a TaskQueue
+  // to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
+  // else), _is_assigned_to_worker is set to true.
+  // TODO(anyone): Change this into proper state transitions, see TransactionContext as an example.
   std::atomic_bool _is_enqueued{false};
   std::atomic_bool _is_scheduled{false};
+  std::atomic_bool _is_assigned_to_worker{false};
 
   // For making Tasks join()-able
   std::condition_variable _done_condition_variable;

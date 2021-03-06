@@ -83,38 +83,34 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For aggregate nodes, we need the group by columns and the arguments to the aggregate functions
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+      const auto& node_expressions = node->node_expressions;
 
-      // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
-      // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
-      // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
-      // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
-      auto has_count_star = false;
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
-        if (AggregateExpression::is_count_star(*expression)) {
-          has_count_star = true;
-          break;
-        }
-      }
-      if (has_count_star) {
-        for (const auto& input_expression : node->left_input()->output_expressions()) {
-          locally_required_expressions.emplace(input_expression);
-        }
-        break;
-      }
-
-      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
-        const auto& expression = node->node_expressions[expression_idx];
-
+      for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+        const auto& expression = node_expressions[expression_idx];
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
-          // This is a group by expression that is required from the input
+          // All group_by-expressions are required
           locally_required_expressions.emplace(expression);
         } else {
-          // This is an aggregate expression - we need its argument
+          // We need the arguments of all aggregate functions
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
-          locally_required_expressions.emplace(expression->arguments[0]);
+          if (!AggregateExpression::is_count_star(*expression)) {
+            locally_required_expressions.emplace(expression->arguments[0]);
+          } else {
+            /**
+             * COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
+             * INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
+             * ensure that the AggregateNode requires at least one expression from other nodes.
+             * For
+             *  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
+             *  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
+             *     is the only type of aggregate function, we simply require the first output expression from the
+             *     left input node.
+             */
+            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
+            locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
+          }
         }
       }
     } break;
@@ -123,7 +119,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     //   (1) were already computed and are re-used as arguments in this projection
     //   (2) cannot be computed (i.e., Aggregate and LQPColumn inputs)
     // PredicateNodes have the same requirements - if they have their own implementation, they require all columns to
-    // be already computed, if they use the ExpressionEvaluator the columns should at least be computable.
+    // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
       for (const auto& expression : node->node_expressions) {
@@ -151,11 +147,26 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     case LQPNodeType::Union: {
       const auto& union_node = static_cast<const UnionNode&>(*node);
-      Assert(union_node.set_operation_mode == SetOperationMode::Positions,
-             "Currently, ColumnPruningRule can only handle UnionNodes in Positions mode");
-      // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
-      // tables, we will probably have to change something here in this rule that the required expressions are kept on
-      // both the left and right sides.
+      switch (union_node.set_operation_mode) {
+        case SetOperationMode::Positions: {
+          // UnionNode does not require any expressions itself for the Positions mode. As Positions by definition
+          // operates on the same table left and right, we simply require the same input expressions from both sides.
+        } break;
+
+        case SetOperationMode::All: {
+          // Similarly, if the two input tables are only glued together, the UnionNode itself does not require any
+          // expressions. Currently, this mode is used to merge the result of two mutually exclusive or conditions (see
+          // PredicateSplitUpRule). Once we have a union operator that merges data from different tables, we have to
+          // look into this more deeply.
+          Assert(union_node.left_input()->output_expressions() == union_node.right_input()->output_expressions(),
+                 "Can only handle SetOperationMode::All if both inputs have the same expressions");
+        } break;
+
+        case SetOperationMode::Unique: {
+          // This probably needs all expressions, as all of them are used to establish uniqueness
+          Fail("SetOperationMode::Unique is not supported yet");
+        }
+      }
     } break;
 
     case LQPNodeType::Intersect:
@@ -240,54 +251,49 @@ void try_join_to_semi_rewrite(
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
+
+  // Early out, if we need output expressions from both input tables.
   if (left_input_is_used && right_input_is_used) return;
 
-  // Check whether the join predicates operate on unique columns.
-  auto join_is_unique_on_left_side = false;
-  auto join_is_unique_on_right_side = false;
-
+  /**
+   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
+   * follows:
+   * (1) From all predicates of type Equals, we collect the operand expressions by input node.
+   * (2) We determine the input node that should be used for filtering.
+   * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
+   *     a) Found match -> Rewrite to semi join
+   *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
+   */
   const auto& join_predicates = join_node->join_predicates();
+  auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
+  auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
-    const auto is_unique_column = [](const auto& expression) {
-      const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (!column) return false;
-
-      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
-      if (!stored_table_node) return false;
-
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& key_constraint : table->soft_key_constraints()) {
-        // This currently does not handle multi-column key constraints, but that should be easy to add once needed.
-        if (key_constraint.columns().size() > 1) continue;
-        if (*key_constraint.columns().cbegin() == column->original_column_id) {
-          return true;
-        }
-      }
-      return false;
-    };
-
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    // We can only rewrite an inner join to a semi join if it is an equi join
+    // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
     if (predicate->predicate_condition != PredicateCondition::Equals) continue;
 
-    const auto& left_operand = predicate->left_operand();
-    const auto& right_operand = predicate->right_operand();
-
-    join_is_unique_on_left_side |= is_unique_column(left_operand);
-    join_is_unique_on_right_side |= is_unique_column(right_operand);
+    // Collect operand expressions table-wise
+    for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
+      if (join_node->left_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_left.insert(operand_expression);
+      } else if (join_node->right_input()->has_output_expressions({operand_expression})) {
+        equals_predicate_expressions_right.insert(operand_expression);
+      }
+    }
   }
+  // Early out, if we did not see any Equals-predicates.
+  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
-  // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
-  // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
-  // join into a semi join.
-  if (!left_input_is_used && join_is_unique_on_left_side) {
+  // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
+  if (!left_input_is_used &&
+      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
   }
-
-  if (!right_input_is_used && join_is_unique_on_right_side) {
+  if (!right_input_is_used &&
+      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 }
@@ -319,22 +325,22 @@ void prune_projection_node(
 
 }  // namespace
 
-void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
   // identified nodes and perform the pruning.
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  const auto output_expressions = lqp->output_expressions();
-  required_expressions_by_node[lqp].insert(output_expressions.cbegin(), output_expressions.cend());
+  const auto output_expressions = lqp_root->output_expressions();
+  required_expressions_by_node[lqp_root].insert(output_expressions.cbegin(), output_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
   // those. However, we track how many of a node's outputs we have already visited and recurse only once we have seen
   // all of them. That way, the performance should be similar to that of visit_lqp.
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> outputs_visited_by_node;
-  recursively_gather_required_expressions(lqp, required_expressions_by_node, outputs_visited_by_node);
+  recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
   for (const auto& [node, required_expressions] : required_expressions_by_node) {

@@ -25,6 +25,13 @@ class Projection : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
 
+  enum class OperatorSteps : uint8_t {
+    UncorrelatedSubqueries,
+    ForwardUnmodifiedColumns,
+    EvaluateNewColumns,
+    BuildOutput
+  };
+
   /**
    * The dummy table is used for literal projections that have no input table.
    * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
@@ -53,6 +60,8 @@ class Projection : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+
+  ExpressionUnorderedSet _determine_forwarded_columns(const TableType table_type) const;
 };
 
 }  // namespace opossum

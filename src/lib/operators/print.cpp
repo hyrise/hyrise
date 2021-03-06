@@ -11,6 +11,7 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
@@ -33,8 +34,8 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, PrintFlags flags)
-    : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
+Print::Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out)
+    : AbstractReadOnlyOperator(OperatorType::Print, in), _flags(flags), _out(out) {}
 
 const std::string& Print::name() const {
   static const auto name = std::string{"Print"};
@@ -44,19 +45,31 @@ const std::string& Print::name() const {
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Print>(copied_left_input, _out);
+  return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(const std::shared_ptr<const Table>& table, PrintFlags flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const Table>& table, const PrintFlags flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  Print(table_wrapper, out, flags).execute();
+  Print(table_wrapper, flags, out).execute();
 }
 
-void Print::print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags flags, std::ostream& out) {
-  Print(in, out, flags).execute();
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out) {
+  Print(in, flags, out).execute();
+}
+
+void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
+  auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  const auto [status, result_tables] = pipeline.get_result_tables();
+  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful");
+  Assert(result_tables.size() == 1, "Expected exactly one result table");
+
+  auto table_wrapper = std::make_shared<TableWrapper>(result_tables[0]);
+  table_wrapper->execute();
+
+  Print(table_wrapper, flags, out).execute();
 }
 
 std::shared_ptr<const Table> Print::_on_execute() {
@@ -126,7 +139,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       // print sorting Information
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         const auto column_width = widths[column_id];
-        const auto sort = chunk->sorted_by();
+        const auto sort = chunk->individually_sorted_by();
         if (!sort.empty() && sort.front().column == column_id){
           _out << "|" << std::setw(column_width) << std::left << "X" << std::right << std::setw(0);
         } else {

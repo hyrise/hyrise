@@ -126,55 +126,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   const ReferenceSegment& _segment;
 
  private:
-  // The iterator for cases where we iterate over a single referenced chunk
-  template <typename Accessor>
-  class SingleChunkIterator : public AbstractSegmentIterator<SingleChunkIterator<Accessor>, SegmentPosition<T>> {
-   public:
-    typedef std::random_access_iterator_tag iterator_category;
-    using ValueType = T;
-    using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIteratorType = AbstractPosList::PosListIterator<>;
-
-   public:
-    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor,
-                                 const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& pos_list_it)
-        : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-    void increment() { ++_pos_list_it; }
-
-    void decrement() { --_pos_list_it; }
-
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
-
-    bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
-
-    std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
-
-    SegmentPosition<T> dereference() const {
-      const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
-
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
-
-      const auto& chunk_offset = _pos_list_it->chunk_offset;
-
-      const auto typed_value = _accessor->access(chunk_offset);
-
-      if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
-      } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
-      }
-    }
-
-   private:
-    PosListIteratorType _begin_pos_list_it;
-    PosListIteratorType _pos_list_it;
-    std::shared_ptr<Accessor> _accessor;
-  };
-
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   template <typename PosListIteratorType>
   class MultipleChunkIterator

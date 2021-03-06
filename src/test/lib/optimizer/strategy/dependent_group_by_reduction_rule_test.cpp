@@ -1,16 +1,13 @@
 #include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -293,9 +290,9 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   auto c = mock_node->get_column("c");
   auto d = mock_node->get_column("d");
   auto e = mock_node->get_column("e");
-  auto fd1 = FunctionalDependency{{a}, {b}};
-  auto fd2 = FunctionalDependency{{c}, {d}};
-  mock_node->set_functional_dependencies({fd1, fd2});
+  auto fd_a = FunctionalDependency{{a}, {b}};
+  auto fd_c = FunctionalDependency{{c}, {d}};
+  mock_node->set_non_trivial_functional_dependencies({fd_a, fd_c});
 
   // clang-format off
   auto lqp =

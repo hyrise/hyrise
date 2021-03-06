@@ -12,7 +12,7 @@ extern "C" {
 #include "benchmark_config.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table_key_constraint.hpp"
 #include "table_builder.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
@@ -116,7 +116,7 @@ std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
+    : TPCHTableGenerator(scale_factor, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}

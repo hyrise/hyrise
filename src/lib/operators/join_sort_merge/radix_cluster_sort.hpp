@@ -11,6 +11,7 @@
 #include "column_materializer.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -52,8 +53,10 @@ class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, size_t cluster_count)
-      : _left_input_table{left},
+                   const bool materialize_null_right, size_t cluster_count,
+                   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+      : _performance{performance_data},
+        _left_input_table{left},
         _right_input_table{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
@@ -85,6 +88,8 @@ class RadixClusterSort {
   * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
   * be able to appropriately reserve space for the clustering output.
   **/
+  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
+
   struct ChunkInformation {
     explicit ChunkInformation(size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
@@ -191,10 +196,9 @@ class RadixClusterSort {
       });
 
       histogram_jobs.push_back(job);
-      job->schedule();
     }
 
-    Hyrise::get().scheduler()->wait_for_tasks(histogram_jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(histogram_jobs);
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
     for (auto& chunk_information : table_information.chunk_information) {
@@ -225,10 +229,9 @@ class RadixClusterSort {
             }
           });
       cluster_jobs.push_back(job);
-      job->schedule();
     }
 
-    Hyrise::get().scheduler()->wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(cluster_jobs);
 
     return output_table;
   }
@@ -327,18 +330,22 @@ class RadixClusterSort {
   RadixClusterOutput<T> execute() {
     RadixClusterOutput<T> output;
 
+    Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
+    output.null_rows_left = std::move(null_rows_left);
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
+
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
-    output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
 
-    // Append right samples to left samples and sort (reserve not necessarity when insert can
-    // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
+    // Append right samples to left samples and sort (reserve not necessary when insert can
+    // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
@@ -352,11 +359,14 @@ class RadixClusterSort {
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer.lap());
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
-    // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
+    // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
+
+    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer.lap());
 
     return output;
   }

@@ -9,7 +9,6 @@
 #include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/delete.hpp"
-#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -81,7 +80,7 @@ TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
   EXPECT_EQ(total_invalid_row_count, rows_to_delete);
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
+TEST_F(OperatorsProjectionTest, ForwardsDataTable) {
   // The Projection will forward segments from its input if all expressions are segment references.
   // Why would you enforce something like this? E.g., Update relies on it.
 
@@ -95,9 +94,12 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
   EXPECT_TRUE(projection->get_output()->uses_mvcc() == UseMvcc::Yes);
   EXPECT_TRUE(projection->get_output()->get_chunk(ChunkID{0})->mvcc_data());
+
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<int>*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
+TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
   const auto projection =
       std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
@@ -107,25 +109,35 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
 
   EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<int>*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ValueSegment<float>*>(&*output_chunk->get_segment(ColumnID{0})));
 }
 
-TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
+TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
-  const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
   EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+
+  // Materialized columns are wrapped in reference segments
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2})));
+
+  for (const auto& row : projection->get_output()->get_rows()) {
+    EXPECT_FLOAT_EQ(boost::get<float>(row[0]) + static_cast<float>(boost::get<int>(row[1])), boost::get<float>(row[2]));
+  }
 }
 
-TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
-  // See ForwardsIfPossibleDataTable
-
+TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
@@ -135,6 +147,53 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
             projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
   EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
             projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}));
+
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1})));
+  EXPECT_TRUE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0})));
+}
+
+TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->execute();
+  const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
+  projection->execute();
+
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
+
+  // a_a is not forwarded as it is used in an expression. Thus, it's part of the expression evaluator output.
+  EXPECT_EQ(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2}))->referenced_table());
+  EXPECT_NE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1}))->referenced_table());
+}
+
+// Check if two PQP columns expressions to the same column are interpreted as equal when using ExpressionUnorderedSet
+TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->execute();
+
+  // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
+  const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
+  projection->execute();
+
+  const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{1}));
+
+  // a_a is not forwarded as it is used in an expression. Thus, it's part of the expression evaluator output.
+  EXPECT_EQ(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{2}))->referenced_table());
+  EXPECT_NE(dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{0}))->referenced_table(),
+            dynamic_cast<const ReferenceSegment*>(&*output_chunk->get_segment(ColumnID{1}))->referenced_table());
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
@@ -156,42 +215,6 @@ TEST_F(OperatorsProjectionTest, SetParameters) {
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});
 }
 
-TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
-  // Checks that instead of materializing all values in an imperfectly forwarded DictionarySegment, the dictionary
-  // is re-used and only the attribute vector is materialized.
-
-  auto dict_table = load_table("resources/test_data/tbl/int_float4.tbl", 3);
-  ChunkEncoder::encode_all_chunks(dict_table, EncodingType::Dictionary);
-  auto table_wrapper = std::make_shared<TableWrapper>(dict_table);
-  table_wrapper->execute();
-
-  const auto table_scan = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, 123456);
-  table_scan->execute();
-  const auto projection =
-      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
-  projection->execute();
-
-  const auto input_segment = dict_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  const auto input_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(input_segment);
-  ASSERT_TRUE(input_dictionary_segment);
-
-  const auto& output_table = projection->get_output();
-  ASSERT_EQ(output_table->chunk_count(), 3);
-
-  // Note that column a now has column id 1
-  const auto output_segment = output_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
-  const auto output_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(output_segment);
-  ASSERT_TRUE(output_dictionary_segment);
-
-  EXPECT_TRUE(output_dictionary_segment->dictionary() == input_dictionary_segment->dictionary());
-
-  const auto& output_attribute_vector = output_dictionary_segment->attribute_vector();
-  EXPECT_EQ(output_attribute_vector->size(), 1);
-
-  const auto output_attribute_vector_decompressor = output_attribute_vector->create_base_decompressor();
-  EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
-}
-
 TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   // Verify that the sorted_by flag is not set when it's not present in left input.
   const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
@@ -199,7 +222,7 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
 
   const auto& result_table_unsorted = projection_a_unsorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
 
@@ -215,7 +238,7 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   const auto& result_table_sorted = projection_b_a_sorted->get_output();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_FALSE(sorted_by.empty());
     // Expect sort to be column a, now with ColumnID 1
     const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};

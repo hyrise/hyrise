@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import glob
 import json
 import os
 import sys
 
-from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize
+from compareBenchmarkScriptTest import CompareBenchmarkScriptTest
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize, run_benchmark
 
 
 # This test runs the binary hyriseBenchmarkFileBased with two different sets of arguments.
@@ -14,6 +14,9 @@ from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, 
 # During the second run, the shell output is validated using pexpect
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
+    build_dir = initialize()
+    compare_benchmarks_path = f"{build_dir}/../scripts/compare_benchmarks.py"
+    output_filename_1 = f"{build_dir}/file_based_output_1.json"
 
     return_error = False
 
@@ -23,17 +26,21 @@ def main():
     arguments["--queries"] = "'select_statement'"
     arguments["--time"] = "10"
     arguments["--runs"] = "100"
-    arguments["--output"] = "'json_output.txt'"
+    arguments["--output"] = output_filename_1
     arguments["--mode"] = "'Shuffled'"
     arguments["--encoding"] = "'Unencoded'"
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    # Binary tables would be written into the table_path. In CI, this path is shared by different targets that are
+    # potentially executed concurrently. This sometimes led to issues with corrupted binary files.
+    arguments["--dont_cache_binary_tables"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
+    os.system(f'rm -rf {arguments["--table_path"]}/*.bin')
 
-    benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
+
+    benchmark.expect_exact(f"Writing benchmark results to '{output_filename_1}'")
     benchmark.expect_exact("Running in single-threaded mode")
     benchmark.expect_exact("1 simulated client is scheduling items")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
@@ -41,7 +48,7 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
-    benchmark.expect_exact("Caching tables as binary files")
+    benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
     benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
     benchmark.expect_exact("Running subset of queries: select_statement")
@@ -50,11 +57,17 @@ def main():
     close_benchmark(benchmark)
     check_exit_status(benchmark)
 
-    if not glob.glob(arguments["--table_path"].replace("'", "") + "*.bin"):
-        print("ERROR: Cannot find binary tables in " + arguments["--table_path"])
-        return_error = True
+    output_filename_2 = f"{build_dir}/file_based_output_1.json"
 
-    os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
+    # Second run for compare_benchmark.py test
+    arguments["--output"] = output_filename_2
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
+    benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
+
+    close_benchmark(benchmark)
+    check_exit_status(benchmark)
+
+    CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename_1, output_filename_2).run()
 
     if not os.path.isfile(arguments["--output"].replace("'", "")):
         print("ERROR: Cannot find output file " + arguments["--output"])
@@ -113,8 +126,9 @@ def main():
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"
+    arguments["--dont_cache_binary_tables"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkFileBased", True)
 
     benchmark.expect_exact("Running in multi-threaded mode using all available cores")
     benchmark.expect_exact("4 simulated clients are scheduling items in parallel")

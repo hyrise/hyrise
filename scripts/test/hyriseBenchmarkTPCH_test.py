@@ -4,25 +4,25 @@ import json
 import os
 import sys
 
-from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize
+from compareBenchmarkScriptTest import CompareBenchmarkScriptTest
+from hyriseBenchmarkCore import close_benchmark, check_exit_status, check_json, initialize, run_benchmark
 
 
-# This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.
-# During the first run, the shell output is validated using pexpect.
-# After the first run, this test checks if an output file was created and if it matches the arguments.
-# During the second run, the shell output is validated using pexpect
-# and the test checks if all queries were successfully verified with sqlite.
 def main():
+    build_dir = initialize()
+    compare_benchmarks_path = f"{build_dir}/../scripts/compare_benchmarks.py"
+    output_filename = f"{build_dir}/tpch_output.json"
 
     return_error = False
 
+    # First, run TPC-H and validate it using pexpect. After this run, check if an output file was created and if it
+    # matches the arguments.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--use_prepared_statements"] = "true"
     arguments["--queries"] = "'1,13,19'"
     arguments["--time"] = "10"
     arguments["--runs"] = "-1"
-    arguments["--output"] = "'json_output.txt'"
     arguments["--mode"] = "'Shuffled'"
     arguments["--encoding"] = "'Dictionary'"
     arguments["--compression"] = "'Fixed-size byte-aligned'"
@@ -30,10 +30,11 @@ def main():
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
     arguments["--dont_cache_binary_tables"] = "true"
+    arguments["--output"] = output_filename
 
-    benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
-    benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
+    benchmark.expect_exact(f"Writing benchmark results to '{output_filename}'")
     benchmark.expect_exact("Running in single-threaded mode")
     benchmark.expect_exact("1 simulated client is scheduling items")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
@@ -42,7 +43,7 @@ def main():
     benchmark.expect_exact("No warmup runs are performed")
     benchmark.expect_exact("Not caching tables as binary files")
     benchmark.expect_exact("Benchmarking Queries: [ 1, 13, 19 ]")
-    benchmark.expect_exact("TPCH scale factor is 0.01")
+    benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: yes")
     benchmark.expect_exact("Creating index on customer [ c_custkey ]")
     benchmark.expect_exact("Preparing queries")
@@ -109,6 +110,9 @@ def main():
         output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error
     )
 
+    CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename, output_filename).run()
+
+    # Run TPC-H and validate its output using pexpect and check if all queries were successfully verified with sqlite.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--chunk_size"] = "10000"
@@ -122,8 +126,9 @@ def main():
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"
+    arguments["--dont_cache_binary_tables"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
     benchmark.expect_exact("Running in multi-threaded mode using all available cores")
     benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
@@ -134,14 +139,15 @@ def main():
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 10 seconds")
     benchmark.expect_exact("Benchmarking Queries: [ 2, 4, 6 ]")
-    benchmark.expect_exact("TPCH scale factor is 0.01")
+    benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: no")
     benchmark.expect_exact("Multi-threaded Topology:")
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)
 
-    # Finally test that pruning works end-to-end, that is from the command line parameter all the way to the visualizer
+    # Run TPC-H and create query plan visualizations. Test that pruning works end-to-end, that is from the command line
+    # parameter all the way to the visualizer.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--chunk_size"] = "10000"
@@ -149,7 +155,7 @@ def main():
     arguments["--runs"] = "1"
     arguments["--visualize"] = "true"
 
-    benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
     benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
     benchmark.expect_exact("Chunk size is 10000")
@@ -170,6 +176,35 @@ def main():
 
     if return_error:
         sys.exit(1)
+
+    # The next two TPC-H runs are executed to create output files with which we check the output of the
+    # compare_benchmark.py script.
+    output_filename_1 = f"{build_dir}/tpch_output_1.json"
+    output_filename_2 = f"{build_dir}/tpch_output_2.json"
+
+    arguments = {}
+    arguments["--scale"] = ".01"
+    arguments["--chunk_size"] = "10000"
+    arguments["--queries"] = "'2,6,15'"
+    arguments["--runs"] = "10"
+    arguments["--output"] = output_filename_1
+    arguments["--dont_cache_binary_tables"] = "true"
+
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
+    benchmark.expect_exact(f"Writing benchmark results to '{output_filename_1}'")
+
+    close_benchmark(benchmark)
+    check_exit_status(benchmark)
+
+    arguments["--output"] = output_filename_2
+    arguments["--scheduler"] = True
+    benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
+    benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
+
+    close_benchmark(benchmark)
+    check_exit_status(benchmark)
+
+    CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename_1, output_filename_2).run()
 
 
 if __name__ == "__main__":

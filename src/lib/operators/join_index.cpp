@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <magic_enum.hpp>
-
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -602,8 +600,7 @@ void JoinIndex::_on_cleanup() {
   _index_matches.clear();
 }
 
-void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream,
-                                                           DescriptionMode description_mode) const {
+void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto chunk_count = chunks_scanned_with_index + chunks_scanned_without_index;

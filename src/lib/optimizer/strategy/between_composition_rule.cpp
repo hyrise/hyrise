@@ -348,12 +348,12 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   }
 }
 
-void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  if (node->type == LQPNodeType::Predicate) {
+void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  if (lqp_root->type == LQPNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
-    auto current_node = node;
+    auto current_node = lqp_root;
     while (current_node->type == LQPNodeType::Predicate) {
       // Once a node has multiple outputs, we're not talking about a predicate chain anymore
       if (current_node->outputs().size() > 1) {
@@ -365,18 +365,18 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       current_node = current_node->left_input();
     }
 
-    // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
+    // A substitution is also possible with only 1 predicate_node if it is a LogicalExpression with
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input
       auto next_node = predicate_nodes.back()->left_input();
       _replace_predicates(predicate_nodes);
-      apply_to(next_node);
+      _apply_to_plan_without_subqueries(next_node);
       return;
     }
   }
 
-  _apply_to_inputs(node);
+  _apply_to_plan_inputs_without_subqueries(lqp_root);
 }
 
 }  // namespace opossum
