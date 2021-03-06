@@ -27,7 +27,7 @@ namespace opossum {
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   return ((config.predicate_condition != PredicateCondition::NotEquals && config.join_mode != JoinMode::Semi) || config.join_mode == JoinMode::Inner ||
-         (config.join_mode == JoinMode::Semi && !config.secondary_predicates) ) &&
+         (config.join_mode == JoinMode::Semi) ) &&
          config.left_data_type == config.right_data_type &&
          config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
@@ -67,8 +67,8 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   Assert(_mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
   // Assert((_mode != JoinMode::Semi) || _primary_predicate.predicate_condition == PredicateCondition::Equals,
   //             "Sort merge join only supports Semi joins with an equality primary predicate.");
-  Assert(_mode != JoinMode::Semi || _secondary_predicates.empty(),
-         "Sort merge join does not support Semi joins with secondary predicates.");
+  // Assert(_mode != JoinMode::Semi || _secondary_predicates.empty(),
+  //        "Sort merge join does not support Semi joins with secondary predicates.");
 
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
@@ -310,7 +310,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   void _emit_qualified_combinations(size_t output_cluster, TableRange left_range, TableRange right_range,
                                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     if (multi_predicate_join_evaluator) {
-      if (_mode == JoinMode::Inner) {
+      if (_mode == JoinMode::Inner || _mode == JoinMode::Semi) {
         _emit_combinations_multi_predicated_inner(output_cluster, left_range, right_range,
                                                   *multi_predicate_join_evaluator);
       } else if (_mode == JoinMode::Left) {
@@ -357,13 +357,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
    **/
   void _emit_combinations_multi_predicated_inner(size_t output_cluster, TableRange left_range, TableRange right_range,
                                                  MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-          _emit_combination(output_cluster, left_row_id, right_row_id);
-        }
-      });
-    });
+      if (_mode == JoinMode::Semi) {
+        // left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        //   if (!_semi_row_ids_emitted.contains(left_row_id)) {
+        //     _semi_row_ids_emitted.emplace(left_row_id);
+        //     _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        //   }
+        // });
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+             if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+              if (!_semi_row_ids_emitted.contains(left_row_id)) {
+                _semi_row_ids_emitted.emplace(left_row_id);
+                _emit_combination(output_cluster, left_row_id, right_row_id);
+              }
+            }
+          });
+        });    
+      } else {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+            if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+              _emit_combination(output_cluster, left_row_id, right_row_id);
+            }
+          });
+        });
+      }
   }
 
   /**
