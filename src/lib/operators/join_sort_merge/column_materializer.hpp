@@ -78,7 +78,8 @@ class ColumnMaterializer {
    * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
   std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>> materialize(
-      const std::shared_ptr<const Table> input, const ColumnID column_id, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+      const std::shared_ptr<const Table> input, const ColumnID column_id, BloomFilter& output_bloom_filter,
+      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
     const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
@@ -104,8 +105,8 @@ class ColumnMaterializer {
       const auto samples_to_write = std::min(samples_per_chunk, chunk->size());
       subsamples.push_back(Subsample<T>(samples_to_write));
 
-      jobs.push_back(
-          _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, subsamples.back(), bloom_filter_per_chunk, input_bloom_filter));
+      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, subsamples.back(),
+                                                       bloom_filter_per_chunk, input_bloom_filter));
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -130,13 +131,12 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
-                                                                  std::unique_ptr<RowIDPosList>& null_rows_output,
-                                                                  const ChunkID chunk_id,
-                                                                  std::shared_ptr<const Table> input,
-                                                                  const ColumnID column_id, Subsample<T>& subsample,
-                                                                  std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample, &bloom_filter_per_chunk, &input_bloom_filter] {
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(
+      std::unique_ptr<MaterializedSegmentList<T>>& output, std::unique_ptr<RowIDPosList>& null_rows_output,
+      const ChunkID chunk_id, std::shared_ptr<const Table> input, const ColumnID column_id, Subsample<T>& subsample,
+      std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample,
+                                      &bloom_filter_per_chunk, &input_bloom_filter] {
       auto& segment = *(input->get_chunk(chunk_id)->get_segment(column_id));
       auto chunk_output = MaterializedSegment<T>{};
       chunk_output.reserve(segment.size());
@@ -157,11 +157,11 @@ class ColumnMaterializer {
           if constexpr (use_bloom_filter) {
             const Hash hashed_value = hash_function(static_cast<T>(position.value()));
             // If Value in not present in input bloom filter and can be skipped
-            if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] or _materialize_null) {
+            if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] || _materialize_null) {
               bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;
               chunk_output.emplace_back(row_id, position.value());
             }
-          } 
+          }
           if constexpr (!use_bloom_filter) {
             chunk_output.emplace_back(row_id, position.value());
           }
@@ -175,7 +175,7 @@ class ColumnMaterializer {
 
       _gather_samples_from_segment(chunk_output, subsample);
 
-      (*output)[chunk_id] =  std::make_shared<MaterializedSegment<T>>(std::move(chunk_output));
+      (*output)[chunk_id] = std::make_shared<MaterializedSegment<T>>(std::move(chunk_output));
     });
   }
 

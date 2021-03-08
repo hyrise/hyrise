@@ -343,17 +343,17 @@ class RadixClusterSort {
     Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
 
-
     auto materialize_left_side = [&](const auto& input_bloom_filter) {
-      auto materialization_results = std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
+      auto materialization_results =
+          std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
       if (_equi_case) {
         ColumnMaterializer<T, true> left_column_materializer(!_equi_case, _materialize_null_left);
-        materialization_results =
-            left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter, input_bloom_filter);
+        materialization_results = left_column_materializer.materialize(_left_input_table, _left_column_id,
+                                                                       left_side_bloom_filter, input_bloom_filter);
       } else {
         ColumnMaterializer<T, false> left_column_materializer(!_equi_case, _materialize_null_left);
-        materialization_results =
-            left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter, input_bloom_filter);
+        materialization_results = left_column_materializer.materialize(_left_input_table, _left_column_id,
+                                                                       left_side_bloom_filter, input_bloom_filter);
       }
       materialized_left_segments = std::move(std::get<0>(materialization_results));
       null_rows_left = std::move(std::get<1>(materialization_results));
@@ -363,15 +363,16 @@ class RadixClusterSort {
     };
 
     auto materialize_right_side = [&](const auto& input_bloom_filter) {
-      auto materialization_results = std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
+      auto materialization_results =
+          std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
       if (_equi_case) {
         ColumnMaterializer<T, true> right_column_materializer(!_equi_case, _materialize_null_right);
-        materialization_results =
-          right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, input_bloom_filter);
+        materialization_results = right_column_materializer.materialize(_right_input_table, _right_column_id,
+                                                                        right_side_bloom_filter, input_bloom_filter);
       } else {
         ColumnMaterializer<T, false> right_column_materializer(!_equi_case, _materialize_null_right);
-        materialization_results =
-          right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, input_bloom_filter);
+        materialization_results = right_column_materializer.materialize(_right_input_table, _right_column_id,
+                                                                        right_side_bloom_filter, input_bloom_filter);
       }
       materialized_right_segments = std::move(std::get<0>(materialization_results));
       null_rows_right = std::move(std::get<1>(materialization_results));
