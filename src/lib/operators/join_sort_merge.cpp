@@ -19,6 +19,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -706,12 +707,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
-    full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-      if (!_right_row_ids_emitted.contains(right_row_id)) {
-        _emit_combination(0, NULL_ROW_ID, right_row_id);
-      }
-    });
+
+    const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+      segment_iterate<T>(*segment, [&](const auto& position) {
+         const auto row_id = RowID{chunk_id, position.chunk_offset()};
+         if (!_right_row_ids_emitted.contains(row_id)) {
+          _emit_combination(0, NULL_ROW_ID, row_id);
+        }
+      });
+    }
+
+
+    // auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
+    // full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+    //   if (!_right_row_ids_emitted.contains(right_row_id)) {
+    //     _emit_combination(0, NULL_ROW_ID, right_row_id);
+    //   }
+    // });
   }
 
   /**
@@ -773,12 +787,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
 
-    auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
-    full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      if (!_left_row_ids_emitted.contains(left_row_id)) {
-        _emit_combination(0, left_row_id, NULL_ROW_ID);
-      }
-    });
+    const auto chunk_count = _sort_merge_join.left_input_table()->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto segment = _sort_merge_join.left_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.first);
+      segment_iterate<T>(*segment, [&](const auto& position) {
+         const auto row_id = RowID{chunk_id, position.chunk_offset()};
+         if (!_left_row_ids_emitted.contains(row_id)) {
+          _emit_combination(0, row_id, NULL_ROW_ID);
+        }
+      });
+    }
+
+
+    // auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
+    // full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+    //   if (!_left_row_ids_emitted.contains(left_row_id)) {
+    //     _emit_combination(0, left_row_id, NULL_ROW_ID);
+    //   }
+    // });
   }
 
   /**
