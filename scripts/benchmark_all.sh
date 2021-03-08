@@ -165,7 +165,7 @@ do
       case "${config}" in
         "st") echo -n "single-threaded" ;;
         "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
-    esac
+      esac
     fi
     
     echo "**"
