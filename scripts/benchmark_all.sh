@@ -153,13 +153,21 @@ do
     echo ""
     echo ""
     echo -n "**${benchmark} - "
-    case "${config}" in
-      "st") echo -n "single-threaded" ;;
-      "st_s01") echo -n "single-threaded, SF 0.01" ;;
-      "st_s1") echo -n "single-threaded, SF 1" ;;
-      "mt_clustered") echo -n "multi-threaded, clustering config 'Pruning'" ;;
-      "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
+    if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+      case "${config}" in
+        "st") echo -n "single-threaded, SF 10.0" ;;
+        "st_s01") echo -n "single-threaded, SF 0.01" ;;
+        "st_s1") echo -n "single-threaded, SF 1.0" ;;
+        "mt_clustered") echo -n "multi-threaded, clustering config 'Pruning', SF 10.0" ;;
+        "mt") echo -n "multi-threaded (${num_mt_clients} clients), SF 10.0" ;;
+      esac
+    else
+      case "${config}" in
+        "st") echo -n "single-threaded" ;;
+        "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
     esac
+    fi
+    
     echo "**"
     echo "<details>"
     echo "<summary>"
