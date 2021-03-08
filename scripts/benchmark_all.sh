@@ -156,7 +156,8 @@ do
     case "${config}" in
       "st") echo -n "single-threaded" ;;
       "st_s01") echo -n "single-threaded, SF 0.01" ;;
-      "st_s10") echo -n "single-threaded, SF 10" ;;
+      "st_s1") echo -n "single-threaded, SF 1" ;;
+      "mt_clustered") echo -n "multi-threaded, clustering config 'Pruning'" ;;
       "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
     esac
     echo "**"
