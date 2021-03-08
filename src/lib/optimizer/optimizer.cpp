@@ -53,11 +53,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // (FDs) used by the DependentGroupByReductionRule.
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
-  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
-
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 
