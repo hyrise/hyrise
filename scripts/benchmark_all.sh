@@ -18,8 +18,8 @@ num_mt_clients=50
 start_commit_reference=$1
 end_commit_reference=$2
 
-start_commit=$(git rev-parse $start_commit_reference | head -n 1)
-end_commit=$(git rev-parse $end_commit_reference | head -n 1)
+start_commit=$(git rev-parse "$start_commit_reference" | head -n 1)
+end_commit=$(git rev-parse "$end_commit_reference" | head -n 1)
 
 # Check status of repository
 if [[ $(git status --untracked-files=no --porcelain) ]]
@@ -38,7 +38,7 @@ fi
 
 # Check whether to use ninja or make
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
-if [ ! -z "$output" ]
+if [ -n "$output" ]
 then
   build_system='ninja'
 else
@@ -63,7 +63,7 @@ do
   fi
 
   # Checkout and build from scratch, tracking the compile time
-  git checkout $commit
+  git checkout "$commit"
   git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
@@ -74,21 +74,21 @@ do
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
-    ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( "${build_folder}"/"$benchmark" -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
       echo "Running $benchmark for $commit... (single-threaded, SF 1.0)"
-      ( ${build_folder}/$benchmark -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
+      ( "${build_folder}"/"$benchmark" -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
 
       echo "Running $benchmark for $commit... (multi-threaded, clustered for pruning)"
-      ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -s 10 --dont_cache_binary_tables --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -s 10 --dont_cache_binary_tables --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
-    ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
@@ -134,10 +134,10 @@ echo ""
 echo "**Commit Info and Build Time**"
 echo "| commit | date | message | build time |"
 echo "| -- | -- | -- | -- |"
-echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${start_commit}) | "
-cat "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
-echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${end_commit}) | "
-cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${start_commit}") | "
+xargs < "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | awk '{printf $0 "|\n"}'
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${end_commit}") | "
+xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | awk '{printf $0 "|\n"}'
 
 # Print information for each benchmark
 for benchmark in $benchmarks
