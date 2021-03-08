@@ -66,7 +66,7 @@ struct Subsample {
  * Materializes a table for a specific segment and sorts it if required. Result is a triple of
  * materialized values, positions of NULL values, and a list of samples.
  **/
-template <typename T>
+template <typename T, bool use_bloom_filter>
 class ColumnMaterializer {
  public:
   explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
@@ -83,16 +83,18 @@ class ColumnMaterializer {
     const auto chunk_count = input->chunk_count();
 
     std::vector<BloomFilter> bloom_filter_per_chunk;
-    bloom_filter_per_chunk.resize(chunk_count);
+
+    if constexpr (use_bloom_filter) {
+      bloom_filter_per_chunk.resize(chunk_count);
+      Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+      output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+    }
 
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
     auto null_rows = std::make_unique<RowIDPosList>();
 
     std::vector<Subsample<T>> subsamples;
     subsamples.reserve(chunk_count);
-
-    Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
-    output_bloom_filter.resize(BLOOM_FILTER_SIZE);
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -108,8 +110,10 @@ class ColumnMaterializer {
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-    for (auto& bloom_filter : bloom_filter_per_chunk) {
-      output_bloom_filter |= bloom_filter;
+    if constexpr (use_bloom_filter) {
+      for (auto& bloom_filter : bloom_filter_per_chunk) {
+        output_bloom_filter |= bloom_filter;
+      }
     }
 
     auto gathered_samples = std::vector<T>();
@@ -137,7 +141,9 @@ class ColumnMaterializer {
       auto chunk_output = MaterializedSegment<T>{};
       chunk_output.reserve(segment.size());
 
-      bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
+      if constexpr (use_bloom_filter) {
+        bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
+      }
 
       const std::hash<T> hash_function;
 
@@ -148,10 +154,15 @@ class ColumnMaterializer {
             null_rows_output->emplace_back(row_id);
           }
         } else {
-          const Hash hashed_value = hash_function(static_cast<T>(position.value()));
-          // If Value in not present in input bloom filter and can be skipped
-          if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] or _materialize_null) {
-            bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;
+          if constexpr (use_bloom_filter) {
+            const Hash hashed_value = hash_function(static_cast<T>(position.value()));
+            // If Value in not present in input bloom filter and can be skipped
+            if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] or _materialize_null) {
+              bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;
+              chunk_output.emplace_back(row_id, position.value());
+            }
+          } 
+          if constexpr (!use_bloom_filter) {
             chunk_output.emplace_back(row_id, position.value());
           }
         }

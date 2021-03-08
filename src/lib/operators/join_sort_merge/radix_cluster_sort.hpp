@@ -333,27 +333,60 @@ class RadixClusterSort {
     auto left_side_bloom_filter = BloomFilter{};
     auto right_side_bloom_filter = BloomFilter{};
 
+    auto materialized_left_segments = std::unique_ptr<MaterializedSegmentList<T>>{};
+    auto null_rows_left = std::unique_ptr<RowIDPosList>{};
+    auto samples_left = std::vector<T>{};
+    auto materialized_right_segments = std::unique_ptr<MaterializedSegmentList<T>>{};
+    auto null_rows_right = std::unique_ptr<RowIDPosList>{};
+    auto samples_right = std::vector<T>{};
+
     Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
 
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    auto [materialized_left_segments, null_rows_left, samples_left] =
-        left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter);
-    output.null_rows_left = std::move(null_rows_left);
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto materialize_left_side = [&](const auto& input_bloom_filter) {
+      auto materialization_results = std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
+      if (_equi_case) {
+        ColumnMaterializer<T, true> left_column_materializer(!_equi_case, _materialize_null_left);
+        materialization_results =
+            left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter, input_bloom_filter);
+      } else {
+        ColumnMaterializer<T, false> left_column_materializer(!_equi_case, _materialize_null_left);
+        materialization_results =
+            left_column_materializer.materialize(_left_input_table, _left_column_id, left_side_bloom_filter, input_bloom_filter);
+      }
+      materialized_left_segments = std::move(std::get<0>(materialization_results));
+      null_rows_left = std::move(std::get<1>(materialization_results));
+      samples_left = std::get<2>(materialization_results);
+      output.null_rows_left = std::move(null_rows_left);
+      _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
+    };
 
-    // We can only use the bloom filter if it is an equi join.  
-    if (!_equi_case) {
-      left_side_bloom_filter = ALL_TRUE_BLOOM_FILTER;
+    auto materialize_right_side = [&](const auto& input_bloom_filter) {
+      auto materialization_results = std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>>{};
+      if (_equi_case) {
+        ColumnMaterializer<T, true> right_column_materializer(!_equi_case, _materialize_null_right);
+        materialization_results =
+          right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, input_bloom_filter);
+      } else {
+        ColumnMaterializer<T, false> right_column_materializer(!_equi_case, _materialize_null_right);
+        materialization_results =
+          right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, input_bloom_filter);
+      }
+      materialized_right_segments = std::move(std::get<0>(materialization_results));
+      null_rows_right = std::move(std::get<1>(materialization_results));
+      samples_right = std::get<2>(materialization_results);
+      output.null_rows_right = std::move(null_rows_right);
+      _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
+    };
+
+    if (_left_input_table->row_count() < _right_input_table->row_count() || !_equi_case) {
+      materialize_left_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_right_side(left_side_bloom_filter);
+    } else {
+      materialize_right_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_left_side(right_side_bloom_filter);
     }
-
-    auto [materialized_right_segments, null_rows_right, samples_right] =
-        right_column_materializer.materialize(_right_input_table, _right_column_id, right_side_bloom_filter, left_side_bloom_filter);
-    output.null_rows_right = std::move(null_rows_right);
-    _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
-
     // Append right samples to left samples and sort (reserve not necessary when insert can
     // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
