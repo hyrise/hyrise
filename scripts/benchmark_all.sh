@@ -80,8 +80,11 @@ do
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (single-threaded, SF 10)"
-      ( ${build_folder}/$benchmark -s 10 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s10.log"
+      echo "Running $benchmark for $commit... (single-threaded, SF 1.0)"
+      ( ${build_folder}/$benchmark -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
+
+      echo "Running $benchmark for $commit... (multi-threaded, clustered for pruning)"
+      ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -s 10 --dont_cache_binary_tables --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
@@ -141,7 +144,7 @@ for benchmark in $benchmarks
 do
   configs="st mt"
   if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 st_s10 mt"
+    configs="st st_s01 st_s1 mt_clustered mt"
   fi
 
   for config in $configs
