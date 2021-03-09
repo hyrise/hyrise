@@ -99,6 +99,11 @@
             "name": "SEGMENTS_SCANNED",
             "nullable": false,
             "type": "long"
+        },
+        {
+            "name": "DATA_TYPE",
+            "nullable": false,
+            "type": "string"
         }
     ],
     "config": {
