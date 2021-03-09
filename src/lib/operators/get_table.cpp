@@ -44,7 +44,7 @@ std::string GetTable::description(DescriptionMode description_mode) const {
 
   std::stringstream stream;
 
-  stream << name() << separator << "(" << table_name() << ")";
+  stream << AbstractOperator::description(description_mode) << separator << "(" << table_name() << ")";
 
   stream << separator << "pruned:" << separator;
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
@@ -62,7 +62,8 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _prune
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 

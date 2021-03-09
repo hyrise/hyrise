@@ -41,7 +41,7 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                                                                         \
  *                                                                        [ProjectionNodeB(...)]
  *
- *        (1) collect_subquery_expressions_by_lqp(ProjectionNodeRoot)
+ *        (1) collect_lqp_subquery_expressions_by_lqp(ProjectionNodeRoot)
  *                =>  returns { [ ProjectionNodeA, { SubqueryExpressionA } ],
  *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
  *
@@ -62,9 +62,9 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) subquery expressions of @param node.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
  */
-SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
