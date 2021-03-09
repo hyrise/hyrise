@@ -5,6 +5,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 
 #include "abstract_benchmark_item_runner.hpp"
+#include "tpch_constants.hpp"
 
 namespace opossum {
 
@@ -15,11 +16,12 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // Constructor for a TPCHBenchmarkItemRunner containing all TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
-                          float scale_factor);
+                          float scale_factor, ClusteringConfiguration clustering_configuration);
 
   // Constructor for a TPCHBenchmarkItemRunner containing a subset of TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
-                          float scale_factor, const std::vector<BenchmarkItemID>& items);
+                          float scale_factor, ClusteringConfiguration clustering_configuration,
+                          const std::vector<BenchmarkItemID>& items);
 
   void on_tables_loaded() override;
 
@@ -50,6 +52,8 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   const bool _use_prepared_statements;
 
   const float _scale_factor;
+
+  const ClusteringConfiguration _clustering_configuration;
 
   // Used for naming the views generated in query 15
   std::atomic<size_t> _q15_view_id = 0;

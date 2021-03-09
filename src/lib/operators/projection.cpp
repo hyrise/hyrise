@@ -28,7 +28,27 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      expressions(init_expressions) {}
+      expressions(init_expressions) {
+  /**
+   * Register as a consumer for all uncorrelated subqueries.
+   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
+   * and managed by the ExpressionEvaluator.
+   */
+  for (const auto& expression : expressions) {
+    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+    for (const auto& subquery_expression : pqp_subquery_expressions) {
+      if (subquery_expression->is_correlated()) continue;
+
+      /**
+       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
+       * 1. register as a consumer and
+       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
+       */
+      subquery_expression->pqp->register_consumer();
+      _uncorrelated_subquery_expressions.push_back(subquery_expression);
+    }
+  }
+}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -37,8 +57,10 @@ const std::string& Projection::name() const {
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions));
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  // Passing copied_ops is essential to allow for global subplan deduplication, including subqueries.
+  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions, copied_ops));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -91,7 +113,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
   const auto uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
+  // Deregister, because we obtained the results and no longer need the subquery plans.
+  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+    pqp_subquery_expression->pqp->deregister_consumer();
+  }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   if (!uncorrelated_subquery_results->empty()) {
@@ -211,15 +237,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
   auto projection_result_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
 
-  // Create a mapping from input columns to output columns for future use. This is necessary as the order may have been
-  // changed. The mapping only contains input column IDs that are forwarded to the output without modfications.
-  auto input_column_to_output_column = std::unordered_map<ColumnID, ColumnID>{};
+  // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
+  // changed. The mapping only contains column IDs that are forwarded without modfications.
+  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       if (forwarded_pqp_columns.contains(expression)) {
         const auto& original_id = pqp_column_expression->column_id;
-        input_column_to_output_column[original_id] = expression_id;
+        output_column_to_input_column[expression_id] = original_id;
       }
     }
   }
@@ -271,12 +297,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
-      for (const auto& [column_id, mode] : sorted_by) {
-        if (!input_column_to_output_column.count(column_id)) {
-          continue;  // column is not present in output expression list
+
+      // We need to iterate both sorted information and the output/input mapping as multiple output columns might
+      // originate from the same sorted input column.
+      for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
+        const auto iter = std::find_if(
+            sorted_by.begin(), sorted_by.end(),
+            [input_column_id = input_column_id](const auto sort) { return input_column_id == sort.column; });
+        if (iter != sorted_by.end()) {
+          transformed.emplace_back(SortColumnDefinition{output_column_id, iter->sort_mode});
         }
-        const auto projected_column_id = input_column_to_output_column[column_id];
-        transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
         chunk->set_individually_sorted_by(transformed);

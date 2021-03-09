@@ -41,7 +41,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             fi
 
             if ! git submodule update --jobs 5 --init --recursive --depth 1; then
-                echo "Error during installation."
+                echo "Error during git fetching submodules."
                 exit 1
             fi
 
@@ -71,7 +71,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
-                    echo "Error during installation."
+                    echo "Error during git fetching submodules."
                     exit 1
                 fi
 
@@ -83,7 +83,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 wait $!
                 apt=$?
                 if [ $apt -ne 0 ]; then
-                    echo "Error during installation."
+                    echo "Error during apt-get installations."
                     exit 1
                 fi
 

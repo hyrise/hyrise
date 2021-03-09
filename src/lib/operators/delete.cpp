@@ -132,7 +132,8 @@ void Delete::_on_rollback_records() {
 
 std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Delete>(copied_left_input);
 }
 
