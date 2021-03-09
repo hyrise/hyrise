@@ -474,6 +474,7 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
     if (expression->type == ExpressionType::LQPColumn) {
       const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
       const auto& table_column_information = _table_column_information(node, column_expression);
+      const auto data_type = pmr_string{magic_enum::enum_name(column_expression->data_type())};
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,
                                                           operator_info.left_input_columns,
@@ -493,7 +494,8 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           static_cast<int64_t>(scans_early_out),
                                                           static_cast<int64_t>(scans_all_match),
                                                           static_cast<int64_t>(sorted_scans),
-                                                          static_cast<int64_t>(segments_scanned)};
+                                                          static_cast<int64_t>(segments_scanned),
+                                                          data_type};
       _scan_output_table->append(output_row);
     }
     return ExpressionVisitation::VisitArguments;
