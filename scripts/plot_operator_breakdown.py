@@ -65,6 +65,8 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 
 df = df.fillna(0)
 
+df_nonnorm = df.copy()
+
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
 df.loc["Total"] = df.sum() / df.count()
 
@@ -134,4 +136,28 @@ else:
 
 # Layout and save
 plt.tight_layout()
-plt.savefig("operator_breakdown.pdf", bbox_extra_artists=(legend,), bbox_inches="tight")
+plt.savefig("operator_breakdown_relative.pdf", bbox_extra_artists=(legend,), bbox_inches="tight")
+
+
+# reset plt
+import matplotlib as mpl
+mpl.rcParams.update(mpl.rcParamsDefault)
+
+df_nonnorm = df_nonnorm / 1e9  # to seconds
+df_nonnorm = df_nonnorm[df.columns]  # only show filtered columns of relative chart (>= 1%)
+
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(2 + len(df_nonnorm) / 4, 4), gridspec_kw={'width_ratios': [len(df_nonnorm), 2]})
+df_nonnorm.plot.bar(ax=ax[0], stacked=True, colormap=cmap)
+ax[0].legend(ncol=17, loc='lower center', bbox_to_anchor=(0.5, 1.05))
+ax[0].set_ylabel("Operator run time [s]\n(hiding operators <1%)")
+ax[0].set_xlabel("Query")
+
+sum_df = df_nonnorm.sum(axis='index').to_frame().T
+sum_df.rename(index={0:'Sum'},inplace=True)
+
+sum_df.plot.bar(ax=ax[1], stacked=True, colormap=cmap)
+ax[1].legend().remove()
+ax[1].set_ylabel("Cumulative operater run time [s]")
+
+fig.tight_layout()
+plt.savefig("operator_breakdown_absolute.pdf", bbox_inches="tight")
