@@ -25,12 +25,6 @@ class WhatIfModel(DisjointClustersModel):
         # Set sortedness information
         scans['INPUT_COLUMN_SORTED'] = scans.apply(lambda x: "Ascending" if x['COLUMN_NAME'] == sorting_column else "No", axis=1)
 
-
-        # Pruning - Future work: consider the following aspects
-        # - first scan's input size is further reduced by the other scans
-        # - if >= 2 scans: first scan will be on reference segments henceforth, second scan will be the type of the first scan
-
-
         # Guess the expected ratio of chunks with early out or all match-shortcut
         # Assumption: early out does not happen because in most cases, chunks with no matches get pruned before the shortcut could apply
         scans['NONE_MATCH_RATIO'] = 0
@@ -238,12 +232,12 @@ class WhatIfModel(DisjointClustersModel):
       group_columns = row['GROUP_COLUMNS']
       group_column_names = row['COLUMN_NAME'].split(",")[0]
       if int(group_columns) != 1:
-        return 0
+        return 0.0
       assert len(group_column_names) > 0 and ',' not in group_column_names
 
       input_column_sorted = int(row['INPUT_ORDERED'].split(',')[0])
       if input_column_sorted == 0:
-        return 0
+        return 0.0
       assert input_column_sorted == 1, "INPUT_ORDERED is neither 0 nor 1: " + str(input_column_sorted)
 
       def correlates(group_column, clustering_columns, correlations):
@@ -256,7 +250,7 @@ class WhatIfModel(DisjointClustersModel):
       if 'lineitem' in sort_order:
         clustering_columns = list(map(lambda x: x[0], sort_order['lineitem']))
         if group_column_names in clustering_columns:
-          return 1
+          return 1.0
         elif correlates(group_column_names, clustering_columns, correlations['lineitem']):
           return 0.5
 

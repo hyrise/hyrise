@@ -158,7 +158,7 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
   
   return result
 
-def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
+def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities, own_table_only=True):
   m.estimate_total_runtime(clustering_columns, sorting_column, dimension_cardinalities)
 
   assert len(m.aggregate_estimates[m.aggregate_estimates['RUNTIME_ESTIMATE'] == -1]) == 0, "not all runtimes computed"
@@ -168,27 +168,30 @@ def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column
     print(negative_estimates)
     m.aggregate_estimates.loc[negative_estimates.index, 'RUNTIME_ESTIMATE'] = 1
   
+  aggregate_estimates = m.aggregate_estimates
   ground_truth_parser = PQPInputParser("tpch", ground_truth_path)
   ground_truth_parser.load_statistics()    
   clustered_aggregates = ground_truth_parser.get_aggregates()
-  if False:
-    clustered_aggregates = clustered_aggregates[clustered_aggregates['TABLE_NAME'] == m.table_name]
+
+  if own_table_only:
+    clustered_aggregates = clustered_aggregates[clustered_aggregates['TABLE_NAME'].apply(lambda x: m.table_name in x)]
+    aggregate_estimates = aggregate_estimates.loc[clustered_aggregates.index]
   clustered_aggregates = clustered_aggregates.sort_values(['QUERY_HASH', 'DESCRIPTION'])
 
   
-  assert len(clustered_aggregates) == len(m.aggregate_estimates), "Different number of aggregates."
+  assert len(clustered_aggregates) == len(aggregate_estimates), "Different number of aggregates."
   
-  m.aggregate_estimates.sort_values(['QUERY_HASH', 'DESCRIPTION'], inplace=True)
+  aggregate_estimates.sort_values(['QUERY_HASH', 'DESCRIPTION'], inplace=True)
   result = pd.DataFrame()
   result['QUERY_HASH'] = np.array(clustered_aggregates['QUERY_HASH'])
   result['COLUMN_NAME'] = np.array(clustered_aggregates['COLUMN_NAME'])
-  result['DESCRIPTION1'] = np.array(m.aggregate_estimates['DESCRIPTION'])
+  result['DESCRIPTION1'] = np.array(aggregate_estimates['DESCRIPTION'])
   result['DESCRIPTION2'] = np.array(clustered_aggregates['DESCRIPTION'])
-  result['QUERY_HASH1'] = np.array(m.aggregate_estimates['QUERY_HASH'])
+  result['QUERY_HASH1'] = np.array(aggregate_estimates['QUERY_HASH'])
   result['QUERY_HASH2'] = np.array(clustered_aggregates['QUERY_HASH'])
-  result['RUNTIME_BASE'] = np.array(m.aggregate_estimates['RUNTIME_NS'], dtype=np.int64)
-  #result['RUNTIME_ESTIMATE'] = np.array(m.aggregate_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
-  result['RUNTIME_ESTIMATE'] = np.array(m.aggregate_estimates['RUNTIME_ESTIMATE'], dtype=np.int64)
+  result['RUNTIME_BASE'] = np.array(aggregate_estimates['RUNTIME_NS'], dtype=np.int64)
+  #result['RUNTIME_ESTIMATE'] = np.array(aggregate_estimates.apply(lambda row: row['RUNTIME_ESTIMATE'] / m.query_frequency(row['QUERY_HASH']), axis=1), dtype=np.int64)
+  result['RUNTIME_ESTIMATE'] = np.array(aggregate_estimates['RUNTIME_ESTIMATE'], dtype=np.int64)
   result['RUNTIME_CLUSTERED'] = np.array(clustered_aggregates['RUNTIME_NS'], dtype=np.int64)
   
 
