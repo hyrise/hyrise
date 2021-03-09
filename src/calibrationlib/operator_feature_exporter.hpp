@@ -119,7 +119,8 @@ class OperatorFeatureExporter {
                                                      {"SHORTCUT_NONE_MATCH", DataType::Long, false},
                                                      {"SHORTCUT_ALL_MATCH", DataType::Long, false},
                                                      {"SCANS_SORTED", DataType::Long, false},
-                                                     {"SEGMENTS_SCANNED", DataType::Long, false}},
+                                                     {"SEGMENTS_SCANNED", DataType::Long, false},
+                                                     {"DATA_TYPE", DataType::String, false}},
                               TableType::Data);
 
   const std::shared_ptr<Table> _join_output_table =

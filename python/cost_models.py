@@ -340,6 +340,7 @@ def get_table_scan_scores(model_types, train_data, test_data, implementation, oh
         "RUNTIME_NS",
         "NONE_MATCH_RATIO",
         "ALL_MATCH_RATIO",
+        "DATA_TYPE",
     ]
 
     model_train_data = model_train_data[keep_labels]
