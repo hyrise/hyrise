@@ -238,6 +238,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_number, left_run, right_run, multi_predicate_join_evaluator);
+        } else if (compare_result == CompareResult::Less && _mode == JoinMode::AntiNullAsTrue){
+            _emit_right_primary_null_combinations(cluster_number, left_run);
         } else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
             _emit_right_primary_null_combinations(cluster_number, left_run);
@@ -587,6 +589,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const size_t left_size = left_cluster->size();
     const size_t right_size = right_cluster->size();
 
+    auto& left_value = (*left_cluster)[left_run_start].value;
+    auto& right_value = (*right_cluster)[right_run_start].value;
+
+    CompareResult compare_result_last_run{};
+
+    if (left_run_start < left_size && right_run_start < right_size) {
+      compare_result_last_run = _compare(left_value, right_value);
+    }
+
     while (left_run_start < left_size && right_run_start < right_size) {
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
@@ -595,7 +606,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
-      _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
+
+      if (_mode == JoinMode::AntiNullAsTrue) {
+        if (compare_result_last_run == CompareResult::Greater && compare_result == CompareResult::Less) {
+          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
+        }
+        compare_result_last_run = compare_result;
+      } else {
+        _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
+      }
 
       // Advance to the next run on the smaller side or both if equal
       if (compare_result == CompareResult::Equal) {
