@@ -52,7 +52,7 @@ class ChunkPruningRule : public AbstractRule {
    * Caches intermediate results.
    * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
    */
-  typedef std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>> stn_predicate_node_pair;
+  using stn_predicate_node_pair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;
   mutable std::unordered_map<stn_predicate_node_pair, std::set<ChunkID>, boost::hash<stn_predicate_node_pair>>
       _excluded_chunk_ids_by_predicate_node_cache;
 };

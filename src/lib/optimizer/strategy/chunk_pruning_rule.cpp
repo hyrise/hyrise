@@ -40,11 +40,8 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
-    if (visited_nodes.contains(current_node)) {
-      Assert(current_node->type == LQPNodeType::Union, "Did not expect to see other nodes than UnionNode twice");
-      return LQPUpwardVisitation::DoNotVisitOutputs;
-    }
-    visited_nodes.insert(current_node);
+    Assert(!visited_nodes.contains(current_node) || current_node->type == LQPNodeType::Union,
+           "Predicate chains are not supposed to merge after having branched.");
 
     /**
      * In the following switch-statement, we
@@ -102,6 +99,17 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       predicate_pruning_chains.emplace_back(current_predicate_pruning_chain);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     }
+    /**
+     * Predicate chains are not supposed to merge after having branched. Therefore, all nodes which
+     *  - belong to or
+     *  - continue
+     * predicate chains are tracked via visited_nodes. If tracked nodes get revisited, an Assert at the top of
+     * visit_lqp_upwards will fail.
+     *
+     * UnionNodes, among other nodes, are never tracked / added to visited_nodes because they do not continue
+     * predicate chains. Instead, they cancel predicate chains.
+     */
+    visited_nodes.insert(current_node);
 
     /**
      * In case the predicate pruning chain branches, we use recursion to continue the predicate chain for each branch
