@@ -40,8 +40,12 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
-    Assert(!visited_nodes.contains(current_node), "Did not expect to see the same node twice.");
+    if (visited_nodes.contains(current_node)) {
+      Assert(current_node->type == LQPNodeType::Union, "Did not expect to see other nodes than UnionNode twice");
+      return LQPUpwardVisitation::DoNotVisitOutputs;
+    }
     visited_nodes.insert(current_node);
+
     /**
      * In the following switch-statement, we
      *  (1) add PredicateNodes to the current predicate pruning chain, if applicable, and
