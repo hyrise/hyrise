@@ -28,6 +28,7 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
  * This function traverses the LQP upwards from @param next_node to find all predicates that filter
  * @param stored_table_node. If the LQP branches, recursion is used to continue @param current_predicate_pruning_chain
  * for all branches.
+ * @param visited_nodes is for debugging purposes only.
  *
  * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains can overlap
  * in their first few nodes.
@@ -39,8 +40,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
-    Assert(!visited_nodes.contains(current_node),
-           "Did not expect to see the same node twice.");
+    Assert(!visited_nodes.contains(current_node), "Did not expect to see the same node twice.");
     visited_nodes.insert(current_node);
     /**
      * In the following switch-statement, we
@@ -176,7 +176,7 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
    *   4. The fourth argument is used to track the visited nodes. Predicate pruning chains can branch out, but are not
    *      expected to merge again. This is checked by tracking the visited nodes.
    */
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;  // for debugging/Assert purposes
   return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node,
                                                                         visited_nodes);
 }

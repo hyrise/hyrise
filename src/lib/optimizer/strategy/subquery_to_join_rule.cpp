@@ -536,6 +536,7 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
 void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // While visiting the LQP, PredicateNodes might become replaced with JoinNodes. Instead of using recursion, we use
   // a node queue to schedule visitation of replaced/newly-inserted nodes.
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;  // for debugging/Assert purposes
   std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
   node_queue.push(lqp_root);
 
@@ -544,6 +545,8 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     node_queue.pop();
 
     visit_lqp(current_node, [&](const auto& node) {
+      Assert(!visited_nodes.contains(current_node), "Did not expect to see the same node twice.");
+      visited_nodes.insert(current_node);
       /**
        * Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
        * To do this, we
