@@ -179,7 +179,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    */
 
   // clang-format off
-  /** Initialise an LQP that contains the same sub query expression twice */
+  /** Initialise an LQP that contains the same subquery expression twice */
   auto lqp = std::static_pointer_cast<AbstractLQPNode>(
   PredicateNode::make(greater_than_(add_(b, subquery_a), 2),
     ProjectionNode::make(expression_vector(add_(b, subquery_a)),

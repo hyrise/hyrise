@@ -28,7 +28,27 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      expressions(init_expressions) {}
+      expressions(init_expressions) {
+  /**
+   * Register as a consumer for all uncorrelated subqueries.
+   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
+   * and managed by the ExpressionEvaluator.
+   */
+  for (const auto& expression : expressions) {
+    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+    for (const auto& subquery_expression : pqp_subquery_expressions) {
+      if (subquery_expression->is_correlated()) continue;
+
+      /**
+       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
+       * 1. register as a consumer and
+       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
+       */
+      subquery_expression->pqp->register_consumer();
+      _uncorrelated_subquery_expressions.push_back(subquery_expression);
+    }
+  }
+}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -37,8 +57,10 @@ const std::string& Projection::name() const {
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions));
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  // Passing copied_ops is essential to allow for global subplan deduplication, including subqueries.
+  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions, copied_ops));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -91,7 +113,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
   const auto uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
+  // Deregister, because we obtained the results and no longer need the subquery plans.
+  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+    pqp_subquery_expression->pqp->deregister_consumer();
+  }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   if (!uncorrelated_subquery_results->empty()) {

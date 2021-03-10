@@ -14,7 +14,7 @@ void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp
   _apply_to_plan_without_subqueries(lqp_root);
 
   // (2) Optimize distinct subquery LQPs, one-by-one.
-  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(lqp_root);
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(lqp_root);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     if (std::all_of(subquery_expressions.cbegin(), subquery_expressions.cend(),
                     [](auto subquery_expression) { return subquery_expression.expired(); })) {

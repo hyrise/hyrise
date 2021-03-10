@@ -85,6 +85,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     }
 
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
+    _data_table_wrapper->never_clear_output();
     _data_table_wrapper->execute();
   }
 

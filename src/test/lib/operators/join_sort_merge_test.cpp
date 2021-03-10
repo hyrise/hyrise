@@ -12,6 +12,7 @@ class OperatorsJoinSortMergeTest : public BaseTest {
     const auto dummy_table =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
+    dummy_input->never_clear_output();
   }
 
   std::shared_ptr<AbstractOperator> dummy_input;
@@ -64,6 +65,7 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   test_table->append({1, 2, 5});
 
   const auto test_input = std::make_shared<TableWrapper>(test_table);
+  test_input->never_clear_output();
   test_input->execute();
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
 
