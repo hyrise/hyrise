@@ -541,10 +541,10 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
   node_queue.push(lqp_root);
 
   while (!node_queue.empty()) {
-    auto current_node = node_queue.front();
+    auto node = node_queue.front();
     node_queue.pop();
 
-    visit_lqp(current_node, [&](const auto& node) {
+    visit_lqp(node, [&](const auto& current_node) {
       Assert(!visited_nodes.contains(current_node), "Did not expect to see the same node twice.");
       visited_nodes.insert(current_node);
       /**
@@ -572,7 +572,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       /**
        * 1. Skip non-PredicateNodes
        */
-      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
       if (!predicate_node) {
         return LQPVisitation::VisitInputs;
       }
@@ -640,7 +640,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
 
       const auto join_mode = predicate_node_info->join_mode;
       const auto join_node = JoinNode::make(join_mode, join_predicates);
-      lqp_replace_node(node, join_node);
+      lqp_replace_node(current_node, join_node);
       join_node->set_right_input(pull_up_result.adapted_lqp);
 
       // Because we changed the LQP, we have to schedule further visitation with a separate visitor.
