@@ -35,7 +35,7 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table_node_recursively(
     const std::shared_ptr<AbstractLQPNode>& next_node, PredicatePruningChain current_predicate_pruning_chain,
     const std::shared_ptr<StoredTableNode>& stored_table_node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
@@ -167,7 +167,7 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
   /**
    * In the following, we use a recursive function to traverse the LQP upwards from stored_table_node. It returns all
    * predicate pruning chains that filter stored_table_node.
-   * It takes the following three arguments:
+   * It takes the following four arguments:
    *   1. The first argument marks the starting point of the LQP upwards-traversal. Hence, we pass stored_table_node.
    *   2. The second argument refers to the current predicate pruning chain. Since the LQP traversal has not yet
    *      started, we pass an empty vector.
