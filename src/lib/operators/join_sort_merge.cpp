@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include <set>
+#include <iostream>
 
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
@@ -27,7 +28,7 @@ namespace opossum {
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   return ((config.predicate_condition != PredicateCondition::NotEquals && config.join_mode != JoinMode::Semi && config.join_mode != JoinMode::AntiNullAsTrue) || config.join_mode == JoinMode::Inner ||
-         (config.join_mode == JoinMode::Semi) || (config.join_mode == JoinMode::AntiNullAsTrue && !config.secondary_predicates && config.predicate_condition == PredicateCondition::Equals) ) &&
+         (config.join_mode == JoinMode::Semi) || (config.join_mode == JoinMode::AntiNullAsTrue && !config.secondary_predicates && (config.predicate_condition == PredicateCondition::NotEquals || config.predicate_condition == PredicateCondition::Equals)) ) &&
          config.left_data_type == config.right_data_type &&
          config.join_mode != JoinMode::AntiNullAsFalse;
 }
@@ -251,7 +252,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Greater) {
+        if (compare_result == CompareResult::Equal && _mode == JoinMode::AntiNullAsTrue) {
+          _emit_qualified_combinations(cluster_number, left_run, right_run, multi_predicate_join_evaluator);
+        }
+        else if (compare_result == CompareResult::Greater) {
           _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run,
                                        multi_predicate_join_evaluator);
         } else if (compare_result == CompareResult::Equal) {
@@ -607,11 +611,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
 
-      if (_mode == JoinMode::AntiNullAsTrue) {
+      if (_mode == JoinMode::AntiNullAsTrue && _primary_predicate_condition == PredicateCondition::Equals) {
         if (compare_result_last_run == CompareResult::Greater && compare_result == CompareResult::Less) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
         }
         compare_result_last_run = compare_result;
+      } else if (_mode == JoinMode::AntiNullAsTrue && _primary_predicate_condition == PredicateCondition::NotEquals){
+        if (compare_result == CompareResult::Equal) {
+          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
+        }
       } else {
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator);
       }
@@ -974,7 +982,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   std::shared_ptr<const Table> _on_execute() override {
 
     auto right_side_has_null = false;
-    if (_mode == JoinMode::AntiNullAsTrue && _primary_predicate_condition == PredicateCondition::Equals) {
+    if (_mode == JoinMode::AntiNullAsTrue) {
       if (_sort_merge_join.right_input_table()->empty()){
         return _sort_merge_join.left_input_table();
       }
