@@ -188,7 +188,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
           case ColumnBoundaryType::UpperBoundaryInclusive:
             if (!upper_bound_value_expression ||
                 std::static_pointer_cast<ValueExpression>(upper_bound_value_expression->border_expression)->value >
-                boundary_border_expression->value) {
+                    boundary_border_expression->value) {
               upper_bound_value_expression = boundary;
               value_upper_inclusive = true;
             }
@@ -196,7 +196,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
           case ColumnBoundaryType::LowerBoundaryInclusive:
             if (!lower_bound_value_expression ||
                 std::static_pointer_cast<ValueExpression>(lower_bound_value_expression->border_expression)->value <
-                boundary_border_expression->value) {
+                    boundary_border_expression->value) {
               lower_bound_value_expression = boundary;
               value_lower_inclusive = true;
             }
@@ -204,7 +204,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
           case ColumnBoundaryType::UpperBoundaryExclusive:
             if (!upper_bound_value_expression ||
                 std::static_pointer_cast<ValueExpression>(upper_bound_value_expression->border_expression)->value >=
-                boundary_border_expression->value) {
+                    boundary_border_expression->value) {
               upper_bound_value_expression = boundary;
               value_upper_inclusive = false;
             }
@@ -212,7 +212,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
           case ColumnBoundaryType::LowerBoundaryExclusive:
             if (!lower_bound_value_expression ||
                 std::static_pointer_cast<ValueExpression>(lower_bound_value_expression->border_expression)->value <=
-                boundary_border_expression->value) {
+                    boundary_border_expression->value) {
               lower_bound_value_expression = boundary;
               value_lower_inclusive = false;
             }
