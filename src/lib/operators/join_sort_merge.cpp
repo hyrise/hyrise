@@ -855,7 +855,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
@@ -973,6 +972,27 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
+
+    auto right_side_has_null = false;
+    if (_mode == JoinMode::AntiNullAsTrue && _primary_predicate_condition == PredicateCondition::Equals) {
+      if (_sort_merge_join.right_input_table()->empty()){
+        return _sort_merge_join.left_input_table();
+      }
+      const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+        segment_iterate<T>(*segment, [&](const auto& position) {
+          if (position.is_null()) {
+            right_side_has_null = true;
+            return;
+          }
+        });
+        if (right_side_has_null) {
+          return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
+        }
+      }
+    }
+
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
