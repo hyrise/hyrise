@@ -187,7 +187,9 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   std::set<ChunkID> excluded_chunk_ids;
   for (const auto& predicate_node : predicate_pruning_chain) {
     // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
-    auto excluded_chunk_ids_iter = _excluded_chunk_ids_by_predicate_node_cache.find(predicate_node);
+    auto excluded_chunk_ids_iter =
+
+        _excluded_chunk_ids_by_predicate_node_cache.find(std::make_pair(stored_table_node, predicate_node));
     if (excluded_chunk_ids_iter != _excluded_chunk_ids_by_predicate_node_cache.end()) {
       // Shortcut: The given PredicateNode is part of multiple predicate pruning chains and the set of excluded chunks
       //           has already been calculated.
@@ -282,7 +284,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     }
 
     // Cache result
-    _excluded_chunk_ids_by_predicate_node_cache.emplace(predicate_node, current_excluded_chunk_ids);
+    _excluded_chunk_ids_by_predicate_node_cache.emplace(std::make_pair(stored_table_node, predicate_node),
+                                                        current_excluded_chunk_ids);
     // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain
     excluded_chunk_ids.insert(current_excluded_chunk_ids.begin(), current_excluded_chunk_ids.end());
   }
