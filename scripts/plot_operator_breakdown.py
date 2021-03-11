@@ -188,4 +188,4 @@ by_label = OrderedDict(zip(labels, handles))
 fig.legend(reversed(by_label.values()), reversed(labels), loc=9, ncol=10)
 fig.legend(reversed(handles), reversed(by_label.keys()), loc=9, ncol=10)
 fig.subplots_adjust(wspace=0.4)  # 0.2 is the default
-fig.savefig("operator_breakdown_absolute.pdf", bbox_inches="tight")
+fig.savefig("operator_breakdown.pdf", bbox_inches="tight")
