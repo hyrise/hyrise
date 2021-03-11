@@ -546,7 +546,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
 
     visit_lqp(node, [&](const auto& current_node) {
       if (visited_nodes.contains(current_node)) {
-        // We do not want revisit nodes
+        // We do not want to revisit nodes
         return LQPVisitation::DoNotVisitInputs;
       }
       visited_nodes.insert(current_node);

@@ -28,7 +28,7 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
  * This function traverses the LQP upwards from @param next_node to find all predicates that filter
  * @param stored_table_node. If the LQP branches, recursion is used to continue @param current_predicate_pruning_chain
  * for all branches.
- * @param visited_nodes is for debugging purposes only.
+ * @param tracked_nodes is for debugging purposes only.
  *
  * @returns all predicate pruning chain(s) that filter @param stored_table_node. Note, that these chains can overlap
  * in their first few nodes.
@@ -36,13 +36,18 @@ using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table_node_recursively(
     const std::shared_ptr<AbstractLQPNode>& next_node, PredicatePruningChain current_predicate_pruning_chain,
     const std::shared_ptr<StoredTableNode>& stored_table_node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& tracked_nodes) {
   std::vector<PredicatePruningChain> predicate_pruning_chains;
 
   visit_lqp_upwards(next_node, [&](const auto& current_node) {
-    Assert(!visited_nodes.contains(current_node) || current_node->type == LQPNodeType::Union,
-           "Predicate chains are not supposed to merge after having branched.");
-
+    /**
+     * Predicate chains are not supposed to merge after having branched. Therefore, all nodes which
+     *  - belong to or
+     *  - continue
+     * predicate chains are tracked via tracked_nodes. These nodes are not expected to be revisited.
+     */
+    Assert(!tracked_nodes.contains(current_node) || current_node->type == LQPNodeType::Union,
+       "Predicate chains are not expected to merge after having branched.");
     /**
      * In the following switch-statement, we
      *  (1) add PredicateNodes to the current predicate pruning chain, if applicable, and
@@ -99,17 +104,8 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       predicate_pruning_chains.emplace_back(current_predicate_pruning_chain);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     }
-    /**
-     * Predicate chains are not supposed to merge after having branched. Therefore, all nodes which
-     *  - belong to or
-     *  - continue
-     * predicate chains are tracked via visited_nodes. If tracked nodes get revisited, an Assert at the top of
-     * visit_lqp_upwards will fail.
-     *
-     * UnionNodes, among other nodes, are never tracked / added to visited_nodes because they do not continue
-     * predicate chains. Instead, they cancel predicate chains.
-     */
-    visited_nodes.insert(current_node);
+    // UnionNodes, among other node types, are never added to tracked_nodes because they cancel predicate chains.
+    tracked_nodes.insert(current_node);
 
     /**
      * In case the predicate pruning chain branches, we use recursion to continue the predicate chain for each branch
@@ -118,7 +114,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
     if (current_node->outputs().size() > 1) {
       for (auto& output_node : current_node->outputs()) {
         auto continued_predicate_pruning_chains = find_predicate_pruning_chains_by_stored_table_node_recursively(
-            output_node, current_predicate_pruning_chain, stored_table_node, visited_nodes);
+            output_node, current_predicate_pruning_chain, stored_table_node, tracked_nodes);
 
         predicate_pruning_chains.insert(predicate_pruning_chains.end(), continued_predicate_pruning_chains.begin(),
                                         continued_predicate_pruning_chains.end());
@@ -185,12 +181,12 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
    *      started, we pass an empty vector.
    *   3. The third argument refers to the StoredTableNode for which predicate pruning chains should be returned.
    *      Therefore, we have to pass stored_table_node again.
-   *   4. The fourth argument is used to track the visited nodes. Predicate pruning chains can branch out, but are not
-   *      expected to merge again. This is checked by tracking the visited nodes.
+   *   4. The fourth argument is used for debugging purposes: Predicate pruning chains can branch out,
+   *      but are not expected to merge again. Therefore, some visited nodes are tracked.
    */
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;  // for debugging/Assert purposes
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> tracked_nodes;  // for debugging/Assert purposes
   return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node,
-                                                                        visited_nodes);
+                                                                        tracked_nodes);
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
