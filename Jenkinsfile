@@ -119,14 +119,6 @@ try {
               scripts/lint.sh
             '''
           }
-        }, tpcdsQueryPlansAndVerification: {
-          stage("tpcdsQueryPlansAndVerification") {
-              sh "cd clang-debug && make hyrise_impl hyriseBenchmarkTPCDS -k -j \$(( \$(nproc) / 6))"
-              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-debug/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
-              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-debug/"
-              archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
-              archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
-          }
         }
 
         parallel clangRelease: {
@@ -297,9 +289,22 @@ try {
           stage("tpchQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify; ../../clang-release/hyriseBenchmarkTPCH -r 1 -q 15 --visualize"
+              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-release/"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
+              archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
+            }
+          }
+        }, tpcdsQueryPlansAndVerification: {
+          stage("tpcdsQueryPlansAndVerification") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
+              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+              archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
+              archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
+            } else {
+              Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
             }
           }
         }

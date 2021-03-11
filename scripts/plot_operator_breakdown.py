@@ -107,10 +107,8 @@ ax_4 = fig.add_subplot(gs[1, -1])  # Summary, absolute
 df_norm_queries.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
 ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
 ax_1.set_ylabel("Share of run time\n(hiding operators <1%)")
-ax_1.legend().remove()
 
 df_norm_total.plot.bar(ax=ax_2, stacked=True, colormap=cmap)
-ax_2.legend().remove()
 ax_2.tick_params(axis="x", labelrotation=0)
 
 # Bottom plots with absolute runtimes
@@ -120,14 +118,15 @@ df = df[df_norm.columns]  # only show filtered columns of relative chart (>= 1%)
 df.plot.bar(ax=ax_3, stacked=True, colormap=cmap)
 ax_3.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
 ax_3.set_xlabel("Query")
-ax_3.legend().remove()
 
 sum_df = df.sum(axis="index").to_frame().T
 sum_df.rename(index={0: "Cumulative\nRuntimes [s]"}, inplace=True)
 
 sum_df.plot.bar(ax=ax_4, stacked=True, colormap=cmap)
-ax_4.legend().remove()
 ax_4.tick_params(axis="x", labelrotation=0)
+
+for axis in [ax_1, ax_2, ax_3, ax_4]:  # remove legends from subplot as we later add single legend for the whole plot
+    axis.legend().remove()
 
 
 def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
@@ -140,6 +139,7 @@ def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https:/
         x = p.get_x() + p.get_width() / 2
         y = p.get_y() + p.get_height() / 2
         value_str = format_string.format(value)
+        # we add two texts to create a shadow that helps reading the text on dark as well as bright bars
         ax.text(x + 0.005, y - y_shift, value_str, ha="center", color="white")
         ax.text(x, y, value_str, ha="center", color="black")
 
@@ -179,5 +179,5 @@ if paper_mode:
 
 handles, labels = ax_1.get_legend_handles_labels()
 fig.legend(reversed(handles), reversed(labels), loc=9, ncol=10)
-fig.subplots_adjust(wspace=0.4)  # 0.2 is the default
+fig.subplots_adjust(wspace=0.4)  # add a little horizontal margin between the charts (0.2 is the default)
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")
