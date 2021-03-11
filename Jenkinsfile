@@ -296,9 +296,11 @@ try {
           }
         }, tpcdsQueryPlansAndVerification: {
           stage("tpcdsQueryPlansAndVerification") {
-            if (env.BRANCH_NAME == 'master' || full_ci) {
+            if (env.BRANCH_NAME == 'master') {
               sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
+              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-release/"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
+              archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
             } else {
               Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
             }
