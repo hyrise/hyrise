@@ -545,7 +545,10 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     node_queue.pop();
 
     visit_lqp(node, [&](const auto& current_node) {
-      Assert(!visited_nodes.contains(current_node), "Did not expect to see the same node twice.");
+      if (visited_nodes.contains(current_node)) {
+        // We do not want revisit nodes
+        return LQPVisitation::DoNotVisitInputs;
+      }
       visited_nodes.insert(current_node);
       /**
        * Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
