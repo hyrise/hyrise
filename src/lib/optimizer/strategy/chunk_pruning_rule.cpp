@@ -184,7 +184,7 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
    *   4. The fourth argument is used for debugging purposes: Predicate pruning chains can branch out,
    *      but are not expected to merge again. Therefore, some visited nodes are tracked.
    */
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> tracked_nodes;  // for debugging/Assert purposes
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> tracked_nodes;  // for debugging / Assert purposes
   return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node,
                                                                         tracked_nodes);
 }
