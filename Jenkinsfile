@@ -119,6 +119,13 @@ try {
               scripts/lint.sh
             '''
           }
+        }, tpcdsQueryPlansAndVerification: {
+          stage("tpcdsQueryPlansAndVerification") {
+              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-debug/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
+              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-debug/"
+              archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
+              archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
+          }
         }
 
         parallel clangRelease: {
@@ -293,13 +300,6 @@ try {
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
             }
-          }
-        }, tpcdsQueryPlansAndVerification: {
-          stage("tpcdsQueryPlansAndVerification") {
-              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-debug/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
-              sh "cd query_plans/tpcds; ../../scripts/plot_operator_breakdown.py ../../clang-debug/"
-              archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
-              archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
           }
         }
       } finally {
