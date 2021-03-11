@@ -17,7 +17,21 @@
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 
+// #include "hyrise.hpp"
+// #include <fstream>
+
 namespace opossum {
+
+// int get_number_loaded_chunks(std::shared_ptr<DipsJoinGraph> join_graph){
+//   int total_number_chunks = 0;
+//   int number_pruned_chunks = 0;
+//   for (auto node : join_graph->nodes){
+//     auto table = Hyrise::get().storage_manager.get_table(node->table_node->table_name);
+//     number_pruned_chunks += node->table_node->pruned_chunk_ids().size();
+//     total_number_chunks += table->chunk_count();
+//   }
+//   return total_number_chunks - number_pruned_chunks; 
+// }
 
 void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
@@ -28,12 +42,28 @@ void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) con
   }
 
   if (join_graph->is_tree()) {
+    // int number_loaded_chunks = get_number_loaded_chunks(join_graph);
+
     std::shared_ptr<DipsJoinGraphNode> root =
         join_graph
             ->nodes[0];  // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
     join_graph->set_root(root);
     bottom_up_dip_traversal(root);
     top_down_dip_traversal(root);
+
+    // int number_loaded_chunks_after_dips = get_number_loaded_chunks(join_graph);
+    // int number_dips_pruned_chunks = number_loaded_chunks - number_loaded_chunks_after_dips;
+ 
+    // loaded_chunks | loaded_chunks_after_dips | pruned_chunks | % pruned_chunks
+    // std::ofstream outfile;
+    // outfile.open("pruned_chunks.txt", std::ios_base::app); // append instead of overwrite
+    
+    // outfile << number_loaded_chunks 
+    // << " " << number_loaded_chunks_after_dips 
+    // << " " << number_dips_pruned_chunks 
+    // << " " << (float)number_dips_pruned_chunks / (float)number_loaded_chunks
+    // << "\n";
+    // outfile.close();
   } else {
     // Assumption: Hyrise handles cycles itself
   }
