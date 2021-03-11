@@ -16,7 +16,6 @@ import sys
 import seaborn as sns
 import matplotlib.colors as mplcolors
 import matplotlib.ticker as ticker
-from collections import OrderedDict
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec
 
@@ -69,6 +68,7 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 
 df = df.fillna(0)
 
+# Obtain copy for normalized plots
 df_norm = df.copy()
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
@@ -86,31 +86,24 @@ df_norm = df_norm[df_norm > 0.01].dropna(axis="columns", how="all")
 df_norm_queries = df_norm.loc[df_norm.index != "Total [%]"]
 df_norm_total = df_norm.loc[["Total [%]"]]
 
-print(df_norm)
-print(df_norm_queries)
-print(df_norm_total)
-
-
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df_norm), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
 cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
 
+# Factor to adapt the sizes and ratios to large benchmarks with many queries (e.g., Join Order Benchmark).
+# The sqrt() somewhat accomodates that we don't create extremely wide charts but still adapt.
+query_count_apaption = int(round(math.sqrt(len(df_norm))))
 
-query_length_adaption_factor = int(round(math.sqrt(len(df_norm))))
-
-fig = plt.figure(figsize=(20 + query_length_adaption_factor,6))
+fig = plt.figure(figsize=(20 + query_count_apaption,6))
 plt.subplots(constrained_layout=True)
-
-# Simple heuristic to have at least a 3:1 ratio and scale to larger workloads.
-# TODO: Explain 2 + sqrt  ... + 1 (that's the summary)
-# The sqrt() ensures that huge workloads
-# (e.g., join order benchmarks) do not lead to 100:1 ratios.
-gs = GridSpec(2, 5 + query_length_adaption_factor)
+# Create a grid with two rows and ensure at least a ratio for the plots of the queries and the summary plot of
+# 4:1. If there are many queries, we increase the share of the query plots.
+gs = GridSpec(2, 5 + query_count_apaption)
 
 ax_1 = fig.add_subplot(gs[0,:-1]) # Queries, relative
 ax_2 = fig.add_subplot(gs[0,-1]) # Summary, relative
-ax_3 = fig.add_subplot(gs[1,:-1]) # Queries, relative
-ax_4 = fig.add_subplot(gs[1,-1]) # Summary, relative
+ax_3 = fig.add_subplot(gs[1,:-1]) # Queries, absolute
+ax_4 = fig.add_subplot(gs[1,-1]) # Summary, absolute
 
 df_norm_queries.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
 ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
@@ -184,8 +177,6 @@ if paper_mode:
             bar.set_linewidth(0)
 
 handles, labels = ax_1.get_legend_handles_labels()
-by_label = OrderedDict(zip(labels, handles))
-fig.legend(reversed(by_label.values()), reversed(labels), loc=9, ncol=10)
 fig.legend(reversed(handles), reversed(by_label.keys()), loc=9, ncol=10)
 fig.subplots_adjust(wspace=0.4)  # 0.2 is the default
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")
