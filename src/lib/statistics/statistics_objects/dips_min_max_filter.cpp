@@ -2,11 +2,11 @@
 #include <optional>
 #include <utility>
 
-#include "min_max_filter.hpp"
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "dips_min_max_filter.hpp"
 #include "lossless_cast.hpp"
+#include "min_max_filter.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 

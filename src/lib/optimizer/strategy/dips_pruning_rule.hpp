@@ -1,10 +1,10 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -48,8 +48,7 @@ class DipsJoinGraphEdge {
 
   void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
     // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
-    if (std::find(predicates.begin(), predicates.end(), predicate) ==
-        predicates.end()) {
+    if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {
       predicates.push_back(predicate);
     }
   }
