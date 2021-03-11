@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <iostream>
+
 #include "segment_meta_data.hpp"
 
 #include "hyrise.hpp"
@@ -11,22 +14,13 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 
-#include <algorithm>
-#include <iostream>
-
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
-#include "resolve_type.hpp"
-#include "statistics/attribute_statistics.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

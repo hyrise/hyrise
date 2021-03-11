@@ -35,17 +35,16 @@ void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) con
     bottom_up_dip_traversal(root);
     top_down_dip_traversal(root);
   } else {
-    // TODO: cycle implementation
     // Assumption: Hyrise handles cycles itself
   }
 }
 
 void DipsPruningRule::bottom_up_dip_traversal(
-    std::shared_ptr<DipsJoinGraphNode> node) const {  //expects root in the first call
+    std::shared_ptr<DipsJoinGraphNode> node) const {  // expects root in the first call
   for (std::shared_ptr<DipsJoinGraphNode> child : node->children) {
     bottom_up_dip_traversal(child);
   }
-  if (node->parent == nullptr) {  //handle root
+  if (node->parent == nullptr) {  // handle root
     return;
   }
   auto edge = node->get_edge_for_table(node->parent);
@@ -77,9 +76,8 @@ void DipsPruningRule::bottom_up_dip_traversal(
 }
 
 void DipsPruningRule::top_down_dip_traversal(
-    std::shared_ptr<DipsJoinGraphNode> node) const {  //expects root in the first call
-  if (node->parent != nullptr) {                      //handle root
-
+    std::shared_ptr<DipsJoinGraphNode> node) const {  // expects root in the first call
+  if (node->parent != nullptr) {                      // handle root
     auto edge = node->get_edge_for_table(node->parent);
 
     for (auto predicate : edge->predicates) {
@@ -163,7 +161,7 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
 
       // append predicates
       left_right_edge->append_predicate(
-          binary_predicate);  // TODO: visit every node in LQP only once (avoid cycles) -> use "simple" append
+          binary_predicate);  // TODO(somebody): visit every node in LQP only once (avoid cycles) -> use "simple" append
       right_left_edge->append_predicate(binary_predicate);
     }
   }
@@ -191,7 +189,7 @@ void DipsPruningRule::dips_pruning(const std::shared_ptr<const StoredTableNode> 
   resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    // TODO: check if pointers would be more efficient
+    // TODO(somebody): check if pointers would be more efficient
     auto base_ranges = get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
     auto partner_ranges =
         get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);

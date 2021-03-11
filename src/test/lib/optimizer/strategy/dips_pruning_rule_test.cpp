@@ -172,7 +172,7 @@ TEST_F(DipsPruningRuleTest, CalculatePrunedChunks) {
       {ChunkID{1}, std::vector{std::pair<int32_t, int32_t>(8, 10)}},
       {ChunkID{2}, std::vector{std::pair<int32_t, int32_t>(10, 12)}}};
   std::map<ChunkID, std::vector<std::pair<int32_t, int32_t>>> partner_ranges{
-      {ChunkID{0}, std::vector{std::pair<int32_t, int32_t>(6, 7)}},  //raus
+      {ChunkID{0}, std::vector{std::pair<int32_t, int32_t>(6, 7)}},  // raus
       {ChunkID{1}, std::vector{std::pair<int32_t, int32_t>(9, 11)}},
       {ChunkID{2}, std::vector{std::pair<int32_t, int32_t>(12, 16)}}};
 
@@ -244,7 +244,7 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphAddsNewNode) {
   EXPECT_TRUE(std::find(join_graph->nodes.begin(), join_graph->nodes.end(), table2_node) != join_graph->nodes.end());
   EXPECT_TRUE(std::find(join_graph->nodes.begin(), join_graph->nodes.end(), table3_node) != join_graph->nodes.end());
 
-  EXPECT_TRUE(join_graph->nodes.size() == 3);
+  EXPECT_EQ(join_graph->nodes.size(), 3);
   EXPECT_FALSE(join_graph->is_empty());
 }
 
@@ -318,9 +318,9 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphSetsRoot) {
   EXPECT_TRUE(table2_node->parent == table1_node);
   EXPECT_TRUE(table3_node->parent == table2_node);
 
-  EXPECT_TRUE(table1_node->children.size() == 1);
-  EXPECT_TRUE(table2_node->children.size() == 1);
-  EXPECT_TRUE(table3_node->children.size() == 0);
+  EXPECT_EQ(table1_node->children.size(), 1);
+  EXPECT_EQ(table2_node->children.size(), 1);
+  EXPECT_EQ(table3_node->children.size(), 0);
 
   EXPECT_TRUE(std::find(table1_node->children.begin(), table1_node->children.end(), table2_node) !=
               table1_node->children.end());

@@ -1,9 +1,8 @@
-#include "min_max_filter.hpp"
-
 #include <memory>
 #include <optional>
 #include <utility>
 
+#include "min_max_filter.hpp"
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "dips_min_max_filter.hpp"

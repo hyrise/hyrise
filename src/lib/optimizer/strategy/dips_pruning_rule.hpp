@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -15,7 +16,6 @@
 
 #include "abstract_rule.hpp"
 
-#include <iostream>
 #include "dips_pruning_rule.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "hyrise.hpp"
@@ -41,14 +41,15 @@ class DipsJoinGraphEdge {
   std::shared_ptr<DipsJoinGraphNode> partner_node;
   std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
 
-  DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> partner_node) {
+  explicit DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> partner_node) {
     this->partner_node = partner_node;
     this->predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>();
   }
 
   void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
+    // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
     if (std::find(predicates.begin(), predicates.end(), predicate) ==
-        predicates.end()) {  // TODO: remove search when implementation "visit single node in LQP only once" is done
+        predicates.end()) {
       predicates.push_back(predicate);
     }
   }
@@ -61,7 +62,7 @@ class DipsJoinGraphNode {
   std::shared_ptr<StoredTableNode> table_node;
   std::vector<std::shared_ptr<DipsJoinGraphEdge>> edges;
 
-  DipsJoinGraphNode(std::shared_ptr<StoredTableNode> table_node) { this->table_node = table_node; }
+  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> table_node) { this->table_node = table_node; }
 
   std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> table_node) {
     for (auto edge : edges) {
@@ -144,7 +145,7 @@ class DipsPruningRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  //TODO: extend if possible
+  std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
 
   void dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
@@ -160,7 +161,7 @@ class DipsPruningRule : public AbstractRule {
     /* For every non pruned chunk, return its ranges for the given attribute (segment) */
     std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> ranges;
 
-    auto pruned_chunks_ids = table_node->pruned_chunk_ids();  //const std::vector<ChunkID>&
+    auto pruned_chunks_ids = table_node->pruned_chunk_ids();  // const std::vector<ChunkID>&
     auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
