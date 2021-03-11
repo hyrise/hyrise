@@ -73,7 +73,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
 }
 
 /**
- * Recursively remove correlated predicate nodes and adapt other nodes as necessary.
+ * Recursively remove correlated PredicateNodes and adapt other nodes as necessary.
  *
  * To handle nodes with more than one output (for example diamond LQPs), we cache the result for such nodes. This
  * avoids adapting the LQP twice but also adding join predicates twice. The boolean in the returned pair indicates
@@ -134,7 +134,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.adapted_lqp = PredicateNode::make(remaining_expression, left_input_adapted);
       } else {
         result.adapted_lqp = left_input_adapted;
-        DebugAssert(!node->right_input(), "Predicate nodes should not have right inputs");
+        DebugAssert(!node->right_input(), "PredicateNodes should not have right inputs");
       }
       if (!join_predicates.empty()) {
         result.pulled_predicate_node_count++;
@@ -334,7 +334,7 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   // Crawl the `lqp`, including subquery-LQPs, for usages of parameters from `parameter_mapping`
   //
-  // While counting correlated predicate nodes we don't need to consider diamond LQPs or other forms of nodes occurring
+  // While counting correlated PredicateNodes we don't need to consider diamond LQPs or other forms of nodes occurring
   // twice since visit_lqp only visits each node once. A node might appear again in a subquery (which has its own call
   // to visit_lqp) but in this case the LQP is not optimizable anyway, so we don't care about an accurate count.
 
@@ -419,7 +419,7 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
     }
 
     // Check that one side of the expression is a correlated parameter and the other an expression of the LQP
-    // below the predicate node (required for turning it into a join predicate). Also order the left/right operands by
+    // below the PredicateNode (required for turning it into a join predicate). Also order the left/right operands by
     // the subplans they originate from.
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
@@ -534,99 +534,123 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
 }
 
 void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  // Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
-  // To do this, we
-  //   - Check whether node is of a supported type:
-  //       - (NOT) IN predicate with a subquery as the right operand
-  //       - (NOT) EXISTS predicate
-  //       - comparison (<,>,<=,>=,=,<>) predicate with subquery as the right operand
-  //   - If node is a (NOT) IN or a comparison, extract a base join predicate
-  //   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of predicate nodes using
-  //     them
-  //     (if one is used outside of predicate nodes, we never optimize the LQP).
-  //   - Scan the subquery-LQP for correlated predicates that we need to pull up, and turn each into a join predicate
-  //   - Check whether all correlated predicates can be pulled up (abort if not)
-  //   - Copy and adapt the subquery-LQP, removing all correlated predicate nodes and adapt nodes above them in the LQP,
-  //     so that all columns required by the new join predicates are available at the top of the adapted subquery-LQP.
-  //   - Build a join with the collected predicates
-  //
-  // We always reformulate when possible, since benchmarks have shown that this reformulation makes the execution
-  // faster regardless of the expected table sizes, etc.
+  // While visiting the LQP, PredicateNodes might become replaced with JoinNodes. Instead of using recursion, we use
+  // a node queue to schedule visitation of replaced/newly-inserted nodes.
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+  node_queue.push(lqp_root);
 
-  /**
-   * 1. Skip non-PredicateNodes
-   */
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp_root);
-  if (!predicate_node) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
-    return;
+  while (!node_queue.empty()) {
+    auto node = node_queue.front();
+    node_queue.pop();
+
+    visit_lqp(node, [&](const auto& current_node) {
+      if (visited_nodes.contains(current_node)) {
+        // We do not want to revisit nodes
+        return LQPVisitation::DoNotVisitInputs;
+      }
+      visited_nodes.insert(current_node);
+      /**
+       * Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
+       * To do this, we
+       *   - Check whether node is of a supported type:
+       *       - (NOT) IN predicate with a subquery as the right operand
+       *       - (NOT) EXISTS predicate
+       *       - comparison (<,>,<=,>=,=,<>) predicate with subquery as the right operand
+       *   - If node is a (NOT) IN or a comparison, extract a base join predicate
+       *   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of PredicateNodes using
+       *     them (if one is used outside of PredicateNodes, we never optimize the LQP).
+       *   - Scan the subquery-LQP for correlated predicates that we need to pull up, and turn each into a join
+       *   predicate
+       *   - Check whether all correlated predicates can be pulled up (abort if not)
+       *   - Copy and adapt the subquery-LQP, removing all correlated PredicateNodes and adapt nodes above them in the
+       *     LQP, so that all columns required by the new join predicates are available at the top of the adapted
+       *     subquery-LQP.
+       *   - Build a join with the collected predicates
+       *
+       * We always reformulate when possible, since benchmarks have shown that this reformulation makes the execution
+       * faster regardless of the expected table sizes, etc.
+       */
+
+      /**
+       * 1. Skip non-PredicateNodes
+       */
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
+      if (!predicate_node) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      /**
+       * 2. Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
+       *    I.e., `x (NOT) IN (<subquery>)`, `(NOT) EXISTS(<subquery>)` or `x <op> <subquery>`
+       */
+      auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
+      if (!predicate_node_info) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      /**
+       * 3. Count the number of PredicateNodes in the Subquery-LQP using correlated parameters. Abort if any
+       *    non-PredicateNodes or nested subquery-LQPs use correlated parameters.
+       */
+      std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
+      for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count();
+           ++parameter_idx) {
+        const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
+        parameter_mapping.emplace(predicate_node_info->subquery->parameter_ids[parameter_idx], parameter_expression);
+      }
+
+      const auto& [optimizable, correlated_predicate_node_count] =
+          assess_correlated_parameter_usage(predicate_node_info->subquery->lqp, parameter_mapping);
+      if (!optimizable) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      /**
+       * 4. Pull up correlated PredicateNodes
+       */
+      const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
+      if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
+        // Not all correlated PredicateNodes can be pulled up
+        DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
+                    "Inconsistent results from scan for correlated PredicateNodes");
+        return LQPVisitation::VisitInputs;
+      }
+
+      /**
+       * 5. Replace PredicateNodes with Joins
+       */
+      auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
+      join_predicates.reserve(pull_up_result.join_predicates.size() + (predicate_node_info->join_predicate ? 1 : 0));
+      if (predicate_node_info->join_predicate) {
+        join_predicates.emplace_back(predicate_node_info->join_predicate);
+      }
+      for (const auto& join_predicate : pull_up_result.join_predicates) {
+        join_predicates.emplace_back(join_predicate);
+      }
+
+      // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the
+      // primary join predicate.
+      // Check that one exists, but rely on join predicate ordering rule to move it to the front.
+      if (std::find_if(
+              join_predicates.begin(), join_predicates.end(),
+              [](const std::shared_ptr<AbstractExpression>& expression) {
+                return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
+                       PredicateCondition::Equals;
+              }) == join_predicates.end()) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      const auto join_mode = predicate_node_info->join_mode;
+      const auto join_node = JoinNode::make(join_mode, join_predicates);
+      lqp_replace_node(current_node, join_node);
+      join_node->set_right_input(pull_up_result.adapted_lqp);
+
+      // Because we changed the LQP, we have to schedule further visitation with a separate visitor.
+      node_queue.push(join_node);
+      return LQPVisitation::DoNotVisitInputs;
+    });
   }
-
-  /**
-   * 2. Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
-   *    I.e., `x (NOT) IN (<subquery>)`, `(NOT) EXISTS(<subquery>)` or `x <op> <subquery>`
-   */
-  auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
-  if (!predicate_node_info) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
-    return;
-  }
-
-  /**
-   * 3. Count the number of PredicateNodes in the Subquery-LQP using correlated parameters. Abort if any
-   *    non-PredicateNodes or nested subquery-LQPs use correlated parameters.
-   */
-  std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
-  for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count(); ++parameter_idx) {
-    const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
-    parameter_mapping.emplace(predicate_node_info->subquery->parameter_ids[parameter_idx], parameter_expression);
-  }
-
-  const auto& [optimizable, correlated_predicate_node_count] =
-      assess_correlated_parameter_usage(predicate_node_info->subquery->lqp, parameter_mapping);
-  if (!optimizable) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
-    return;
-  }
-
-  /**
-   *
-   */
-  const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
-  if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
-    // Not all correlated predicate nodes can be pulled up
-    DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
-                "Inconsistent results from scan for correlated predicate nodes");
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
-    return;
-  }
-
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
-  join_predicates.reserve(pull_up_result.join_predicates.size() + (predicate_node_info->join_predicate ? 1 : 0));
-  if (predicate_node_info->join_predicate) {
-    join_predicates.emplace_back(predicate_node_info->join_predicate);
-  }
-  for (const auto& join_predicate : pull_up_result.join_predicates) {
-    join_predicates.emplace_back(join_predicate);
-  }
-
-  // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
-  // join predicate. Check that one exists, but rely on join predicate ordering rule to move it to the front.
-  if (std::find_if(join_predicates.begin(), join_predicates.end(),
-                   [](const std::shared_ptr<AbstractExpression>& expression) {
-                     return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
-                            PredicateCondition::Equals;
-                   }) == join_predicates.end()) {
-    _apply_to_plan_inputs_without_subqueries(lqp_root);
-    return;
-  }
-
-  const auto join_mode = predicate_node_info->join_mode;
-  const auto join_node = JoinNode::make(join_mode, join_predicates);
-  lqp_replace_node(lqp_root, join_node);
-  join_node->set_right_input(pull_up_result.adapted_lqp);
-
-  _apply_to_plan_inputs_without_subqueries(join_node);
 }
 
 }  // namespace opossum
