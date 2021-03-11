@@ -9,6 +9,7 @@ that information without blowing up the code of the Hyrise core.
 import glob
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import re
 import sys
@@ -71,7 +72,7 @@ df = df.fillna(0)
 df_norm = df.copy()
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-df_norm.loc["Total"] = df_norm.sum() / df_norm.count()
+df_norm.loc["Total [%]"] = df_norm.sum() / df_norm.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
@@ -82,30 +83,75 @@ print(df_norm)
 
 # Drop all operators that do not exceed 1% in any query
 df_norm = df_norm[df_norm > 0.01].dropna(axis="columns", how="all")
+df_norm_queries = df_norm.loc[df_norm.index != "Total [%]"]
+df_norm_total = df_norm.loc[["Total [%]"]]
 
 print(df_norm)
+print(df_norm_queries)
+print(df_norm_total)
+
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df_norm), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
 cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
 
 
+query_length_adaption_factor = int(round(math.sqrt(len(df_norm))))
 
-fig = plt.figure(figsize=(20,6))
+fig = plt.figure(figsize=(20 + query_length_adaption_factor,6))
+plt.subplots(constrained_layout=True)
 
 # Simple heuristic to have at least a 3:1 ratio and scale to larger workloads.
 # TODO: Explain 2 + sqrt  ... + 1 (that's the summary)
 # The sqrt() ensures that huge workloads
 # (e.g., join order benchmarks) do not lead to 100:1 ratios.
-gs = GridSpec(2, 5 + int(round(math.sqrt(len(df_norm)))))
+gs = GridSpec(2, 5 + query_length_adaption_factor)
 
 ax_1 = fig.add_subplot(gs[0,:-1]) # Queries, relative
 ax_2 = fig.add_subplot(gs[0,-1]) # Summary, relative
 ax_3 = fig.add_subplot(gs[1,:-1]) # Queries, relative
 ax_4 = fig.add_subplot(gs[1,-1]) # Summary, relative
 
-# Plot it
-df_norm.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
+df_norm_queries.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
+ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
+ax_1.set_ylabel("Share of run time\n(hiding operators <1%)")
+ax_1.legend().remove()
+
+df_norm_total.plot.bar(ax=ax_2, stacked=True, colormap=cmap)
+ax_2.legend().remove()
+ax_2.tick_params(axis='x', labelrotation=0)
+
+# Bottom plots with absolute runtimes
+df = df / 1e9  # to seconds
+df = df[df_norm.columns]  # only show filtered columns of relative chart (>= 1%)
+
+df.plot.bar(ax=ax_3, stacked=True, colormap=cmap)
+ax_3.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
+ax_3.set_xlabel("Query")
+ax_3.legend().remove()
+
+sum_df = df.sum(axis='index').to_frame().T
+sum_df.rename(index={0:'Cumulative\nRuntimes [s]'}, inplace=True)
+
+sum_df.plot.bar(ax=ax_4, stacked=True, colormap=cmap)
+ax_4.legend().remove()
+ax_4.tick_params(axis='x', labelrotation=0)
+
+def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
+    stack_sum = sum([p.get_height() for p in ax.patches])
+    y_shift = (stack_sum / 1000) * 3
+    for p in ax.patches:
+        value = p.get_height()
+        if value < (stack_sum * 0.1):
+            continue
+        x = p.get_x() + p.get_width() / 2
+        y = p.get_y() + p.get_height() / 2
+        value_str = format_string.format(value)
+        ax.text(x + 0.005, y - y_shift, value_str, ha="center", color='white')
+        ax.text(x, y, value_str, ha="center", color='black')
+
+add_value_labels_to_stacked_plot(ax_2, '{:.0%}')
+add_value_labels_to_stacked_plot(ax_4, '{:,.1f}')
 
 if paper_mode:
     # Add hatches in paper mode, where graphs may be printed in grayscale
@@ -124,9 +170,10 @@ if paper_mode:
         "",
         "/\\/\\/\\/\\/\\",
     )
-    hatches = [p for p in patterns for i in range(len(df_norm))]
     for axis in [ax_1, ax_2, ax_3, ax_4]:
-        for bar, hatch in zip(axis.patches, hatches):
+        column_count = len(axis.get_xticks())
+        hatches = [p for p in patterns for i in range(column_count)]
+        for bar, hatch in zip(reversed(axis.patches), hatches):
             # Calculate color so that the hatches are visible but not pushy
             hsv = mplcolors.rgb_to_hsv(bar.get_facecolor()[:3])
             hatch_color_hsv = hsv
@@ -136,28 +183,9 @@ if paper_mode:
             bar.set_hatch(hatch)
             bar.set_linewidth(0)
 
-# Set labels
-ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
-ax_1.set_ylabel("Share of run time\n(hiding operators <1%)")
-ax_1.legend().remove()
-
-df = df / 1e9  # to seconds
-df = df[df_norm.columns]  # only show filtered columns of relative chart (>= 1%)
-
-df.plot.bar(ax=ax_3, stacked=True, colormap=cmap)
-ax_3.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
-ax_3.set_xlabel("Query")
-ax_3.legend().remove()
-
-sum_df = df.sum(axis='index').to_frame().T
-sum_df.rename(index={0:'Sum'},inplace=True)
-
-sum_df.plot.bar(ax=ax_4, stacked=True, colormap=cmap)
-ax_4.legend().remove()
-ax_4.set_ylabel("Cumulative operater run time [s]")
-
-
 handles, labels = ax_1.get_legend_handles_labels()
 by_label = OrderedDict(zip(labels, handles))
-fig.legend(by_label.values(), by_label.keys(), loc=9, ncol=10)
+fig.legend(reversed(by_label.values()), reversed(labels), loc=9, ncol=10)
+fig.legend(reversed(handles), reversed(by_label.keys()), loc=9, ncol=10)
+fig.subplots_adjust(wspace=0.4)  # 0.2 is the default
 fig.savefig("operator_breakdown_absolute.pdf", bbox_inches="tight")
