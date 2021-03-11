@@ -9,7 +9,6 @@ that information without blowing up the code of the Hyrise core.
 import glob
 import math
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import re
 import sys
@@ -94,16 +93,16 @@ cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
 # The sqrt() somewhat accomodates that we don't create extremely wide charts but still adapt.
 query_count_apaption = int(round(math.sqrt(len(df_norm))))
 
-fig = plt.figure(figsize=(20 + query_count_apaption,6))
+fig = plt.figure(figsize=(20 + query_count_apaption, 6))
 plt.subplots(constrained_layout=True)
 # Create a grid with two rows and ensure at least a ratio for the plots of the queries and the summary plot of
 # 4:1. If there are many queries, we increase the share of the query plots.
 gs = GridSpec(2, 5 + query_count_apaption)
 
-ax_1 = fig.add_subplot(gs[0,:-1]) # Queries, relative
-ax_2 = fig.add_subplot(gs[0,-1]) # Summary, relative
-ax_3 = fig.add_subplot(gs[1,:-1]) # Queries, absolute
-ax_4 = fig.add_subplot(gs[1,-1]) # Summary, absolute
+ax_1 = fig.add_subplot(gs[0, :-1])  # Queries, relative
+ax_2 = fig.add_subplot(gs[0, -1])  # Summary, relative
+ax_3 = fig.add_subplot(gs[1, :-1])  # Queries, absolute
+ax_4 = fig.add_subplot(gs[1, -1])  # Summary, absolute
 
 df_norm_queries.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
 ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
@@ -112,7 +111,7 @@ ax_1.legend().remove()
 
 df_norm_total.plot.bar(ax=ax_2, stacked=True, colormap=cmap)
 ax_2.legend().remove()
-ax_2.tick_params(axis='x', labelrotation=0)
+ax_2.tick_params(axis="x", labelrotation=0)
 
 # Bottom plots with absolute runtimes
 df = df / 1e9  # to seconds
@@ -123,12 +122,13 @@ ax_3.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
 ax_3.set_xlabel("Query")
 ax_3.legend().remove()
 
-sum_df = df.sum(axis='index').to_frame().T
-sum_df.rename(index={0:'Cumulative\nRuntimes [s]'}, inplace=True)
+sum_df = df.sum(axis="index").to_frame().T
+sum_df.rename(index={0: "Cumulative\nRuntimes [s]"}, inplace=True)
 
 sum_df.plot.bar(ax=ax_4, stacked=True, colormap=cmap)
 ax_4.legend().remove()
-ax_4.tick_params(axis='x', labelrotation=0)
+ax_4.tick_params(axis="x", labelrotation=0)
+
 
 def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
     stack_sum = sum([p.get_height() for p in ax.patches])
@@ -140,11 +140,12 @@ def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https:/
         x = p.get_x() + p.get_width() / 2
         y = p.get_y() + p.get_height() / 2
         value_str = format_string.format(value)
-        ax.text(x + 0.005, y - y_shift, value_str, ha="center", color='white')
-        ax.text(x, y, value_str, ha="center", color='black')
+        ax.text(x + 0.005, y - y_shift, value_str, ha="center", color="white")
+        ax.text(x, y, value_str, ha="center", color="black")
 
-add_value_labels_to_stacked_plot(ax_2, '{:.0%}')
-add_value_labels_to_stacked_plot(ax_4, '{:,.1f}')
+
+add_value_labels_to_stacked_plot(ax_2, "{:.0%}")
+add_value_labels_to_stacked_plot(ax_4, "{:,.1f}")
 
 if paper_mode:
     # Add hatches in paper mode, where graphs may be printed in grayscale
@@ -177,6 +178,6 @@ if paper_mode:
             bar.set_linewidth(0)
 
 handles, labels = ax_1.get_legend_handles_labels()
-fig.legend(reversed(handles), reversed(by_label.keys()), loc=9, ncol=10)
+fig.legend(reversed(handles), reversed(labels), loc=9, ncol=10)
 fig.subplots_adjust(wspace=0.4)  # 0.2 is the default
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")
