@@ -54,7 +54,7 @@ class BaseAttributeStatistics {
 
   const DataType data_type;
 
-  std::string range_strings() const {return "";};
+  std::string range_strings() const { return ""; };
 };
 
 }  // namespace opossum

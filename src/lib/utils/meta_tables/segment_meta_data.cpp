@@ -63,15 +63,16 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
           std::string statistics_string = "";
 
-          if (chunk->pruning_statistics().has_value()){
+          if (chunk->pruning_statistics().has_value()) {
             resolve_data_type((*chunk->pruning_statistics())[column_id]->data_type, [&](auto type) {
               using ColumnDataType = typename decltype(type)::type;
-              statistics_string = (static_cast<const AttributeStatistics<ColumnDataType>&>(*(*chunk->pruning_statistics())[column_id])).range_strings();
+              statistics_string =
+                  (static_cast<const AttributeStatistics<ColumnDataType>&>(*(*chunk->pruning_statistics())[column_id]))
+                      .range_strings();
             });
           } else {
             statistics_string = "Found no statistics object";
           }
-          
 
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
@@ -81,7 +82,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary]),
-                              pmr_string{statistics_string} });
+                              pmr_string{statistics_string}});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,

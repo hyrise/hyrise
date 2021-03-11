@@ -43,7 +43,6 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
   }
 }
 
-
 template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
   const auto statistics = std::make_shared<AttributeStatistics<T>>();

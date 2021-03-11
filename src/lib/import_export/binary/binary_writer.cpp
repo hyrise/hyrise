@@ -318,9 +318,8 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
     // Write string_offset size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.string_offsets()->size()));
     // Write string_offset data_size
-    export_value(ofstream,
-                 static_cast<uint32_t>(
-                     dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets()).data().size()));
+    export_value(ofstream, static_cast<uint32_t>(
+                               dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets()).data().size()));
     // Write string offsets
     _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *(lz4_segment.string_offsets()));
   } else {

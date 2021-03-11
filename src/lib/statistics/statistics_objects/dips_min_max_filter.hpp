@@ -4,9 +4,9 @@
 #include <memory>
 #include <optional>
 
-#include "min_max_filter.hpp"
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
+#include "min_max_filter.hpp"
 #include "types.hpp"
 
 namespace opossum {

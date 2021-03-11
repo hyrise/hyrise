@@ -184,17 +184,16 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     std::vector<bool> is_initialized = std::vector<bool>(target_chunk->column_count());
     std::optional<ChunkPruningStatistics> new_target_chunk_statistic = {};
 
-    if(target_chunk_statistic.has_value()){
+    if (target_chunk_statistic.has_value()) {
       new_target_chunk_statistic = target_chunk_statistic;
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count();column_id++) {
-        is_initialized[(size_t) column_id] = true;
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); column_id++) {
+        is_initialized[(size_t)column_id] = true;
       }
     } else {
-        new_target_chunk_statistic = std::make_optional(
-        std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count())
-      );
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count();column_id++) {
-        is_initialized[(size_t) column_id] = false;
+      new_target_chunk_statistic =
+          std::make_optional(std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count()));
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); column_id++) {
+        is_initialized[(size_t)column_id] = false;
       }
     }
 
@@ -219,23 +218,17 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
           std::shared_ptr<BaseAttributeStatistics> segment_statistic = nullptr;
           if (is_initialized[column_id]) {
-            segment_statistic = new_target_chunk_statistic.value()[(size_t) column_id];
+            segment_statistic = new_target_chunk_statistic.value()[(size_t)column_id];
           } else {
             segment_statistic = std::make_shared<AttributeStatistics<ColumnDataType>>();
           }
-          std::shared_ptr<AttributeStatistics<ColumnDataType>> new_segment_statistic = _update_segment_statistic<ColumnDataType>(
-            source_segment, 
-            source_row_id.chunk_offset, 
-            segment_statistic, 
-            num_rows_current_iteration,
-            context
-          );
+          std::shared_ptr<AttributeStatistics<ColumnDataType>> new_segment_statistic =
+              _update_segment_statistic<ColumnDataType>(source_segment, source_row_id.chunk_offset, segment_statistic,
+                                                        num_rows_current_iteration, context);
 
           new_target_chunk_statistic.value()[column_id] = new_segment_statistic;
-          is_initialized[(size_t) column_id] = true;
+          is_initialized[(size_t)column_id] = true;
         });
-
-
       }
 
       if (num_rows_current_iteration == source_chunk_remaining_rows) {
@@ -273,7 +266,6 @@ void Insert::_on_commit_records(const CommitID cid) {
     std::atomic_thread_fence(std::memory_order_release);
   }
 }
-
 
 void Insert::_on_rollback_records() {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
@@ -324,6 +316,4 @@ std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
 
 void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-
 }  // namespace opossum
-

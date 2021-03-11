@@ -164,14 +164,14 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 }
 
 template <typename T>
-std::string  MinMaxFilter<T>::range_strings() const {
+std::string MinMaxFilter<T>::range_strings() const {
   std::string output_string = "{";
 
-   if constexpr (std::is_arithmetic_v<T>) {
+  if constexpr (std::is_arithmetic_v<T>) {
     output_string += std::to_string(min) + "->" + std::to_string(max) + "; MINMAX";
-   } else {
-     output_string += min + "->" + max + "; MINMAX (non-arithm)";
-   }
+  } else {
+    output_string += min + "->" + max + "; MINMAX (non-arithm)";
+  }
 
   output_string += "}";
   return output_string;

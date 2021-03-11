@@ -84,7 +84,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
   }
 
   chunk->set_pruning_statistics(chunk_statistics);
-  
+
   chunk->has_generated_pruning_statistics = true;
 }
 
