@@ -1,4 +1,4 @@
-black>=20.8b1
+black>=19.10b0
 flake8>=3.8.4
 matplotlib>=3.3.4
 numpy>=1.20.1
