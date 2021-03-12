@@ -167,6 +167,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // Semi/Anti* Joins only emit tuples from the probe table
   auto output_column_order = OutputColumnOrder{};
 
+  // Depending on which input table became the build/probe table we have to order the columns of the output table.
+  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
+  // For other join modes, we need to check which side has been chosen as the probe side (see variable
+  // `build_hash_table_for_right_input` for more details).
   if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
     output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
@@ -534,8 +538,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
     const auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
-    // partitions can be merged (#2202).
+    // A sort merge join's input can be heavily pre-filtered or the join results in very few matches. In contrast to
+    // the hash join, we do not (for now) merge small partitions to keep the sorted chunk guarantees, which could be
+    // exploited by subsequent operators.
     constexpr auto ALLOW_PARTITION_MERGE = true;
     auto output_chunks =
         write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
