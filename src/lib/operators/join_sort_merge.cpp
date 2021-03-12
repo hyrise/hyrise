@@ -1037,7 +1037,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
-    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
@@ -1053,13 +1053,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer;
 
-    // if (!(_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty())) { 
-        _perform_join();
-    // }
+    if (_mode == JoinMode::AntiNullAsFalse) {
+      include_null_right = false;
+    }
 
-    // if ((_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty())) { 
-    //     include_null_right = false;
-    // }
+    if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty()) {
+        _output_pos_lists_left[0] = std::make_shared<RowIDPosList>();
+        _output_pos_lists_right[0] = std::make_shared<RowIDPosList>();
+    } else {
+      _perform_join();
+    }
 
     if (include_null_left || include_null_right) {
       auto null_output_left = std::make_shared<RowIDPosList>();
