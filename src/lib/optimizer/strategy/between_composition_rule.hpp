@@ -19,17 +19,20 @@ class PredicateNode;
  * boost. The case where x and y are columns can largely be handled by this rule as well. As no scan can handle that
  * combination yet, we still emit two separate predicates in this case.
  *
- * The BetweenCompositionRule searches for a chain of predicate nodes and within this chain substitutes
+ * The BetweenCompositionRule searches for a chain of PredicateNodes and within this chain substitutes
  * BinaryPredicateConditions with BetweenExpressions. The algorithm checks whether two or more BinaryPredicateConditions
  * represent a range on one column. The highest lower bound and the lowest upper bound are substituted by a
  * corresponding (exclusive or inclusive) BetweenExpression. All obsolete BinaryPredicateConditions are removed
  * after the substitution.
-**/
+ */
 class BetweenCompositionRule : public AbstractRule {
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
+  using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
+  static void _substitute_predicates_with_between_expressions(const PredicateChain& predicate_chain);
+
   /**
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
    * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
@@ -44,7 +47,7 @@ class BetweenCompositionRule : public AbstractRule {
 
   /**
    * A column boundary is a normalized format that allows us to store a column and a value
-   * expression of a predicate node. The value represents a boundary for the column if the ColumnBoundaryType does not
+   * expression of a PredicateNode. The value represents a boundary for the column if the ColumnBoundaryType does not
    * equal None. To create the ColumnBoundary for the other column, if both expressions are LQPColumnExpressions, the
    * boundary_is_column_expression flag has been added.
    */
@@ -57,8 +60,6 @@ class BetweenCompositionRule : public AbstractRule {
   };
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
-
-  static void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates);
 
   static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };

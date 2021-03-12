@@ -8,13 +8,15 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/abstract_operator.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
-enum class LogicalOperator;
 class LQPColumnExpression;
 class TransactionContext;
+class PQPSubqueryExpression;
+enum class LogicalOperator;
 
 /**
  * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
@@ -38,10 +40,22 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
                                                      const LQPNodeMapping& node_mapping);
 
 /**
- * Utility to AbstractExpression::deep_copy() a vector of expressions
+ * Utility to AbstractExpression::deep_copy() a vector of expressions.
+ *
+ * Regarding PQPSubqueryExpressions: Deduplication of operator plans will be preserved. See lqp_translator.cpp
+ * for more info on deduplication.
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+/**
+ * Utility to AbstractExpression::deep_copy() a vector of expressions. Uses
+ * @param copied_ops to preserve deduplication for the operator plans of PQPSubqueryExpressions.
+ * See lqp_translator.cpp for more info on deduplication.
+ */
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops);
 
 /**
  * Recurse through the expression and replace them according to @param mapping, where applicable
@@ -159,5 +173,13 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
  *          std::nullopt for other expression types
  */
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
+
+/**
+ * @returns a vector of PQPSubqueryExpressions consisting of @param expression or a subset of its arguments.
+ *          If @param expression is not of type PQPSubqueryExpression, this function will search its arguments for
+ *          PQPSubqueryExpressions. Note, however, that it will not search for nested PQPSubqueryExpressions.
+ */
+std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(
+    const std::shared_ptr<AbstractExpression>& expression);
 
 }  // namespace opossum

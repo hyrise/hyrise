@@ -20,12 +20,13 @@ PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOpera
                                              const Parameters& init_parameters)
     : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(init_pqp), parameters(init_parameters) {}
 
-std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   if (_data_type_info) {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), _data_type_info->data_type,
+    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), _data_type_info->data_type,
                                                    _data_type_info->nullable, parameters);
   } else {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(), parameters);
+    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), parameters);
   }
 }
 
@@ -51,7 +52,7 @@ bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
   DebugAssert(dynamic_cast<const PQPSubqueryExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other = static_cast<const PQPSubqueryExpression&>(expression);
-  return pqp == other.pqp && parameters == parameters;
+  return pqp == other.pqp && parameters == other.parameters;
 }
 
 size_t PQPSubqueryExpression::_shallow_hash() const {
