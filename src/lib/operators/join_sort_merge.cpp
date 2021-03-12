@@ -1,6 +1,7 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -9,7 +10,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 #include "hyrise.hpp"
@@ -705,37 +705,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _right_row_ids_emitted.emplace(right_row_id);
       });
     }
+
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-
-    if (!_secondary_join_predicates.empty()){
-      for (auto cluster : *_sorted_right_table){
+    if (!_secondary_join_predicates.empty()) {
+      for (auto cluster : *_sorted_right_table) {
         for (auto row : *cluster) {
-         if (!_right_row_ids_emitted.contains(row.row_id)) {
-            _emit_combination(0, NULL_ROW_ID, row.row_id);  
+          if (!_right_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, NULL_ROW_ID, row.row_id);
           }
         }
       }
-      // std::cout << "right" << std::endl;
-      // const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
-      // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      //   auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
-      //   segment_iterate<T>(*segment, [&](const auto& position) {
-      //      const auto row_id = RowID{chunk_id, position.chunk_offset()};
-      //      if (!_right_row_ids_emitted.contains(row_id)) {
-      //       _emit_combination(0, NULL_ROW_ID, row_id);
-      //     }
-      //   });
-      // }
     }
-
-
-    // auto full_table_range = TablePosition(0, 0).to(end_of_right_table);
-    // full_table_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-    //   if (!_right_row_ids_emitted.contains(right_row_id)) {
-    //     _emit_combination(0, NULL_ROW_ID, right_row_id);
-    //   }
-    // });
   }
 
   /**
@@ -793,36 +774,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _left_row_ids_emitted.emplace(left_row_id);
       });
     }
-    
+
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    if (!_secondary_join_predicates.empty()){
-      for (auto cluster : *_sorted_left_table){
+    if (!_secondary_join_predicates.empty()) {
+      for (auto cluster : *_sorted_left_table) {
         for (auto row : *cluster) {
-         if (!_left_row_ids_emitted.contains(row.row_id)) {
-          _emit_combination(0, row.row_id, NULL_ROW_ID);  
+          if (!_left_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, row.row_id, NULL_ROW_ID);
+          }
         }
       }
     }
-      // const auto chunk_count = _sort_merge_join.left_input_table()->chunk_count();
-      // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      //   auto segment = _sort_merge_join.left_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.first);
-      //   segment_iterate<T>(*segment, [&](const auto& position) {
-      //      const auto row_id = RowID{chunk_id, position.chunk_offset()};
-      //      if (!_left_row_ids_emitted.contains(row_id)) {
-      //       _emit_combination(0, row_id, NULL_ROW_ID);
-      //       _left_row_ids_emitted.emplace(row_id);
-      //     }
-      //   });
-      // }
-    }
-
-    // auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
-    // full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-    //   if (!_left_row_ids_emitted.contains(left_row_id)) {
-    //     _emit_combination(0, left_row_id, NULL_ROW_ID);
-    //   }
-    // });
   }
 
   /**
@@ -877,8 +840,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-
-      for (auto &set : _left_row_ids_emitted_per_chunk) {
+      for (auto& set : _left_row_ids_emitted_per_chunk) {
         _left_row_ids_emitted.merge(set);
       }
 
@@ -886,7 +848,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto &set : _right_row_ids_emitted_per_chunk) {
+      for (auto& set : _right_row_ids_emitted_per_chunk) {
         _right_row_ids_emitted.merge(set);
       }
       _right_outer_non_equi_join();
