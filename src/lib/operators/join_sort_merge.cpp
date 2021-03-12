@@ -708,15 +708,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
 
-    const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
-      segment_iterate<T>(*segment, [&](const auto& position) {
-         const auto row_id = RowID{chunk_id, position.chunk_offset()};
-         if (!_right_row_ids_emitted.contains(row_id)) {
-          _emit_combination(0, NULL_ROW_ID, row_id);
+    if (!_secondary_join_predicates.empty()){
+      for (auto cluster : *_sorted_right_table){
+        for (auto row : *cluster) {
+         if (!_right_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, NULL_ROW_ID, row.row_id);  
+          }
         }
-      });
+      }
+      // std::cout << "right" << std::endl;
+      // const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
+      // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      //   auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+      //   segment_iterate<T>(*segment, [&](const auto& position) {
+      //      const auto row_id = RowID{chunk_id, position.chunk_offset()};
+      //      if (!_right_row_ids_emitted.contains(row_id)) {
+      //       _emit_combination(0, NULL_ROW_ID, row_id);
+      //     }
+      //   });
+      // }
     }
 
 
@@ -786,18 +796,26 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-
-    const auto chunk_count = _sort_merge_join.left_input_table()->chunk_count();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto segment = _sort_merge_join.left_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.first);
-      segment_iterate<T>(*segment, [&](const auto& position) {
-         const auto row_id = RowID{chunk_id, position.chunk_offset()};
-         if (!_left_row_ids_emitted.contains(row_id)) {
-          _emit_combination(0, row_id, NULL_ROW_ID);
+    if (!_secondary_join_predicates.empty()){
+      for (auto cluster : *_sorted_left_table){
+        for (auto row : *cluster) {
+         if (!_left_row_ids_emitted.contains(row.row_id)) {
+          _emit_combination(0, row.row_id, NULL_ROW_ID);  
         }
-      });
+      }
     }
-
+      // const auto chunk_count = _sort_merge_join.left_input_table()->chunk_count();
+      // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      //   auto segment = _sort_merge_join.left_input_table()->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.first);
+      //   segment_iterate<T>(*segment, [&](const auto& position) {
+      //      const auto row_id = RowID{chunk_id, position.chunk_offset()};
+      //      if (!_left_row_ids_emitted.contains(row_id)) {
+      //       _emit_combination(0, row_id, NULL_ROW_ID);
+      //       _left_row_ids_emitted.emplace(row_id);
+      //     }
+      //   });
+      // }
+    }
 
     // auto full_table_range = TablePosition(0, 0).to(end_of_left_table);
     // full_table_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
