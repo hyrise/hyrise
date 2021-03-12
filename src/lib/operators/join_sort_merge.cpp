@@ -1,7 +1,6 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -10,6 +9,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 #include "hyrise.hpp"
@@ -142,7 +142,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   struct RowHasher {
     size_t operator()(const RowID& row) const {
-      size_t seed = 0;
+      auto seed = size_t{0};
       boost::hash_combine(seed, row.chunk_id);
       boost::hash_combine(seed, row.chunk_offset);
       return seed;
@@ -708,11 +708,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    if (!_secondary_join_predicates.empty()) {
-      for (auto cluster : *_sorted_right_table) {
+    if (!_secondary_join_predicates.empty()){
+      for (auto cluster : *_sorted_right_table){
         for (auto row : *cluster) {
-          if (!_right_row_ids_emitted.contains(row.row_id)) {
-            _emit_combination(0, NULL_ROW_ID, row.row_id);
+         if (!_right_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, NULL_ROW_ID, row.row_id);  
           }
         }
       }
@@ -774,14 +774,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _left_row_ids_emitted.emplace(left_row_id);
       });
     }
-
+    
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    if (!_secondary_join_predicates.empty()) {
-      for (auto cluster : *_sorted_left_table) {
+    if (!_secondary_join_predicates.empty()){
+      for (auto cluster : *_sorted_left_table){
         for (auto row : *cluster) {
-          if (!_left_row_ids_emitted.contains(row.row_id)) {
-            _emit_combination(0, row.row_id, NULL_ROW_ID);
+         if (!_left_row_ids_emitted.contains(row.row_id)) {
+          _emit_combination(0, row.row_id, NULL_ROW_ID);  
           }
         }
       }
@@ -840,7 +840,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto& set : _left_row_ids_emitted_per_chunk) {
+
+      for (auto &set : _left_row_ids_emitted_per_chunk) {
         _left_row_ids_emitted.merge(set);
       }
 
@@ -848,7 +849,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto& set : _right_row_ids_emitted_per_chunk) {
+      for (auto &set : _right_row_ids_emitted_per_chunk) {
         _right_row_ids_emitted.merge(set);
       }
       _right_outer_non_equi_join();
