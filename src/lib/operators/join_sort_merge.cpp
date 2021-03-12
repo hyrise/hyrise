@@ -34,7 +34,8 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
             !config.secondary_predicates && 
             (config.predicate_condition == PredicateCondition::NotEquals || 
             config.predicate_condition == PredicateCondition::Equals)) ||
-            (config.join_mode == JoinMode::AntiNullAsFalse && config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) ) &&
+            (config.join_mode == JoinMode::AntiNullAsFalse && config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) ||
+            (config.join_mode == JoinMode::AntiNullAsFalse && config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) &&
          config.left_data_type == config.right_data_type;
 }
 
@@ -1052,8 +1053,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer;
 
-    _perform_join();
+    // if (!(_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty())) { 
+        _perform_join();
+    // }
 
+    // if ((_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty())) { 
+    //     include_null_right = false;
+    // }
 
     if (include_null_left || include_null_right) {
       auto null_output_left = std::make_shared<RowIDPosList>();
@@ -1078,7 +1084,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       DebugAssert(null_output_left->size() == null_output_right->size(),
                   "Null positions lists are expected to be of equal length.");
       if (!null_output_left->empty()) {
-        _output_pos_lists_left.push_back(null_output_left);
+        // if ((_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals && !_null_rows_right->empty())) {
+        //    _output_pos_lists_left[0] = null_output_left;
+        // } else {
+          _output_pos_lists_left.push_back(null_output_left);
+        // }
         _output_pos_lists_right.push_back(null_output_right);
       }
     }
