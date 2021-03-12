@@ -55,7 +55,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,

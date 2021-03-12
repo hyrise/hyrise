@@ -21,6 +21,7 @@ class OperatorsLimitTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 3));
+    _table_wrapper->never_clear_output();
     _table_wrapper->execute();
   }
 

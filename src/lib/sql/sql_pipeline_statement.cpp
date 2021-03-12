@@ -294,7 +294,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
   if (!_is_transaction_statement()) {
-    _result_table = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
+    const auto& last_executed_operator = static_cast<const OperatorTask&>(*tasks.back()).get_operator();
+    _result_table = last_executed_operator->get_output();
+    last_executed_operator->clear_output();
   }
 
   if (!_result_table) _query_has_output = false;
