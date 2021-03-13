@@ -18,6 +18,35 @@ import matplotlib.ticker as ticker
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec
 
+
+# Determine if a color is considered dark based on the brightness of the HSV color value.
+def color_is_dark(rgb_color):
+    hatch_color_hsv = mplcolors.rgb_to_hsv(rgb_color)
+    return hatch_color_hsv[2] < 0.5
+
+
+# Calculate color so that the hatches are visible but not pushy
+def get_hatch_color(rgb_color):
+    hatch_color_hsv = mplcolors.rgb_to_hsv(rgb_color)
+    hatch_color_hsv[2] = hatch_color_hsv[2] + 0.2 if color_is_dark(rgb_color) else hatch_color_hsv[2] - 0.2
+    return mplcolors.hsv_to_rgb(hatch_color_hsv)
+
+
+def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
+    stack_sum = sum([p.get_height() for p in ax.patches])
+    for p in ax.patches:
+        value = p.get_height()
+        if value < (stack_sum * 0.1):
+            continue
+        x = p.get_x() + p.get_width() / 2
+        y = p.get_y() + p.get_height() / 2
+        value_str = format_string.format(value)
+        text_color = "black"
+        if color_is_dark(p.get_facecolor()[:3]):
+            text_color = "white"
+        ax.text(x, y, value_str, ha="center", color=text_color)
+
+
 if len(sys.argv) not in [1, 2] or len(glob.glob("*-PQP.svg")) == 0:
     exit("Call in a folder containing *-PQP.svg files, pass `paper` as an argument to change legend and hatching")
 paper_mode = len(sys.argv) == 2 and sys.argv[1] == "paper"
@@ -71,7 +100,7 @@ df = df.fillna(0)
 df_norm = df.copy()
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-df_norm.loc["Total [%]"] = df_norm.sum() / df_norm.count()
+df_norm.loc["Total"] = df_norm.sum() / df_norm.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
@@ -82,8 +111,8 @@ print(df_norm)
 
 # Drop all operators that do not exceed 1% in any query
 df_norm = df_norm[df_norm > 0.01].dropna(axis="columns", how="all")
-df_norm_queries = df_norm.loc[df_norm.index != "Total [%]"]
-df_norm_total = df_norm.loc[["Total [%]"]]
+df_norm_queries = df_norm.loc[df_norm.index != "Total"]
+df_norm_total = df_norm.loc[["Total"]]
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df_norm), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
@@ -110,6 +139,7 @@ ax_1.set_ylabel("Share of run time\n(hiding operators <1%)")
 
 df_norm_total.plot.bar(ax=ax_2, stacked=True, colormap=cmap)
 ax_2.tick_params(axis="x", labelrotation=0)
+ax_2.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
 
 # Bottom plots with absolute runtimes
 df = df / 1e9  # to seconds
@@ -127,22 +157,6 @@ ax_4.tick_params(axis="x", labelrotation=0)
 
 for axis in [ax_1, ax_2, ax_3, ax_4]:  # remove legends from subplot as we later add single legend for the whole plot
     axis.legend().remove()
-
-
-def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
-    stack_sum = sum([p.get_height() for p in ax.patches])
-    y_shift = (stack_sum / 1000) * 3
-    for p in ax.patches:
-        value = p.get_height()
-        if value < (stack_sum * 0.1):
-            continue
-        x = p.get_x() + p.get_width() / 2
-        y = p.get_y() + p.get_height() / 2
-        value_str = format_string.format(value)
-        # we add two texts to create a shadow that helps reading the text on dark as well as bright bars
-        ax.text(x + 0.005, y - y_shift, value_str, ha="center", color="white")
-        ax.text(x, y, value_str, ha="center", color="black")
-
 
 add_value_labels_to_stacked_plot(ax_2, "{:.0%}")
 add_value_labels_to_stacked_plot(ax_4, "{:,.1f}")
@@ -168,16 +182,13 @@ if paper_mode:
         column_count = len(axis.get_xticks())
         hatches = [p for p in patterns for i in range(column_count)]
         for bar, hatch in zip(reversed(axis.patches), hatches):
-            # Calculate color so that the hatches are visible but not pushy
-            hsv = mplcolors.rgb_to_hsv(bar.get_facecolor()[:3])
-            hatch_color_hsv = hsv
-            hatch_color_hsv[2] = hsv[2] + 0.2 if hsv[2] < 0.5 else hsv[2] - 0.2
-            bar.set_edgecolor(mplcolors.hsv_to_rgb(hatch_color_hsv))
+            hatch_color = get_hatch_color(bar.get_facecolor()[:3])
+            bar.set_edgecolor(hatch_color)
 
             bar.set_hatch(hatch)
             bar.set_linewidth(0)
 
 handles, labels = ax_1.get_legend_handles_labels()
 fig.legend(reversed(handles), reversed(labels), loc=9, ncol=10)
-fig.subplots_adjust(wspace=0.4)  # add a little horizontal margin between the charts (0.2 is the default)
+fig.subplots_adjust(wspace=0.5)  # add a little horizontal margin between the charts (0.2 is the default)
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")
