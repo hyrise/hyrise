@@ -9,9 +9,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
+
 #include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -19,7 +19,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -708,11 +707,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    if (!_secondary_join_predicates.empty()){
-      for (auto cluster : *_sorted_right_table){
-        for (auto row : *cluster) {
-         if (!_right_row_ids_emitted.contains(row.row_id)) {
-            _emit_combination(0, NULL_ROW_ID, row.row_id);  
+    if (!_secondary_join_predicates.empty()) {
+      for (const auto& cluster : *_sorted_right_table) {
+        for (const auto& row : *cluster) {
+          if (!_right_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, NULL_ROW_ID, row.row_id);
           }
         }
       }
@@ -774,14 +773,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _left_row_ids_emitted.emplace(left_row_id);
       });
     }
-    
+
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    if (!_secondary_join_predicates.empty()){
-      for (auto cluster : *_sorted_left_table){
-        for (auto row : *cluster) {
-         if (!_left_row_ids_emitted.contains(row.row_id)) {
-          _emit_combination(0, row.row_id, NULL_ROW_ID);  
+    if (!_secondary_join_predicates.empty()) {
+      for (const auto& cluster : *_sorted_left_table) {
+        for (const auto& row : *cluster) {
+          if (!_left_row_ids_emitted.contains(row.row_id)) {
+            _emit_combination(0, row.row_id, NULL_ROW_ID);
           }
         }
       }
@@ -797,7 +796,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
 
     // Parallel join for each cluster
-    for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
+    for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
 
       _output_pos_lists_left[cluster_id] = std::make_shared<RowIDPosList>();
@@ -840,8 +839,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-
-      for (auto &set : _left_row_ids_emitted_per_chunk) {
+      for (auto& set : _left_row_ids_emitted_per_chunk) {
         _left_row_ids_emitted.merge(set);
       }
 
@@ -849,7 +847,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
-      for (auto &set : _right_row_ids_emitted_per_chunk) {
+      for (auto& set : _right_row_ids_emitted_per_chunk) {
         _right_row_ids_emitted.merge(set);
       }
       _right_outer_non_equi_join();
