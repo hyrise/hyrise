@@ -314,7 +314,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
     _output_pos_lists_left[output_cluster]->push_back(left_row_id);
-    if (_mode != JoinMode::Semi || _mode != JoinMode::AntiNullAsTrue || _mode != JoinMode::AntiNullAsFalse) {
+    if (!(_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
       _output_pos_lists_right[output_cluster]->push_back(right_row_id);
     }
   }
