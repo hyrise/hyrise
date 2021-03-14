@@ -52,10 +52,17 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  return expressions_deep_copy(expressions, copied_ops);
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
-    copied_expressions.emplace_back(expression->deep_copy());
+    copied_expressions.emplace_back(expression->deep_copy(copied_ops));
   }
   return copied_expressions;
 }
@@ -296,6 +303,28 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   } else {
     return std::nullopt;
   }
+}
+
+std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(
+    const std::shared_ptr<AbstractExpression>& expression) {
+  if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
+    // Quick Path
+    return {pqp_subquery_expression};
+  }
+
+  // Long Path: Search expression's arguments for PQPSubqueryExpressions
+  std::vector<std::shared_ptr<PQPSubqueryExpression>> pqp_subquery_expressions;
+  for (const auto& argument_expression : expression->arguments) {
+    visit_expression(argument_expression, [&](const auto& sub_expression) {
+      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+      if (pqp_subquery_expression) {
+        pqp_subquery_expressions.push_back(pqp_subquery_expression);
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+  return pqp_subquery_expressions;
 }
 
 }  // namespace opossum

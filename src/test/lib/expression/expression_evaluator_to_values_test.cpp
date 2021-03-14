@@ -639,7 +639,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalcu
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   // PQP that returns the column "b" multiplied with the current value in "a"
   //
-  // row   list returned from sub query
+  // row   list returned from subquery
   //  0      (1, 2, 3, 4)
   //  1      (2, 4, 6, 8)
   //  2      (3, 6, 9, 12)
@@ -664,7 +664,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
 
   // PQP that returns the column "c" added to the current value in "a"
   //
-  // row   list returned from sub query
+  // row   list returned from subquery
   //  0      (34, NULL, 35, NULL)
   //  1      (35, NULL, 36, NULL)
   //  2      (36, NULL, 37, NULL)
