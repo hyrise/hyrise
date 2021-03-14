@@ -19,13 +19,13 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec
 
 
-# Determine if a color is considered dark based on the brightness of the HSV color value.
+# Determine if a color is rather dark based on the brightness of the HSV color value.
 def color_is_dark(rgb_color):
     hatch_color_hsv = mplcolors.rgb_to_hsv(rgb_color)
     return hatch_color_hsv[2] < 0.5
 
 
-# Calculate color so that the hatches are visible but not pushy
+# Calculate hatch color so that the hatches are visible but not pushy
 def get_hatch_color(rgb_color):
     hatch_color_hsv = mplcolors.rgb_to_hsv(rgb_color)
     hatch_color_hsv[2] = hatch_color_hsv[2] + 0.2 if color_is_dark(rgb_color) else hatch_color_hsv[2] - 0.2
@@ -34,17 +34,15 @@ def get_hatch_color(rgb_color):
 
 def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https://stackoverflow.com/a/51535326/1147726
     stack_sum = sum([p.get_height() for p in ax.patches])
-    for p in ax.patches:
-        value = p.get_height()
-        if value < (stack_sum * 0.1):
+    for patch in ax.patches:
+        value = patch.get_height()
+        if value < (stack_sum * 0.1):  # don't add text labels to tiny bars
             continue
-        x = p.get_x() + p.get_width() / 2
-        y = p.get_y() + p.get_height() / 2
+        x = patch.get_x() + patch.get_width() / 2
+        y = patch.get_y() + patch.get_height() / 2
         value_str = format_string.format(value)
-        text_color = "black"
-        if color_is_dark(p.get_facecolor()[:3]):
-            text_color = "white"
-        ax.text(x, y, value_str, ha="center", color=text_color)
+        patch_color = patch.get_facecolor()[:3]
+        ax.text(x, y, value_str, ha="center", color="white" if color_is_dark(patch_color) else "black")
 
 
 if len(sys.argv) not in [1, 2] or len(glob.glob("*-PQP.svg")) == 0:
@@ -182,9 +180,7 @@ if paper_mode:
         column_count = len(axis.get_xticks())
         hatches = [p for p in patterns for i in range(column_count)]
         for bar, hatch in zip(reversed(axis.patches), hatches):
-            hatch_color = get_hatch_color(bar.get_facecolor()[:3])
-            bar.set_edgecolor(hatch_color)
-
+            bar.set_edgecolor(get_hatch_color(bar.get_facecolor()[:3]))
             bar.set_hatch(hatch)
             bar.set_linewidth(0)
 
