@@ -524,15 +524,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   auto order_table = generate_order_table(order_line_counts);
   auto order_line_table = generate_order_line_table(order_line_counts);
 
-  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
-                                                              {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
-                                                              {"STOCK", BenchmarkTableInfo{stock_table}},
-                                                              {"DISTRICT", BenchmarkTableInfo{district_table}},
-                                                              {"CUSTOMER", BenchmarkTableInfo{customer_table}},
-                                                              {"HISTORY", BenchmarkTableInfo{history_table}},
-                                                              {"ORDER", BenchmarkTableInfo{order_table}},
-                                                              {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
-                                                              {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
+  auto table_info_by_name =
+      std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
+                                                           {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
+                                                           {"STOCK", BenchmarkTableInfo{stock_table}},
+                                                           {"DISTRICT", BenchmarkTableInfo{district_table}},
+                                                           {"CUSTOMER", BenchmarkTableInfo{customer_table}},
+                                                           {"HISTORY", BenchmarkTableInfo{history_table}},
+                                                           {"ORDER", BenchmarkTableInfo{order_table}},
+                                                           {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
+                                                           {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);

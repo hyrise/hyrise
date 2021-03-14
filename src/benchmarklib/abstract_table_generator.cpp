@@ -356,7 +356,8 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
   return true;
 }
 
-std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(std::string cache_directory) {
+std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(
+    std::string cache_directory) {
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
   for (const auto& table_file : list_directory(cache_directory)) {
