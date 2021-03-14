@@ -42,7 +42,7 @@ def add_value_labels_to_stacked_plot(ax, format_string):  # adapted from https:/
         y = patch.get_y() + patch.get_height() / 2
         value_str = format_string.format(value)
         patch_color = patch.get_facecolor()[:3]
-        ax.text(x, y, value_str, ha="center", color="white" if color_is_dark(patch_color) else "black")
+        ax.text(x, y, value_str, ha="center", va="center", color="white" if color_is_dark(patch_color) else "black")
 
 
 if len(sys.argv) not in [1, 2] or len(glob.glob("*-PQP.svg")) == 0:
@@ -108,7 +108,7 @@ df_norm.iloc[:, 0:] = df_norm.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 print(df_norm)
 
 # Drop all operators that do not exceed 1% in any query
-df_norm = df_norm[df_norm > 0.01].dropna(axis="columns", how="all")
+df_norm = df_norm[df_norm >= 0.01].dropna(axis="columns", how="all")
 df_norm_queries = df_norm.loc[df_norm.index != "Total"]
 df_norm_total = df_norm.loc[["Total"]]
 
@@ -116,48 +116,50 @@ df_norm_total = df_norm.loc[["Total"]]
 colors = sns.cubehelix_palette(n_colors=len(df_norm), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
 cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
 
-# Factor to adapt the sizes and ratios to large benchmarks with many queries (e.g., Join Order Benchmark).
-# The sqrt() somewhat accomodates that we don't create extremely wide charts but still adapt.
-query_count_apaption = int(round(math.sqrt(len(df_norm))))
+# Factor to adapt the sizes and ratios to large benchmarks. Since some benchmarks (e.g., Join Order Benchmark) have
+# dozens of queries, we do not scale up the share of the query grid part linearly, but square the number of queries.
+query_count_adaption = int(round(math.sqrt(len(df_norm))))
 
-fig = plt.figure(figsize=(20 + query_count_apaption, 6))
+fig = plt.figure(figsize=(20 + query_count_adaption, 6))
 plt.subplots(constrained_layout=True)
-# Create a grid with two rows and ensure at least a ratio for the plots of the queries and the summary plot of
-# 4:1. If there are many queries, we increase the share of the query plots.
-gs = GridSpec(2, 5 + query_count_apaption)
+# Create a grid with two rows (relative and absolute) and two columns (queries and summary). We ensure that each row
+# has at least a ratio of 4:1 (queries:summary). This has been manually determined. For TPC-H we get a ratio of 9:1,
+# for the Join Order Benchmark it's 14:1.
+gs = GridSpec(2, 5 + query_count_adaption)
 
-ax_1 = fig.add_subplot(gs[0, :-1])  # Queries, relative
-ax_2 = fig.add_subplot(gs[0, -1])  # Summary, relative
-ax_3 = fig.add_subplot(gs[1, :-1])  # Queries, absolute
-ax_4 = fig.add_subplot(gs[1, -1])  # Summary, absolute
+ax_relative_queries = fig.add_subplot(gs[0, :-1])
+ax_relative_summary = fig.add_subplot(gs[0, -1])
+ax_absolute_queries = fig.add_subplot(gs[1, :-1])
+ax_absolute_summary = fig.add_subplot(gs[1, -1])
 
-df_norm_queries.plot.bar(ax=ax_1, stacked=True, colormap=cmap)
-ax_1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
-ax_1.set_ylabel("Share of run time\n(hiding operators <1%)")
+df_norm_queries.plot.bar(ax=ax_relative_queries, stacked=True, colormap=cmap)
+ax_relative_queries.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
+ax_relative_queries.set_ylabel("Share of run time\n(hiding operators <1%)")
 
-df_norm_total.plot.bar(ax=ax_2, stacked=True, colormap=cmap)
-ax_2.tick_params(axis="x", labelrotation=0)
-ax_2.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
+df_norm_total.plot.bar(ax=ax_relative_summary, stacked=True, colormap=cmap)
+ax_relative_summary.tick_params(axis="x", labelrotation=0)
+ax_relative_summary.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
 
 # Bottom plots with absolute runtimes
 df = df / 1e9  # to seconds
 df = df[df_norm.columns]  # only show filtered columns of relative chart (>= 1%)
 
-df.plot.bar(ax=ax_3, stacked=True, colormap=cmap)
-ax_3.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
-ax_3.set_xlabel("Query")
+df.plot.bar(ax=ax_absolute_queries, stacked=True, colormap=cmap)
+ax_absolute_queries.set_ylabel("Operator run time [s]\n(hiding operators <1%)")
+ax_absolute_queries.set_xlabel("Query")
 
 sum_df = df.sum(axis="index").to_frame().T
 sum_df.rename(index={0: "Cumulative\nRuntimes [s]"}, inplace=True)
 
-sum_df.plot.bar(ax=ax_4, stacked=True, colormap=cmap)
-ax_4.tick_params(axis="x", labelrotation=0)
+sum_df.plot.bar(ax=ax_absolute_summary, stacked=True, colormap=cmap)
+ax_absolute_summary.tick_params(axis="x", labelrotation=0)
 
-for axis in [ax_1, ax_2, ax_3, ax_4]:  # remove legends from subplot as we later add single legend for the whole plot
+# remove legends from subplot as we later add single legend for the whole plot
+for axis in [ax_relative_queries, ax_relative_summary, ax_absolute_queries, ax_absolute_summary]:
     axis.legend().remove()
 
-add_value_labels_to_stacked_plot(ax_2, "{:.0%}")
-add_value_labels_to_stacked_plot(ax_4, "{:,.1f}")
+add_value_labels_to_stacked_plot(ax_relative_summary, "{:.0%}")
+add_value_labels_to_stacked_plot(ax_absolute_summary, "{:,.1f}")
 
 if paper_mode:
     # Add hatches in paper mode, where graphs may be printed in grayscale
@@ -176,7 +178,7 @@ if paper_mode:
         "",
         "/\\/\\/\\/\\/\\",
     )
-    for axis in [ax_1, ax_2, ax_3, ax_4]:
+    for axis in [ax_relative_queries, ax_relative_summary, ax_absolute_queries, ax_absolute_summary]:
         column_count = len(axis.get_xticks())
         hatches = [p for p in patterns for i in range(column_count)]
         for bar, hatch in zip(reversed(axis.patches), hatches):
@@ -184,7 +186,7 @@ if paper_mode:
             bar.set_hatch(hatch)
             bar.set_linewidth(0)
 
-handles, labels = ax_1.get_legend_handles_labels()
-fig.legend(reversed(handles), reversed(labels), loc=9, ncol=10)
+handles, labels = ax_relative_queries.get_legend_handles_labels()
+fig.legend(reversed(handles), reversed(labels), loc='upper center', ncol=10,)
 fig.subplots_adjust(wspace=0.5)  # add a little horizontal margin between the charts (0.2 is the default)
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")

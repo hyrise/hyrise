@@ -288,7 +288,7 @@ try {
         }, tpchVerification: {
           stage("tpchVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "../../clang-release/hyriseBenchmarkTPCH -r 1 -s 1 --verify"
+              sh "./clang-release/hyriseBenchmarkTPCH -r 1 -s 1 --verify"
             } else {
               Utils.markStageSkippedForConditional("tpchVerification")
             }
