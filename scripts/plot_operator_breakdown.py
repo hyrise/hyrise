@@ -76,7 +76,7 @@ df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
 print(df)
 
 # Drop all operators that do not exceed 1% in any query
-df = df[df > 0.01].dropna(axis="columns", how="all")
+df = df[df >= 0.01].dropna(axis="columns", how="all")
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
