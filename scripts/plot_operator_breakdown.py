@@ -116,16 +116,16 @@ df_norm_total = df_norm.loc[["Total"]]
 colors = sns.cubehelix_palette(n_colors=len(df_norm), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
 cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
 
-# Factor to adapt the sizes and ratios to large benchmarks. Since some benchmarks (e.g., Join Order Benchmark) have
-# dozens of queries, we do not scale up the share of the query grid part linearly, but square the number of queries.
-query_count_adaption = int(round(math.sqrt(len(df_norm))))
+# We want the figure to be slightly wider if more queries are plotted. `added_figure_width` grows sublinearly, using
+# sqrt() just happens to work well for the benchmarks that we tested it with.
+added_figure_width = int(round(math.sqrt(len(df_norm))))
 
-fig = plt.figure(figsize=(20 + query_count_adaption, 6))
+fig = plt.figure(figsize=(20 + added_figure_width, 6))
 plt.subplots(constrained_layout=True)
 # Create a grid with two rows (relative and absolute) and two columns (queries and summary). We ensure that each row
 # has at least a ratio of 4:1 (queries:summary). This has been manually determined. For TPC-H we get a ratio of 9:1,
 # for the Join Order Benchmark it's 14:1.
-gs = GridSpec(2, 5 + query_count_adaption)
+gs = GridSpec(2, 5 + added_figure_width)
 
 ax_relative_queries = fig.add_subplot(gs[0, :-1])
 ax_relative_summary = fig.add_subplot(gs[0, -1])
