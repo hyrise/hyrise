@@ -50,7 +50,7 @@ class WhatIfModel(DisjointClustersModel):
 
         # Pruning
         scans_per_query = scans.sort_values(['INPUT_ROWS'], ascending=False).groupby(['QUERY_HASH', 'GET_TABLE_HASH'])
-        for _, query_scans in scans_per_query:
+        for (query_hash, _), query_scans in scans_per_query:
 
             unprunable_parts = query_scans.apply(self.compute_unprunable_parts, axis=1, args=(clustering_columns, dimension_cardinalities,))
             unprunable_part = unprunable_parts.product()
@@ -80,6 +80,11 @@ class WhatIfModel(DisjointClustersModel):
                     # The current implementation may lead to underestimated input sizes, but usually those scans are already rather fast, so maybe it does not matter.
                     scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= scans.loc[query_scans.iloc[i].name, 'SELECTIVITY_LEFT']
 
+            # After pruning, the scan has a really high selectivity -> semi joins will probably occur first
+            probe_side_semi_joins = self.joins[(self.joins['QUERY_HASH'] == query_hash) & (self.joins['JOIN_MODE'] == 'Semi') & (self.joins['PROBE_TABLE'] == self.table_name)]
+            probe_side_semi_join_selectivities = probe_side_semi_joins['OUTPUT_ROW_COUNT'] / probe_side_semi_joins['PROBE_TABLE_ROW_COUNT']
+            scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= probe_side_semi_join_selectivities.product()
+
         return scans
 
 
@@ -88,7 +93,7 @@ class WhatIfModel(DisjointClustersModel):
 
         scans = self.table_scans.copy()
         scans = self.adapt_scans_to_clustering(scans, clustering_columns, sorting_column, dimension_cardinalities)
-        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_ID', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'PREDICATE', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_SORTED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
+        scans = scans.drop(columns=['COLUMN_NAME', 'DESCRIPTION', 'GET_TABLE_HASH', 'LEFT_INPUT_OPERATOR_HASH', 'OPERATOR_HASH', 'OPERATOR_ID', 'OPERATOR_TYPE', 'OUTPUT_CHUNK_COUNT', 'QUERY_HASH', 'PREDICATE', 'RIGHT_INPUT_OPERATOR_HASH', 'RUNTIME_NS', 'SCANS_SKIPPED', 'SCANS_ALL_MATCH', 'SCANS_SORTED', 'SEGMENTS_SCANNED', 'TABLE_NAME', 'benefits_from_sorting', 'part_of_or_chain', 'time_per_input_row', 'time_per_output_row', 'time_per_row', 'useful_for_pruning'])
         
         scans_by_implementation = scans.groupby(['OPERATOR_IMPLEMENTATION'])
         for operator_implementation, df in scans_by_implementation:
