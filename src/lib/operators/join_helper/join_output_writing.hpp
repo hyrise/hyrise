@@ -73,7 +73,6 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
                                   std::shared_ptr<RowIDPosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
-  // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
 
   // Add segments from input table to output chunk
@@ -183,12 +182,13 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;
 
-  // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
+  // left_side_pos_lists_by_segment will only be needed if the left input table is a reference table and being an
+  // output table.
   if (create_left_side_pos_lists_by_segment) {
     left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
   }
 
-  // right_side_pos_lists_by_segment will only be needed if right is a reference table
+  // right_side_pos_lists_by_segment will only be needed if the right input table is a reference table.
   if (create_right_side_pos_lists_by_segment) {
     right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
   }

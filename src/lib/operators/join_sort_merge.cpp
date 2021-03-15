@@ -951,7 +951,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
     const auto create_right_side_pos_lists_by_segment = (_right_input_table->type() == TableType::References);
 
-    // Do not allow merge of the partitions, to keep the sort order.
+    // A sort merge join's input can be heavily pre-filtered or the join results in very few matches. In contrast to
+    // the hash join, we do not (for now) merge small partitions to keep the sorted chunk guarantees, which could be
+    // exploited by subsequent operators.
     constexpr auto ALLOW_PARTITION_MERGE = false;
     auto output_chunks =
         write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
