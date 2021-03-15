@@ -1,4 +1,6 @@
 from .pqp_input_parser import PQPInputParser
+from .util import create_model
+from .model_util import preprocess_data
 
 import pandas as pd
 import numpy as np
@@ -156,6 +158,49 @@ def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dim
   result['RUNTIME_CLUSTERED_MS'] = result['RUNTIME_CLUSTERED'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
   result['TOTAL_ERROR_MS'] = result['TOTAL_ERROR'].apply(lambda x: "{:,}".format(np.int64(x / 1e6)))
   
+  return result
+
+def evaluate_scan_simulation(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
+  adapted_scans = m.adapt_scans_to_clustering(m.table_scans.copy(), clustering_columns, sorting_column, dimension_cardinalities)
+  adapted_scans = adapted_scans.sort_values(['QUERY_HASH', 'DESCRIPTION'])
+  
+  clustered_scans = create_model("lineitem", PQPInputParser("tpch", ground_truth_path), 2).table_scans
+  #clustered_scans = preprocess_data(clustered_scans)
+  clustered_scans = clustered_scans.sort_values(['QUERY_HASH', 'DESCRIPTION'])
+
+  result = pd.DataFrame()
+
+  # add basic data
+  result['QUERY_HASH1'] = np.array(adapted_scans['QUERY_HASH'])
+  result['QUERY_HASH2'] = np.array(clustered_scans['QUERY_HASH'])
+  result['DESCRIPTION1'] = np.array(adapted_scans['DESCRIPTION'])
+  result['DESCRIPTION2'] = np.array(clustered_scans['DESCRIPTION'])
+  result['IR1'] = np.array(adapted_scans['INPUT_ROWS'], dtype=np.int64)
+  result['IR2'] = np.array(clustered_scans['INPUT_ROWS'], dtype=np.int64)
+  result['OR1'] = np.array(adapted_scans['OUTPUT_ROWS'], dtype=np.int64)
+  result['OR2'] = np.array(clustered_scans['OUTPUT_ROWS'], dtype=np.int64)
+  result['IC1'] = np.array(adapted_scans['INPUT_CHUNKS'], dtype=np.int64)
+  result['IC2'] = np.array(clustered_scans['INPUT_CHUNKS'], dtype=np.int64)
+  result['NMR1'] = np.array(adapted_scans['NONE_MATCH_RATIO'], dtype=np.float)
+  result['NMR2'] = np.array(clustered_scans['SCANS_SKIPPED'] / clustered_scans['SEGMENTS_SCANNED'])
+  result['AMR1'] = np.array(adapted_scans['ALL_MATCH_RATIO'], dtype=np.float)
+  result['AMR2'] = np.array(clustered_scans['SCANS_ALL_MATCH'] / clustered_scans['SEGMENTS_SCANNED'])
+  result['CT1'] = np.array(adapted_scans['COLUMN_TYPE'])
+  result['CT2'] = np.array(clustered_scans['COLUMN_TYPE'])
+
+
+  # make sure we match all operators
+  matches = result.apply(lambda row: row['DESCRIPTION1'] == row['DESCRIPTION2'] and row['QUERY_HASH1'] == row['QUERY_HASH2'], axis=1)
+  assert matches.all(), "not all rows match"
+  
+  # add evaluation metric
+  result['IRr'] = result['IR1'] / result['IR2']
+  result['ORr'] = result['OR1'] / result['OR2']
+  result['ICr'] = result['IC1'] / result['IC2']
+  result['NMRr'] = result['NMR1'] / result['NMR2']
+  result['AMRr'] = result['AMR1'] / result['AMR2']
+  result['CTr'] = result['CT1'] == result['CT2']
+
   return result
 
 def evaluate_aggregates(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities, own_table_only=True):
