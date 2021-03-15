@@ -862,69 +862,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _right_outer_non_equi_join();
     }
   }
-  /**
-  * Adds the segments from an input table to the output table
-  **/
-  void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                            const std::shared_ptr<const RowIDPosList>& pos_list) {
-    auto column_count = input_table->column_count();
-    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      // Add the segment data (in the form of a poslist)
-      if (input_table->type() == TableType::References) {
-        // Create a pos_list referencing the original segment instead of the reference segment
-        // TODO(anyone): consider caching of dereferenced pos lists (as done in the hash join) when derefencing
-        //               becomes a bottleneck here.
-        auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
-
-        if (input_table->chunk_count() > 0) {
-          const auto abstract_segment = input_table->get_chunk(ChunkID{0})->get_segment(column_id);
-          const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(abstract_segment);
-
-          auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
-                                                                    ref_segment->referenced_column_id(), new_pos_list);
-          output_segments.push_back(new_ref_segment);
-        } else {
-          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
-          // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
-          // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
-          // it.
-          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
-          output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
-        }
-      } else {
-        auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
-        output_segments.push_back(new_ref_segment);
-      }
-    }
-  }
-
-  /**
-  * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
-  * This is done because there should not be any reference segments referencing reference segments.
-  **/
-  std::shared_ptr<AbstractPosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table,
-                                                         ColumnID column_id,
-                                                         const std::shared_ptr<const AbstractPosList>& pos_list) {
-    // Get all the input pos lists so that we only have to pointer cast the segments once
-    auto input_pos_lists = std::vector<std::shared_ptr<const AbstractPosList>>();
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
-      auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(abstract_segment);
-      input_pos_lists.push_back(reference_segment->pos_list());
-    }
-
-    // Get the row ids that are referenced
-    auto new_pos_list = std::make_shared<RowIDPosList>();
-    for (const auto row : *pos_list) {
-      if (row.is_null()) {
-        new_pos_list->push_back(NULL_ROW_ID);
-      } else {
-        new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
-      }
-    }
-
-    return new_pos_list;
-  }
 
  public:
   /**
