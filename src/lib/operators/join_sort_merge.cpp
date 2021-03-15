@@ -806,7 +806,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Parallel join for each cluster
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
-
       // Create output position lists
       _output_pos_lists_left[cluster_id] = RowIDPosList{};
       _output_pos_lists_right[cluster_id] = RowIDPosList{};
