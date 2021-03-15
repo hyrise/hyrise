@@ -149,8 +149,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   };
 
   using RowHashSet = std::unordered_set<RowID, RowHasher>;
-  // these are used for outer joins where the primary predicate is not Equals.
 
+  // These are used for outer joins with multiple predicates where the primary predicate is not equals.
   RowHashSet _left_row_ids_emitted{};
   RowHashSet _right_row_ids_emitted{};
 
