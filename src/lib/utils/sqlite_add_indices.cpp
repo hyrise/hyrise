@@ -36,12 +36,17 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
 
   // Recreate tables using the passed schema sql file
   std::ifstream schema_file(schema_file_path);
+  Assert(schema_file.good(), std::string{"Schema file "} + schema_file_path +
+                                 " not found - are you calling the binary from a different working directory?");
   std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
   sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
   // If indices are not part of the schema file, add them here
   if (!create_indices_file_path.empty()) {
     std::ifstream create_indices_file(create_indices_file_path);
+    Assert(create_indices_file.good(),
+           std::string{"Index file "} + create_indices_file_path +
+               " not found - are you calling the binary from a different working directory?");
     std::string create_indices_sql((std::istreambuf_iterator<char>(create_indices_file)),
                                    std::istreambuf_iterator<char>());
     sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
