@@ -51,7 +51,6 @@ class WhatIfModel(DisjointClustersModel):
         # Pruning
         scans_per_query = scans.sort_values(['INPUT_ROWS'], ascending=False).groupby(['QUERY_HASH', 'GET_TABLE_HASH'])
         for (query_hash, _), query_scans in scans_per_query:
-
             unprunable_parts = query_scans.apply(self.compute_unprunable_parts, axis=1, args=(clustering_columns, dimension_cardinalities,))
             unprunable_part = unprunable_parts.product()
             assert unprunable_part > 0, "no unprunable part"
@@ -60,6 +59,7 @@ class WhatIfModel(DisjointClustersModel):
             #          Reduce the number of input chunks for all scans
             estimated_pruned_table_size = min(self.table_size, self.round_up_to_next_multiple(unprunable_part * self.table_size, self.target_chunksize))
             scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] = np.int64(estimated_pruned_table_size)
+            scans.loc[query_scans.iloc[0].name, 'OUTPUT_ROWS'] = np.int64(self.table_size * scans.loc[query_scans.iloc[0].name, 'SELECTIVITY_LEFT'])
             for i in range(len(query_scans)):
                 scans.loc[query_scans.iloc[i].name, 'INPUT_CHUNKS'] = min(scans.loc[query_scans.iloc[i].name, 'INPUT_CHUNKS'], np.int64(estimated_pruned_table_size / self.target_chunksize))
 
@@ -79,11 +79,13 @@ class WhatIfModel(DisjointClustersModel):
                     # TODO: actually, we should sum up the selectivities of or-scans, rather than multiplying them individually.
                     # The current implementation may lead to underestimated input sizes, but usually those scans are already rather fast, so maybe it does not matter.
                     scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= scans.loc[query_scans.iloc[i].name, 'SELECTIVITY_LEFT']
+                    scans.loc[query_scans.iloc[0].name, 'OUTPUT_ROWS'] *= scans.loc[query_scans.iloc[i].name, 'SELECTIVITY_LEFT']
 
             # After pruning, the scan has a really high selectivity -> semi joins will probably occur first
             probe_side_semi_joins = self.joins[(self.joins['QUERY_HASH'] == query_hash) & (self.joins['JOIN_MODE'] == 'Semi') & (self.joins['PROBE_TABLE'] == self.table_name)]
             probe_side_semi_join_selectivities = probe_side_semi_joins['OUTPUT_ROW_COUNT'] / probe_side_semi_joins['PROBE_TABLE_ROW_COUNT']
             scans.loc[query_scans.iloc[0].name, 'INPUT_ROWS'] *= probe_side_semi_join_selectivities.product()
+            scans.loc[query_scans.iloc[0].name, 'OUTPUT_ROWS'] *= probe_side_semi_join_selectivities.product()
 
         return scans
 
