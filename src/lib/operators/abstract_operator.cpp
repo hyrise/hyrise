@@ -68,6 +68,8 @@ void AbstractOperator::execute() {
   if (_executed) return;
   Assert(!_output, "Unexpected re-execution of an operator.");
 
+  std::cout << *this << std::endl;
+
   auto execution_already_started = _execution_started.exchange(true);
   Assert(!execution_already_started, "Operator is already being executed.");
 
