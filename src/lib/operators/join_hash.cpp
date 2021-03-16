@@ -13,20 +13,13 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
-
-namespace {
-
-// Depending on which input table became the build/probe table we have to order the columns of the output table.
-// Semi/Anti* Joins only emit tuples from the probe table
-enum class OutputColumnOrder { BuildFirstProbeSecond, ProbeFirstBuildSecond, ProbeOnly };
-
-}  // namespace
 
 namespace opossum {
 
@@ -171,15 +164,17 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto build_column_type = build_input_table->column_data_type(build_column_id);
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
 
-  // Determine output column order
+  // Depending on which input table became the build/probe table we have to order the columns of the output table.
+  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
+  // For other join modes, we need to check which side has been chosen as the probe side (see variable
+  // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-
   if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
-    output_column_order = OutputColumnOrder::ProbeOnly;
+    output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
-    output_column_order = OutputColumnOrder::ProbeFirstBuildSecond;
+    output_column_order = OutputColumnOrder::RightFirstLeftSecond;
   } else {
-    output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
+    output_column_order = OutputColumnOrder::LeftFirstRightSecond;
   }
 
   auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
@@ -535,114 +530,20 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    /**
-     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
-     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
-     *  write_output_chunks a lot.
-     *
-     * They do two things:
-     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
-     *          PosLists Chunk by Chunk
-     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
-     *
-     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
-     */
-
-    PosListsByChunk build_side_pos_lists_by_segment;
-    PosListsByChunk probe_side_pos_lists_by_segment;
-
     Timer timer_output_writing;
 
-    // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
-      build_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_build_input_table);
-    }
+    const auto create_left_side_pos_lists_by_segment =
+        (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
+    const auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    // probe_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (_probe_input_table->type() == TableType::References) {
-      probe_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_probe_input_table);
-    }
+    // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
+    // partitions can be merged (#2202).
+    constexpr auto ALLOW_PARTITION_MERGE = true;
+    auto output_chunks =
+        write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
+                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                            _output_column_order, ALLOW_PARTITION_MERGE);
 
-    auto expected_output_chunk_count = size_t{0};
-    for (size_t partition_id = 0; partition_id < build_side_pos_lists.size(); ++partition_id) {
-      if (!build_side_pos_lists[partition_id].empty() || !probe_side_pos_lists[partition_id].empty()) {
-        ++expected_output_chunk_count;
-      }
-    }
-
-    std::vector<std::shared_ptr<Chunk>> output_chunks{};
-    output_chunks.reserve(expected_output_chunk_count);
-
-    // For every partition, create a reference segment.
-    auto partition_id = size_t{0};
-    auto output_chunk_id = size_t{0};
-    while (partition_id < build_side_pos_lists.size()) {
-      // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
-      // build_pos_lists and probe_side_pos_lists will not be used again.
-      auto build_side_pos_list = std::make_shared<RowIDPosList>(std::move(build_side_pos_lists[partition_id]));
-      auto probe_side_pos_list = std::make_shared<RowIDPosList>(std::move(probe_side_pos_lists[partition_id]));
-
-      if (build_side_pos_list->empty() && probe_side_pos_list->empty()) {
-        ++partition_id;
-        continue;
-      }
-
-      // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
-      // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
-      // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
-      // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
-      // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
-      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-      constexpr auto MIN_SIZE = 500;
-      constexpr auto MAX_SIZE = MIN_SIZE * 2;
-      build_side_pos_list->reserve(MAX_SIZE);
-      probe_side_pos_list->reserve(MAX_SIZE);
-
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-      // size or are empty (in case of semi/anti joins).
-      while (partition_id + 1 < probe_side_pos_lists.size() && probe_side_pos_list->size() < MIN_SIZE &&
-             probe_side_pos_list->size() + probe_side_pos_lists[partition_id + 1].size() < MAX_SIZE) {
-        // Copy entries from following PosList into the current working set (build_side_pos_list) and free the memory
-        // used for the merged PosList.
-        std::copy(build_side_pos_lists[partition_id + 1].begin(), build_side_pos_lists[partition_id + 1].end(),
-                  std::back_inserter(*build_side_pos_list));
-        build_side_pos_lists[partition_id + 1] = {};
-
-        std::copy(probe_side_pos_lists[partition_id + 1].begin(), probe_side_pos_lists[partition_id + 1].end(),
-                  std::back_inserter(*probe_side_pos_list));
-        probe_side_pos_lists[partition_id + 1] = {};
-
-        ++partition_id;
-      }
-
-      Segments output_segments;
-
-      // Swap back the inputs, so that the order of the output columns is not changed.
-      switch (_output_column_order) {
-        case OutputColumnOrder::BuildFirstProbeSecond:
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
-                                build_side_pos_list);
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          break;
-
-        case OutputColumnOrder::ProbeFirstBuildSecond:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
-                                build_side_pos_list);
-          break;
-
-        case OutputColumnOrder::ProbeOnly:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          break;
-      }
-
-      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
-      ++partition_id;
-      ++output_chunk_id;
-    }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
     return _join_hash._build_output_table(std::move(output_chunks));
