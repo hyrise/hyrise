@@ -66,13 +66,13 @@ class DipsJoinGraphNode {
     this->table_node = stored_table_node;
   }
 
-  std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> table_node) {
+  std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> partner_table_node) {
     for (auto edge : edges) {
-      if (edge->partner_node == table_node) {
+      if (edge->partner_node == partner_table_node) {
         return edge;
       }
     }
-    std::shared_ptr<DipsJoinGraphEdge> edge = std::make_shared<DipsJoinGraphEdge>(table_node);
+    std::shared_ptr<DipsJoinGraphEdge> edge = std::make_shared<DipsJoinGraphEdge>(partner_table_node);
     edges.push_back(edge);
     return edge;
   }

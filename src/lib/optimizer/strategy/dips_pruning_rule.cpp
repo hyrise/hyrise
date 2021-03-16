@@ -207,7 +207,7 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
   if (join_graph.nodes.empty()) {
     stream << "<none>" << std::endl;
   } else {
-    for (const auto node : join_graph.nodes) {
+    for (const auto & node : join_graph.nodes) {
       stream << node->table_node->description() << std::endl;
       stream << "      ==== Adress ====" << std::endl;
       stream << "          " << node << std::endl;
@@ -219,7 +219,7 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
       }
 
       stream << "      ==== Edges ====" << std::endl;
-      for (const auto edge : node->edges) {
+      for (const auto & edge : node->edges) {
         stream << "      " << edge->partner_node->table_node->description() << std::endl;
         stream << "            ==== Predicates ====" << std::endl;
         for (auto predicate : edge->predicates) {
