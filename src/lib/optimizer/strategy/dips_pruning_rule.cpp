@@ -116,8 +116,7 @@ void DipsPruningRule::top_down_dip_traversal(
 }
 
 void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
-                                        std::shared_ptr<DipsJoinGraph> join_graph
-                                        ) const {
+                                        std::shared_ptr<DipsJoinGraph> join_graph) const {
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
   }

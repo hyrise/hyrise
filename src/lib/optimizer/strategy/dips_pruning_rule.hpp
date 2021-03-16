@@ -21,12 +21,12 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "resolve_type.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
 
 #include "types.hpp"
 
@@ -62,7 +62,9 @@ class DipsJoinGraphNode {
   std::shared_ptr<StoredTableNode> table_node;
   std::vector<std::shared_ptr<DipsJoinGraphEdge>> edges;
 
-  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> stored_table_node) { this->table_node = stored_table_node; }
+  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> stored_table_node) {
+    this->table_node = stored_table_node;
+  }
 
   std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> table_node) {
     for (auto edge : edges) {
@@ -152,7 +154,7 @@ class DipsPruningRule : public AbstractRule {
                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
 
   void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const;
-  
+
   void extend_pruned_chunks(std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const;
   void top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;
   void bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;
