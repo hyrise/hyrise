@@ -182,13 +182,10 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;
 
-  // left_side_pos_lists_by_segment will only be needed if the left input table is a reference table and being an
-  // output table.
   if (create_left_side_pos_lists_by_segment) {
     left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
   }
 
-  // right_side_pos_lists_by_segment will only be needed if the right input table is a reference table.
   if (create_right_side_pos_lists_by_segment) {
     right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
   }
