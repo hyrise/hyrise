@@ -26,6 +26,7 @@
 #include "resolve_type.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 
 #include "types.hpp"
 
@@ -141,15 +142,17 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
 
 class DipsPruningRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& node) const override;
 
  protected:
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
   void dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
 
   void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<DipsJoinGraph> join_graph) const;
+  
   void extend_pruned_chunks(std::shared_ptr<StoredTableNode> table_node, std::set<ChunkID> pruned_chunk_ids) const;
   void top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;
   void bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const;

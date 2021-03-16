@@ -6,6 +6,7 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -33,7 +34,7 @@ namespace opossum {
 //   return total_number_chunks - number_pruned_chunks; 
 // }
 
-void DipsPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void DipsPruningRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& node) const {
   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
   _build_join_graph(node, join_graph);
 
@@ -142,7 +143,8 @@ void DipsPruningRule::top_down_dip_traversal(
 }
 
 void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
-                                        std::shared_ptr<DipsJoinGraph> join_graph) const {
+                                        std::shared_ptr<DipsJoinGraph> join_graph
+                                        ) const {
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
   }
@@ -258,5 +260,7 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
 
   return stream;
 }
+
+void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {}
 
 }  // namespace opossum
