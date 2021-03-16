@@ -35,10 +35,11 @@ class OperatorsValidateTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table2_name, _test_table2);
 
     _gt = std::make_shared<GetTable>(_table2_name);
+    _gt->never_clear_output();
     _gt->execute();
 
     _table_wrapper = std::make_shared<TableWrapper>(_test_table);
-
+    _table_wrapper->never_clear_output();
     _table_wrapper->execute();
   }
 

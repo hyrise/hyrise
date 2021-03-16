@@ -10,11 +10,9 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
-#include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_key_constraint.hpp"
 #include "table_builder.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
@@ -131,23 +129,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 
   const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-
-    for (const auto& table_file : list_directory(cache_directory)) {
-      const auto table_name = table_file.stem();
-      Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
-
-      BenchmarkTableInfo table_info;
-      table_info.table = BinaryParser::parse(table_file);
-      table_info.loaded_from_binary = true;
-      table_info.binary_file_path = table_file;
-      table_info_by_name[table_name] = table_info;
-
-      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
-    }
-
-    return table_info_by_name;
+    return _load_binary_tables_from_path(cache_directory);
   }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.

@@ -21,6 +21,7 @@ def main():
 
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
     benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 2")
+    benchmark.expect_exact("Writing 'NEW_ORDER' into binary file")
     benchmark.expect_exact("Consistency checks passed")
 
     close_benchmark(benchmark)
@@ -41,6 +42,7 @@ def main():
     benchmark.expect_exact("10 simulated clients are scheduling items in parallel")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
     benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 1")
+    benchmark.expect_exact("Writing 'NEW_ORDER' into binary file")
     benchmark.expect_exact("Results for Delivery")
     benchmark.expect_exact("-> Executed")
     benchmark.expect_exact("Results for New-Order")
@@ -66,6 +68,7 @@ def main():
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCC", True)
     benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
+    benchmark.expect_exact("Loading table 'NEW_ORDER' from cached binary")
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)
