@@ -606,8 +606,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if ((left_run_start < left_size && right_run_start == right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       left_run.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        // Mark as emitted so that it doesn't get emitted again below
-        _emit_combination(cluster_number, left_row_id, NULL_ROW_ID);
+        if (!_semi_row_ids_emitted.contains(left_row_id)) {
+          _semi_row_ids_emitted.emplace(left_row_id);
+          _emit_combination(cluster_number, left_row_id, NULL_ROW_ID);
+        }
       });
     }
 
@@ -951,7 +953,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (unmatched_range) {
         unmatched_range->for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           // Mark as emitted so that it doesn't get emitted again below
-          _emit_combination(0, left_row_id, NULL_ROW_ID);
+          if (!_semi_row_ids_emitted.contains(left_row_id)) {
+            _semi_row_ids_emitted.emplace(left_row_id);
+            _emit_combination(0, left_row_id, NULL_ROW_ID);
+          }
         });
       }
     }
