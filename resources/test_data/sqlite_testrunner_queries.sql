@@ -8,7 +8,7 @@ SELECT * FROM mixed_null;
 
 -- No FROM clause
 SELECT 1;
-SELECT -1;
+SELECT -1 AS negative;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
 SELECT 22 / 5 AS col;
 

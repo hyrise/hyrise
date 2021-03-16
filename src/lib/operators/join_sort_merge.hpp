@@ -33,12 +33,22 @@ class JoinSortMerge : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
+  enum class OperatorSteps : uint8_t {
+    LeftSideMaterializing,
+    RightSideMaterializing,
+    Clustering,
+    Sorting,
+    Merging,
+    OutputWriting
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   template <typename T>
@@ -47,6 +57,11 @@ class JoinSortMerge : public AbstractJoinOperator {
   friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
+
+  // Tasks are added to the scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not,
+  // the task is executed directly. This threshold needs to be re-evaluated over time to find the value which gives the
+  // best performance.
+  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 };
 
 }  // namespace opossum

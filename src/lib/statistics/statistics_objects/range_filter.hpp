@@ -68,4 +68,9 @@ std::ostream& operator<<(std::ostream& stream, const RangeFilter<T>& filter) {
   return stream;
 }
 
+extern template class RangeFilter<int32_t>;
+extern template class RangeFilter<int64_t>;
+extern template class RangeFilter<float>;
+extern template class RangeFilter<double>;
+
 }  // namespace opossum

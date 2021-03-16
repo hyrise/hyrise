@@ -94,4 +94,7 @@ class RunLengthSegment : public AbstractEncodedSegment {
   const std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(RunLengthSegment);
+
+
 }  // namespace opossum

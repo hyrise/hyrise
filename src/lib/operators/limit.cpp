@@ -26,8 +26,9 @@ std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy(copied_ops));
 }
 
 std::shared_ptr<const Table> Limit::_on_execute() {

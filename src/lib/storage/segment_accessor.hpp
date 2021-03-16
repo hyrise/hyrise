@@ -21,6 +21,8 @@ class CreateSegmentAccessor {
   static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const AbstractSegment>& segment);
 };
 
+EXPLICITLY_DECLARE_DATA_TYPES(CreateSegmentAccessor);
+
 }  // namespace detail
 
 /**
@@ -51,7 +53,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
     return _segment.get_typed_value(offset);
   }
 
-  ~SegmentAccessor() { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
+  ~SegmentAccessor() override { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
 
  protected:
   mutable uint64_t _accesses{0};
@@ -112,7 +114,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
     return _segment.get_typed_value(referenced_chunk_offset);
   }
 
-  ~SingleChunkReferenceSegmentAccessor() {
+  ~SingleChunkReferenceSegmentAccessor() override {
     _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
   }
 

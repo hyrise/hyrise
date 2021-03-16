@@ -28,6 +28,9 @@ namespace opossum {
 void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                            const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name) {
+  // Prevent auto-clearing of in's output
+  in->never_clear_output();
+
   // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name);
 
@@ -75,6 +78,7 @@ class AggregateSortTest : public BaseTest {
     table_1->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
     table_1->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
     _table_wrapper_1 = std::make_shared<TableWrapper>(table_1);
+    _table_wrapper_1->never_clear_output();
     _table_wrapper_1->execute();
 
     const auto table_2 =
@@ -89,6 +93,7 @@ class AggregateSortTest : public BaseTest {
                                       SortColumnDefinition(ColumnID{1}, SortMode::Descending),
                                       SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
+    _table_wrapper_multi_columns->never_clear_output();
     _table_wrapper_multi_columns->execute();
   }
 
@@ -144,6 +149,7 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
     const auto sort =
         std::make_shared<Sort>(this->_table_wrapper_multi_columns,
                                std::vector<SortColumnDefinition>{SortColumnDefinition{sorted_by_column_id}});
+    sort->never_clear_output();
     sort->execute();
     // Group and aggregate by every column combination.
     for (auto group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {

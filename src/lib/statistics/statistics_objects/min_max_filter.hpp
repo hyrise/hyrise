@@ -53,4 +53,6 @@ std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
   return stream;
 }
 
+EXPLICITLY_DECLARE_DATA_TYPES(MinMaxFilter);
+
 }  // namespace opossum

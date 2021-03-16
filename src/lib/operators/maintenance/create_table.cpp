@@ -25,9 +25,13 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
-  const auto column_definitions = left_input_table()->column_definitions();
+  // If the input operator has already been cleared, we cannot retrieve its columns anymore. However, since the table
+  // has been created, we can simply pull the definitions from the new table.
+  const auto column_definitions = left_input_table()
+                                      ? left_input_table()->column_definitions()
+                                      : Hyrise::get().storage_manager.get_table(table_name)->column_definitions();
 
-  stream << "CreateTable '" << table_name << "' (";
+  stream << AbstractOperator::description(description_mode) << " '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     const auto& column_definition = column_definitions[column_id];
 
@@ -70,7 +74,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
 
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<CreateTable>(table_name, if_not_exists, copied_left_input);
 }
 

@@ -12,8 +12,9 @@ namespace opossum {
 JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
                                                  const std::string& data_path,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
-                                                 bool use_prepared_statements, float scale_factor)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor),
+                                                 bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration)
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, clustering_configuration),
       _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {
@@ -24,8 +25,9 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::s
                                                  const std::string& data_path,
                                                  const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration,
                                                  const std::vector<BenchmarkItemID>& items)
-    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, items),
+    : TPCHBenchmarkItemRunner(config, use_prepared_statements, scale_factor, clustering_configuration, items),
       _skewed(skewed),
       _dbgen_path(dbgen_path),
       _data_path(data_path) {

@@ -20,16 +20,18 @@ class ChangeMetaTableTest : public BaseTest {
     auto mock_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     mock_table->append({pmr_string{"foo"}});
     left_input = std::make_shared<TableWrapper>(std::move(mock_table));
+    left_input->never_clear_output();
 
     auto other_mock_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     other_mock_table->append({pmr_string{"bar"}});
     right_input = std::make_shared<TableWrapper>(std::move(other_mock_table));
+    right_input->never_clear_output();
 
     left_input->execute();
     right_input->execute();
 
     meta_mock_table = std::make_shared<MetaMockTable>();
-    Hyrise::get().meta_table_manager._add(meta_mock_table);
+    Hyrise::get().meta_table_manager.add_table(meta_mock_table);
 
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }

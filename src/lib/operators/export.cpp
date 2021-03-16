@@ -45,7 +45,8 @@ std::shared_ptr<const Table> Export::_on_execute() {
 
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Export>(copied_left_input, _filename, _file_type);
 }
 
