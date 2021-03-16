@@ -573,10 +573,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   CompareResult _compare(T left, T right) {
     if (left < right) {
+      // std::cout << left << " < " << right << std::endl;
       return CompareResult::Less;
     } else if (left == right) {
+      // std::cout << left << " == " << right << std::endl;
       return CompareResult::Equal;
     } else {
+      // std::cout << left << " > " << right << std::endl;
       return CompareResult::Greater;
     }
   }
@@ -587,6 +590,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _join_cluster(size_t cluster_number,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
+    
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
@@ -599,14 +603,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const size_t left_size = left_cluster->size();
     const size_t right_size = right_cluster->size();
 
-    // auto& left_value = (*left_cluster)[left_run_start].value;
-    // auto& right_value = (*right_cluster)[right_run_start].value;
-
-    // CompareResult compare_result_last_run{};
-
-    // if (left_run_start < left_size && right_run_start < right_size) {
-    //   compare_result_last_run = _compare(left_value, right_value);
-    // }
+    if ((left_run_start < left_size && right_run_start == right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
+      TableRange left_run(cluster_number, left_run_start, left_run_end);
+      left_run.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        // Mark as emitted so that it doesn't get emitted again below
+        _emit_combination(cluster_number, left_row_id, NULL_ROW_ID);
+      });
+    }
 
     while (left_run_start < left_size && right_run_start < right_size) {
       auto& left_value = (*left_cluster)[left_run_start].value;
@@ -705,7 +708,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Determines the largest value in a sorted materialized table.
   **/
   T& _table_max_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
-    DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
+    DebugAssert(!(_primary_predicate_condition == PredicateCondition::Equals && !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) && _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count())) ,
                 "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table is empty");
 
@@ -933,6 +936,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
+    if ((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) && _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count()) {
+      auto end_of_left_table = _end_of_table(_sorted_left_table);
+      auto& right_max_value = _table_max_value(_sorted_right_table);
+
+      auto unmatched_range = std::optional<TableRange>{};
+
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
+                                                        [&](const T& value) { return value <= right_max_value; });
+      if (result) {
+        unmatched_range = (*result).to(end_of_left_table);
+      }
+
+      if (unmatched_range) {
+        unmatched_range->for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          // Mark as emitted so that it doesn't get emitted again below
+          _emit_combination(0, left_row_id, NULL_ROW_ID);
+        });
+      }
+    }
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
       _left_outer_non_equi_join();
@@ -1040,7 +1062,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
+        _sort_merge_join._primary_predicate.column_ids, (_primary_predicate_condition == PredicateCondition::Equals && !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) && _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count())) ,
         include_null_left, include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
