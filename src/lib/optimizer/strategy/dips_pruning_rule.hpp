@@ -42,8 +42,8 @@ class DipsJoinGraphEdge {
   std::shared_ptr<DipsJoinGraphNode> partner_node;
   std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
 
-  explicit DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> partner_node) {
-    this->partner_node = partner_node;
+  explicit DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> edge_partner_node) {
+    this->partner_node = edge_partner_node;
     this->predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>();
   }
 
@@ -62,7 +62,7 @@ class DipsJoinGraphNode {
   std::shared_ptr<StoredTableNode> table_node;
   std::vector<std::shared_ptr<DipsJoinGraphEdge>> edges;
 
-  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> table_node) { this->table_node = table_node; }
+  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> stored_table_node) { this->table_node = stored_table_node; }
 
   std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> table_node) {
     for (auto edge : edges) {

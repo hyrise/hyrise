@@ -186,14 +186,14 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     if (target_chunk_statistic.has_value()) {
       new_target_chunk_statistic = target_chunk_statistic;
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); column_id++) {
-        is_initialized[(size_t)column_id] = true;
+      for (size_t column_id = 0; column_id < target_chunk->column_count(); column_id++) {
+        is_initialized[column_id] = true;
       }
     } else {
       new_target_chunk_statistic =
           std::make_optional(std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count()));
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); column_id++) {
-        is_initialized[(size_t)column_id] = false;
+      for (size_t column_id = 0; column_id < target_chunk->column_count(); column_id++) {
+        is_initialized[column_id] = false;
       }
     }
 
@@ -218,7 +218,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
           std::shared_ptr<BaseAttributeStatistics> segment_statistic = nullptr;
           if (is_initialized[column_id]) {
-            segment_statistic = new_target_chunk_statistic.value()[(size_t)column_id];
+            segment_statistic = new_target_chunk_statistic.value()[static_cast<size_t>(column_id)];
           } else {
             segment_statistic = std::make_shared<AttributeStatistics<ColumnDataType>>();
           }
@@ -227,7 +227,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
                                                         num_rows_current_iteration, context);
 
           new_target_chunk_statistic.value()[column_id] = new_segment_statistic;
-          is_initialized[(size_t)column_id] = true;
+          is_initialized[static_cast<size_t>(column_id)] = true;
         });
       }
 
