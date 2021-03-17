@@ -9,6 +9,7 @@
 #include "all_parameter_variant.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operator_performance_data.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -187,6 +188,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
+  // OperatorTask
+  bool has_operator_task();
+  std::shared_ptr<OperatorTask> operator_task();
+  void set_operator_task(const std::shared_ptr<OperatorTask>& operator_task);
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -222,13 +228,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
+ private:
   // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic<int> _consumer_count = 0;
-
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
 
- private:
   enum class OperatorState : uint8_t {
     Created = 0,
     Running = 1,
@@ -236,8 +241,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
     Cleared = 3
   };
   std::atomic<OperatorState> _state;
-
   void _transition_to(OperatorState new_state);
+
+  std::atomic_bool _has_operator_task{false};
+  std::weak_ptr<OperatorTask> _operator_task;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

@@ -264,6 +264,18 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
+bool AbstractOperator::has_operator_task() { return _has_operator_task; };
+
+std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
+  Assert(_has_operator_task, "No OperatorTask owns this operator.");
+  return _operator_task.lock();
+}
+
+void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
+  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  _has_operator_task = true;
+}
+
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
