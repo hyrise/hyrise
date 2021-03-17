@@ -1,73 +1,76 @@
-# Contribution Guidelines
-Do not commit/push directly to the master branch. Instead, create a feature branch/fork and file a merge request.
+# The Four Commandments
+1. Thy code (or the beginning of the header file) shalt be the primary method of documentation. Comments should be used to explain higher level concepts, but primarily, the code should be explaining itself. Part of this is to choose concise, descriptive names.
+1. Thou shalt program defensively. Use Assert wherever it makes sense, use DebugAssert in performance-critical parts (e.g., within hot loops). Also, we do not handle exceptions in Hyrise. If an invalid state is reached, we crash immediately. This makes debugging easier. An exception (hihi) to this is user-facing code where we handle, e.g., typos in SQL queries.
+1. Thou shalt reflect on existing code. Just as your code is not perfect, neither is the code that people wrote before you. Try to improve it as part of your PRs and do not hesitate to ask if anything is unclear. Chances are that it can be improved.
+1. Thou shalt properly test thy code. This includes unit *and* integration tests. Try to isolate parts that can be individually tested.
 
-# Coding Style
-Avoid exception handling. Because Hyrise is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
+# C++
+* Use automatic memory management (RAII, smart pointers). `new` and `malloc` are evil words.
+* Use `const` whenever possible. Consider variables, methods, pointers, and their pointees.
+* Reduce the size of your hpp files, both in terms of the number of lines and the code complexity. This keeps the compilation duration low.
+  * Code in hpp files is compiled for every cpp file that includes the header. As such, move code to cpp files where possible. This often includes templated classes, where it is sometimes possible to implement their code in cpp files.
+  * Anonymous namespaces are a good way to define local helper methods.
+  * Use forward declarations instead of full header includes wherever possible.
+* Loops
+  * Use range-based for loops when possible: `for (const auto& item : items) {...}`.
+  * If you have to use old-style loops, keep in mind that the loop condition is evaluated every time: Instead of `for (auto i = 0; i < expensive_function(); ++i)`, the comparison value should be calculated just once. http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop
+* Data structures
+  * When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations.
+  * Hash-based data structures are usually faster than tree-based data structures. Unless you have a reason to use the latter, prefer unordered_(map|set) over map and set.
+* Copies
 
-## Formatting
-- 2 spaces for indentation
-- 120 columns
-- Comments above code
-- clang_format enforces these rules automatically
+    * C++ makes it too easy to inadvertently copy objects.
 
-## C++ guidelines
-- Do not use `new` or `malloc`
-- Do not nest namespaces
-- Do not import namespaces (`std::`)
+    * For larger elements (e.g., vectors), pass a (const) reference instead.
 
-- When overriding a `virtual` method, avoid repeating `virtual` and always use `override` or `final`
-- Use const (including cbegin() and cend()) whenever possible
-- Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
-- Include in this order: header for implementation file, c system, c++ system, other
-- If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
-- Try to keep the size of your templated methods as small as possible (Thin Template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
-- Use smart pointers over c-style pointers
-- Use `HYRISE_DEBUG` macro for non-essential checks
-- Be specific: `double a = 3.0;` but `float a = 3.0f;`
-- Use forward declarations whenever possible to reduce compile time
-- We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
-- Don't write `this->` if you don't have to
-- Use C++11 for loops when possible: `for (const auto& item : items) {...}`
-- When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations
-- Don’t evaluate end() every time through a loop: http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop
-- Use `if (object) {` over `if (object != nullptr) {` or `if (object.has_value()) {`
+    * When your implemented class does not need to be copied (e.g., a Table should never exist more than once), inherit from Noncopyable to avoid these potentially expensive copies.
 
+* Miscellaneous
+  * Prefer `if (object) {` over `if (object != nullptr) {` or `if (object.has_value()) {`.
+  * Don't write `this->` if you don't have to.
+  * Be explicit with types: Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
+  * Use auto-to-stick (https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or `auto y = std::vector<size_t>{};`.
+  * Namespaces: Do not create nested namespaces, do not import namespaces.
 
-## Naming Conventions
-- Files: lowercase separated by underscores, e.g., abstract_operator.cpp
-- Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `TableScan`
-- Variables: lowercase separated by underscores, e.g., `chunk_size`
-- Functions: lowercase separated by underscores, e.g., `append_mutable_chunk()`
-- Private / protected members / methods: like variables / functions with leading underscore, e.g., `_on_execute()`
-- Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`), while classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`)
-- Choose descriptive names. Avoid `i`, `j`, etc. in loops.
-- In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
-- If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
+# Formatting and Naming
+* Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while clang-tidy is a great help, do not rely on it.
+* Call ./scripts/format.sh before pushing.
+* Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`.
+* Formatting details: 2 spaces, 120 columns, comments above code.
+* Use empty lines to structure your code.
+* Naming conventions:
 
-### Naming convention for gtest macros:
+    * Files: lowercase separated by underscores, e.g., abstract_operator.cpp, usually corresponding to a class, e.g., AbstractOperator.
 
-TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
-same for fixtures Test_F()
+    * Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `TableScan`.
 
-If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
+    * Variables: lowercase separated by underscores, e.g., `chunk_size`.
 
-- Testing the storage module: `./build/hyriseTest --gtest_filter="Storage*"`
-- Testing the table class: `./build/hyriseTest --gtest_filter="StorageTableTest*"`
-- Testing the RowCount test: `./build/hyriseTest --gtest_filter="StorageTableTest.RowCount"`
+    * Functions: lowercase separated by underscores, e.g., `append_mutable_chunk()`.
 
-## Performance Warnings
-- Sometimes, we have convenience functions, such as `ReferenceSegment::operator[]`, or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in `performance_warning.hpp`.
+    * Private / protected members / methods: like variables / functions with leading underscore, e.g., `_on_execute()`.
 
-## Documentation
-- Most documentation should happen in the code or in the beginning of the header file
-- More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, no one will find it.
+    * Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`, while classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`).
 
-# Review
+    * In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`.
 
-**Things to look for:**
+    * If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
 
-	- Guidelines (see above)
-	- Is the copy constructor deleted where it makes sense?
-	- Is the destructor virtual for base classes?
-	- Are unnecessary copies of heavy elements made? (prefer vector& over vector, but not int& over int)
-	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install_dependencies.sh, Jenkinsfile)
+* Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished with a full stop.
+  * Class names within comments are written in CamelCase - e.g., "As the input may be a ReferenceSegment, a valid RowID may *point to* a row that is NULL."
+
+# Pull Requests
+## Opening PRs
+* When you submit a non-trivial PR, include the results of benchmark_all.sh.
+  * These help in understanding potential performance changes as well as document potential changes to the compilation costs.
+  * We do not do this automatically as the CI server is not sufficiently isolated and the performance results would vary. Similarly, your personal laptop is likely to produce unreliable results.
+* If your PR is related to an existing issue, reference it in the PR's description (e.g., `fixes #123`).
+* If you are not a member of the Hyrise organization, your PR will not be built by our CI server. Contact a maintainer for this. They can add you to the organization or manually trigger builds from within Jenkins.
+* When merging your PR, copy your PR description (excluding the benchmark results) into the commit message. The commit message of the squash merge should NOT contain the individual commit messages from your branch.
+* For your PR to be merged, it must pass the FullCI run. Set the FullCI tag in Github before committing to trigger the complete (but more expensive!) run.
+
+## Reviewing PRs
+* Check if the PR sufficiently adds tests both for happy and unhappy cases.
+* Keep the whole picture in mind. Often, it makes sense to make two passes: One for the code style and line-level modifications; one for checking how it fits into the overall picture.
+* Do not shy away from requesting changes on surrounding code that was not modified in the PR. Remember that after a PR, the code base should be better than before.
+* Verify the CI results, including the change in procentual coverage, and check if the compile time or query performance have been negatively affected. For this, the author should have posted the results of benchmark_all.sh into the PR description.
