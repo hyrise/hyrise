@@ -235,7 +235,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   bool _never_clear_output = false;
 
   enum class OperatorState : uint8_t { Created = 0, Running = 1, Executed = 2, Cleared = 3 };
-  std::atomic<OperatorState> _state;
+  std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(OperatorState new_state);
 
   std::atomic_bool _has_operator_task{false};
