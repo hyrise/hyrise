@@ -10,6 +10,41 @@
 #include "scheduler/job_task.hpp"
 #include "utils/tracing/probes.hpp"
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+/**
+ * Create tasks recursively. Called by `make_tasks_from_operator`.
+ * @returns the root of the subtree that was added.
+ * @param task_by_op  Cache to avoid creating duplicate Tasks for diamond shapes
+ */
+std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(
+    const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+  if (op->has_operator_task()) return op->operator_task();
+
+  auto task = std::make_shared<OperatorTask>(op);
+  op->set_operator_task(task);
+
+  if (auto left = op->mutable_left_input()) {
+    if (auto left_subtree_root = add_tasks_from_operator_recursively(left, tasks)) {
+      left_subtree_root->set_as_predecessor_of(task);
+    }
+  }
+  if (auto right = op->mutable_right_input()) {
+    if (auto right_subtree_root = add_tasks_from_operator_recursively(right, tasks)) {
+      right_subtree_root->set_as_predecessor_of(task);
+    }
+  }
+
+  // Add AFTER the inputs to establish a task order where predecessor get executed before successors
+  tasks.push_back(task);
+
+  return task;
+}
+
+} // namespace
+
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)
     : AbstractTask(priority, stealable), _op(std::move(op)) {}
@@ -21,35 +56,8 @@ std::string OperatorTask::description() const {
 std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op) {
   std::vector<std::shared_ptr<AbstractTask>> tasks;
-  std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>> task_by_op;
-  _add_tasks_from_operator(op, tasks, task_by_op);
+  add_tasks_from_operator_recursively(op, tasks);
   return tasks;
-}
-
-std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
-    const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
-    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op) {
-  const auto task_by_op_it = task_by_op.find(op);
-  if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
-
-  auto task = std::make_shared<OperatorTask>(op);
-  task_by_op.emplace(op, task);
-
-  if (auto left = op->mutable_left_input()) {
-    if (auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op)) {
-      left_subtree_root->set_as_predecessor_of(task);
-    }
-  }
-  if (auto right = op->mutable_right_input()) {
-    if (auto right_subtree_root = _add_tasks_from_operator(right, tasks, task_by_op)) {
-      right_subtree_root->set_as_predecessor_of(task);
-    }
-  }
-
-  // Add AFTER the inputs to establish a task order where predecessor get executed before successors
-  tasks.push_back(task);
-
-  return task;
 }
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
