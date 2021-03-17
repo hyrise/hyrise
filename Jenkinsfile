@@ -3,14 +3,10 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
-          unity = '-DCMAKE_UNITY_BUILD=ON'
-
-          debug = '-DCMAKE_BUILD_TYPE=Debug'
-
-          release = '-DCMAKE_BUILD_TYPE=Release'
-
-          relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
-
+unity = '-DCMAKE_UNITY_BUILD=ON'
+debug = '-DCMAKE_BUILD_TYPE=Debug'
+release = '-DCMAKE_BUILD_TYPE=Release'
+relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
 try {
   node {
