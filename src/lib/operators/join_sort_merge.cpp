@@ -208,6 +208,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     TablePosition start;
     TablePosition end;
 
+    bool empty(std::unique_ptr<MaterializedSegmentList<T>>& table) {
+       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
+        size_t start_index = (cluster == start.cluster) ? start.index : 0;
+        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+        if ((end_index - start_index) > 0 ) return false;
+       }
+       return true;
+    }
+
+    size_t size(std::unique_ptr<MaterializedSegmentList<T>>& table){
+      size_t size = 0;
+       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
+        size_t start_index = (cluster == start.cluster) ? start.index : 0;
+        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+        size += end_index - start_index;
+       }
+       return size;
+    } 
+
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
@@ -364,12 +383,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // no secondary join predicates
       if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
+          // least one match, that means the right range can not be empty.
+          if (!right_range.empty(_sorted_right_table)) {
             if (!_semi_row_ids_emitted.contains(left_row_id)) {
               _semi_row_ids_emitted.emplace(left_row_id);
-              _emit_combination(output_cluster, left_row_id, right_row_id);
+              _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
             }
-          });
+          }
         });    
       } else {
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
