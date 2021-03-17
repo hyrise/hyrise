@@ -49,7 +49,7 @@ try {
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   node('mac-arm') {
-    stage("clangDebugMac") {
+    stage("clangDebugMacM1") {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
           checkout scm
@@ -74,7 +74,7 @@ try {
   }
   
   node('mac-x64') {
-    stage("clangDebugMac") {
+    stage("clangDebugMacX64") {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
           checkout scm
