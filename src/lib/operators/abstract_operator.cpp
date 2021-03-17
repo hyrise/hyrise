@@ -312,7 +312,7 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
   OperatorState previous_state = _state.exchange(new_state);
 
   // Check for validity
-  const std::string error_msg = "Illegal state transition in AbstractOperator.";
+  const auto error_msg = std::string{"Illegal state transition in AbstractOperator."};
   switch (new_state) {
     case OperatorState::Running:
       Assert(previous_state == OperatorState::Created, error_msg);

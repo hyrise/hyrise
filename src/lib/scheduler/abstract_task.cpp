@@ -27,7 +27,7 @@ bool AbstractTask::is_done() const { return _done; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
-bool AbstractTask::is_scheduled() const { return _is_scheduled; }
+bool AbstractTask::is_scheduled() const { return _state == TaskState::Scheduled; }
 
 std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
@@ -36,7 +36,7 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
-  Assert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
+  Assert((!is_scheduled()), "Possible race: Don't set dependencies after the Task was scheduled");
 
   successor->_pending_predecessors++;
   _successors.emplace_back(successor);
@@ -49,12 +49,12 @@ const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() con
 
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
-bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
+bool AbstractTask::try_mark_as_enqueued() { return _try_transition_to(TaskState::Enqueued); }
 
-bool AbstractTask::try_mark_as_assigned_to_worker() { return !_is_assigned_to_worker.exchange(true); }
+bool AbstractTask::try_mark_as_assigned_to_worker() { return _try_transition_to(TaskState::AssignedToWorker); }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
-  DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
+  DebugAssert((!is_scheduled()), "Possible race: Don't set callback after the Task was scheduled");
 
   _done_callback = done_callback;
 }
@@ -74,15 +74,16 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  DebugAssert(_is_scheduled, "Task must be scheduled before it can be waited for");
+  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return static_cast<bool>(_done); });
 }
 
 void AbstractTask::execute() {
+  _try_transition_to(TaskState::Started);
+
   DTRACE_PROBE3(HYRISE, JOB_START, _id.load(), _description.c_str(), reinterpret_cast<uintptr_t>(this));
-  DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
   std::atomic_thread_fence(std::memory_order_seq_cst);  // See documentation in AbstractTask::schedule
@@ -91,7 +92,7 @@ void AbstractTask::execute() {
   // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
   // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
   // spawned the task are pushed down to a point where this thread is already running.
-  Assert(_is_scheduled, "Task should have been scheduled before being executed");
+  Assert(is_scheduled(), "Task should have been scheduled before being executed");
 
   _on_execute();
 
@@ -110,9 +111,9 @@ void AbstractTask::execute() {
 }
 
 void AbstractTask::_mark_as_scheduled() {
-  [[maybe_unused]] auto already_scheduled = _is_scheduled.exchange(true);
+  [[maybe_unused]] auto success = _try_transition_to(TaskState::Scheduled);
 
-  DebugAssert((!already_scheduled), "Task was already scheduled!");
+  DebugAssert(success, "Task was already scheduled!");
 }
 
 void AbstractTask::_on_predecessor_done() {
@@ -124,13 +125,13 @@ void AbstractTask::_on_predecessor_done() {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
       // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
       // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
-      if (!_is_scheduled) return;
+      if (!is_scheduled()) return;
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
       current_worker->execute_next(shared_from_this());
     } else {
-      if (_is_scheduled) execute();
+      if (is_scheduled()) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"
       // before they are being scheduled in a no-Scheduler context. Think:
       //
@@ -142,6 +143,33 @@ void AbstractTask::_on_predecessor_done() {
       // task2->schedule(); <-- Executes Task2, Task3 becomes ready, executes Task3
     }
   }
+}
+
+bool AbstractTask::_try_transition_to(TaskState new_state) {
+  TaskState previous_state = _state.exchange(new_state);
+
+  // Check for validity
+  const auto error_msg = std::string{"Illegal state transition in AbstractTask."};
+  switch (new_state) {
+    case TaskState::Enqueued:
+      if (previous_state == TaskState::Enqueued) return false;
+      Assert(previous_state == TaskState::Created, error_msg);
+      break;
+    case TaskState::Scheduled:
+      Assert(previous_state == TaskState::Enqueued, error_msg);
+      break;
+    case TaskState::AssignedToWorker:
+      if (previous_state == TaskState::AssignedToWorker) return false;
+      Assert(previous_state == TaskState::Scheduled, error_msg);
+      break;
+    case TaskState::Started:
+      Assert(previous_state == TaskState::AssignedToWorker, error_msg);
+      break;
+    default:
+      Fail("Unexpected target state in AbstractTask.");
+  }
+
+  return true;
 }
 
 }  // namespace opossum

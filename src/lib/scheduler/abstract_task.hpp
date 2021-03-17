@@ -152,10 +152,9 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
   // to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
   // else), _is_assigned_to_worker is set to true.
-  // TODO(anyone): Change this into proper state transitions, see TransactionContext as an example.
-  std::atomic_bool _is_enqueued{false};
-  std::atomic_bool _is_scheduled{false};
-  std::atomic_bool _is_assigned_to_worker{false};
+  enum class TaskState : uint8_t { Created = 0, Enqueued = 1, Scheduled = 2, AssignedToWorker = 3, Started = 4 };
+  std::atomic<TaskState> _state{TaskState::Created};
+  bool _try_transition_to(TaskState new_state);
 
   // For making Tasks join()-able
   std::condition_variable _done_condition_variable;
@@ -163,9 +162,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled
   std::string _description;
-
-  // To make sure a task is never executed twice
-  std::atomic_bool _started{false};
 };
 
 }  // namespace opossum
