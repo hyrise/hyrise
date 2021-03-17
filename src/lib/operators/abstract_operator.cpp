@@ -67,7 +67,12 @@ void AbstractOperator::execute() {
   if (executed()) return;
   OperatorState previous_state = _state.exchange(OperatorState::Running);
   if (previous_state == OperatorState::Running) {
-    // Wait for results TODO
+    std::unique_lock<std::mutex> lock(_state_mutex) ;
+    _state_cv.wait(lock, [&](){
+      return _state == OperatorState::Executed;
+    });
+    // Return to reuse operator results
+    return;
   }
 
   if constexpr (HYRISE_DEBUG) {
@@ -107,6 +112,7 @@ void AbstractOperator::execute() {
   performance_data->walltime = performance_timer.lap();
   previous_state = _state.exchange(OperatorState::Executed);
   Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.");
+  _state_cv.notify_all();
 
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();

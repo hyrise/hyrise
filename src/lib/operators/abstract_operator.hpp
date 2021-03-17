@@ -1,7 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -196,6 +198,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   };
 
   std::atomic<OperatorState> _state;
+  std::mutex _state_mutex;
+  std::condition_variable _state_cv;
 
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
