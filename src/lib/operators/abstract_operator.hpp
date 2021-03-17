@@ -188,15 +188,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
-  enum class OperatorState : uint8_t {
-    Created = 0,
-    Running = 1,
-    Executed = 2,
-    Cleared = 3
-  };
-
-  std::atomic<OperatorState> _state;
-
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
@@ -236,6 +227,17 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
+
+ private:
+  enum class OperatorState : uint8_t {
+    Created = 0,
+    Running = 1,
+    Executed = 2,
+    Cleared = 3
+  };
+  std::atomic<OperatorState> _state;
+
+  void _transition_to(OperatorState new_state);
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

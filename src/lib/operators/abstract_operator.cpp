@@ -65,10 +65,7 @@ void AbstractOperator::execute() {
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
   if (executed()) return;
-  OperatorState previous_state = _state.exchange(OperatorState::Running);
-  if (previous_state == OperatorState::Running) {
-    // Wait for results TODO
-  }
+  _transition_to(OperatorState::Running);
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
@@ -105,8 +102,8 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  previous_state = _state.exchange(OperatorState::Executed);
-  Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.");
+
+  _transition_to(OperatorState::Executed);
 
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
@@ -173,11 +170,9 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 }
 
 void AbstractOperator::clear_output() {
-  Assert(_state == OperatorState::Executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
   if (!_never_clear_output) {
-    auto previous_state = _state.exchange(OperatorState::Cleared);
-    Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.")
+    _transition_to(OperatorState::Cleared);
     _output = nullptr;
   }
 }
@@ -299,6 +294,26 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                                                        node_print_fn, stream);
 
   return stream;
+}
+
+void AbstractOperator::_transition_to(OperatorState new_state) {
+  OperatorState previous_state = _state.exchange(new_state);
+
+  // Check for validity
+  const std::string error_msg = "Illegal state transition in AbstractOperator.";
+  switch (new_state) {
+    case OperatorState::Running:
+      Assert(previous_state == OperatorState::Created, error_msg);
+      break;
+    case OperatorState::Executed:
+      Assert(previous_state == OperatorState::Running, error_msg);
+      break;
+    case OperatorState::Cleared:
+      Assert(previous_state == OperatorState::Executed, error_msg);
+      break;
+    default:
+      Fail("Unexpected target state in AbstractOperator.");
+  }
 }
 
 }  // namespace opossum
