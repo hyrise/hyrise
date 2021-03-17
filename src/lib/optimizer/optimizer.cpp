@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -58,6 +59,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
+  optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
+
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
@@ -78,10 +81,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  // The LQPTranslator deduplicates subplans to avoid performing the same computation twice (see
-  // LQPTranslator::translate_node). The StoredTableColumnAlignmentRule supports this effort by aligning the list of
-  // pruned column ids across nodes that could become deduplicated. For this, the ColumnPruningRule needs to have
-  // been executed.
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
@@ -149,7 +151,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
 
   // First, collect all LQPs (the main LQP and all subqueries)
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }

@@ -179,6 +179,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
         Assert(stored_table_node->table_statistics->column_statistics.size() ==
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
+        Assert(stored_table_node->table_statistics->row_count >= 0, "Tables can't have negative row counts");
         output_table_statistics =
             prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
       } else {
@@ -335,7 +336,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto row_count = Cardinality{
           std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
 
-      const auto selectivity = row_count / input_table_statistics->row_count;
+      auto selectivity = Selectivity{1};
+      if (input_table_statistics->row_count > 0) {
+        selectivity = row_count / input_table_statistics->row_count;
+      }
 
       auto output_column_statistics =
           std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
@@ -348,7 +352,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       return output_table_statistics;
     } else if (logical_expression->logical_operator == LogicalOperator::And) {
-      // Estimate AND by splitting it up into two consecutive predicate nodes
+      // Estimate AND by splitting it up into two consecutive PredicateNodes
 
       const auto first_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());

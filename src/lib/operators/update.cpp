@@ -59,7 +59,8 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
 std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Update>(_table_to_update_name, copied_left_input, copied_right_input);
 }
 

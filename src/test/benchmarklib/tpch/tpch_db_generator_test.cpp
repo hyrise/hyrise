@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
@@ -17,7 +18,7 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
   const auto dir_001 = std::string{"resources/test_data/tbl/tpch/sf-0.01/"};
 
   const auto chunk_size = 1000;
-  auto table_info_by_name = TPCHTableGenerator(0.01f, chunk_size).generate();
+  auto table_info_by_name = TPCHTableGenerator(0.01f, ClusteringConfiguration::None, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir_001 + "part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir_001 + "supplier.tbl", chunk_size));
@@ -40,7 +41,7 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
 
   const auto dir_002 = std::string{"resources/test_data/tbl/tpch/sf-0.02/"};
 
-  table_info_by_name = TPCHTableGenerator(0.02f, chunk_size).generate();
+  table_info_by_name = TPCHTableGenerator(0.02f, ClusteringConfiguration::None, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir_002 + "part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir_002 + "supplier.tbl", chunk_size));
@@ -64,7 +65,7 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
   const auto scale_factor = 1.0f;
-  const auto table_info_by_name = TPCHTableGenerator(scale_factor).generate();
+  const auto table_info_by_name = TPCHTableGenerator(scale_factor, ClusteringConfiguration::None).generate();
 
   EXPECT_EQ(table_info_by_name.at("part").table->row_count(), std::floor(200'000 * scale_factor));
   EXPECT_EQ(table_info_by_name.at("supplier").table->row_count(), std::floor(10'000 * scale_factor));
@@ -85,7 +86,7 @@ TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("region"));
 
   // Small scale factor
-  TPCHTableGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
+  TPCHTableGenerator(0.01f, ClusteringConfiguration::None, Chunk::DEFAULT_SIZE).generate_and_store();
 
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("part"));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("supplier"));
