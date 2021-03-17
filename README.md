@@ -122,6 +122,7 @@ To configure a build directory for a release build make sure it is empty and cal
 ### Test
 Calling `make hyriseTest` from the build directory builds all available tests.
 The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
+Subsets of all available tests can be selected via `--gtest_filter=`.
 Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
 
 ### Coverage
