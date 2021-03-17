@@ -49,7 +49,7 @@ try {
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   node('mac-arm') {
-    stage("clangDebugMacM1") {
+    stage("clangDebugMacArm") {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
           checkout scm
@@ -68,7 +68,7 @@ try {
           sh "ls -A1 | xargs rm -rf"
         }
       } else {
-        Utils.markStageSkippedForConditional("clangDebugMac")
+        Utils.markStageSkippedForConditional("clangDebugMacArm")
       }
     }
   }
@@ -93,7 +93,7 @@ try {
           sh "ls -A1 | xargs rm -rf"
         }
       } else {
-        Utils.markStageSkippedForConditional("clangDebugMac")
+        Utils.markStageSkippedForConditional("clangDebugMacX64")
       }
     }
   }
