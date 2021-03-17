@@ -65,13 +65,10 @@ void AbstractOperator::execute() {
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
   if (executed()) return;
-  {
-    OperatorState previous_state = _state.exchange(OperatorState::Running);
-    Assert(previous_state == OperatorState::Created, "Cannot execute operator because of illegal state.");
+  OperatorState previous_state = _state.exchange(OperatorState::Running);
+  if (previous_state == OperatorState::Running) {
+    // Wait for results TODO
   }
-
-  auto execution_already_started = _execution_started.exchange(true);
-  Assert(!execution_already_started, "Operator is already being executed.");
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
@@ -108,10 +105,9 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  {
-    OperatorState previous_state = _state.exchange(OperatorState::Executed);
-    Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.");
-  }
+  previous_state = _state.exchange(OperatorState::Executed);
+  Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.");
+
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
   if (_right_input) mutable_right_input()->deregister_consumer();
@@ -179,7 +175,11 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 void AbstractOperator::clear_output() {
   Assert(_state == OperatorState::Executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (!_never_clear_output) _output = nullptr;
+  if (!_never_clear_output) {
+    auto previous_state = _state.exchange(OperatorState::Cleared);
+    Assert(previous_state == OperatorState::Running, "Unexpected OperatorState transition.")
+    _output = nullptr;
+  }
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
