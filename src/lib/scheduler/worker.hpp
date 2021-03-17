@@ -69,6 +69,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
   std::vector<int> _random{};
   size_t _next_random{};
+
+  std::chrono::microseconds _sleep_time{30};
 };
 
 }  // namespace opossum

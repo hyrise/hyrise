@@ -51,6 +51,12 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
+  // Note, depeding on the platform, sleep times shorter than 50 microseconds might not be possible (see
+  // https://stackoverflow.com/a/18086173/1147726). We have measured minimal sleep times in a range from 30
+  // (macOS) up to 75 (Linux servers) microseconds.
+  auto sleep_time = std::chrono::microseconds{10};
+  constexpr auto MAX_SLEEP_TIME = std::chrono::microseconds{10'240};
+  
   while (true) {
     uint64_t num_finished_tasks = 0;
     for (auto& worker : _workers) {
@@ -59,7 +65,8 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
     if (num_finished_tasks == _task_counter) break;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::max(MAX_SLEEP_TIME, sleep_time));
+    sleep_time *= 2;
   }
 }
 
