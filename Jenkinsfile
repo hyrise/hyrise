@@ -3,6 +3,15 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
+          unity = '-DCMAKE_UNITY_BUILD=ON'
+
+          debug = '-DCMAKE_BUILD_TYPE=Debug'
+
+          release = '-DCMAKE_BUILD_TYPE=Release'
+
+          relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
+
+
 try {
   node {
     stage ("Start") {
@@ -58,7 +67,8 @@ try {
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-          sh "mkdir clang-debug && cd clang-debug && /opt/homebrew/Cellar/cmake/3.19.6/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && /opt/homebrew/Cellar/cmake/3.19.6/bin/cmake ${
+        } ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
