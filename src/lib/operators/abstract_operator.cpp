@@ -264,7 +264,7 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
-bool AbstractOperator::has_operator_task() { return _has_operator_task; };
+bool AbstractOperator::has_operator_task() { return _has_operator_task; }
 
 std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
   Assert(_has_operator_task, "No OperatorTask owns this operator.");
