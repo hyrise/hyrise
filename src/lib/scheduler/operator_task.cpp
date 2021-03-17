@@ -19,8 +19,8 @@ using namespace opossum;  // NOLINT
  * @returns the root of the subtree that was added.
  * @param task_by_op  Cache to avoid creating duplicate Tasks for diamond shapes
  */
-std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(
-    const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::shared_ptr<AbstractOperator>& op,
+                                                                  std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   if (op->has_operator_task()) return op->operator_task();
 
   auto task = std::make_shared<OperatorTask>(op);
@@ -43,7 +43,7 @@ std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(
   return task;
 }
 
-} // namespace
+}  // namespace
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)
