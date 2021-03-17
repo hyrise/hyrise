@@ -62,9 +62,15 @@ try {
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
+          environment {
+            PATH = "/opt/homebrew/bin:${env.PATH}
+          }
+          
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
           sh "env" // TODO remove
-          sh "mkdir clang-debug && cd clang-debug && /opt/homebrew/bin/cmake ${unity} ${debug} -DPOSTGRESQL_BIN= -DBOOST_ROOT:PATHNAME=/opt/homebrew/include -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
+          
+          // -DBOOST_ROOT:PATHNAME=/opt/homebrew/include 
+          sh "mkdir clang-debug && cd clang-debug && /opt/homebrew/bin/cmake ${unity} ${debug} -DPOSTGRESQL_BIN= -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
@@ -80,33 +86,6 @@ try {
     }
   }
   
-  node('mac-x64') {
-    stage("clangDebugMacX64") {
-      if (env.BRANCH_NAME == 'master' || full_ci) {
-        try {
-          checkout scm
-
-          // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-          sh "git submodule update --init --recursive --jobs 4 --depth=1"
-
-          sh "export PATH=/opt/homebrew/bin:$PATH"
-          sh "env"
-          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
-          sh "cd clang-debug && make -j8"
-          sh "./clang-debug/hyriseTest"
-          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-        } finally {
-          sh "ls -A1 | xargs rm -rf"
-        }
-      } else {
-        Utils.markStageSkippedForConditional("clangDebugMacX64")
-      }
-    }
-  }
-
   node {
     stage("Notify") {
       script {
