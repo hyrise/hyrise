@@ -63,7 +63,7 @@ try {
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           environment {
-            PATH = "/opt/homebrew/bin:${env.PATH}
+            PATH = "/opt/homebrew/bin:${env.PATH}"
           }
           
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
