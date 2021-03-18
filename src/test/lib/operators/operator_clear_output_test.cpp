@@ -43,8 +43,8 @@ class OperatorClearOutputTest : public BaseTest {
 
 TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   // Prerequisite
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
+  ASSERT_EQ(_gt->consumer_count(), 0);
+  ASSERT_NE(_gt->get_output(), nullptr);
 
   // Add consumers
   auto validate1 = std::make_shared<Validate>(_gt);
@@ -72,8 +72,8 @@ TEST_F(OperatorClearOutputTest, NeverClearOutput) {
   _gt->never_clear_output();
 
   // Prerequisite
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
+  ASSERT_EQ(_gt->consumer_count(), 0);
+  ASSERT_NE(_gt->get_output(), nullptr);
 
   // Prepare
   auto validate = std::make_shared<Validate>(_gt);
