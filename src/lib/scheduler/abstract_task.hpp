@@ -147,7 +147,14 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
   // to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
   // else), _is_assigned_to_worker is set to true.
-  enum class TaskState : uint8_t { Created = 0, Enqueued = 1, Scheduled = 2, AssignedToWorker = 3, Started = 4 };
+  enum class TaskState : uint8_t {
+    Created = 0,
+    Scheduled = 1,
+    Enqueued = 2,
+    AssignedToWorker = 3,
+    Started = 4,
+    Done = 5
+  };
   std::atomic<TaskState> _state{TaskState::Created};
   bool _try_transition_to(TaskState new_state);
 

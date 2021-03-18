@@ -27,7 +27,9 @@ bool AbstractTask::is_done() const { return _done; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
-bool AbstractTask::is_scheduled() const { return _state == TaskState::Scheduled; }
+bool AbstractTask::is_scheduled() const {
+  return (_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker || _state == TaskState::Started);
+}
 
 std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
@@ -96,9 +98,10 @@ void AbstractTask::execute() {
   // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
   // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
   // spawned the task are pushed down to a point where this thread is already running.
-  Assert(is_scheduled(), "Task should have been scheduled before being executed");
 
   _on_execute();
+
+  _try_transition_to(TaskState::Done);
 
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();
@@ -122,7 +125,7 @@ void AbstractTask::_on_predecessor_done() {
     if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
       // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
-      // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
+      // the sake of a clearly defined lifecycle, we wait for the task to be scheduled.
       if (!is_scheduled()) return;
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
@@ -149,19 +152,23 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   // Check for validity
   const auto error_msg = std::string{"Illegal state transition in AbstractTask."};
   switch (new_state) {
-    case TaskState::Enqueued:
-      if (previous_state == TaskState::Enqueued) return false;
+    case TaskState::Scheduled:
       Assert(previous_state == TaskState::Created, error_msg);
       break;
-    case TaskState::Scheduled:
-      Assert(previous_state == TaskState::Enqueued, error_msg);
+    case TaskState::Enqueued:
+      if (previous_state == TaskState::Enqueued) return false;
+      Assert(previous_state == TaskState::Scheduled, error_msg);
       break;
     case TaskState::AssignedToWorker:
       if (previous_state == TaskState::AssignedToWorker) return false;
-      Assert(previous_state == TaskState::Scheduled, error_msg);
+      Assert(previous_state == TaskState::Enqueued, error_msg);
       break;
     case TaskState::Started:
-      Assert(previous_state == TaskState::AssignedToWorker, error_msg);
+      Assert(previous_state == TaskState::Scheduled || previous_state == TaskState::AssignedToWorker,
+             "Task should have been scheduled before being executed.");
+      break;
+    case TaskState::Done:
+      Assert(previous_state == TaskState::Started, error_msg);
       break;
     default:
       Fail("Unexpected target state in AbstractTask.");
