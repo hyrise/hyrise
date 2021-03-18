@@ -31,7 +31,7 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
   DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
   for (const auto& task : tasks) {
     DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
-    if (!task->is_scheduled()) task->schedule();
+    task->schedule();
   }
 }
 

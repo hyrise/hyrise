@@ -40,10 +40,9 @@ void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
   Assert((!is_scheduled()), "Possible race: Don't set dependencies after the Task was scheduled");
-
-  successor->_pending_predecessors++;
   _successors.emplace_back(successor);
   successor->_predecessors.emplace_back(shared_from_this());
+  if (!is_done()) successor->_pending_predecessors++;
 }
 
 const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
@@ -74,8 +73,10 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the Task as scheduled, thus making sure this happens only once
-  [[maybe_unused]] auto success = _try_transition_to(TaskState::Scheduled);
-  DebugAssert(success, "Task was already scheduled!");
+  if (is_done()) return;
+
+  auto success = _try_transition_to(TaskState::Scheduled);
+  DebugAssert(success, "Task could not be scheduled!");
 
   Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
 }
@@ -152,6 +153,10 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   // Check validity of state transition
   switch (new_state) {
     case TaskState::Scheduled:
+      if (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
+          _state == TaskState::Started || _state == TaskState::Done) {
+        return false;
+      }
       Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
       break;
     case TaskState::Enqueued:
