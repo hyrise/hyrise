@@ -21,10 +21,11 @@ using namespace opossum;  // NOLINT
  */
 std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::shared_ptr<AbstractOperator>& op,
                                                                   std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  if (op->has_operator_task()) return op->operator_task();
-
-  auto task = std::make_shared<OperatorTask>(op);
-  op->set_operator_task(task);
+  auto task = op->operator_task();
+  if (!task) {
+    task = std::make_shared<OperatorTask>(op);
+    op->set_operator_task(task);
+  }
 
   if (auto left = op->mutable_left_input()) {
     if (auto left_subtree_root = add_tasks_from_operator_recursively(left, tasks)) {

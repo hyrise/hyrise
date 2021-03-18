@@ -188,9 +188,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
-  // OperatorTask
-  bool has_operator_task();
+  /**
+   * @returns a shared pointer to the OperatorTask that owns this operator, if set previously. Otherwise, an
+   * empty shared pointer will be returned.
+   */
   std::shared_ptr<OperatorTask> operator_task();
+
+  /**
+   * Stores a weak reference to @param operator_task that owns this operator.
+   * The function should be called once only.
+   */
   void set_operator_task(const std::shared_ptr<OperatorTask>& operator_task);
 
  protected:
@@ -238,8 +245,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(OperatorState new_state);
 
-  std::atomic_bool _has_operator_task{false};
   std::weak_ptr<OperatorTask> _operator_task;
+  std::mutex _operator_task_mutex;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

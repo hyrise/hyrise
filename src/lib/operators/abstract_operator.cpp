@@ -264,16 +264,15 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
-bool AbstractOperator::has_operator_task() { return _has_operator_task; }
-
 std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
-  Assert(_has_operator_task, "No OperatorTask owns this operator.");
+  std::unique_lock<std::mutex> lock(_operator_task_mutex);
   return _operator_task.lock();
 }
 
 void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
+  std::unique_lock<std::mutex> lock(_operator_task_mutex);
+  Assert(!_operator_task.lock(), "An OperatorTask is expected to be set once only.");
   _operator_task = std::weak_ptr<OperatorTask>(operator_task);
-  _has_operator_task = true;
 }
 
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
