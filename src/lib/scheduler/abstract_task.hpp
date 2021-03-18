@@ -94,12 +94,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
-   * @return The Task was scheduled
+   * @returns true when the task was scheduled successfully
    */
   bool is_scheduled() const;
 
   /**
-   * returns true whether the caller is atomically the first to try to enqueue this task into a TaskQueue,
+   * @returns true whether the caller is atomically the first to try to enqueue this task into a TaskQueue,
    * false otherwise.
    * Makes sure a task only gets put into a TaskQueue once
    */
@@ -120,11 +120,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   virtual void _on_execute() = 0;
 
  private:
-  /**
-   * Atomically marks the Task as scheduled, thus making sure this happens only once
-   */
-  void _mark_as_scheduled();
-
   /**
    * Called by a dependency when it finished execution
    */

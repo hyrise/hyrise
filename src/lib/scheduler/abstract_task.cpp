@@ -60,15 +60,19 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id) {
-  // We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
-  // spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
-  // executed by an unrelated thread. Thus, we add a memory barrier.
-  //
-  // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-  // _done_condition_variable.
+  /**
+   * We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
+   * spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
+   * executed by an unrelated thread. Thus, we add a memory barrier.
+   *
+   * For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
+   * _done_condition_variable.
+   */
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
-  _mark_as_scheduled();
+  // Atomically marks the Task as scheduled, thus making sure this happens only once
+  [[maybe_unused]] auto success = _try_transition_to(TaskState::Scheduled);
+  DebugAssert(success, "Task was already scheduled!");
 
   Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
 }
@@ -108,12 +112,6 @@ void AbstractTask::execute() {
   }
   _done_condition_variable.notify_all();
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
-}
-
-void AbstractTask::_mark_as_scheduled() {
-  [[maybe_unused]] auto success = _try_transition_to(TaskState::Scheduled);
-
-  DebugAssert(success, "Task was already scheduled!");
 }
 
 void AbstractTask::_on_predecessor_done() {
