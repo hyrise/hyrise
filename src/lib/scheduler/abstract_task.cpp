@@ -28,7 +28,8 @@ bool AbstractTask::is_done() const { return _done; }
 bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const {
-  return (_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker || _state == TaskState::Started);
+  return (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
+          _state == TaskState::Started);
 }
 
 std::string AbstractTask::description() const {
