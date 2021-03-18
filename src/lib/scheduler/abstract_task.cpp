@@ -81,7 +81,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  if(is_done()) return;
+  if (is_done()) return;
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);
@@ -102,7 +102,6 @@ void AbstractTask::execute() {
   // spawned the task are pushed down to a point where this thread is already running.
 
   _on_execute();
-
 
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();
@@ -168,12 +167,12 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
     } break;
     case TaskState::Started: {
       auto previous_state = _state.exchange(new_state);
-      Assert(previous_state== TaskState::Scheduled || previous_state == TaskState::AssignedToWorker,
+      Assert(previous_state == TaskState::Scheduled || previous_state == TaskState::AssignedToWorker,
              "Illegal state transition to TaskState::Started: Task should have been scheduled before being executed.");
     } break;
     case TaskState::Done: {
       auto previous_state = _state.exchange(new_state);
-      Assert(previous_state == TaskState::Started,"Illegal state transition to TaskState::Done");
+      Assert(previous_state == TaskState::Started, "Illegal state transition to TaskState::Done");
     } break;
     default:
       Fail("Unexpected target state in AbstractTask.");
