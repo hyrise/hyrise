@@ -23,13 +23,13 @@ NodeID AbstractTask::node_id() const { return _node_id; }
 
 bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
-bool AbstractTask::is_done() const { return _done; }
+bool AbstractTask::is_done() const { return _state == TaskState::Done; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const {
   return (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
-          _state == TaskState::Started);
+          _state == TaskState::Started || _state == TaskState::Done);
 }
 
 std::string AbstractTask::description() const {
@@ -84,7 +84,7 @@ void AbstractTask::_join() {
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);
-  _done_condition_variable.wait(lock, [&]() { return static_cast<bool>(_done); });
+  _done_condition_variable.wait(lock, [&]() { return _state == TaskState::Done; });
 }
 
 void AbstractTask::execute() {
@@ -102,7 +102,6 @@ void AbstractTask::execute() {
 
   _on_execute();
 
-  _try_transition_to(TaskState::Done);
 
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();
@@ -110,10 +109,8 @@ void AbstractTask::execute() {
 
   if (_done_callback) _done_callback();
 
-  {
-    std::lock_guard<std::mutex> lock(_done_mutex);
-    _done = true;
-  }
+  _try_transition_to(TaskState::Done);
+
   _done_condition_variable.notify_all();
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
 }
