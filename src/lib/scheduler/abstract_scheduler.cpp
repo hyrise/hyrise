@@ -5,7 +5,7 @@ namespace opossum {
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   DebugAssert(([&]() {
                 for (const auto& task : tasks) {
-                  if (!task->is_scheduled() || task->is_done()) {
+                  if (!task->is_scheduled() && !task->is_done()) {
                     return false;
                   }
                 }

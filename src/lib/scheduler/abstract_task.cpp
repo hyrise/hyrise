@@ -29,7 +29,7 @@ bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const {
   return (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
-          _state == TaskState::Started || _state == TaskState::Done);
+          _state == TaskState::Started);
 }
 
 std::string AbstractTask::description() const {
@@ -81,6 +81,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
+  if(is_done()) return;
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);
