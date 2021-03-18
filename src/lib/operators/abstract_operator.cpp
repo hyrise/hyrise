@@ -310,17 +310,16 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 void AbstractOperator::_transition_to(OperatorState new_state) {
   OperatorState previous_state = _state.exchange(new_state);
 
-  // Check for validity
-  const auto error_msg = std::string{"Illegal state transition in AbstractOperator."};
+  // Check validity of state transition
   switch (new_state) {
     case OperatorState::Running:
-      Assert(previous_state == OperatorState::Created, error_msg);
+      Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");
       break;
     case OperatorState::Executed:
-      Assert(previous_state == OperatorState::Running, error_msg);
+      Assert(previous_state == OperatorState::Running, "Illegal state transition to OperatorState::Executed");
       break;
     case OperatorState::Cleared:
-      Assert(previous_state == OperatorState::Executed, error_msg);
+      Assert(previous_state == OperatorState::Executed, "Illegal state transition to OperatorState::Cleared");
       break;
     default:
       Fail("Unexpected target state in AbstractOperator.");

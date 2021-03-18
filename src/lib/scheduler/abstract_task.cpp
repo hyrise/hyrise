@@ -84,7 +84,7 @@ void AbstractTask::_join() {
   if (is_done()) return;
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
 
-  std::unique_lock<std::mutex> lock(_done_mutex);
+  auto lock = std::unique_lock<std::mutex>(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return _state == TaskState::Done; });
 }
 
@@ -145,39 +145,37 @@ void AbstractTask::_on_predecessor_done() {
 }
 
 bool AbstractTask::_try_transition_to(TaskState new_state) {
+  // Lock critical section
+  static auto mutex = std::mutex();
+  auto lock = std::unique_lock<std::mutex>(mutex);
+
+  // Check validity of state transition
   switch (new_state) {
-    case TaskState::Scheduled: {
-      auto expected_state = TaskState::Created;
-      auto success = _state.compare_exchange_strong(expected_state, new_state);
-      Assert(success, "Illegal state transition to TaskState::Scheduled.");
-    } break;
-    case TaskState::Enqueued: {
+    case TaskState::Scheduled:
+      Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
+      break;
+    case TaskState::Enqueued:
       if (_state == TaskState::Enqueued) return false;
-      auto expected_state = TaskState::Scheduled;
-      auto success = _state.compare_exchange_strong(expected_state, new_state);
-      Assert(success, "Illegal state transition to TaskState::Enqueued");
-    } break;
-    case TaskState::AssignedToWorker: {
+      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
+      break;
+    case TaskState::AssignedToWorker:
       if (_state == TaskState::AssignedToWorker || _state == TaskState::Started || _state == TaskState::Done) {
         return false;
       }
-      auto expected_state = TaskState::Enqueued;
-      auto success = _state.compare_exchange_strong(expected_state, new_state);
-      Assert(success, "Illegal state transition to TaskState::AssignedToWorker");
-    } break;
-    case TaskState::Started: {
-      auto previous_state = _state.exchange(new_state);
-      Assert(previous_state == TaskState::Scheduled || previous_state == TaskState::AssignedToWorker,
+      Assert(_state == TaskState::Enqueued, "Illegal state transition to TaskState::AssignedToWorker");
+      break;
+    case TaskState::Started:
+      Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
              "Illegal state transition to TaskState::Started: Task should have been scheduled before being executed.");
-    } break;
-    case TaskState::Done: {
-      auto previous_state = _state.exchange(new_state);
-      Assert(previous_state == TaskState::Started, "Illegal state transition to TaskState::Done");
-    } break;
+      break;
+    case TaskState::Done:
+      Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done");
+      break;
     default:
       Fail("Unexpected target state in AbstractTask.");
   }
 
+  _state = new_state;
   return true;
 }
 
