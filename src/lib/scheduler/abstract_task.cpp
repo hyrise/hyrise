@@ -42,7 +42,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   Assert((!is_scheduled()), "Possible race: Don't set dependencies after the Task was scheduled");
   _successors.emplace_back(successor);
   successor->_predecessors.emplace_back(shared_from_this());
-  if (!is_done()) successor->_pending_predecessors++;
+  if (!is_done()) successor->_pending_predecessors++; // TODO make Assert?
 }
 
 const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }

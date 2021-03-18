@@ -38,8 +38,13 @@ std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::sha
     }
   }
 
-  // Add AFTER the inputs to establish a task order where predecessor get executed before successors
-  tasks.push_back(task);
+  /**
+   * Add AFTER the inputs to establish a task order where predecessor get executed before successors.
+   * Do not add duplicate tasks.
+   */
+  if (std::find(tasks.cbegin(), tasks.cend(), task) == tasks.cend()) {
+    tasks.push_back(task);
+  }
 
   return task;
 }

@@ -265,13 +265,13 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
 }
 
 std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
-  std::unique_lock<std::mutex> lock(_operator_task_mutex);
+  auto lock = std::unique_lock<std::mutex>(_operator_task_mutex);
   return _operator_task.lock();
 }
 
 void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
-  std::unique_lock<std::mutex> lock(_operator_task_mutex);
-  Assert(!_operator_task.lock(), "An OperatorTask is expected to be set once only.");
+  auto lock = std::unique_lock<std::mutex>(_operator_task_mutex);
+  Assert(!_operator_task.lock(), "OperatorTask can be set once only.");
   _operator_task = std::weak_ptr<OperatorTask>(operator_task);
 }
 
