@@ -39,10 +39,12 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
-  Assert((!is_scheduled()), "Possible race: Don't set dependencies after the Task was scheduled");
-  _successors.emplace_back(successor);
-  successor->_predecessors.emplace_back(shared_from_this());
-  if (!is_done()) successor->_pending_predecessors++; // TODO make Assert?
+  Assert(!is_scheduled(), "Possible race: Don't set dependencies after the Task was scheduled");
+  if (std::find(_successors.cbegin(), _successors.cend(), successor) == _successors.cend()) {
+    _successors.emplace_back(successor);
+    successor->_predecessors.emplace_back(shared_from_this());
+    if (!is_done()) successor->_pending_predecessors++;
+  }
 }
 
 const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
