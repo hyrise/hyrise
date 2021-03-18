@@ -139,7 +139,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::function<void()> _done_callback;
 
   // For dependencies
-  std::atomic_uint _pending_predecessors{0};
+  std::atomic_uint32_t _pending_predecessors{0};
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
 
