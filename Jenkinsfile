@@ -59,6 +59,10 @@ try {
         try {
           checkout scm
 
+          sh "sysctl sysctl.proc_translated"
+          sh "which java"
+          sh "file $(which java)"
+          
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
           
