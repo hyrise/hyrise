@@ -57,11 +57,11 @@ try {
     stage("clangDebugMacArm") {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
-          checkout scm
-
           sh "sysctl sysctl.proc_translated"
           sh "which java"
           sh "file `which java`"
+
+          checkout scm          
           
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
