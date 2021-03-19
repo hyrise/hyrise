@@ -65,6 +65,7 @@ try {
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
           sh "mkdir clang-debug && cd clang-debug && PATH=/opt/homebrew/bin:$PATH arch -arm64 cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
           sh "cd clang-debug && arch -arm64 make -j8"
+          sh "file ./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
