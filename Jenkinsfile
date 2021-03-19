@@ -63,8 +63,9 @@ try {
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
           
           // (Martin) testing
-          sh "source ~/.zshrc"
-          sh "echo $PATH"
+          sh "printenv"
+          sh "zsh"
+          sh "printenv"
 
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
           sh "mkdir clang-debug && cd clang-debug && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib PATH=/opt/homebrew/bin:$PATH /opt/homebrew/bin/cmake ${unity} ${debug} -DBOOST_ROOT:PATHNAME=/opt/homebrew/include  -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
