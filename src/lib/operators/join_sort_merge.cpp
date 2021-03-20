@@ -615,6 +615,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto& left_cluster = (*_sorted_left_table)[cluster_id];
     auto& right_cluster = (*_sorted_right_table)[cluster_id];
 
+    // TODO: move to perfrom job
+    size_t last_filled_cunk_right_table = 0;
+    for (auto id = size_t{0}; id < _cluster_count; ++id) {
+      if (!(*_sorted_right_table)[id]->empty()) {
+        last_filled_cunk_right_table = id;
+      }
+    }
+
     // std::cout << "cluster_id:  " << cluster_id << std::endl;
     size_t left_run_start = 0;
     size_t right_run_start = 0;
@@ -625,16 +633,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const size_t left_size = left_cluster->size();
     const size_t right_size = right_cluster->size();
 
-    if ((left_run_start < left_size && right_run_start == right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
-      TableRange left_run(cluster_id, left_run_start, left_run_end);
-      TableRange right_run(cluster_id, right_run_start, right_run_end);
-      std::cout << right_run.size(_sorted_right_table) << std::endl;
-      left_run.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
-      });
-    }
+    // if ((left_run_start < left_size && right_run_start == right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
+    //   TableRange left_run(cluster_id, left_run_start, left_run_end);
+    //   TableRange right_run(cluster_id, right_run_start, right_run_end);
+    //   std::cout << right_run.size(_sorted_right_table) << std::endl;
+    //   left_run.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+    //       _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
+    //   });
+    // }
+
+    bool match = false;
+
 
     while (left_run_start < left_size && right_run_start < right_size) {
+      match = true;
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
 
@@ -646,17 +658,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
         if (compare_result == CompareResult::Less) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          // std::cout << "One" << std::endl;
         }
         // compare_result_last_run = compare_result;
       } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::NotEquals){
         if (compare_result == CompareResult::Equal) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          // std::cout << "Two" << std::endl;
         }
       } else if (_mode == JoinMode::Semi && compare_result == CompareResult::Greater && (_primary_predicate_condition == PredicateCondition::NotEquals || _primary_predicate_condition == PredicateCondition::GreaterThanEquals || _primary_predicate_condition == PredicateCondition::GreaterThan) && !multi_predicate_join_evaluator ){
         // We know that all up coming rows will be unequal to the current right value.
+        // std::cout << "Three" << std::endl;
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         return;
       } else {
+        // std::cout << "Four" << std::endl;
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
       }
 
@@ -677,28 +693,52 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
       }
 
-      if (!(left_run_start < left_size && right_run_start < right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && compare_result == CompareResult::Greater && _primary_predicate_condition == PredicateCondition::Equals) {
-        _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      }
+      // if (!(left_run_start < left_size && right_run_start < right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && compare_result == CompareResult::Greater && _primary_predicate_condition == PredicateCondition::Equals) {
+      //   std::cout << "Five" << std::endl;
+      //   _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      // }
     }
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
     auto right_rest = TableRange(cluster_id, right_run_start, right_size);
     auto left_rest = TableRange(cluster_id, left_run_start, left_size);
 
     if (left_run_start < left_size) {
-      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
-          // left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          //   if (!_semi_row_ids_emitted.contains(left_row_id)) {
-          //     _semi_row_ids_emitted.emplace(left_row_id);
-          //     _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
-          //   }
-          // });  
-        //}
+      // 
+      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals && match && (cluster_id < last_filled_cunk_right_table)) {
+          // std::cout << "left_run_start < left_size start" << std::endl;
+          // auto& _left_value = (*left_cluster)[left_run_start].value;
+          // std::cout << _left_value << std::endl;
+          // std::cout << "Six" << std::endl;
+          // std::cout << "cluster_id: " <<  cluster_id << std::endl;
+          // std::cout << "cluster_count: " << _cluster_count << std::endl;
+          left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+            // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
+            // least one match, that means the right range can not be empty.
+              // std::cout << left_row_id << std::endl;
+              _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
+          });
+          // std::cout << "left_run_start < left_size end" << std::endl;
       } else {
+        // std::cout << "Seven" << std::endl;
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
+      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
+          // std::cout << "(right_run_start < right_size)" << std::endl;
+          // auto& _left_value = (*left_cluster)[left_run_start].value;
+          // std::cout << _left_value << std::endl;
+          // left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          //   // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
+          //   // least one match, that means the right range can not be empty.
+          //     std::cout << left_row_id << std::endl;
+          //     _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
+          // });
+          // std::cout << "left_run_start < left_size end" << std::endl;
+          // std::cout << "Eight" << std::endl;
+      } else {
+        // std::cout << "Nine" << std::endl;
+        _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
+      }
     }
   }
 
