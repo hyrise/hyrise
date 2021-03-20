@@ -353,9 +353,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Emits a combination of a left row id and a right row id to the join output.
   **/
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
-    // std::cout << "cluster id: " << output_cluster << std::endl;
-    // std::cout << "left_row_id: " << left_row_id << std::endl;
-    // std::cout << "_output_pos_lists_left size : " << _output_pos_lists_left[output_cluster].size() << std::endl;
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
     if (!(_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
       _output_pos_lists_right[output_cluster].push_back(right_row_id);
@@ -385,12 +382,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // no secondary join predicates
       if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
-        // std::cout << "===================" << std::endl;
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
           // least one match, that means the right range can not be empty.
           if (!right_range.empty(_sorted_right_table)) {
-            // std::cout << left_row_id << std::endl;
             _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
           }
         });
@@ -615,15 +610,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto& left_cluster = (*_sorted_left_table)[cluster_id];
     auto& right_cluster = (*_sorted_right_table)[cluster_id];
 
-    // TODO: move to perfrom job
-    size_t last_filled_cunk_right_table = 0;
-    for (auto id = size_t{0}; id < _cluster_count; ++id) {
-      if (!(*_sorted_right_table)[id]->empty()) {
-        last_filled_cunk_right_table = id;
-      }
-    }
-
-    // std::cout << "cluster_id:  " << cluster_id << std::endl;
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
@@ -633,24 +619,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const size_t left_size = left_cluster->size();
     const size_t right_size = right_cluster->size();
 
-    // if ((left_run_start < left_size && right_run_start == right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
-    //   TableRange left_run(cluster_id, left_run_start, left_run_end);
-    //   TableRange right_run(cluster_id, right_run_start, right_run_end);
-    //   std::cout << right_run.size(_sorted_right_table) << std::endl;
-    //   left_run.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-    //       _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
-    //   });
-    // }
-
-    bool match = false;
-
-
     while (left_run_start < left_size && right_run_start < right_size) {
-      match = true;
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
 
-      // std::cout << left_value << "  :  " << right_value << std::endl;
       auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
@@ -658,21 +630,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
         if (compare_result == CompareResult::Less) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-          // std::cout << "One" << std::endl;
         }
         // compare_result_last_run = compare_result;
       } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::NotEquals){
         if (compare_result == CompareResult::Equal) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-          // std::cout << "Two" << std::endl;
         }
       } else if (_mode == JoinMode::Semi && compare_result == CompareResult::Greater && (_primary_predicate_condition == PredicateCondition::NotEquals || _primary_predicate_condition == PredicateCondition::GreaterThanEquals || _primary_predicate_condition == PredicateCondition::GreaterThan) && !multi_predicate_join_evaluator ){
         // We know that all up coming rows will be unequal to the current right value.
-        // std::cout << "Three" << std::endl;
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         return;
       } else {
-        // std::cout << "Four" << std::endl;
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
       }
 
@@ -692,53 +660,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         right_run_start = right_run_end;
         right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
       }
-
-      // if (!(left_run_start < left_size && right_run_start < right_size) && (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && compare_result == CompareResult::Greater && _primary_predicate_condition == PredicateCondition::Equals) {
-      //   std::cout << "Five" << std::endl;
-      //   _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      // }
     }
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
     auto right_rest = TableRange(cluster_id, right_run_start, right_size);
     auto left_rest = TableRange(cluster_id, left_run_start, left_size);
 
     if (left_run_start < left_size) {
-      // 
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
-          // std::cout << "left_run_start < left_size start" << std::endl;
-          // auto& _left_value = (*left_cluster)[left_run_start].value;
-          // std::cout << _left_value << std::endl;
-          // std::cout << "Six" << std::endl;
-          // std::cout << "cluster_id: " <<  cluster_id << std::endl;
-          // std::cout << "cluster_count: " << _cluster_count << std::endl;
-        if (!(_sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count() && cluster_id >= last_filled_cunk_right_table)) {
           left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-            // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
-            // least one match, that means the right range can not be empty.
-              // std::cout << left_row_id << std::endl;
               _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
           });
-          // std::cout << "left_run_start < left_size end" << std::endl;
-        }
       } else {
-        // std::cout << "Seven" << std::endl;
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
-      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
-          // std::cout << "(right_run_start < right_size)" << std::endl;
-          // auto& _left_value = (*left_cluster)[left_run_start].value;
-          // std::cout << _left_value << std::endl;
-          // left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          //   // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
-          //   // least one match, that means the right range can not be empty.
-          //     std::cout << left_row_id << std::endl;
-          //     _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
-          // });
-          // std::cout << "left_run_start < left_size end" << std::endl;
-          // std::cout << "Eight" << std::endl;
-      } else {
-        // std::cout << "Nine" << std::endl;
+      if (!((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals)) {
         _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
       }
     }
@@ -1008,26 +944,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    if ((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) && _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count()) {
-      auto end_of_left_table = _end_of_table(_sorted_left_table);
-      auto& right_max_value = _table_max_value(_sorted_right_table);
-
-      auto unmatched_range = std::optional<TableRange>{};
-
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value <= right_max_value; });
-      if (result) {
-        unmatched_range = (*result).to(end_of_left_table);
-      }
-
-      if (unmatched_range) {
-        unmatched_range->for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          // Mark as emitted so that it doesn't get emitted again below
-          // std::cout << left_row_id << std::endl;
-          _emit_combination(0, left_row_id, NULL_ROW_ID);
-        });
-      }
-    }
     if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
         _primary_predicate_condition != PredicateCondition::Equals) {
       for (auto& set : _left_row_ids_emitted_per_chunk) {
@@ -1051,8 +967,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   std::shared_ptr<const Table> _on_execute() override {
 
-    // std::cout << _mode << std::endl;
-    // std::cout << _primary_predicate_condition << std::endl;
     auto right_side_has_null = false;
     if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
       return _sort_merge_join.left_input_table();
@@ -1075,12 +989,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
     }
+    bool equi_case = false;
+    if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
+      equi_case = _primary_predicate_condition == PredicateCondition::NotEquals;
+    } else {
+      equi_case = _primary_predicate_condition == PredicateCondition::Equals;
+    }
 
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-        _sort_merge_join._primary_predicate.column_ids, (_primary_predicate_condition == PredicateCondition::Equals && !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) && _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count())) ,
+        _sort_merge_join._primary_predicate.column_ids, equi_case ,
         include_null_left, include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
@@ -1103,10 +1023,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       _perform_join();
     }
-    // std::cout << "xxxxxxxxxxxxxxx" << std::endl;
-    // for (size_t i = 0; i < _output_pos_lists_left.size(); i++) {
-    //   std::cout << _output_pos_lists_left[i].size() << std::endl;
-    // }
 
     if (include_null_left || include_null_right) {
       auto null_output_left = RowIDPosList();
