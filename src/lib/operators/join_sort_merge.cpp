@@ -704,13 +704,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (left_run_start < left_size) {
       // 
-      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals && match && (cluster_id < last_filled_cunk_right_table)) {
+      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _primary_predicate_condition == PredicateCondition::Equals) {
           // std::cout << "left_run_start < left_size start" << std::endl;
           // auto& _left_value = (*left_cluster)[left_run_start].value;
           // std::cout << _left_value << std::endl;
           // std::cout << "Six" << std::endl;
           // std::cout << "cluster_id: " <<  cluster_id << std::endl;
           // std::cout << "cluster_count: " << _cluster_count << std::endl;
+        if (!(_sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count() && cluster_id >= last_filled_cunk_right_table)) {
           left_rest.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
             // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
             // least one match, that means the right range can not be empty.
@@ -718,6 +719,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
               _emit_combination(cluster_id, left_row_id, NULL_ROW_ID);
           });
           // std::cout << "left_run_start < left_size end" << std::endl;
+        }
       } else {
         // std::cout << "Seven" << std::endl;
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
