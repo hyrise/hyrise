@@ -720,7 +720,7 @@ if(NOT APPLE)
     target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
 
     # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions
-    target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR}/third_party/jemalloc/include)
+    target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
