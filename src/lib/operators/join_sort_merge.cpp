@@ -31,17 +31,37 @@ namespace opossum {
 **/
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
-  return ((config.predicate_condition != PredicateCondition::NotEquals && config.join_mode != JoinMode::Semi &&
-           config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse) ||
-          config.join_mode == JoinMode::Inner || (config.join_mode == JoinMode::Semi) ||
-          (config.join_mode == JoinMode::AntiNullAsTrue && !config.secondary_predicates &&
-           (config.predicate_condition == PredicateCondition::NotEquals ||
-            config.predicate_condition == PredicateCondition::Equals)) ||
-          (config.join_mode == JoinMode::AntiNullAsFalse && config.predicate_condition == PredicateCondition::Equals &&
-           !config.secondary_predicates) ||
-          (config.join_mode == JoinMode::AntiNullAsFalse &&
-           config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) &&
-         config.left_data_type == config.right_data_type;
+  if (config.left_data_type != config.right_data_type) {
+    return false;
+  }
+
+  switch (config.join_mode) {
+    case JoinMode::Inner:
+      return true;
+    case JoinMode::Semi:
+      return true;
+    case JoinMode::AntiNullAsTrue:
+      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+        return true;
+      }
+      if (config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) {
+        return true;
+      }
+      return false;
+    case JoinMode::AntiNullAsFalse:
+      if (config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) {
+        return true;
+      }
+      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+        return true;
+      }
+      return false;
+    default:
+      if (config.predicate_condition != PredicateCondition::NotEquals) {
+        return true;
+      }
+      return false;
+  }
 }
 
 /**
