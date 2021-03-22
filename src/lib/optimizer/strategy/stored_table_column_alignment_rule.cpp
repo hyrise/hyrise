@@ -49,16 +49,11 @@ ColumnPruningAgnosticMultiSet collect_stored_table_nodes(const std::vector<std::
   // Iterate over the given LQPs and store all StoredTableNodes in multiple sets/groups: Nodes of the same set/group
   // share the same table name and the same pruned ChunkIDs.
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&](const auto& node) {
-      if (node->type == LQPNodeType::StoredTable) {
-        const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-        DebugAssert(stored_table_node, "LQPNode with type 'StoredTable' could not be casted to a StoredTableNode.");
-        grouped_stored_table_nodes.emplace(stored_table_node);
-      }
-      return LQPVisitation::VisitInputs;
+    const auto nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::StoredTable);
+    std::for_each(nodes.begin(), nodes.end(), [&](const auto& node) {
+      grouped_stored_table_nodes.insert(std::static_pointer_cast<StoredTableNode>(node));
     });
   }
-
   return grouped_stored_table_nodes;
 }
 
@@ -110,7 +105,7 @@ void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<Logical
   // (1) Collect all plans
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
   lqps.emplace_back(std::static_pointer_cast<AbstractLQPNode>(root_node));
-  const auto subquery_expressions_by_lqp = collect_subquery_expressions_by_lqp(root_node);
+  const auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+// Warning: In the past, magic_enum has led to problems with TSan. See #2154 for details.
 #include <magic_enum.hpp>
 
 #include "types.hpp"
@@ -19,7 +20,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 
-  bool executed{false};
   std::chrono::nanoseconds walltime{0};
 
   // Some operators do not return a table (e.g., Insert).
@@ -40,13 +40,8 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 template <typename Steps>
 struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
-    if (!executed) {
-      stream << "Not executed.";
-      return;
-    }
-
     if (!has_output) {
-      stream << "Executed, but no output.";
+      stream << "No output.";
       return;
     }
 

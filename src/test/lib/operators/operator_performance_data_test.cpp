@@ -24,6 +24,7 @@ class OperatorPerformanceDataTest : public BaseTest {
   static void SetUpTestCase() {
     _table = load_table("resources/test_data/tbl/int_int.tbl", 2);
     _table_wrapper = std::make_shared<TableWrapper>(_table);
+    _table_wrapper->never_clear_output();
     _table_wrapper->execute();
   }
 
@@ -44,8 +45,8 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
       std::make_shared<TableScan>(table_wrapper, greater_than_(get_column_expression(table_wrapper, ColumnID{0}), 1));
   table_scan->execute();
 
+  EXPECT_TRUE(table_scan->executed());
   auto& performance_data = table_scan->performance_data;
-  EXPECT_TRUE(performance_data->executed);
   EXPECT_TRUE(performance_data->has_output);
   EXPECT_GT(performance_data->walltime.count(), 0ul);
   EXPECT_EQ(performance_data->output_row_count, 2ul);
@@ -206,6 +207,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
   auto table = load_table("resources/test_data/tbl/int_int.tbl", 2);
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   {
@@ -300,15 +302,15 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   EXPECT_FALSE(delete_op->execute_failed());
 
   {
+    EXPECT_TRUE(delete_op->executed());
     const auto& performance_data = delete_op->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_FALSE(performance_data->has_output);
   }
 
   {
+    EXPECT_TRUE(table_scan_1->executed());
     const auto& performance_data = table_scan_1->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_TRUE(performance_data->has_output);
     EXPECT_EQ(performance_data->output_row_count, 1);
@@ -316,8 +318,8 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   }
 
   {
+    EXPECT_TRUE(table_scan_2->executed());
     const auto& performance_data = table_scan_2->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_TRUE(performance_data->has_output);
     EXPECT_EQ(performance_data->output_row_count, 0);
@@ -332,7 +334,6 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   OperatorPerformanceData<JoinHash::OperatorSteps> performance_data;
   performance_data.set_step_runtime(JoinHash::OperatorSteps::BuildSideMaterializing, std::chrono::nanoseconds{17});
   performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
-  performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 1u;
   performance_data.output_chunk_count = 1u;
@@ -358,13 +359,7 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   {
     std::stringstream stream;
     stream << performance_data;
-    EXPECT_EQ(stream.str(), "Not executed.");
-  }
-  {
-    std::stringstream stream;
-    performance_data.executed = true;
-    stream << performance_data;
-    EXPECT_EQ(stream.str(), "Executed, but no output.");
+    EXPECT_EQ(stream.str(), "No output.");
   }
   {
     std::stringstream stream;

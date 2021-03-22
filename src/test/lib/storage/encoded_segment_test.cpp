@@ -57,6 +57,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto counter = 0u;
     for (auto& elem : values) {
       elem = _generated_value_pool[counter % _generated_value_pool.size()];
+      ++counter;
     }
 
     return std::make_shared<ValueSegment<int32_t>>(std::move(values));

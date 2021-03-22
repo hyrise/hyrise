@@ -204,6 +204,7 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+    operators/join_helper/join_output_writing.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
     operators/join_hash/join_hash_steps.hpp

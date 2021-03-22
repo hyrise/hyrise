@@ -12,6 +12,7 @@
 namespace opossum {
 
 class AbstractLQPNode;
+class AbstractOperator;
 
 enum class ExpressionType {
   Aggregate,
@@ -62,7 +63,21 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    */
   virtual bool requires_computation() const;
 
-  virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
+  /**
+   * @returns a deep copy of the expression.
+   *
+   * Regarding PQPSubqueryExpressions: Deduplication of operator plans will be preserved. See lqp_translator.cpp
+   * for more info on deduplication.
+   */
+  std::shared_ptr<AbstractExpression> deep_copy() const;
+
+  /**
+   * @returns a deep copy of the expression and uses
+   * @param copied_ops to preserve deduplication for the operator plans of PQPSubqueryExpressions.
+   * See lqp_translator.cpp for more info on deduplication.
+   */
+  std::shared_ptr<AbstractExpression> deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
   /**
    * @return the expression's column name or, optionally, a more detailed description of the expression
@@ -113,6 +128,9 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual size_t _shallow_hash() const;
 
   virtual bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
+
+  virtual std::shared_ptr<AbstractExpression> _on_deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
 
   /**
    * Used internally in _enclose_argument to put parentheses around expression arguments if they have a lower

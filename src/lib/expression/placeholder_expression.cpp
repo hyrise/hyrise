@@ -24,7 +24,8 @@ PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id
   DebugAssert(*optional_data_type != DataType::Null, "Typed Placeholder should not be DataType::Null");
 }
 
-std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   if (optional_data_type) {
     return std::make_shared<PlaceholderExpression>(parameter_id, *optional_data_type);
   } else {

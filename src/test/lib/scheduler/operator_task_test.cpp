@@ -55,9 +55,6 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result,
                             static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output());
-
-  // Check that everything was properly cleaned up
-  EXPECT_EQ(gt->get_output(), nullptr);
 }
 
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
@@ -76,10 +73,6 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto expected_result = load_table("resources/test_data/tbl/join_operators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result,
                             static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output());
-
-  // Check that everything was properly cleaned up
-  EXPECT_EQ(gt_a->get_output(), nullptr);
-  EXPECT_EQ(gt_b->get_output(), nullptr);
 }
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
@@ -119,11 +112,5 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
-
-  // Check that everything was properly cleaned up
-  EXPECT_EQ(gt_a->get_output(), nullptr);
-  EXPECT_EQ(scan_a->get_output(), nullptr);
-  EXPECT_EQ(scan_b->get_output(), nullptr);
-  EXPECT_EQ(scan_c->get_output(), nullptr);
 }
 }  // namespace opossum

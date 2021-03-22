@@ -31,8 +31,12 @@ class ChunkPruningRule : public AbstractRule {
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
-  std::set<ChunkID> _compute_exclude_list(const Table& table,
-                                          const std::vector<std::shared_ptr<PredicateNode>>& predicate_chain,
+  using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
+
+  static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
+      const std::shared_ptr<StoredTableNode>& stored_table_node);
+
+  std::set<ChunkID> _compute_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                           const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
@@ -46,13 +50,15 @@ class ChunkPruningRule : public AbstractRule {
 
   static std::set<ChunkID> _intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
 
-  static std::vector<std::vector<std::shared_ptr<PredicateNode>>> _find_predicate_chains_recursively(
-      const std::shared_ptr<StoredTableNode>& stored_table_node, const std::shared_ptr<AbstractLQPNode>& node,
-      std::vector<std::shared_ptr<PredicateNode>> current_predicate_chain = {});
-
  private:
-  // Caches intermediate results
-  mutable std::unordered_map<std::shared_ptr<PredicateNode>, std::set<ChunkID>> _excluded_chunk_ids_by_predicate_node;
+  /**
+   * Caches intermediate results.
+   * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
+   */
+  using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;
+  mutable std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+                             boost::hash<StoredTableNodePredicateNodePair>>
+      _excluded_chunk_ids_by_predicate_node_cache;
 };
 
 }  // namespace opossum

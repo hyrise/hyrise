@@ -27,8 +27,9 @@ std::string ExistsExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
-  return std::make_shared<ExistsExpression>(subquery()->deep_copy(), exists_expression_type);
+std::shared_ptr<AbstractExpression> ExistsExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<ExistsExpression>(subquery()->deep_copy(copied_ops), exists_expression_type);
 }
 
 DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }

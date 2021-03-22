@@ -41,7 +41,7 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                                                                         \
  *                                                                        [ProjectionNodeB(...)]
  *
- *        (1) collect_subquery_expressions_by_lqp(ProjectionNodeRoot)
+ *        (1) collect_lqp_subquery_expressions_by_lqp(ProjectionNodeRoot)
  *                =>  returns { [ ProjectionNodeA, { SubqueryExpressionA } ],
  *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
  *
@@ -62,9 +62,9 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) subquery expressions of @param node.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
  */
-SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -209,30 +209,14 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * Traverses @param lqp from top to bottom to find all leaf nodes.
- * @return By default, all leaf nodes are returned.
- *         Optionally, the template parameter can be set to return leaf nodes of type @tparam LQPNode only.
+ * Traverses @param lqp from the top to the bottom and returns all nodes of the given @param type.
  */
-template <class LQPNode = AbstractLQPNode>
-std::vector<std::shared_ptr<LQPNode>> lqp_find_leafs(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  static_assert(std::is_same<LQPNode, AbstractLQPNode>::value || std::is_base_of<AbstractLQPNode, LQPNode>::value,
-                "The given type LQPNode must be derived from AbstractLQPNode");
-  std::vector<std::shared_ptr<LQPNode>> leaf_nodes;
-
-  visit_lqp(lqp, [&](const auto& node) {
-    if (node->input_count() > 0) return LQPVisitation::VisitInputs;
-
-    if constexpr (std::is_same<LQPNode, AbstractLQPNode>::value) {
-      leaf_nodes.emplace_back(node);
-    } else {
-      auto casted_node = std::dynamic_pointer_cast<LQPNode>(node);
-      if (casted_node) leaf_nodes.emplace_back(casted_node);
-    }
-    return LQPVisitation::DoNotVisitInputs;
-  });
-
-  return leaf_nodes;
-}
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                     const LQPNodeType type);
+/**
+ * Traverses @param lqp from the top to the bottom and @returns all leaf nodes.
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.

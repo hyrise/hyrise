@@ -8,7 +8,6 @@
 #include "operators/abstract_read_write_operator.hpp"
 
 #include "scheduler/job_task.hpp"
-#include "scheduler/worker.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
@@ -37,13 +36,14 @@ std::shared_ptr<AbstractTask> OperatorTask::_add_tasks_from_operator(
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_left_input()) {
-    auto subtree_root = _add_tasks_from_operator(left, tasks, task_by_op);
-    subtree_root->set_as_predecessor_of(task);
+    if (auto left_subtree_root = _add_tasks_from_operator(left, tasks, task_by_op)) {
+      left_subtree_root->set_as_predecessor_of(task);
+    }
   }
-
   if (auto right = op->mutable_right_input()) {
-    auto subtree_root = _add_tasks_from_operator(right, tasks, task_by_op);
-    subtree_root->set_as_predecessor_of(task);
+    if (auto right_subtree_root = _add_tasks_from_operator(right, tasks, task_by_op)) {
+      right_subtree_root->set_as_predecessor_of(task);
+    }
   }
 
   // Add AFTER the inputs to establish a task order where predecessor get executed before successors
@@ -70,8 +70,6 @@ void OperatorTask::_on_execute() {
           read_write_operator->rollback_records();
         }
         return;
-        break;
-
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
         Fail("Trying to execute an operator for a transaction that is already committed");
@@ -82,6 +80,7 @@ void OperatorTask::_on_execute() {
   }
 
   DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
+
   _op->execute();
 
   /**
@@ -94,23 +93,6 @@ void OperatorTask::_on_execute() {
 
     context->rollback(RollbackReason::Conflict);
   }
-
-  // Get rid of temporary tables that are not needed anymore
-  // Because `clear_output` is only called by the successive OperatorTasks, we can be sure that no one cleans up the
-  // root (i.e., the final result)
-  for (const auto& weak_predecessor : predecessors()) {
-    const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
-    DebugAssert(predecessor, "Predecessor of OperatorTask is not an OperatorTask itself");
-    auto previous_operator_still_needed = false;
-
-    for (const auto& successor : predecessor->successors()) {
-      if (successor.get() != this && !successor->is_done()) {
-        previous_operator_still_needed = true;
-      }
-    }
-    // If someone else still holds a shared_ptr to the table (e.g., a ReferenceSegment pointing to a materialized
-    // temporary table), it will not yet get deleted
-    if (!previous_operator_still_needed) predecessor->get_operator()->clear_output();
-  }
 }
+
 }  // namespace opossum

@@ -141,7 +141,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   VizEdgeInfo info = _default_edge;
 
   const auto& performance_data = *from->performance_data;
-  if (performance_data.executed && performance_data.has_output) {
+  if (from->executed() && performance_data.has_output) {
     std::stringstream stream;
 
     // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
@@ -169,7 +169,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   auto label = op->description(DescriptionMode::MultiLine);
 
   const auto& performance_data = *op->performance_data;
-  if (performance_data.executed) {
+  if (op->executed()) {
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());

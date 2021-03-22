@@ -51,8 +51,10 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 
 // Used to identify a Parameter within a subquery. This can be either a parameter of a Prepared SELECT statement
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
-STRONG_TYPEDEF(size_t, ParameterID);
-STRONG_TYPEDEF(size_t, ValueExpressionID);
+STRONG_TYPEDEF(uint16_t, ParameterID);
+// Used to identify a ValueExpression in a query. This helps to track how value expressions get moved around
+// in the lqp during optimization.
+STRONG_TYPEDEF(uint16_t, ValueExpressionID);
 
 namespace opossum {
 

@@ -22,6 +22,7 @@ class SortTest : public BaseTestWithParam<SortTestParam> {
   static void SetUpTestCase() {
     input_table = load_table("resources/test_data/tbl/sort/input.tbl", 20);
     input_table_wrapper = std::make_shared<TableWrapper>(input_table);
+    input_table_wrapper->never_clear_output();
     input_table_wrapper->execute();
   }
 

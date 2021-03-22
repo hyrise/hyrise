@@ -18,7 +18,8 @@ class PQPColumnExpression : public AbstractExpression {
   PQPColumnExpression(const ColumnID init_column_id, const DataType data_type, const bool nullable,
                       const std::string& column_name);
 
-  std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::shared_ptr<AbstractExpression> _on_deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
   bool requires_computation() const override;
