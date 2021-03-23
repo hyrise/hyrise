@@ -1,10 +1,13 @@
 #include "cxxopts.hpp"
 
+#include <filesystem>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "benchmark_config.hpp"
 #include "cli_config_parser.hpp"
+#include "file_based_table_generator.hpp"
 #include "server/server.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
@@ -48,6 +51,14 @@ void generate_benchmark_data(std::string argument_string) {
   }
 }
 
+void load_table_data(const std::string& import_path) {
+  Assert(std::filesystem::is_directory(import_path), "Table import path cannot be accessed.");
+  auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+  config->cache_binary_tables = true;
+
+  opossum::FileBasedTableGenerator(config, import_path).generate_and_store();
+}
+
 }  // namespace
 
 cxxopts::Options get_server_cli_options() {
@@ -63,6 +74,7 @@ cxxopts::Options get_server_cli_options() {
                        "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
                        "warehouse count in TPC-C.", cxxopts::value<std::string>()) // NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("table_import_path", "Path to a directory storing loadable table files (binary or CSV).", cxxopts::value<std::string>()) // NOLINT
     ;  // NOLINT
   // clang-format on
 
@@ -89,6 +101,10 @@ int main(int argc, char* argv[]) {
     */
   if (parsed_options.count("benchmark_data")) {
     generate_benchmark_data(parsed_options["benchmark_data"].as<std::string>());
+  }
+
+  if (parsed_options.count("table_import_path")) {
+    load_table_data(parsed_options["table_import_path"].as<std::string>());
   }
 
   const auto execution_info = parsed_options["execution_info"].as<bool>();
