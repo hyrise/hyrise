@@ -162,20 +162,15 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    */
   switch (new_state) {
     case TaskState::Scheduled:
-      if (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
-          _state == TaskState::Started || _state == TaskState::Done) {
-        return false;
-      }
+      if (_state >= TaskState::Scheduled) return false;
       Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
       break;
     case TaskState::Enqueued:
-      if (_state == TaskState::Enqueued) return false;
+      if (_state >= TaskState::Enqueued) return false;
       Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
       break;
     case TaskState::AssignedToWorker:
-      if (_state == TaskState::AssignedToWorker || _state == TaskState::Started || _state == TaskState::Done) {
-        return false;
-      }
+      if (_state >= TaskState::AssignedToWorker) return false;
       Assert(_state == TaskState::Enqueued, "Illegal state transition to TaskState::AssignedToWorker");
       break;
     case TaskState::Started:
@@ -189,7 +184,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       Fail("Unexpected target state in AbstractTask.");
   }
 
-  _state = new_state;
+  _state.exchange(new_state);
   return true;
 }
 
