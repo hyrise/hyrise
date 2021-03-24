@@ -174,9 +174,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  std::cout << sql_pipeline.get_optimized_logical_plans().size() << std::endl;
-  std::cout << *sql_pipeline.get_optimized_logical_plans()[0] << std::endl;
-
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
