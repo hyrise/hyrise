@@ -39,10 +39,10 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
-  Assert(!is_scheduled(), "Possible race: Don't set dependencies after the Task was scheduled");
   if (std::find(_successors.cbegin(), _successors.cend(), successor) == _successors.cend()) {
     _successors.emplace_back(successor);
     successor->_predecessors.emplace_back(shared_from_this());
+    auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
     if (!is_done()) successor->_pending_predecessors++;
   }
 }
