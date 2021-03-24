@@ -232,6 +232,8 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 }
 
 void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  Assert(_state == OperatorState::Created,
+         "Setting the TransactionContext is allowed for OperatorState::Created only.");
   _transaction_context = transaction_context;
   _on_set_transaction_context(transaction_context);
 }
@@ -257,7 +259,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  DebugAssert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
+  Assert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
   if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
