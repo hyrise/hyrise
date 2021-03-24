@@ -84,10 +84,11 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  if (is_done()) return;
-  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
+  auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
 
-  auto lock = std::unique_lock<std::mutex>(_done_mutex);
+  if (is_done()) return;
+
+  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
   _done_condition_variable.wait(lock, [&]() { return _state == TaskState::Done; });
 }
 
@@ -113,8 +114,10 @@ void AbstractTask::execute() {
   if (_done_callback) _done_callback();
 
   _try_transition_to(TaskState::Done);
-
-  _done_condition_variable.notify_all();
+  {
+    auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
+    _done_condition_variable.notify_all();
+  }
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
 }
 
