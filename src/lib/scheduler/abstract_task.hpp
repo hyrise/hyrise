@@ -94,7 +94,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
-   * @returns true when the task was scheduled successfully
+   * @returns true when the task was scheduled successfully // TODO(Julian) add "it may already be done"
    */
   bool is_scheduled() const;
 

@@ -28,8 +28,8 @@ bool AbstractTask::is_done() const { return _state == TaskState::Done; }
 bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const {
-  return (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
-          _state == TaskState::Started);
+  DebugAssert(static_cast<std::uint8_t>(TaskState::Created) == 0, "TaskState::Created is not equal to 0");
+  return _state > TaskState::Created;
 }
 
 std::string AbstractTask::description() const {
