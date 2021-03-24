@@ -156,6 +156,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   };
   std::atomic<TaskState> _state{TaskState::Created};
   bool _try_transition_to(TaskState new_state);
+  std::mutex _transition_to_mutex;
 
   // For making Tasks join()-able
   std::condition_variable _done_condition_variable;

@@ -149,10 +149,14 @@ void AbstractTask::_on_predecessor_done() {
 
 bool AbstractTask::_try_transition_to(TaskState new_state) {
   // Lock critical section
-  static auto mutex = std::mutex();
-  auto lock = std::unique_lock<std::mutex>(mutex);
+  auto lock = std::unique_lock<std::mutex>(_transition_to_mutex);
 
-  // Check validity of state transition
+  /**
+   * Before switching to the new state, check the validity of the state transition.
+   *  a) Fail if the transition is illegal or unexpected.
+   *  b) Return false when conflicts arrive. E.g., when another thread already changed the task's state to
+   *     TaskState::Scheduled.
+   */
   switch (new_state) {
     case TaskState::Scheduled:
       if (_state == TaskState::Scheduled || _state == TaskState::Enqueued || _state == TaskState::AssignedToWorker ||
