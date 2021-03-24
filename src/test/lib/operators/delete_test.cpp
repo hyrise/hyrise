@@ -296,9 +296,9 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   t1_context->commit();
 
   auto delete_op2 = std::make_shared<Delete>(validate1);
-  delete_op->set_transaction_context(t1_context);
+  delete_op2->set_transaction_context(t1_context);
 
-  EXPECT_THROW(delete_op->execute(), std::logic_error);
+  EXPECT_THROW(delete_op2->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
