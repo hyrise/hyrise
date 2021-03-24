@@ -134,7 +134,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id = INVALID_NODE_ID;
   SchedulePriority _priority;
-  std::atomic<bool> _stealable;
+  std::atomic_bool _stealable;
   std::function<void()> _done_callback;
 
   // For dependencies

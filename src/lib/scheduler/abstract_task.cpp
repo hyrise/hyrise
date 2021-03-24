@@ -85,7 +85,6 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 
 void AbstractTask::_join() {
   auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
-
   if (is_done()) return;
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
