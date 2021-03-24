@@ -121,6 +121,7 @@ void AbstractTask::execute() {
 }
 
 void AbstractTask::_on_predecessor_done() {
+  Assert(_pending_predecessors > 0, "The count of pending predecessors equals zero and cannot be decremented.");
   auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
     auto current_worker = Worker::get_this_thread_worker();
