@@ -167,8 +167,8 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
       break;
     case TaskState::AssignedToWorker:
-      if (_state >= TaskState::AssignedToWorker) return false;
-      Assert(_state == TaskState::Enqueued, "Illegal state transition to TaskState::AssignedToWorker");
+      if (_state >= TaskState::Enqueued) return false;
+      Assert(_state == TaskState::Scheduled, "Illegal state transition to TaskState::AssignedToWorker");
       break;
     case TaskState::Started:
       Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
