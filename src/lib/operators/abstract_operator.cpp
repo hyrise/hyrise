@@ -320,7 +320,8 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
       Assert(previous_state == OperatorState::Running, "Illegal state transition to OperatorState::Executed");
       break;
     case OperatorState::Cleared:
-      Assert(previous_state == OperatorState::Executed, "Illegal state transition to OperatorState::Cleared");
+      Assert(previous_state == OperatorState::Executed || previous_state == OperatorState::Cleared,
+             "Illegal state transition to OperatorState::Cleared");
       break;
     default:
       Fail("Unexpected target state in AbstractOperator.");
