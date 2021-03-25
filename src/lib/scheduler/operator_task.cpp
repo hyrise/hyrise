@@ -17,7 +17,7 @@ using namespace opossum;  // NOLINT
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
  * @returns the root of the subtree that was added.
- * @param task_by_op  Cache to avoid creating duplicate Tasks for diamond shapes
+ * @param task_by_op is used as a cache to avoid creating duplicate tasks. For example, in the case of diamond shapes.
  */
 std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::shared_ptr<AbstractOperator>& op,
                                                                   std::vector<std::shared_ptr<AbstractTask>>& tasks) {
