@@ -75,10 +75,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the Task as scheduled, thus making sure this happens only once
-  if (is_done()) return;
-
-  [[maybe_unused]] auto success = _try_transition_to(TaskState::Scheduled);
-  DebugAssert(success, "Task could not be scheduled!");
+  if(!_try_transition_to(TaskState::Scheduled)) return;
 
   Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
 }
