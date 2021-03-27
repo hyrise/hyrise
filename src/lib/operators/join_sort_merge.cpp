@@ -39,7 +39,13 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     case JoinMode::Inner:
       return true;
     case JoinMode::Semi:
-      return true;
+      // if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      //   return true;
+      // }
+      if (config.predicate_condition == PredicateCondition::Equals) {
+        return true;
+      }
+      return false;
     case JoinMode::AntiNullAsTrue:
       if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
@@ -343,7 +349,37 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       default:
         throw std::logic_error("Unknown PredicateCondition");
     }
+  }
 
+    void _join_runs_semi(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                              std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        if (compare_result == CompareResult::Equal ) {
+          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        }
+        break;
+      case PredicateCondition::NotEquals:
+        if (compare_result == CompareResult::Less) {
+          // std::cout << "Equal" << std::endl;
+          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        }
+        // if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
+        //   // std::cout << "Less" << std::endl;
+        //   _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        // }
+        break;
+      case PredicateCondition::GreaterThan:
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        break;
+      case PredicateCondition::LessThan:
+        break;
+      case PredicateCondition::LessThanEquals:
+        break;
+      default:
+        throw std::logic_error("Unknown PredicateCondition");
+    }
   }
 
   /**
@@ -479,14 +515,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                  MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_mode == JoinMode::Semi) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool match = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-            if (!_semi_row_ids_emitted.contains(left_row_id)) {
-              _semi_row_ids_emitted.emplace(left_row_id);
-              _emit_combination(output_cluster, left_row_id, right_row_id);
-            }
+            match = true;
+            return;
           }
         });
+        if (match) {
+           _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        }
       });
     } else if (_mode == JoinMode::AntiNullAsFalse) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
@@ -705,14 +743,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
           _join_runs_anti(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         // compare_result_last_run = compare_result;
-      } else if (_mode == JoinMode::Semi && compare_result == CompareResult::Greater &&
-                 (_primary_predicate_condition == PredicateCondition::NotEquals ||
-                  _primary_predicate_condition == PredicateCondition::GreaterThanEquals ||
-                  _primary_predicate_condition == PredicateCondition::GreaterThan) &&
-                 !multi_predicate_join_evaluator) {
+      } else if (_mode == JoinMode::Semi ) {
         // We know that all up coming rows will be unequal to the current right value.
-        _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-        return;
+        _join_runs_semi(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
       } else {
         _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
       }
@@ -740,12 +773,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (left_run_start < left_size) {
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+        // If the predicate condition is not equal, I do not need to emit anything since there are no equal matches.
         if (_primary_predicate_condition == PredicateCondition::Equals) {
           left_rest.for_every_row_id(_sorted_left_table,
                                     [&](RowID left_row_id) { _emit_combination(cluster_id, left_row_id, NULL_ROW_ID); });
         }
+      } else if (_mode == JoinMode::Semi) {
         if (_primary_predicate_condition == PredicateCondition::NotEquals) {
-          // I do not need to emit anything since there are no equal matches.
+          left_rest.for_every_row_id(_sorted_left_table,
+                                    [&](RowID left_row_id) { _emit_combination(cluster_id, left_row_id, NULL_ROW_ID); });
         }
       } else {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
