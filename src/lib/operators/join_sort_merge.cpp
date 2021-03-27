@@ -49,7 +49,7 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
       }
       return false;
     case JoinMode::AntiNullAsFalse:
-      if (config.predicate_condition == PredicateCondition::Equals && !config.secondary_predicates) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
       if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
@@ -301,10 +301,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                   std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
-        if (compare_result == CompareResult::Equal) {
+        if (compare_result == CompareResult::Equal && (_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse)) {
           _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
-        } else if (compare_result == CompareResult::Less &&
+        } else if (compare_result == CompareResult::Less  &&
                    (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+          // We do not want to use the multi_predicate_join_evaluator here, since there is no equal match.
+          // TODO: find a better way
+          std::optional<MultiPredicateJoinEvaluator> _multi_predicate_join_evaluator;
+          _emit_qualified_combinations(cluster_id, left_run, right_run, _multi_predicate_join_evaluator);
+        } else if (compare_result == CompareResult::Equal && _mode == JoinMode::AntiNullAsFalse && compare_result == CompareResult::Equal && multi_predicate_join_evaluator){
           _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
         } else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
@@ -405,10 +410,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       // no secondary join predicates
       if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+        auto right_range_empty = right_range.empty(_sorted_right_table);
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           // In the case of Semi/Anti we do not need to use the cross product. We still need to check if we have at
           // least one match, that means the right range can not be empty.
-          if (!right_range.empty(_sorted_right_table)) {
+          if (!right_range_empty) {
             _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
           }
         });
@@ -442,14 +448,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
     } else if (_mode == JoinMode::AntiNullAsFalse) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool match = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          if (!multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-            if (!_semi_row_ids_emitted.contains(left_row_id)) {
-              _semi_row_ids_emitted.emplace(left_row_id);
-              _emit_combination(output_cluster, left_row_id, right_row_id);
-            }
+          if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+            match = true;
+            return;
           }
         });
+        if (!match) {
+           _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        }
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
@@ -652,7 +660,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       TableRange right_run(cluster_id, right_run_start, right_run_end);
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
           _primary_predicate_condition == PredicateCondition::Equals) {
-        if (compare_result == CompareResult::Less) {
+        if (compare_result == CompareResult::Less ) {
+          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+        }
+        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
           _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         }
         // compare_result_last_run = compare_result;
