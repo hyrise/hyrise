@@ -39,9 +39,9 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     case JoinMode::Inner:
       return true;
     case JoinMode::Semi:
-      // if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
-      //   return true;
-      // }
+      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+        return true;
+      }
       if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
@@ -299,23 +299,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   enum class CompareResult { Less, Greater, Equal };
 
-
-      //   if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-      //     _primary_predicate_condition == PredicateCondition::Equals) {
-      //   if (compare_result == CompareResult::Less ) {
-      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      //   }
-      //   if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
-      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      //   }
-      //   // compare_result_last_run = compare_result;
-      // } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-      //            _primary_predicate_condition == PredicateCondition::NotEquals) {
-      //   if (compare_result == CompareResult::Equal) {
-      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      //   }
-      // } 
-
   void _join_runs_anti(TableRange left_run, TableRange right_run, CompareResult compare_result,
                               std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
     switch (_primary_predicate_condition) {
@@ -360,14 +343,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Less) {
-          // std::cout << "Equal" << std::endl;
-          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        if (compare_result != CompareResult::Equal ) {
+          _emit_right_primary_null_combinations(cluster_id, left_run);
         }
-        // if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
-        //   // std::cout << "Less" << std::endl;
-        //   _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
-        // }
         break;
       case PredicateCondition::GreaterThan:
         break;
@@ -1145,6 +1123,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       //   // We still need to check all predicates 
       //   _perform_join();
       // }
+    } else if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
+      if (_sort_merge_join.right_input_table()->empty()) {
+        return _sort_merge_join.left_input_table();
+      }
+      auto& right_min_value = _table_min_value(_sorted_right_table);
+      auto& right_max_value = _table_max_value(_sorted_right_table);
+      if (right_min_value != right_max_value) {
+        for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
+          _output_pos_lists_left[cluster_id] = RowIDPosList{};
+          size_t start_index = 0;
+          size_t end_index = (*_sorted_left_table)[cluster_id]->size();
+          for (size_t index = start_index; index < end_index; ++index) {
+             _output_pos_lists_left[cluster_id].push_back((*(*_sorted_left_table)[cluster_id])[index].row_id);
+          }
+        }
+      }
+      if (right_min_value == right_max_value) {
+        _perform_join();
+      }
     } else {
       _perform_join();
     }
