@@ -323,6 +323,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
+        if (compare_result == CompareResult::Equal) {
+          // std::cout << "Equal" << std::endl;
+          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        }
+        // if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
+        //   // std::cout << "Less" << std::endl;
+        //   _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        // }
         break;
       case PredicateCondition::GreaterThan:
         break;
@@ -362,10 +370,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Equal &&
-            (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
-        } else if (compare_result == CompareResult::Greater) {
+        if (compare_result == CompareResult::Greater) {
           _emit_qualified_combinations(cluster_id, left_run.start.to(_end_of_left_table), right_run,
                                        multi_predicate_join_evaluator);
         } else if (compare_result == CompareResult::Equal) {
@@ -691,19 +696,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
 
+      // std::cout << left_value << "  :  " << right_value << std::endl;
+
       auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
       TableRange right_run(cluster_id, right_run_start, right_run_end);
-      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-          _primary_predicate_condition == PredicateCondition::Equals) {
+      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
           _join_runs_anti(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         // compare_result_last_run = compare_result;
-      } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-                 _primary_predicate_condition == PredicateCondition::NotEquals) {
-        if (compare_result == CompareResult::Equal) {
-          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-        }
       } else if (_mode == JoinMode::Semi && compare_result == CompareResult::Greater &&
                  (_primary_predicate_condition == PredicateCondition::NotEquals ||
                   _primary_predicate_condition == PredicateCondition::GreaterThanEquals ||
@@ -738,16 +739,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto left_rest = TableRange(cluster_id, left_run_start, left_size);
 
     if (left_run_start < left_size) {
-      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-          _primary_predicate_condition == PredicateCondition::Equals) {
-        left_rest.for_every_row_id(_sorted_left_table,
-                                   [&](RowID left_row_id) { _emit_combination(cluster_id, left_row_id, NULL_ROW_ID); });
+      if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+        if (_primary_predicate_condition == PredicateCondition::Equals) {
+          left_rest.for_every_row_id(_sorted_left_table,
+                                    [&](RowID left_row_id) { _emit_combination(cluster_id, left_row_id, NULL_ROW_ID); });
+        }
+        if (_primary_predicate_condition == PredicateCondition::NotEquals) {
+          // I do not need to emit anything since there are no equal matches.
+        }
       } else {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
-      if (!((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
-            _primary_predicate_condition == PredicateCondition::Equals)) {
+      // We know that all the right values are greater. So we do not need to emit left rows inside the Anti Join anymore.
+      if ((_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse)) {
         _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
       }
     }
@@ -1100,6 +1105,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         !_null_rows_right.empty()) {
       _output_pos_lists_left[0] = RowIDPosList{};
       _output_pos_lists_right[0] = RowIDPosList{};
+      // if (!_secondary_join_predicates.empty()) {
+      //   // We still need to check all predicates 
+      //   _perform_join();
+      // }
     } else {
       _perform_join();
     }
