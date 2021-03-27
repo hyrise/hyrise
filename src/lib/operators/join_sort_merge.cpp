@@ -293,6 +293,51 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   enum class CompareResult { Less, Greater, Equal };
 
+
+      //   if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
+      //     _primary_predicate_condition == PredicateCondition::Equals) {
+      //   if (compare_result == CompareResult::Less ) {
+      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      //   }
+      //   if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
+      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      //   }
+      //   // compare_result_last_run = compare_result;
+      // } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
+      //            _primary_predicate_condition == PredicateCondition::NotEquals) {
+      //   if (compare_result == CompareResult::Equal) {
+      //     _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      //   }
+      // } 
+
+  void _join_runs_anti(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                              std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        if (compare_result == CompareResult::Less ) {
+          std::optional<MultiPredicateJoinEvaluator> _multi_predicate_join_evaluator;
+          _emit_qualified_combinations(cluster_id, left_run, right_run, _multi_predicate_join_evaluator);
+        }
+        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
+          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
+        }
+        break;
+      case PredicateCondition::NotEquals:
+        break;
+      case PredicateCondition::GreaterThan:
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        break;
+      case PredicateCondition::LessThan:
+        break;
+      case PredicateCondition::LessThanEquals:
+        break;
+      default:
+        throw std::logic_error("Unknown PredicateCondition");
+    }
+
+  }
+
   /**
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
@@ -301,17 +346,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                   std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
-        if (compare_result == CompareResult::Equal && (_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse)) {
+        if (compare_result == CompareResult::Equal) {
           _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
-        } else if (compare_result == CompareResult::Less  &&
-                   (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-          // We do not want to use the multi_predicate_join_evaluator here, since there is no equal match.
-          // TODO: find a better way
-          std::optional<MultiPredicateJoinEvaluator> _multi_predicate_join_evaluator;
-          _emit_qualified_combinations(cluster_id, left_run, right_run, _multi_predicate_join_evaluator);
-        } else if (compare_result == CompareResult::Equal && _mode == JoinMode::AntiNullAsFalse && compare_result == CompareResult::Equal && multi_predicate_join_evaluator){
-          _emit_qualified_combinations(cluster_id, left_run, right_run, multi_predicate_join_evaluator);
-        } else if (compare_result == CompareResult::Less) {
+        }  else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
             _emit_right_primary_null_combinations(cluster_id, left_run);
           }
@@ -660,12 +697,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       TableRange right_run(cluster_id, right_run_start, right_run_end);
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
           _primary_predicate_condition == PredicateCondition::Equals) {
-        if (compare_result == CompareResult::Less ) {
-          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-        }
-        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
-          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-        }
+          _join_runs_anti(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
         // compare_result_last_run = compare_result;
       } else if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) &&
                  _primary_predicate_condition == PredicateCondition::NotEquals) {
