@@ -26,6 +26,7 @@ std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(
   for (int i = 0; i < vector.size(); i++) {
     data.push_back(vector[i]);
   }
+  data.resize(data.size());
 
   return std::make_unique<BitpackingVector>(std::move(data));
 }
