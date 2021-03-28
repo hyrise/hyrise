@@ -780,22 +780,27 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (left_run_start < left_size) {
       if ((_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        // If the predicate condition is not equal, we do not need to emit anything since there are no equal matches.
+        // If the predicate condition is not equal, we do not need to emit anything since there are no equal matches
+        // in the last left runs.
         if (_primary_predicate_condition == PredicateCondition::Equals) {
+          // If the predicate condition is equal we know that there are no matches for the rest of the left runs.
+          // Through the radix clustering we know that there can also be no match inside the other clusters, because
+          // if there would be it would be in this cluster.
           _emit_left_range_only(cluster_id, left_rest);
         }
       } else if (_mode == JoinMode::Semi) {
         if (_primary_predicate_condition == PredicateCondition::NotEquals) {
-          // We only get here if the right table has only one value.
+          // We only get here if the right table has only one value. Since we know at this that there is no equal match
+          // to the one value, we can emit the rest of the left ranges.
           _emit_left_range_only(cluster_id, left_rest);
         }
       } else {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
-      // We know that all the right values are greater. So we do not need to emit left rows inside the Anti Join
-      // anymore.
-      if ((_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse)) {
+      // We know that there is no match between the left runs and the rest of the right runs. In the case of Anti/Semi
+      // we do not need to emit any rows anymore, since we already worked off all left runs. 
+      if ((_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse && _mode != JoinMode::Semi)) {
         _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
       }
     }
@@ -1063,6 +1068,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                  _secondary_join_predicates);
         }
         if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
+          // We need to check if there are at lest two values. As a result all left rows will always find at least one
+          // match. Is that the case we want to emit all rows from the left table with the exception where the value
+          // is NULL.
+          // If there is only one value, we need to run the join algorithm and check for equality.
           if (right_min_value != right_max_value) {
             size_t start_index = 0;
             size_t end_index = (*_sorted_left_table)[cluster_id]->size();
@@ -1178,6 +1187,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals &&
         !_null_rows_right.empty()) {
+      // We only want to emit the rows where the value is NULL.
       _output_pos_lists_left[0] = RowIDPosList{};
       _output_pos_lists_right[0] = RowIDPosList{};
     } else {
