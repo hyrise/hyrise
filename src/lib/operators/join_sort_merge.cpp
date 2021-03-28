@@ -689,8 +689,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
 
-      // std::cout << left_value << "  :  " << right_value << std::endl;
-
       auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
@@ -1002,7 +1000,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                  *_sort_merge_join.right_input()->get_output(), _mode,
                                                  _secondary_join_predicates);
         }
-
+        if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
+          auto& right_min_value = _table_min_value(_sorted_right_table);
+          auto& right_max_value = _table_max_value(_sorted_right_table);
+          if (right_min_value != right_max_value) {
+            size_t start_index = 0;
+            size_t end_index = (*_sorted_left_table)[cluster_id]->size();
+            for (size_t index = start_index; index < end_index; ++index) {
+              _output_pos_lists_left[cluster_id].push_back((*(*_sorted_left_table)[cluster_id])[index].row_id);
+            }
+            return;
+          }
+        }
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
 
@@ -1034,12 +1043,36 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
+  bool _check_if_table_has_null(const std::shared_ptr<const Table> table) {
+    const auto chunk_count = table->chunk_count();
+    auto has_null = false;
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto segment = table->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+      segment_iterate<T>(*segment, [&](const auto& position) {
+        if (position.is_null()) {
+          has_null = true;
+          return;
+        }
+      });
+      if (has_null) return true;
+    }
+    return false;
+  }
+
  public:
   /**
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    auto right_side_has_null = false;
+    if (_mode == JoinMode::Semi) {
+      if (_primary_predicate_condition == PredicateCondition::NotEquals &&
+          _sort_merge_join.right_input_table()->empty()) {
+        return _sort_merge_join.left_input_table();
+      }
+      if (_primary_predicate_condition == PredicateCondition::Equals && _sort_merge_join.right_input_table()->empty()) {
+        return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
+      }
+    }
     if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
       return _sort_merge_join.left_input_table();
     }
@@ -1047,21 +1080,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (_sort_merge_join.right_input_table()->empty()) {
         return _sort_merge_join.left_input_table();
       }
-      const auto chunk_count = _sort_merge_join.right_input_table()->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto segment = _sort_merge_join.right_input_table()->get_chunk(chunk_id)->get_segment(
-            _sort_merge_join._primary_predicate.column_ids.second);
-        segment_iterate<T>(*segment, [&](const auto& position) {
-          if (position.is_null()) {
-            right_side_has_null = true;
-            return;
-          }
-        });
-        if (right_side_has_null) {
-          return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
-        }
+      auto right_side_has_null = _check_if_table_has_null(_sort_merge_join.right_input_table());
+      if (right_side_has_null) {
+        return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
       }
     }
+
     bool equi_case = false;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
       equi_case = _primary_predicate_condition == PredicateCondition::NotEquals;
@@ -1096,25 +1120,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         !_null_rows_right.empty()) {
       _output_pos_lists_left[0] = RowIDPosList{};
       _output_pos_lists_right[0] = RowIDPosList{};
-    } else if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
-      if (_sort_merge_join.right_input_table()->empty()) {
-        return _sort_merge_join.left_input_table();
-      }
-      auto& right_min_value = _table_min_value(_sorted_right_table);
-      auto& right_max_value = _table_max_value(_sorted_right_table);
-      if (right_min_value != right_max_value) {
-        for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
-          _output_pos_lists_left[cluster_id] = RowIDPosList{};
-          size_t start_index = 0;
-          size_t end_index = (*_sorted_left_table)[cluster_id]->size();
-          for (size_t index = start_index; index < end_index; ++index) {
-            _output_pos_lists_left[cluster_id].push_back((*(*_sorted_left_table)[cluster_id])[index].row_id);
-          }
-        }
-      }
-      if (right_min_value == right_max_value) {
-        _perform_join();
-      }
     } else {
       _perform_join();
     }
