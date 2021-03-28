@@ -28,6 +28,8 @@ namespace opossum {
 /**
 * TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
+* TODO(anyone): Support not equals Semi with multiple predicates.
+* TODO(anyone): Support not equals AntiNullAsFalse with multiple predicates.
 **/
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
@@ -47,6 +49,8 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
       }
       return false;
     case JoinMode::AntiNullAsTrue:
+      // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
+      // so far determine a case/query where we'd need them.
       if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
       }
@@ -297,19 +301,42 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   enum class CompareResult { Less, Greater, Equal };
 
+
+  /**
+  * Performs the join for the left run of a specified cluster.
+  * A run is a series of rows in a cluster with the same value.
+  **/
   void _join_runs_anti(TableRange left_run, TableRange right_run, CompareResult compare_result,
                        std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
                        const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
+        // In the equal case, we only want to emit rows with values where we know that there is no match on in the 
+        // right table. That is the case if the comparison result is less. If we have the comparison result less
+        // between the runs, it means that the runs the step before been equal, less or greater. In all cases we now
+        // that there can not be a equal value on the right table if we have the comparison result less:
+        // (1) -> [5] | [5] <- |  (1) -> [4] | [7] <- | (1) -> [6] | [3] <-            
+        //        [6] | [7]    |         [6] |        |            | [7]  
+        // ------------------- | -------------------- | --------------------      
+        // (2)    [5] | [5]    |  (2)   [4] | [7] <-  | (2) -> [6] | [3]   
+        //     -> [6] | [7] <- |     -> [6] |         |            | [7] <-
+        // (We can not have a match for 6.)
+        //  We know that if we find not equal math for a row the join condition with the multiple predicates will be
+        // in any case false:  False AND ... . So we do not need to check in this case if the multiple predicates are
+        // satisfied or not.
         if (compare_result == CompareResult::Less) {
           _emit_left_range_only(cluster_id, left_run);
         }
+        // If the Anti join has multiple predicates we also need to check the equal cases since the primary equal
+        // predicate can match but the multiple predicates can not. That means that we need to emit the row, if there
+        // there is no combination where the multiple predicates are satisfied, because of as a result of that the
+        // predicate expression is always false.
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
           _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
         }
         break;
       case PredicateCondition::NotEquals:
+        // In the case of Anti not equals we only want to emit the rows where we know there is no equal match.
         if (compare_result == CompareResult::Equal) {
           _emit_left_range_only(cluster_id, left_run);
         }
@@ -333,16 +360,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
+          // In the case of Semi equals all rows that have an equal match on the right table need to be checked that
+          // there is at least one match where all multiple predicates are satisfied.
           if (multi_predicate_join_evaluator) {
             _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
           }
+          // If there are no equal predicates a single equal match is sufficient.
           if (!multi_predicate_join_evaluator) {
             _emit_left_range_only(cluster_id, left_run);
           }
         }
         break;
       case PredicateCondition::NotEquals:
-        // We only get here if the right table has only one value.
+        // We only get here if the right table has only one value. It must be ensured that the comparative value is not
+        // the same.
         if (compare_result != CompareResult::Equal) {
           _emit_left_range_only(cluster_id, left_run);
         }
@@ -603,6 +634,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
+  // In the case of the anti-join, we need to check that there is no combination where all predicates are satisfied. In
+  // the case of the semi-join, we need to check that there is at least one combination where all predicates are
+  // satisfied.
   void _emit_multipredicate_semi_anti(size_t output_cluster, TableRange left_range, TableRange right_range,
                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
@@ -674,10 +708,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
-  * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
-  **/
+  // Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
+  // This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
+  // The main logic of the algorithm is the following:
+  // We have for the left and right side a list of runs. There are also pointers that are pointing to the current run
+  // on either side of the lists. The values of the runs are compared and then we determine which pointer will be
+  // advanced. If the comparison result is equal we advance both pointers, if it is less we advance the left one if it
+  // greater we advance the right one:
+  //          Equal      |            Less      |         Greater
+  // (1) -> [2] | [2] <- |  (1) -> [3] | [4] <- | (1) -> [6] | [4] <-         
+  //        [3] | [4]    |         [6] | [7]    |        [7] | [7]
+  //        [6] | [7]    |         [7] | [9]    |        [8] | [9]
+  // ------------------- | -------------------- | --------------------   
+  // (2)    [2] | [2]    |  (2)   [3] | [4] <-  | (2) -> [6] | [3]
+  //     -> [3] | [4] <- |     -> [6] | [7]     |        [7] | [7] <-
+  //        [6] | [7]    |        [7] | [9]     |        [8] | [9]
+  // We can than use in every step the comparison information to join the combinations. For example if we have the
+  // equal comparison and an equal join, we now that we emit the cross product between the rows from the left and right
+  // and run. 
   void _join_cluster(const size_t cluster_id,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     auto& left_cluster = (*_sorted_left_table)[cluster_id];
@@ -1043,7 +1091,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       for (auto& set : _left_row_ids_emitted_per_chunk) {
         _left_row_ids_emitted.merge(set);
       }
-
       _left_outer_non_equi_join();
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
@@ -1076,6 +1123,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
+    
     if (_mode == JoinMode::Semi) {
       if (_primary_predicate_condition == PredicateCondition::NotEquals &&
           _sort_merge_join.right_input_table()->empty()) {
