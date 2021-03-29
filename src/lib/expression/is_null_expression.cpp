@@ -15,8 +15,9 @@ IsNullExpression::IsNullExpression(const PredicateCondition init_predicate_condi
 
 const std::shared_ptr<AbstractExpression>& IsNullExpression::operand() const { return arguments[0]; }
 
-std::shared_ptr<AbstractExpression> IsNullExpression::deep_copy() const {
-  return std::make_shared<IsNullExpression>(predicate_condition, operand()->deep_copy());
+std::shared_ptr<AbstractExpression> IsNullExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<IsNullExpression>(predicate_condition, operand()->deep_copy(copied_ops));
 }
 
 std::string IsNullExpression::description(const DescriptionMode mode) const {

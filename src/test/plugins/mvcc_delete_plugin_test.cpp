@@ -44,6 +44,7 @@ class MvccDeletePluginTest : public BaseTest {
     // Validate
     auto validate_table = std::make_shared<Validate>(get_table);
     validate_table->set_transaction_context(transaction_context);
+    validate_table->never_clear_output();
     validate_table->execute();
 
     // Update

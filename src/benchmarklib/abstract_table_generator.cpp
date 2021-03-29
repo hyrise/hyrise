@@ -3,6 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
@@ -10,6 +11,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
@@ -352,6 +354,27 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
     if (!chunk_sorted) return false;
   }
   return true;
+}
+
+std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(
+    const std::string& cache_directory) {
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+  for (const auto& table_file : list_directory(cache_directory)) {
+    const auto table_name = table_file.stem();
+    std::cout << "-  Loading table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
+
+    Timer timer;
+    BenchmarkTableInfo table_info;
+    table_info.table = BinaryParser::parse(table_file);
+    table_info.loaded_from_binary = true;
+    table_info.binary_file_path = table_file;
+    table_info_by_name[table_name] = table_info;
+
+    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+  }
+
+  return table_info_by_name;
 }
 
 }  // namespace opossum

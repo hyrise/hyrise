@@ -12,6 +12,7 @@ class OperatorsJoinNestedLoopTest : public BaseTest {
     const auto dummy_table =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
+    dummy_input->never_clear_output();
   }
 
   std::shared_ptr<AbstractOperator> dummy_input;

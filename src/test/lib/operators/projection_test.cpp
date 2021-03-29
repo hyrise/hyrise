@@ -29,12 +29,17 @@ class OperatorsProjectionTest : public BaseTest {
  public:
   void SetUp() override {
     table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_a->never_clear_output();
     table_wrapper_a->execute();
     table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_b->never_clear_output();
     table_wrapper_b->execute();
 
     a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
     a_b = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "b");
+
+    b_a = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "a");
+    b_b = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "b");
   }
 
   std::shared_ptr<TableWrapper> table_wrapper_a, table_wrapper_b;
@@ -116,6 +121,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
 
 TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
@@ -139,6 +145,7 @@ TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
 
 TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
@@ -155,8 +162,11 @@ TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
 
 TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
+
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
+  projection->never_clear_output();
   projection->execute();
 
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
@@ -175,12 +185,14 @@ TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
 // Check if two PQP columns expressions to the same column are interpreted as equal when using ExpressionUnorderedSet
 TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->never_clear_output();
   table_scan->execute();
 
   // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
   const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
+  projection->never_clear_output();
   projection->execute();
 
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
@@ -198,18 +210,22 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto table_scan_a = create_table_scan(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, 5);
-  const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
+
   const auto subquery_expression =
       std::make_shared<PQPSubqueryExpression>(table_scan_a, DataType::Int, false, PQPSubqueryExpression::Parameters{});
-  const auto projection_b = std::make_shared<Projection>(
-      table_wrapper_a, expression_vector(correlated_parameter_(ParameterID{2}, a_a), subquery_expression));
+
+  // Hint: To set parameters, operators are not allowed to have executed.
+  //       Therefore, we deep copy table_wrapper_a & subquery_expression to reset their execution state.
+  const auto projection = std::make_shared<Projection>(
+      table_wrapper_a->deep_copy(),
+      expression_vector(correlated_parameter_(ParameterID{2}, a_a), subquery_expression->deep_copy()));
 
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
                                                                           {ParameterID{2}, AllTypeVariant{13}}};
-  projection_b->set_parameters(parameters);
+  projection->set_parameters(parameters);
 
   const auto correlated_parameter_expression =
-      std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection_b->expressions.at(0));
+      std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection->expressions.at(0));
   ASSERT_TRUE(correlated_parameter_expression);
   EXPECT_TRUE(correlated_parameter_expression->value());
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});

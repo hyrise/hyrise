@@ -733,6 +733,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
+  Assert(!std::isnan(selectivity), "Unexpected selectivity.");
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
   // Scale the number of values in the bin with the given selectivity.
