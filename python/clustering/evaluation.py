@@ -1,6 +1,5 @@
 from .pqp_input_parser import PQPInputParser
 from .util import create_model
-from .model_util import preprocess_data
 
 import pandas as pd
 import numpy as np
@@ -114,6 +113,117 @@ def evaluate_join_step(m, ground_truth_path, clustering_columns, sorting_column,
 
   return result
 
+def evaluate_join_simulation(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities, own_table_only="both"):
+  adapted_joins = m.adapt_joins_to_clustering(m.joins.copy(), clustering_columns, sorting_column, dimension_cardinalities)
+  clustered_joins = create_model("lineitem", PQPInputParser("tpch", ground_truth_path), 2).joins
+  print(adapted_joins.columns)
+
+  if own_table_only != None:
+
+
+    if own_table_only == "both":
+      adapted_joins = adapted_joins[(adapted_joins['PROBE_TABLE'] == m.table_name) | (adapted_joins['BUILD_TABLE'] == m.table_name)]
+      clustered_joins = clustered_joins[(clustered_joins['PROBE_TABLE'] == m.table_name) | (clustered_joins['BUILD_TABLE'] == m.table_name)]
+    elif own_table_only == "probe":
+      adapted_joins = adapted_joins[(adapted_joins['PROBE_TABLE'] == m.table_name)]
+      clustered_joins = clustered_joins[(clustered_joins['PROBE_TABLE'] == m.table_name)]
+    elif own_table_only == "build":
+      adapted_joins = adapted_joins[(adapted_joins['BUILD_TABLE'] == m.table_name)]
+      clustered_joins = clustered_joins[(clustered_joins['BUILD_TABLE'] == m.table_name)]
+    else:
+      raise Exception(f"invalid value: own_table_only={own_table_only}")
+
+  adapted_joins = adapted_joins.sort_values(['QUERY_HASH', 'DESCRIPTION'])
+  clustered_joins = clustered_joins.sort_values(['QUERY_HASH', 'DESCRIPTION'])
+
+  result = pd.DataFrame()
+
+  # add basic data
+  result['QUERY_HASH1'] = np.array(adapted_joins['QUERY_HASH'])
+  result['QUERY_HASH2'] = np.array(clustered_joins['QUERY_HASH'])
+  result['DESCRIPTION1'] = np.array(adapted_joins['DESCRIPTION'])
+  result['DESCRIPTION2'] = np.array(clustered_joins['DESCRIPTION'])
+  result['PIR1'] = np.array(adapted_joins['PROBE_TABLE_ROW_COUNT'])
+  result['PIR2'] = np.array(clustered_joins['PROBE_TABLE_ROW_COUNT'])
+  result['BIR1'] = np.array(adapted_joins['BUILD_TABLE_ROW_COUNT'])
+  result['BIR2'] = np.array(clustered_joins['BUILD_TABLE_ROW_COUNT'])
+  result['OR1'] = np.array(adapted_joins['OUTPUT_ROW_COUNT'])
+  result['OR2'] = np.array(clustered_joins['OUTPUT_ROW_COUNT'])
+  result['PIC1'] = np.array(adapted_joins['PROBE_INPUT_CHUNKS'])
+  result['PIC2'] = np.array(clustered_joins['PROBE_INPUT_CHUNKS'])
+  result['BIC1'] = np.array(adapted_joins['BUILD_INPUT_CHUNKS'])
+  result['BIC2'] = np.array(clustered_joins['BUILD_INPUT_CHUNKS'])
+  result['PPCR1'] = np.array(adapted_joins['PROBE_TABLE_PRUNED_CHUNK_RATIO'])
+  result['PPCR2'] = np.array(clustered_joins.apply(lambda x: x['PROBE_PRUNED_CHUNKS'] / (m.table_sizes[x['PROBE_TABLE']] / m.target_chunksize), axis=1))
+  result['BPCR1'] = np.array(adapted_joins['BUILD_TABLE_PRUNED_CHUNK_RATIO'])
+  result['BPCR2'] = np.array(clustered_joins.apply(lambda x: x['BUILD_PRUNED_CHUNKS'] / (m.table_sizes[x['BUILD_TABLE']] / m.target_chunksize), axis=1))
+  result['PCT1'] = np.array(adapted_joins['PROBE_COLUMN_TYPE'])
+  result['PCT2'] = np.array(clustered_joins['PROBE_COLUMN_TYPE'])
+  result['BCT1'] = np.array(adapted_joins['BUILD_COLUMN_TYPE'])
+  result['BCT2'] = np.array(clustered_joins['BUILD_COLUMN_TYPE'])
+  #result['PS1'] = np.array(adapted_joins['PROBE_INPUT_COLUMN_SORTED'])
+  #result['PS2'] = np.array(clustered_joins['PROBE_INPUT_COLUMN_SORTED'])
+  #result['BS1'] = np.array(adapted_joins['BUILD_INPUT_COLUMN_SORTED'])
+  #result['BS2'] = np.array(clustered_joins['BUILD_INPUT_COLUMN_SORTED'])
+  result['PROBE_TABLE'] = np.array(adapted_joins['PROBE_TABLE'])
+  result['BUILD_TABLE'] = np.array(adapted_joins['BUILD_TABLE'])
+
+  # make sure we match all operators
+  matches = result.apply(lambda row: row['DESCRIPTION1'] == row['DESCRIPTION2'] and row['QUERY_HASH1'] == row['QUERY_HASH2'], axis=1)
+  assert matches.all(), "not all rows match"
+  
+  # add evaluation metric
+  result['PIR'] = result['PIR1'] / result['PIR2']
+  result['BIR'] = result['BIR1'] / result['BIR2']
+  result['OR'] = result['OR1'] / result['OR2']
+  result['PIC'] = result['PIC1'] / result['PIC2']
+  result['BIC'] = result['BIC1'] / result['BIC2']
+  # attention: type mismatch: (P|B)PCR1 is relative (0-1), (P|B)PCR2 is absolute. Does not matter if we only check for > 0, but it would if we would, e.g., divide them
+  #result['PPCR'] = result.apply(lambda r: (r['PPCR1'] > 0 and r['PPCR2'] > 0) or (r['PPCR1'] == 0 and r['PPCR2'] == 0), axis=1)
+  #result['BPCR'] = result.apply(lambda r: (r['BPCR1'] > 0 and r['BPCR2'] > 0) or (r['BPCR1'] == 0 and r['BPCR2'] == 0), axis=1)
+  result['PPCR'] = result['PPCR1'] / result['PPCR2']
+  result['PPCR'].fillna(1, inplace=True)
+  result['BPCR'] = result['BPCR1'] / result['BPCR2']
+  result['BPCR'].fillna(1, inplace=True)
+  result['PCT'] = result['PCT1'] == result['PCT2']
+  result['BCT'] = result['BCT1'] == result['BCT2']
+  #result['PS'] = result['PS1'] == result['PS2']
+  #result['BS'] = result['BS1'] == result['BS2']
+
+
+  percentage_bounds = [[1, 1.1], [1.1, 1.2], [1.2, 1e100]]
+  percentages = get_percentage_bounds(result, percentage_bounds, column="PIR")
+  print(f"PIR: {percentages}")
+  percentages = get_percentage_bounds(result, percentage_bounds, column="BIR")
+  print(f"BIR: {percentages}")
+  percentages = get_percentage_bounds(result, percentage_bounds, column="OR")
+  print(f"OR: {percentages}")
+  print(f"PCT: {len(result[result['PCT']]) / len(result)}")
+  print(f"BCT: {len(result[result['BCT']]) / len(result)}")
+  percentages = get_percentage_bounds(result, percentage_bounds, column="BPCR")
+  print(f"BPCR: {percentages}")
+  percentages = get_percentage_bounds(result, percentage_bounds, column="PPCR")
+  print(f"PPCR: {percentages}")
+  #print(f"AMRr: {len(result[result['AMRr']]) / len(result)}")
+
+  combined_result = pd.DataFrame()
+  combined_result['IR'] = np.concatenate((np.array(result[result['PROBE_TABLE'] == m.table_name]['PIR']), np.array(result[result['BUILD_TABLE'] == m.table_name]['BIR']) ), axis=None)
+  combined_result['OR'] = np.concatenate((np.array(result[result['PROBE_TABLE'] == m.table_name]['OR']), np.array(result[result['BUILD_TABLE'] == m.table_name]['OR']) ), axis=None)
+  combined_result['PCR'] = np.concatenate((np.array(result[result['PROBE_TABLE'] == m.table_name]['PPCR']), np.array(result[result['BUILD_TABLE'] == m.table_name]['BPCR']) ), axis=None)
+  combined_result['CT'] = np.concatenate((np.array(result[result['PROBE_TABLE'] == m.table_name]['PCT']), np.array(result[result['BUILD_TABLE'] == m.table_name]['BCT']) ), axis=None)
+
+
+  print("## COMBINED METRICS")
+  percentages = get_percentage_bounds(combined_result, percentage_bounds, column="IR")
+  print(f"IR: {percentages}")
+  percentages = get_percentage_bounds(combined_result, percentage_bounds, column="OR")
+  print(f"OR: {percentages}")
+  percentages = get_percentage_bounds(combined_result, percentage_bounds, column="PCR")
+  print(f"PCR: {percentages}")
+  print(f"CT: {len(combined_result[combined_result['CT']]) / len(combined_result)}")
+
+  return combined_result
+
 def evaluate_scans(m, ground_truth_path, clustering_columns, sorting_column, dimension_cardinalities):
   m.estimate_total_runtime(clustering_columns, sorting_column, dimension_cardinalities)
 
@@ -165,7 +275,6 @@ def evaluate_scan_simulation(m, ground_truth_path, clustering_columns, sorting_c
   adapted_scans = adapted_scans.sort_values(['QUERY_HASH', 'DESCRIPTION'])
   
   clustered_scans = create_model("lineitem", PQPInputParser("tpch", ground_truth_path), 2).table_scans
-  #clustered_scans = preprocess_data(clustered_scans)
   clustered_scans = clustered_scans.sort_values(['QUERY_HASH', 'DESCRIPTION'])
 
   result = pd.DataFrame()
@@ -196,10 +305,19 @@ def evaluate_scan_simulation(m, ground_truth_path, clustering_columns, sorting_c
   # add evaluation metric
   result['IRr'] = result['IR1'] / result['IR2']
   result['ORr'] = result['OR1'] / result['OR2']
+  result['ORr'].fillna(1, inplace=True)
   result['ICr'] = result['IC1'] / result['IC2']
-  result['NMRr'] = result['NMR1'] / result['NMR2']
-  result['AMRr'] = result['AMR1'] / result['AMR2']
+  result['NMRr'] = result.apply(lambda r: (r['NMR1'] > 0 and r['NMR2'] > 0) or (r['NMR1'] == 0 and r['NMR2'] == 0), axis=1)
+  result['AMRr'] = result.apply(lambda r: (r['AMR1'] > 0 and r['AMR2'] > 0) or (r['AMR1'] == 0 and r['AMR2'] == 0), axis=1)
   result['CTr'] = result['CT1'] == result['CT2']
+
+  percentage_bounds = [[1, 1.1], [1.1, 1.2], [1.2, 1e100]]
+  percentages = get_percentage_bounds(result, percentage_bounds, column="IRr")
+  print(f"IRr: {percentages}")
+  percentages = get_percentage_bounds(result, percentage_bounds, column="ORr")
+  print(f"ORr: {percentages}")
+  print(f"CTr: {len(result[result['CTr']]) / len(result)}")
+  print(f"AMRr: {len(result[result['AMRr']]) / len(result)}")
 
   return result
 
@@ -304,17 +422,21 @@ def plot_relative_errors(estimation_errors, old_estimation_errors, query_frequen
   plt.show()
 
 
-def get_percentage_bounds(results, percentage_bounds):
+def get_percentage_bounds(results, percentage_bounds, column='RELATIVE_ERROR'):
   percentages = []
 
   for bound in percentage_bounds:
       mi = bound[0]
       ma = bound[1]
-      high = results[results['RELATIVE_ERROR'] < ma]
-      high = high[high['RELATIVE_ERROR'] >= mi]
-      low = results[results['RELATIVE_ERROR'] <= 1/mi]
-      low = low[low['RELATIVE_ERROR'] > 1/ma]    
-      percentages.append(len(low) + len(high))
+      high = results[results[column] < ma]
+      high = high[high[column] >= mi]
+      low = results[results[column] <= 1/mi]
+      low = low[low[column] > 1/ma] 
+
+      num_matches = len(low) + len(high)
+      if mi == 1:
+        num_matches -= len(results[results[column] == 1])
+      percentages.append(num_matches)
       
   return np.array(percentages) * 100 / len(results)
 

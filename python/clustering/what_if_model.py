@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import math
 
 from .disjoint_clusters_model import DisjointClustersModel
 import util
@@ -37,7 +38,7 @@ class WhatIfModel(DisjointClustersModel):
 
         # Assumption: for range queries on clustered columns, pruning yields a range where all chunks (except the two bounding chunks) match completely
         def compute_all_match_ratio(row):
-            if row['OPERATOR_IMPLEMENTATION'] != "ColumnBetween":
+            if row['OPERATOR_IMPLEMENTATION'] != "ColumnBetween": #not in ["ColumnBetween", "ColumnVsValue"]:
                 return 0 # ColumnVsValue has no all-match-shortcut
             elif row['COLUMN_NAME'] in clustering_columns:
                 return 1
@@ -152,8 +153,13 @@ class WhatIfModel(DisjointClustersModel):
                 min_clustered_scan_id = min(clustered_scan_operator_ids) if clustered_scans.any() else 0
                 joins_before_clustered_scans = joins['OPERATOR_ID'] < min_clustered_scan_id
 
+                # TODO: what about subsequent joins on two other tables? Should they get an input reduction too?`Semijoins only?
                 joins.loc[query_joins & build_side_joins & joins_before_clustered_scans, 'BUILD_TABLE_ROW_COUNT'] *= unprunable_part
                 joins.loc[query_joins & probe_side_joins & joins_before_clustered_scans, 'PROBE_TABLE_ROW_COUNT'] *= unprunable_part
+                joins.loc[query_joins & (build_side_joins | probe_side_joins) & joins_before_clustered_scans, 'OUTPUT_ROW_COUNT'] *= unprunable_part
+                joins.loc[query_joins & build_side_joins & joins_before_clustered_scans, 'BUILD_INPUT_CHUNKS'] = math.ceil(self.table_size * unprunable_part / self.target_chunksize)
+                joins.loc[query_joins & probe_side_joins & joins_before_clustered_scans, 'PROBE_INPUT_CHUNKS'] = math.ceil(self.table_size * unprunable_part / self.target_chunksize)
+
 
         return joins
         
