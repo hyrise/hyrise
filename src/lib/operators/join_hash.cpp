@@ -371,6 +371,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
 
+    // Store the number of probe values after the probe side has been materialized. Depending on the input sizes, the
+    // probe side has potentially been filtered using the Bloom filter.
+    for (const auto& partition : materialized_probe_column) {
+      _performance.probe_side_materialized_values += partition.elements.size();
+    }
+
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
      *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
@@ -439,6 +445,16 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                                                        probe_side_bloom_filter);
     }
     _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+
+    // Store the element counts of the built hash tables. Depending on the bloom filter, we might have significantly
+    // less values stored than in the initial input table.
+    for (const auto& hash_table : hash_tables) {
+      if (hash_table) {
+        const auto [hash_table_size, position_count] = hash_table->get_hash_table_size_and_position_count();
+        _performance.build_side_hash_table_size += hash_table_size;
+        _performance.build_side_position_count += position_count;
+      }
+    }
 
     /**
      * Short cut for AntiNullAsTrue:

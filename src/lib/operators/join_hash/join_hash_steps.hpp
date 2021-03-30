@@ -191,6 +191,16 @@ class PosHashTable {
     return _offset_hash_table.find(casted_value) != _offset_hash_table.end();
   }
 
+  // Return the size of the hash table and the number of positions stored (in case the mode is AllPositions). We use
+  // the unified position list that is created in finalize(). For semi/anti* joins the number of positions is 0.
+  std::pair<size_t, size_t> get_hash_table_size_and_position_count() const {
+    const auto hash_table_size = _offset_hash_table.size();
+    if (_mode == JoinHashBuildMode::AllPositions) {
+      return {hash_table_size, _unified_pos_list->pos_list.size()};
+    }
+    return {hash_table_size, 0ul};
+  }
+
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own pool, which is discarded once finalize() is called. The pool is unsynchronized (i.e., non-thread-

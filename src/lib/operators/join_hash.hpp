@@ -52,6 +52,13 @@ class JoinHash : public AbstractJoinOperator {
     size_t radix_bits{0};
     // Initially, the left input is the build side and the right side is the probe side.
     bool left_input_is_build_side{true};
+
+    // Due to the used Bloom filters, the number of actually joined tuples can significantly differ from the sizes of
+    // the input tables. For the build side, the bloom filter reduces the number of values in the hash table (i.e., the
+    // size of the hash table) and potentially the number of rows (in case of non-semi/anti* joins).
+    size_t probe_side_materialized_values{0};
+    size_t build_side_hash_table_size{0};
+    size_t build_side_position_count{0};
   };
 
  protected:
