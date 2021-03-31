@@ -268,14 +268,9 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);
-
-  // Return a shared pointer to the OperatorTask, if it already exists
+  // Return OperatorTask if it already exists. Otherwise, create a new OperatorTask that owns this operator.
   auto operator_task = _operator_task.lock();
   if (!operator_task) {
-    // Create an OperatorTask that owns this AbstractOperator
-    Assert(!_operator_task.owner_before(std::weak_ptr<OperatorTask>{}) &&
-               !std::weak_ptr<OperatorTask>{}.owner_before(_operator_task),
-           "An OperatorTask has already been created previously because _operator_task is initialized.");
     operator_task = std::make_shared<OperatorTask>(shared_from_this());
     _operator_task = std::weak_ptr<OperatorTask>(operator_task);
   }
