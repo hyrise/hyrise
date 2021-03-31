@@ -28,7 +28,8 @@ bool AbstractTask::is_done() const { return _state == TaskState::Done; }
 bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const {
-  DebugAssert(static_cast<std::uint8_t>(TaskState::Created) == 0, "TaskState::Created is not equal to 0");
+  static_assert(static_cast<std::uint8_t>(TaskState::Created) == 0,
+                "TaskState::Created is not equal to 0. TaskState enum values are expected to be ordered.");
   return _state > TaskState::Created;
 }
 
@@ -85,7 +86,7 @@ void AbstractTask::_join() {
   if (is_done()) return;
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
-  _done_condition_variable.wait(lock, [&]() { return _state == TaskState::Done; });
+  _done_condition_variable.wait(lock, [&]() { return is_done(); });
 }
 
 void AbstractTask::execute() {
