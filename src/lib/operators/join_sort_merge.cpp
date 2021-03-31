@@ -281,9 +281,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   enum class CompareResult { Less, Greater, Equal };
 
-
-  void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range, MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) { 
+  void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range,
+                                              MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
       for (const auto& right_row_id : _null_rows_right) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
@@ -292,21 +292,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
       if (!match) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-          match = true;
-          return;
-        }
-      });
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+            match = true;
+            return;
+          }
+        });
       }
       if (!match) {
-        _emit_left_only(output_cluster, left_row_id);                                   
+        _emit_left_only(output_cluster, left_row_id);
       }
     });
   }
 
-  void _emit_left_range_only_anti_null_as_true(size_t output_cluster, TableRange left_range, MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) { 
+  void _emit_left_range_only_anti_null_as_true(size_t output_cluster, TableRange left_range,
+                                               MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
       for (const auto& right_row_id : _null_rows_right) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
@@ -315,14 +316,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
       if (!match) {
-        _emit_left_only(output_cluster, left_row_id);                                   
+        _emit_left_only(output_cluster, left_row_id);
       }
     });
   }
 
   void _join_runs_anti_null_as_true(TableRange left_run, TableRange right_run, CompareResult compare_result,
-                       std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
-                       const size_t cluster_id) {
+                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                    const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Less && !multi_predicate_join_evaluator) {
@@ -358,8 +359,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * A run is a series of rows in a cluster with the same value.
   **/
   void _join_runs_anti_null_as_false(TableRange left_run, TableRange right_run, CompareResult compare_result,
-                       std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
-                       const size_t cluster_id) {
+                                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                     const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         // In the equal case, we only want to emit rows with values where we know that there is no match on in the
@@ -700,11 +701,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
       if (match && _mode == JoinMode::Semi) {
         _emit_left_only(output_cluster, left_row_id);
-      }
-      else {
+      } else {
         if (!match && _mode == JoinMode::AntiNullAsFalse) {
-                _emit_left_only(output_cluster, left_row_id);
-          }
+          _emit_left_only(output_cluster, left_row_id);
+        }
       }
     });
   }
@@ -1227,9 +1227,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     auto include_null_left =
-        (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
-    auto include_null_right =
-        (_mode == JoinMode::Right || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
+        (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse ||
+         (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()));
+    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter ||
+                               _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
                             _sort_merge_join._primary_predicate.column_ids, equi_case, include_null_left,
@@ -1245,8 +1246,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer;
 
-    if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
+    if (_mode == JoinMode::AntiNullAsFalse) {
       include_null_right = false;
+    }
+    if (_mode == JoinMode::AntiNullAsTrue) {
+      include_null_right = false;
+      include_null_left = false;
     }
 
     if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals &&
@@ -1256,6 +1261,42 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _output_pos_lists_right[0] = RowIDPosList{};
     } else {
       _perform_join();
+    }
+
+    if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
+      auto null_output_left = RowIDPosList();
+
+      null_output_left.reserve(_null_rows_left.size());
+
+      MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
+                                                                 *_sort_merge_join.right_input()->get_output(), _mode,
+                                                                 _secondary_join_predicates);
+      for (const auto& row_id_left : _null_rows_left) {
+        auto end_of_right_table = _end_of_table(_sorted_right_table);
+        auto right_range = TablePosition(0, 0).to(end_of_right_table);
+        auto match = false;
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
+          if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+            match = true;
+            return;
+          }
+        });
+        if (!match) {
+          for (const auto& row_id_right : _null_rows_right) {
+            if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+              match = true;
+              break;
+            }
+          }
+        }
+        if (!match) {
+          null_output_left.push_back(row_id_left);
+        }
+      }
+      if (!null_output_left.empty()) {
+        _output_pos_lists_left.push_back(std::move(null_output_left));
+        _output_pos_lists_right.push_back(RowIDPosList());
+      }
     }
 
     if (include_null_left || include_null_right) {
