@@ -1,7 +1,6 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
@@ -28,8 +27,6 @@ namespace opossum {
 /**
 * TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
-* TODO(anyone): Support not equals Semi with multiple predicates.
-* TODO(anyone): Support not equals AntiNullAsFalse with multiple predicates.
 **/
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
@@ -237,25 +234,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     TablePosition start;
     TablePosition end;
 
-    bool empty(std::unique_ptr<MaterializedSegmentList<T>>& table) {
-      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
-        if ((end_index - start_index) > 0) return false;
-      }
-      return true;
-    }
-
-    size_t size(std::unique_ptr<MaterializedSegmentList<T>>& table) {
-      size_t size = 0;
-      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
-        size += end_index - start_index;
-      }
-      return size;
-    }
-
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
@@ -327,7 +305,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_run);
         }
         // If the Anti join has multiple predicates we also need to check the equal cases since the primary equal
-        // predicate can match but the multiple predicates can not. That means that we need to emit the row, if there
+        // predicate could match but the multiple predicates might not. That means that we need to emit the row, if there
         // there is no combination where the multiple predicates are satisfied, because of as a result of that the
         // predicate expression is always false.
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
@@ -365,7 +343,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
             _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
           }
           // If there are no equal predicates a single equal match is sufficient.
-          if (!multi_predicate_join_evaluator) {
+          else {
             _emit_left_range_only(cluster_id, left_run);
           }
         }
@@ -467,7 +445,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _output_pos_lists_right[output_cluster].push_back(right_row_id);
   }
 
-  // Is only used for Anti and Semi Joins.
+  // Is only used for anti and semi Joins.
   void _emit_left_only(size_t output_cluster, RowID left_row_id) {
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
   }
@@ -639,7 +617,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   void _emit_multipredicate_semi_anti(size_t output_cluster, TableRange left_range, TableRange right_range,
                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      bool match = false;
+      auto match = false;
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
           match = true;
@@ -649,8 +627,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (match && _mode == JoinMode::Semi) {
         _emit_left_only(output_cluster, left_row_id);
       }
-      if (!match && _mode == JoinMode::AntiNullAsFalse) {
-        _emit_left_only(output_cluster, left_row_id);
+      else {
+        if (!match && _mode == JoinMode::AntiNullAsFalse) {
+                _emit_left_only(output_cluster, left_row_id);
+          }
       }
     });
   }
@@ -1110,7 +1090,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  bool _check_if_table_has_null(const std::shared_ptr<const Table> table) {
+  bool _check_if_table_contains_null(const std::shared_ptr<const Table> table) {
     const auto chunk_count = table->chunk_count();
     auto has_null = false;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -1147,22 +1127,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (_sort_merge_join.right_input_table()->empty()) {
         return _sort_merge_join.left_input_table();
       }
-      auto right_side_has_null = _check_if_table_has_null(_sort_merge_join.right_input_table());
+      auto right_side_has_null = _check_if_table_contains_null(_sort_merge_join.right_input_table());
       if (right_side_has_null) {
         return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
       }
     }
 
-    bool equi_case = false;
+    auto equi_case = false;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
       equi_case = _primary_predicate_condition == PredicateCondition::NotEquals;
     } else {
       equi_case = _primary_predicate_condition == PredicateCondition::Equals;
     }
 
-    bool include_null_left =
+    auto include_null_left =
         (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
-    bool include_null_right =
+    auto include_null_right =
         (_mode == JoinMode::Right || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
