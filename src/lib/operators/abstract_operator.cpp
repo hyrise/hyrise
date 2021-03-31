@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -265,15 +266,20 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
-std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
-  auto lock = std::unique_lock<std::mutex>(_operator_task_mutex);
-  return _operator_task.lock();
-}
+std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
+  std::lock_guard<std::mutex> lock(_operator_task_mutex);
 
-void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
-  auto lock = std::unique_lock<std::mutex>(_operator_task_mutex);
-  Assert(!_operator_task.lock(), "OperatorTask can be set once only.");
-  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  // Return a shared pointer to the OperatorTask, if it already exists
+  auto operator_task = _operator_task.lock();
+  if (!operator_task) {
+    // Create an OperatorTask that owns this AbstractOperator
+    Assert(!_operator_task.owner_before(std::weak_ptr<OperatorTask>{}) &&
+               !std::weak_ptr<OperatorTask>{}.owner_before(_operator_task),
+           "An OperatorTask has already been created previously because _operator_task is initialized.");
+    operator_task = std::make_shared<OperatorTask>(shared_from_this());
+    _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  }
+  return operator_task;
 }
 
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}

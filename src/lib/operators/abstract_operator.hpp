@@ -189,16 +189,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
   /**
-   * @returns a shared pointer to the OperatorTask that owns this operator, if set previously. Otherwise, an
-   * empty shared pointer will be returned.
+   * @returns a shared pointer to the OperatorTask that owns this operator.
    */
-  std::shared_ptr<OperatorTask> operator_task();
-
-  /**
-   * Stores a weak reference to @param operator_task that owns this operator.
-   * The function should be called once only.
-   */
-  void set_operator_task(const std::shared_ptr<OperatorTask>& operator_task);
+  std::shared_ptr<OperatorTask> get_or_create_operator_task();
 
  protected:
   // abstract method to actually execute the operator
