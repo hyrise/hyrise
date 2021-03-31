@@ -37,6 +37,8 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   switch (config.join_mode) {
     case JoinMode::Inner:
       return true;
+    case JoinMode::Cross:
+      return false;
     case JoinMode::Semi:
       if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
