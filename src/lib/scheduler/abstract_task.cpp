@@ -42,7 +42,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   if (std::find(_successors.cbegin(), _successors.cend(), successor) == _successors.cend()) {
     _successors.emplace_back(successor);
     successor->_predecessors.emplace_back(shared_from_this());
-    auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
+    std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
     if (!is_done()) successor->_pending_predecessors++;
   }
 }
@@ -111,7 +111,7 @@ void AbstractTask::execute() {
 
   _try_transition_to(TaskState::Done);
   {
-    auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
+    std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
     _done_condition_variable.notify_all();
   }
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
@@ -149,7 +149,7 @@ void AbstractTask::_on_predecessor_done() {
 
 bool AbstractTask::_try_transition_to(TaskState new_state) {
   // Lock critical section
-  auto lock = std::unique_lock<std::mutex>(_transition_to_mutex);
+  std::lock_guard<std::mutex> lock(_transition_to_mutex);
 
   /**
    * Before switching to the new state, check the validity of the state transition.
