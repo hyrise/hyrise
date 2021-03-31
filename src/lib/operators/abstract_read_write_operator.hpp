@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-enum class ReadWriteOperatorState : uint8_t {
+enum class ReadWriteOperatorState {
   Pending,     // The operator has been instantiated.
   Executed,    // Execution succeeded.
   Conflicted,  // The execution identified a conflict, which has not yet been resolved.

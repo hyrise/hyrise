@@ -241,7 +241,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
 
-  enum class OperatorState : uint8_t { Created = 0, Running = 1, Executed = 2, Cleared = 3 };
+  /**
+   * Order is important
+   */
+  enum class OperatorState { Created, Running, Executed, Cleared };
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(OperatorState new_state);
 
