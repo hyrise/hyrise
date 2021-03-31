@@ -15,6 +15,16 @@ namespace opossum {
 class Worker;
 
 /**
+ * TODO(Julian) Doc
+ * Order is important
+ */
+// For making sure a task gets only scheduled and enqueued once, respectively
+// A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
+// to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
+// else), _is_assigned_to_worker is set to true.
+enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
+
+/**
  * Base class for anything that can be scheduled by the Scheduler and gets executed by a Worker.
  *
  * Derive and implement logic in _on_execute()
@@ -116,6 +126,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void execute();
 
+  TaskState state() const;
+
  protected:
   virtual void _on_execute() = 0;
 
@@ -142,11 +154,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
 
-  // For making sure a task gets only scheduled and enqueued once, respectively
-  // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
-  // to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
-  // else), _is_assigned_to_worker is set to true.
-  enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
+  // State management
   std::atomic<TaskState> _state{TaskState::Created};
   bool _try_transition_to(TaskState new_state);
   std::mutex _transition_to_mutex;
