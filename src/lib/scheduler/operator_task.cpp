@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <utility>
-#include <unordered_set>
+#include <vector>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
@@ -20,8 +20,7 @@ using namespace opossum;  // NOLINT
  * @param task_by_op is used as a cache to avoid creating duplicate tasks. For example, in the case of diamond shapes.
  */
 std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::shared_ptr<AbstractOperator>& op,
-                                                                  std::unordered_set<std::shared_ptr<AbstractTask>>&
-                                                                      tasks) {
+                                                                  std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   const auto task = op->get_or_create_operator_task();
 
   if (auto left = op->mutable_left_input()) {
@@ -35,8 +34,13 @@ std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::sha
     }
   }
 
-  // By using an unordered set, we ensure that we do not add any duplicate tasks.
-  tasks.insert(task);
+  /**
+   * Add AFTER the inputs to establish a task order where predecessor get executed before successors.
+   * Do not add duplicate tasks.
+   */
+  if (std::find(tasks.cbegin(), tasks.cend(), task) == tasks.cend()) {
+    tasks.push_back(task);
+  }
 
   return task;
 }
@@ -53,9 +57,9 @@ std::string OperatorTask::description() const {
 
 std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operator(
     const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<AbstractTask>> tasks;
+  std::vector<std::shared_ptr<AbstractTask>> tasks;
   add_tasks_from_operator_recursively(op, tasks);
-  return std::vector<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  return tasks;
 }
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
