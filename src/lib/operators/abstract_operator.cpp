@@ -268,12 +268,25 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);
-  // Return an OperatorTask if it already exists. Otherwise, create a new OperatorTask that owns this operator.
-  auto operator_task = _operator_task.lock();
-  if (!operator_task) {
-    operator_task = std::make_shared<OperatorTask>(shared_from_this());
-    _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  // Return the OperatorTask that owns this operator if it already exists.
+  if (!_operator_task.expired()) return _operator_task.lock();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether the weak pointer is uninitialized / points to null.
+    if (_operator_task.owner_before(std::weak_ptr<OperatorTask>{}) ||
+        std::weak_ptr<OperatorTask>{}.owner_before(_operator_task)) {
+      Assert(executed(), "This operator was owned by an OperatorTask that did not execute.");
+    }
   }
+
+  auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
+  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  if (executed()) {
+    // Execute dummy task to reduce scheduling overhead.
+    operator_task->execute();
+    DebugAssert(operator_task->state() == TaskState::Done, "Expected OperatorTask to be in TaskState::Done.");
+  }
+
   return operator_task;
 }
 
