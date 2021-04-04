@@ -12,7 +12,8 @@ ValueExpression::ValueExpression(const AllTypeVariant& init_value)
 
 bool ValueExpression::requires_computation() const { return false; }
 
-std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> ValueExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<ValueExpression>(value);
 }
 

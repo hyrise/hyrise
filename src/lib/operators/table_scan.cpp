@@ -43,7 +43,24 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
-      _predicate(predicate) {}
+      _predicate(predicate) {
+  /**
+   * Register as a consumer for all uncorrelated subqueries.
+   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
+   * and managed by the ExpressionEvaluator.
+   */
+  auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
+  for (const auto& subquery_expression : pqp_subquery_expressions) {
+    if (subquery_expression->is_correlated()) continue;
+    /**
+     * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
+     * 1. register as a consumer and
+     * 2. store pointers to eventually call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
+     */
+    subquery_expression->pqp->register_consumer();
+    _uncorrelated_subquery_expressions.push_back(subquery_expression);
+  }
+}
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
@@ -57,7 +74,7 @@ std::string TableScan::description(DescriptionMode description_mode) const {
 
   std::stringstream stream;
 
-  stream << name() << separator;
+  stream << AbstractOperator::description(description_mode) << separator;
   stream << "Impl: " << _impl_description;
   stream << separator << _predicate->as_column_name();
 
@@ -74,8 +91,9 @@ void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
@@ -211,24 +229,37 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
-    const std::shared_ptr<AbstractExpression>& predicate) {
-  // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
-  // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
-  // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
-  // those complex queries anyway.
-
-  if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
-      !std::dynamic_pointer_cast<IsNullExpression>(predicate) &&
-      !std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
+    const std::shared_ptr<const AbstractExpression>& predicate) {
+  /**
+   * If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
+   * use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
+   * about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
+   * those complex queries anyway.
+   */
+  if (!std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate) &&
+      !std::dynamic_pointer_cast<const IsNullExpression>(predicate) &&
+      !std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
     // We have no dedicated Impl for these, so we leave them untouched
     return predicate;
   }
 
-  auto new_predicate = predicate->deep_copy();
-  for (auto& argument : new_predicate->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
-    if (!subquery || subquery->is_correlated()) continue;
+  /**
+   * (1) Create arguments for new predicate
+   *      - resolve arguments of type uncorrelated subquery, and create ValueExpressions from the results
+   *      - create deep copies for all other arguments
+   */
+  auto arguments_count = predicate->arguments.size();
+  auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
+  new_arguments.reserve(arguments_count);
+  auto computed_subqueries_count = int{0};
+
+  for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
+    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
+    if (!subquery || subquery->is_correlated()) {
+      new_arguments.emplace_back(predicate->arguments.at(argument_idx)->deep_copy());
+      continue;
+    }
 
     auto subquery_result = AllTypeVariant{};
     resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
@@ -239,13 +270,46 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
         subquery_result = AllTypeVariant{expression_result->value(0)};
       }
     });
-    argument = std::make_shared<ValueExpression>(std::move(subquery_result));
+    new_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
+
+    // Deregister, because we obtained the subquery result and no longer need the subquery plan.
+    subquery->pqp->deregister_consumer();
+    computed_subqueries_count++;
+  }
+  DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
+  DebugAssert(static_cast<int>(_uncorrelated_subquery_expressions.size()) == computed_subqueries_count,
+              "Expected to resolve all uncorrelated subqueries.");
+
+  // Return original predicate if we did not compute any subquery results
+  if (computed_subqueries_count == 0) return predicate;
+
+  /**
+   * (2) Create new predicate with arguments from step (1)
+   */
+  if (auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate)) {
+    auto left_operand = new_arguments.at(0);
+    auto right_operand = new_arguments.at(1);
+    DebugAssert(left_operand && right_operand, "Unexpected null pointer.");
+    return std::make_shared<BinaryPredicateExpression>(binary_predicate->predicate_condition, left_operand,
+                                                       right_operand);
+  }
+  if (auto between_predicate = std::dynamic_pointer_cast<const BetweenExpression>(predicate)) {
+    auto value = new_arguments.at(0);
+    auto lower_bound = new_arguments.at(1);
+    auto upper_bound = new_arguments.at(2);
+    DebugAssert(value && lower_bound && upper_bound, "Unexpected null pointer.");
+    return std::make_shared<BetweenExpression>(between_predicate->predicate_condition, value, lower_bound, upper_bound);
+  }
+  if (auto is_null_predicate = std::dynamic_pointer_cast<const IsNullExpression>(predicate)) {
+    auto operand = new_arguments.at(0);
+    DebugAssert(operand, "Unexpected null pointer.");
+    return std::make_shared<IsNullExpression>(is_null_predicate->predicate_condition, operand);
   }
 
-  return new_predicate;
+  Fail("Unexpected predicate type");
 }
 
-std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
+std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
@@ -258,10 +322,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
    * an expression.
    */
 
-  auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
+  const auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
 
   if (const auto binary_predicate_expression =
-          std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
+          std::dynamic_pointer_cast<const BinaryPredicateExpression>(resolved_predicate)) {
     auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
@@ -328,7 +392,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
+  if (const auto is_null_expression = std::dynamic_pointer_cast<const IsNullExpression>(resolved_predicate)) {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
@@ -337,7 +401,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+  if (const auto between_expression = std::dynamic_pointer_cast<const BetweenExpression>(resolved_predicate)) {
     // The ColumnBetweenTableScanImpl expects both values to be of the same data type as the column that is being
     // scanned. We retrieve the lower and upper bounds of the BetweenExpression, perform a
     // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
@@ -381,8 +445,15 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate);
+  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
+  const auto& uncorrelated_subquery_results =
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
+  // Deregister, because we obtained the results and no longer need the subquery plans.
+  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+    pqp_subquery_expression->pqp->deregister_consumer();
+  }
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
+                                                            uncorrelated_subquery_results);
 }
 
 void TableScan::_on_cleanup() { _impl.reset(); }
