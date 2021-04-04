@@ -555,6 +555,7 @@ set(
     storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
     storage/vector_compression/bitpacking/bitpacking_vector.hpp
     storage/vector_compression/bitpacking/bitpacking_vector.cpp
+    storage/vector_compression/bitpacking/vector_types.hpp
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp

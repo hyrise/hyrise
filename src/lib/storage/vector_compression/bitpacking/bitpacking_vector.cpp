@@ -1,6 +1,6 @@
 #include "bitpacking_vector.hpp"
-#include "bitpacking_iterator.hpp"
 #include "bitpacking_decompressor.hpp"
+#include "bitpacking_iterator.hpp"
 
 namespace opossum {
 
@@ -17,7 +17,7 @@ std::unique_ptr<BaseVectorDecompressor> BitpackingVector::on_create_base_decompr
 
 BitpackingDecompressor BitpackingVector::on_create_decompressor() const { return BitpackingDecompressor(_data); }
 
-BitpackingIterator BitpackingVector::on_begin() const { return BitpackingIterator(_data, 0u);}
+BitpackingIterator BitpackingVector::on_begin() const { return BitpackingIterator(_data, 0u); }
 
 BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(_data, _data.size()); }
 
@@ -25,7 +25,7 @@ std::unique_ptr<const BaseCompressedVector> BitpackingVector::on_copy_using_allo
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_bitpacking_vector<uint32_t>(_data.used_bits(), _data.size(), alloc);
   std::copy(_data.begin(), _data.end(), data_copy.begin());
-  
+
   return std::make_unique<BitpackingVector>(data_copy);
 }
 

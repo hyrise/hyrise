@@ -4,9 +4,9 @@
 #include <boost/hana/value.hpp>
 
 // Include your compressed vector file here!
+#include "bitpacking/bitpacking_vector.hpp"
 #include "fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "simd_bp128/simd_bp128_vector.hpp"
-#include "bitpacking/bitpacking_vector.hpp"
 
 #include "compressed_vector_type.hpp"
 

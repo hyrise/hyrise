@@ -146,9 +146,10 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
  private:
   // LZ4Encoder only supports SimdBp128 in order to reduce the compile time, see the comment in lz4_encoder.hpp.
-  VectorCompressionType _vector_compression_type = std::is_same_v<Derived, LZ4Encoder>
-                                                       ? VectorCompressionType::SimdBp128
-                                                       : VectorCompressionType::FixedSizeByteAligned; // todo(ben) VectorCompressionType::Bitpacking;
+  VectorCompressionType _vector_compression_type =
+      std::is_same_v<Derived, LZ4Encoder>
+          ? VectorCompressionType::SimdBp128
+          : VectorCompressionType::FixedSizeByteAligned;  // todo(ben) VectorCompressionType::Bitpacking;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

@@ -26,10 +26,7 @@ class BitpackingDecompressor : public BaseVectorDecompressor {
 
   ~BitpackingDecompressor() override = default;
 
-  uint32_t get(size_t i) final {
-
-    return _data[i];
-  }
+  uint32_t get(size_t i) final { return _data[i]; }
 
   size_t size() const final { return _data.size(); }
 
