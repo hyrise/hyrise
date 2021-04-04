@@ -31,7 +31,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   std::vector<ChunkID> included_chunk_ids;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() final;
+  std::shared_ptr<const Table> _on_execute();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,

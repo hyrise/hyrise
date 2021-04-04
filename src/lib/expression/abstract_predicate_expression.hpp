@@ -18,7 +18,7 @@ class AbstractPredicateExpression : public AbstractExpression {
   const PredicateCondition predicate_condition;
 
  protected:
-  bool _shallow_equals(const AbstractExpression& expression) const override;
+  bool _shallow_equals(const AbstractExpression& expression) const;
   size_t _shallow_hash() const override;
 };
 
