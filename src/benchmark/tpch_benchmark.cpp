@@ -200,8 +200,5 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
-  //CALLGRIND_START_INSTRUMENTATION;
   benchmark_runner->run();
-  //CALLGRIND_STOP_INSTRUMENTATION;
-
 }

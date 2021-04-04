@@ -1,6 +1,0 @@
-{
-  "default": {
-          "encoding": "Dictionary",
-          "compression": "Bitpacking"
-  }
-}

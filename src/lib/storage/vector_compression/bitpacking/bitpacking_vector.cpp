@@ -24,7 +24,7 @@ BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(
 std::unique_ptr<const BaseCompressedVector> BitpackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_bitpacking_vector<uint32_t>(_data.used_bits(), _data.size(), alloc);
-  for (int i = 0; i < _data.size(); i++) {
+  for (size_t i = 0; i < _data.size(); i++) {
     data_copy[i] = _data[i];
   }
   return std::make_unique<BitpackingVector>(data_copy);

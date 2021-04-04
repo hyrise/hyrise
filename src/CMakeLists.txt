@@ -86,7 +86,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/lz4
     ${PROJECT_SOURCE_DIR}/third_party/zstd
     ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
-    ${PROJECT_SOURCE_DIR}/third_party/SIMDCompressionAndIntersection
 )
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")

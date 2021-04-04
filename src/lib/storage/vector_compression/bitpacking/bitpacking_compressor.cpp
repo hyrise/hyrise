@@ -18,13 +18,13 @@ std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(
   } else if (max_value == 1) {
     b_1 = 1;
   } else {
-    b_1 = std::ceil(log2(max_value + 1));
+    b_1 = static_cast<uint32_t>(std::ceil(log2(max_value + 1)));
   }
   uint32_t b = std::min(b_1, std::max(compact::vector<unsigned int, 32>::required_bits(max_value), 1u));
 
   auto data = pmr_bitpacking_vector<uint32_t>(b, alloc);
   data.resize(vector.size());
-  for (int i = 0; i < vector.size(); i++) {
+  for (size_t i = 0; i < vector.size(); i++) {
     data[i] = vector[i];
   }
   // data.resize(data.size());

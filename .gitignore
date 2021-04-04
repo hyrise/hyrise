@@ -43,5 +43,3 @@ default.profdata
 default.profraw
 
 tpcds_cached_tables/
-
-venv/
