@@ -1,11 +1,12 @@
 # The Four Commandments
-1. Thy code (or the beginning of the header file) shalt be the primary method of documentation. Comments should be used to explain higher level concepts, but primarily, the code should be explaining itself. Part of this is to choose concise, descriptive names.
-1. Thou shalt program defensively. Use Assert wherever it makes sense, use DebugAssert in performance-critical parts (e.g., within hot loops). Also, we do not handle exceptions in Hyrise. If an invalid state is reached, we crash immediately. This makes debugging easier. An exception (hihi) to this is user-facing code where we handle, e.g., typos in SQL queries.
-1. Thou shalt reflect on existing code. Just as your code is not perfect, neither is the code that people wrote before you. Try to improve it as part of your PRs and do not hesitate to ask if anything is unclear. Chances are that it can be improved.
-1. Thou shalt properly test thy code. This includes unit *and* integration tests. Try to isolate parts that can be individually tested.
+1. Thy code shalt be the primary method of documentation. Part of this is to choose concise but descriptive names. Comments should be used to explain the concept and usage of classes (in the hpp file) and the structure of the algorithms (in the implementation).
+2. Thou shalt program defensively. Use Assert wherever it makes sense, use DebugAssert in performance-critical parts (e.g., within hot loops). Also, we do not handle exceptions in Hyrise. If an invalid state is reached, we crash immediately. This makes debugging easier. An exception (hihi) to this is user-facing code where we handle, e.g., typos in SQL queries.
+3. Thou shalt reflect on existing code. Just as your code is not perfect, neither is the code that people wrote before you. Try to improve it as part of your PRs and do not hesitate to ask if anything is unclear. Chances are that it can be improved.
+4. Thou shalt properly test thy code. This includes unit *and* integration tests. Try to isolate parts that can be individually tested.
 
 # C++
 * Use automatic memory management (RAII, smart pointers). `new` and `malloc` are evil words.
+* Be mindful of ownership. Not everything needs to be a smart pointer. Consider passing around references to the object or references to a shared_ptr instead of copying the shared_ptr. Remember that this might not be safe when passing shared_ptrs into, i.e., JobTasks.
 * Use `const` whenever possible. Consider variables, methods, pointers, and their pointees.
 * Reduce the size of your hpp files, both in terms of the number of lines and the code complexity. This keeps the compilation duration low.
   * Code in hpp files is compiled for every cpp file that includes the header. As such, move code to cpp files where possible. This often includes templated classes, where it is sometimes possible to implement their code in cpp files.
@@ -13,7 +14,7 @@
   * Use forward declarations instead of full header includes wherever possible.
 * Loops
   * Use range-based for loops when possible: `for (const auto& item : items) {...}`.
-  * If you have to use old-style loops, keep in mind that the loop condition is evaluated every time: Instead of `for (auto i = 0; i < expensive_function(); ++i)`, the comparison value should be calculated just once. http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop
+  * If you have to use old-style loops, keep in mind that the loop condition is evaluated every time: Instead of `for (auto offset = size_t{0}; offset < something.size(); ++offset)`, the size should be retrieved just once. See also [here](http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop)
 * Data structures
   * When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations.
   * Hash-based data structures are usually faster than tree-based data structures. Unless you have a reason to use the latter, prefer unordered_(map|set) over map and set.
@@ -29,8 +30,9 @@
   * Prefer `if (object) {` over `if (object != nullptr) {` or `if (object.has_value()) {`.
   * Don't write `this->` if you don't have to.
   * Be explicit with types: Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
-  * Use auto-to-stick (https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or `auto y = std::vector<size_t>{};`.
+  * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
+  * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
 
 # Formatting and Naming
 * Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while clang-tidy is a great help, do not rely on it.
@@ -42,7 +44,7 @@
 
     * Files: lowercase separated by underscores, e.g., abstract_operator.cpp, usually corresponding to a class, e.g., AbstractOperator.
 
-    * Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `TableScan`.
+    * Types (classes, structs, enums, typedefs, using): PascalCase starting with uppercase letter, e.g., `TableScan`.
 
     * Variables: lowercase separated by underscores, e.g., `chunk_size`.
 
@@ -57,7 +59,7 @@
     * If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
 
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished with a full stop.
-  * Class names within comments are written in CamelCase - e.g., "As the input may be a ReferenceSegment, a valid RowID may *point to* a row that is NULL."
+  * Class names within comments are written in PascalCase - e.g., "As the input may be a ReferenceSegment, a valid RowID may *point to* a row that is NULL."
 
 # Pull Requests
 ## Opening PRs
