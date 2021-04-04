@@ -74,10 +74,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
 
-# Add compact_vector
-add_library(compact_vector INTERFACE)
-target_include_directories(compact_vector INTERFACE compact_vector/include)
-
 # Add Libraries with their own build setup
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)

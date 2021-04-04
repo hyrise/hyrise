@@ -65,7 +65,7 @@ class BitpackingIterator : public BaseCompressedVectorIterator<BitpackingIterato
 
   uint32_t dereference() const {
     return _data[_absolute_index];
-  };
+  }
 
  private:
   const pmr_bitpacking_vector<uint32_t>& _data;

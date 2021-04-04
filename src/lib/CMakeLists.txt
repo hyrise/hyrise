@@ -734,8 +734,6 @@ endif()
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
-target_include_directories(hyrise_impl PUBLIC ${CMAKE_SOURCE_DIR}/third_party/compact_vector/include)
-
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.
