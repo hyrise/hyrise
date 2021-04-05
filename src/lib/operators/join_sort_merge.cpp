@@ -1220,11 +1220,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    auto equi_case = false;
+    auto sort = true;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
-      equi_case = _primary_predicate_condition == PredicateCondition::NotEquals;
+      sort = !(_primary_predicate_condition == PredicateCondition::NotEquals);
     } else {
-      equi_case = _primary_predicate_condition == PredicateCondition::Equals;
+      sort = !(_primary_predicate_condition == PredicateCondition::Equals);
     }
 
     auto include_null_left =
@@ -1234,7 +1234,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-                            _sort_merge_join._primary_predicate.column_ids, equi_case, include_null_left,
+                            _sort_merge_join._primary_predicate.column_ids, sort, include_null_left,
                             include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
