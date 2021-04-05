@@ -283,12 +283,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                               MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
+      // We need to make sure that there is not one combination between the left rows from the run and the null rows
+      // from the right where all predicates are satisfied.
       for (const auto& right_row_id : _null_rows_right) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
           match = true;
           break;
         }
       }
+      // If there is no match with the null rows from the right we need to check that there is no a match with the rows
+      // from the right side with an equal value to the ones from the left.
       if (!match) {
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
@@ -307,6 +311,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
+      // We need to make sure that there is not one combination between the left rows from the run and the null rows
+      // from the right where all predicates are satisfied.
       for (const auto& right_row_id : _null_rows_right) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
           match = true;
@@ -328,10 +334,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                      const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
-        // In the equal case, we only want to emit rows with values where we know that there is no match on in the
-        // right table. That is the case if the comparison result is less. If we have the comparison result less
-        // between the runs, it means that the runs the step before been equal, less or greater. In all cases we now
-        // that there can not be a equal value on the right table if we have the comparison result less:
+        // (Please read first the comment for the _join_cluster function) In the equal case, we only want to emit rows
+        // with values where we know that there is no match on in the right table. That is the case if the comparison
+        // result is less. If we have the comparison result less between the runs, it means that the runs the step
+        // before been equal, less or greater. In all cases we now that there can not be a equal value on the right
+        // table if we have the comparison result less:
         // (1) -> [5] | [5] <- |  (1) -> [4] | [7] <- | (1) -> [6] | [3] <-
         //        [6] | [7]    |         [6] |        |            | [7]
         // ------------------- | -------------------- | --------------------
@@ -851,7 +858,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
       } else if (_mode == JoinMode::Semi) {
         if (_primary_predicate_condition == PredicateCondition::NotEquals) {
-          // We only get here if the right table has only one value. Since we know at this that there is no equal match
+          // We only get here if the right table has only one value. Since we know that there is no equal match
           // to the one value, we can emit the rest of the left ranges.
           _emit_left_range_only(cluster_id, left_rest);
         }
@@ -1131,8 +1138,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
           // We need to check if there are at lest two values. As a result all left rows will always find at least one
           // match. Is that the case we want to emit all rows from the left table with the exception where the value
-          // is NULL.
-          // If there is only one value, we need to run the join algorithm and check for equality.
+          // is NULL. If there is only one value, we need to run the join algorithm and check for equality.
           if (right_min_value != right_max_value) {
             size_t start_index = 0;
             size_t end_index = (*_sorted_left_table)[cluster_id]->size();
@@ -1176,6 +1182,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto table_column_definition =
         table->column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
     if (table_column_definition.nullable == false) return false;
+
     const auto chunk_count = table->chunk_count();
     auto has_null = false;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -1222,6 +1229,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     auto sort = true;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
+      // Since the not equal anti join does not support multiple predicates we are only interested in equal values. For
+      // that, we do not need to sort the tables.
       sort = !(_primary_predicate_condition == PredicateCondition::NotEquals);
     } else {
       sort = !(_primary_predicate_condition == PredicateCondition::Equals);
@@ -1264,6 +1273,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _perform_join();
     }
 
+    // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
+    // 1. There is no match with one of the right null rows where all predicates are satisfied.
+    // 2. There is no match with one of the left rows (not null) where all predicates are satisfied.
+    // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
+    // to emit the row.
     if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
       auto null_output_left = RowIDPosList();
 
@@ -1272,23 +1286,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
                                                                  *_sort_merge_join.right_input()->get_output(), _mode,
                                                                  _secondary_join_predicates);
+      auto end_of_right_table = _end_of_table(_sorted_right_table);
+      auto right_range = TablePosition(0, 0).to(end_of_right_table);
       for (const auto& row_id_left : _null_rows_left) {
-        auto end_of_right_table = _end_of_table(_sorted_right_table);
-        auto right_range = TablePosition(0, 0).to(end_of_right_table);
         auto match = false;
-        right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
+        for (const auto& row_id_right : _null_rows_right) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
             match = true;
-            return;
+            break;
           }
-        });
+        }
         if (!match) {
-          for (const auto& row_id_right : _null_rows_right) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
             if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
               match = true;
-              break;
+              return;
             }
-          }
+          });
         }
         if (!match) {
           null_output_left.push_back(row_id_left);
