@@ -4,7 +4,7 @@
 
 #include "bitpacking_vector.hpp"
 
-#include "vector_types.hpp"
+#include "bitpacking_vector_type.hpp"
 
 namespace opossum {
 

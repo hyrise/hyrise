@@ -8,7 +8,7 @@
 #include "bitpacking_decompressor.hpp"
 
 #include "utils/performance_warning.hpp"
-#include "vector_types.hpp"
+#include "bitpacking_vector_type.hpp"
 
 namespace opossum {
 
