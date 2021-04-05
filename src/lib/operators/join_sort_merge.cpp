@@ -1182,17 +1182,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         table->column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
     if (table_column_definition.nullable == false) return false;
 
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
     const auto chunk_count = table->chunk_count();
-    auto has_null = false;
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto segment = table->get_chunk(chunk_id)->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
-      segment_iterate<T>(*segment, [&](const auto& position) {
-        if (position.is_null()) {
-          has_null = true;
-          return;
-        }
-      });
-      if (has_null) return true;
+    std::vector<bool> null_per_chunk{};
+    null_per_chunk.resize(chunk_count);
+
+    for (ChunkID cluster_id{0}; cluster_id < chunk_count; ++cluster_id) {
+      const auto chunk = table->get_chunk(cluster_id);
+      const auto search_row_count = chunk->size();
+      const auto segment = chunk->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+      const auto search_for_null_task = [&null_per_chunk, &segment, cluster_id] {
+        segment_iterate<T>(*segment, [&](const auto& position) {
+          if (position.is_null()) {
+            null_per_chunk[cluster_id] = true;
+            return;
+          }
+        });
+      };
+      if (search_row_count > JOB_SPAWN_THRESHOLD * 100) {
+        jobs.push_back(std::make_shared<JobTask>(search_for_null_task));
+      } else {
+        search_for_null_task();
+      }
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    for (auto is_null : null_per_chunk) {
+      if (is_null) return true;
     }
     return false;
   }
