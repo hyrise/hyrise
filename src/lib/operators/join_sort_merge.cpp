@@ -48,8 +48,6 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
       }
       return false;
     case JoinMode::AntiNullAsTrue:
-      // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we
-      // couldn't so far determine a case/query where we'd need them.
       if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
       }
@@ -321,39 +319,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     });
   }
 
-  void _join_runs_anti_null_as_true(TableRange left_run, TableRange right_run, CompareResult compare_result,
-                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
-                                    const size_t cluster_id) {
-    switch (_primary_predicate_condition) {
-      case PredicateCondition::Equals:
-        if (compare_result == CompareResult::Less && !multi_predicate_join_evaluator) {
-          _emit_left_range_only(cluster_id, left_run);
-        }
-        if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
-          _emit_left_range_only_anti_null_as_true(cluster_id, left_run, *multi_predicate_join_evaluator);
-        }
-        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
-          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
-        }
-        break;
-      case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Equal) {
-          _emit_left_range_only(cluster_id, left_run);
-        }
-        break;
-      case PredicateCondition::GreaterThan:
-        break;
-      case PredicateCondition::GreaterThanEquals:
-        break;
-      case PredicateCondition::LessThan:
-        break;
-      case PredicateCondition::LessThanEquals:
-        break;
-      default:
-        throw std::logic_error("Unknown PredicateCondition");
-    }
-  }
-
   /**
   * Performs the join for the left run of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
@@ -389,6 +354,39 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         break;
       case PredicateCondition::NotEquals:
         // In the case of Anti not equals we only want to emit the rows where we know there is no equal match.
+        if (compare_result == CompareResult::Equal) {
+          _emit_left_range_only(cluster_id, left_run);
+        }
+        break;
+      case PredicateCondition::GreaterThan:
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        break;
+      case PredicateCondition::LessThan:
+        break;
+      case PredicateCondition::LessThanEquals:
+        break;
+      default:
+        throw std::logic_error("Unknown PredicateCondition");
+    }
+  }
+
+  void _join_runs_anti_null_as_true(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                    const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        if (compare_result == CompareResult::Less && !multi_predicate_join_evaluator) {
+          _emit_left_range_only(cluster_id, left_run);
+        }
+        if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
+          _emit_left_range_only_anti_null_as_true(cluster_id, left_run, *multi_predicate_join_evaluator);
+        }
+        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
+        }
+        break;
+      case PredicateCondition::NotEquals:
         if (compare_result == CompareResult::Equal) {
           _emit_left_range_only(cluster_id, left_run);
         }
@@ -1175,6 +1173,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   bool _check_if_table_contains_null(const std::shared_ptr<const Table> table) {
+    const auto table_column_definition =
+        table->column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
+    if (table_column_definition.nullable == false) return false;
     const auto chunk_count = table->chunk_count();
     auto has_null = false;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
