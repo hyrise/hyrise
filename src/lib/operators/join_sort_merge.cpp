@@ -352,7 +352,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_run);
         }
         // If the Anti join has multiple predicates we also need to check the equal cases since the primary equal
-        // predicate could match but the multiple predicates might not. That means that we need to emit the row, if there
+        // predicate could match but the multiple predicates might not. That means that we need to emit the row, if
         // there is no combination where the multiple predicates are satisfied, because of as a result of that the
         // predicate expression is always false.
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
@@ -421,9 +421,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           // there is at least one match where all multiple predicates are satisfied.
           if (multi_predicate_join_evaluator) {
             _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
-          }
-          // If there are no equal predicates a single equal match is sufficient.
-          else {
+          } else {
+            // If there are no equal predicates a single equal match is sufficient.
             _emit_left_range_only(cluster_id, left_run);
           }
         }
@@ -1243,8 +1242,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-                            _sort_merge_join._primary_predicate.column_ids, sort, include_null_left,
-                            include_null_right, _cluster_count, _performance);
+                            _sort_merge_join._primary_predicate.column_ids, sort, include_null_left, include_null_right,
+                            _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
