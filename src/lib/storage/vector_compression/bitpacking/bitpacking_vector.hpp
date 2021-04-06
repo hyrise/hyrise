@@ -8,6 +8,18 @@
 
 namespace opossum {
 
+/**
+ * @brief Bit-packed vector with fixed bit length
+ *
+ * Bit-aligned Null Suppression.
+ * All values of the sequences are compressed with the same bit length, which is determined by the bits required to 
+ * represent the maximum value of the sequence. The compression ratio is worse than that of SimdBp128Vector 
+ * because the the bit-width is fixed for the whole sequence and not determined per value. The decoding runtime is 
+ * vastly better than SimdBp128Vector and competitive to FixedSizeByteAlignedVector.
+ * 
+ *
+ * @see SimdBp128Packing for more information
+ */
 class BitpackingVector : public CompressedVector<BitpackingVector> {
  public:
   explicit BitpackingVector(const pmr_bitpacking_vector<uint32_t>& data);
