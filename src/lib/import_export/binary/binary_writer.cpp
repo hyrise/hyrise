@@ -11,6 +11,7 @@
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_bit_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -60,6 +61,11 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
+}
+
+template <typename T>
+void export_values(std::ofstream& ofstream, const pmr_compact_vector<T>& values) {
+  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
 }
 
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
@@ -344,6 +350,9 @@ uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& ab
       case CompressedVectorType::FixedSize1ByteAligned:
         vector_width = 1u;
         break;
+      case CompressedVectorType::FixedSizeBitAligned:
+        vector_width = 0u;
+        break;
       default:
         Fail("Export of specified CompressedVectorType is not yet supported");
     }
@@ -365,6 +374,9 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
       return;
     case CompressedVectorType::SimdBp128:
       export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
+      return;
+    case CompressedVectorType::FixedSizeBitAligned:
+      export_values(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(compressed_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");
