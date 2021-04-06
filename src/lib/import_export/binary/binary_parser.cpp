@@ -35,6 +35,14 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 }
 
 template <typename T>
+pmr_compact_vector<T> BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
+  const auto bit_width = _read_value<uint8_t>(file);
+  const auto values = pmr_compact_vector<T>(bit_width, count);
+  file.read(reinterpret_cast<char*>(const_cast<uint64_t*>(values.get())), values.bytes());
+  return values;
+}
+
+template <typename T>
 pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
@@ -286,6 +294,8 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
     std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
   switch (attribute_vector_width) {
+    case 0:
+      return std::make_shared<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case 1:
       return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case 2:
@@ -300,6 +310,8 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
     std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
   switch (attribute_vector_width) {
+    case 0:
+      return std::make_unique<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case 1:
       return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case 2:
