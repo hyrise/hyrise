@@ -1,8 +1,8 @@
 #pragma once
 
-#include "bitpacking_decompressor.hpp"
-#include "bitpacking_iterator.hpp"
-#include "bitpacking_vector_type.hpp"
+#include "fixed_size_bit_aligned_decompressor.hpp"
+#include "fixed_size_bit_aligned_iterator.hpp"
+#include "fixed_size_bit_aligned_vector_type.hpp"
 #include "compact_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
@@ -20,28 +20,28 @@ namespace opossum {
  *
  * @see SimdBp128Packing for more information
  */
-class BitpackingVector : public CompressedVector<BitpackingVector> {
+class FixedSizeBitAlignedVector : public CompressedVector<FixedSizeBitAlignedVector> {
  public:
-  explicit BitpackingVector(const pmr_bitpacking_vector<uint32_t>& data);
-  ~BitpackingVector() override = default;
+  explicit FixedSizeBitAlignedVector(const pmr_compact_vector<uint32_t>& data);
+  ~FixedSizeBitAlignedVector() override = default;
 
-  const pmr_bitpacking_vector<uint32_t>& data() const;
+  const pmr_compact_vector<uint32_t>& data() const;
 
   size_t on_size() const;
   size_t on_data_size() const;
 
   std::unique_ptr<BaseVectorDecompressor> on_create_base_decompressor() const;
-  BitpackingDecompressor on_create_decompressor() const;
+  FixedSizeBitAlignedDecompressor on_create_decompressor() const;
 
-  BitpackingIterator on_begin() const;
-  BitpackingIterator on_end() const;
+  FixedSizeBitAlignedIterator on_begin() const;
+  FixedSizeBitAlignedIterator on_end() const;
 
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
-  friend class BitpackingDecompressor;
+  friend class FixedSizeBitAlignedDecompressor;
 
-  const pmr_bitpacking_vector<uint32_t> _data;
+  const pmr_compact_vector<uint32_t> _data;
 };
 
 }  // namespace opossum

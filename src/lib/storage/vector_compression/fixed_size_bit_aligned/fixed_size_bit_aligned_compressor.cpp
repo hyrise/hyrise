@@ -1,4 +1,4 @@
-#include "bitpacking_compressor.hpp"
+#include "fixed_size_bit_aligned_compressor.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,32 +7,32 @@
 
 namespace opossum {
 
-class BitpackingVector;
+class FixedSizeBitAlignedVector;
 
-std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(const pmr_vector<uint32_t>& vector,
+std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compress(const pmr_vector<uint32_t>& vector,
                                                                            const PolymorphicAllocator<size_t>& alloc,
                                                                            const UncompressedVectorInfo& meta_info) {
   const auto max_value = _find_max_value(vector);
   const auto required_bits = _get_required_bits(max_value);
 
-  auto data = pmr_bitpacking_vector<uint32_t>(required_bits, alloc);
+  auto data = pmr_compact_vector<uint32_t>(required_bits, alloc);
   // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
   data.resize(vector.size());  
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
-  return std::make_unique<BitpackingVector>(std::move(data));
+  return std::make_unique<FixedSizeBitAlignedVector>(std::move(data));
 }
 
-std::unique_ptr<BaseVectorCompressor> BitpackingCompressor::create_new() const {
-  return std::make_unique<BitpackingCompressor>();
+std::unique_ptr<BaseVectorCompressor> FixedSizeBitAlignedCompressor::create_new() const {
+  return std::make_unique<FixedSizeBitAlignedCompressor>();
 }
 
-uint32_t BitpackingCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) const {
+uint32_t FixedSizeBitAlignedCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) const {
   const auto it = std::max_element(vector.cbegin(), vector.cend());
   return it != vector.cend() ? *it : 0;
 }
 
-uint32_t BitpackingCompressor::_get_required_bits(uint32_t max_value) const {
+uint32_t FixedSizeBitAlignedCompressor::_get_required_bits(uint32_t max_value) const {
   if (max_value == 0) {
     return 1;
   }
