@@ -3,12 +3,9 @@
 #include <array>
 #include <memory>
 
-#include "storage/vector_compression/base_compressed_vector.hpp"
-
 #include "bitpacking_decompressor.hpp"
-
-#include "utils/performance_warning.hpp"
 #include "bitpacking_vector_type.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 
 namespace opossum {
 

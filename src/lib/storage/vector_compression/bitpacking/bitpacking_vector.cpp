@@ -1,4 +1,5 @@
 #include "bitpacking_vector.hpp"
+
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
 
@@ -24,9 +25,9 @@ BitpackingIterator BitpackingVector::on_end() const { return BitpackingIterator(
 std::unique_ptr<const BaseCompressedVector> BitpackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_bitpacking_vector<uint32_t>(_data.used_bits(), _data.size(), alloc);
-  std::copy(_data.begin(), _data.end(), data_copy.begin());
+  std::copy(_data.cbegin(), _data.cend(), data_copy.begin());
 
-  return std::make_unique<BitpackingVector>(data_copy);
+  return std::make_unique<BitpackingVector>(std::move(data_copy));
 }
 
 }  // namespace opossum

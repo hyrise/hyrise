@@ -1,6 +1,8 @@
 #include "bitpacking_compressor.hpp"
+
 #include <algorithm>
 #include <cmath>
+
 #include "compact_vector.hpp"
 
 namespace opossum {
@@ -11,11 +13,12 @@ std::unique_ptr<const BaseCompressedVector> BitpackingCompressor::compress(const
                                                                            const PolymorphicAllocator<size_t>& alloc,
                                                                            const UncompressedVectorInfo& meta_info) {
   const auto max_value = _find_max_value(vector);
-  auto b = _get_required_bits(max_value);
+  const auto required_bits = _get_required_bits(max_value);
 
-  auto data = pmr_bitpacking_vector<uint32_t>(b, alloc);
-  data.resize(vector.size());  // resize to avoid allocating too much memory with auto-growing vector
-  std::copy(vector.begin(), vector.end(), data.begin());
+  auto data = pmr_bitpacking_vector<uint32_t>(required_bits, alloc);
+  // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
+  data.resize(vector.size());  
+  std::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<BitpackingVector>(std::move(data));
 }
