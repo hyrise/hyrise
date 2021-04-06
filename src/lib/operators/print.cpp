@@ -253,7 +253,7 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
           break;
         }
         case CompressedVectorType::FixedSizeBitAligned: {
-          segment_type += ":BitP";
+          segment_type += ":FBitP";
           break;
         }
       }
