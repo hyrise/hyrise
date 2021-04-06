@@ -41,9 +41,10 @@ namespace opossum {
  * setting the key (unoptimized lqp) in the constructor.
  */
 
+template <ParameterizedLQPCache use_parameterized_cache>
 class ParameterizedPlanCacheHandler {
  public:
-  ParameterizedPlanCacheHandler(const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
+  ParameterizedPlanCacheHandler(const std::shared_ptr<SQLLogicalPlanCache<use_parameterized_cache>>& lqp_cache,
                                 const std::shared_ptr<AbstractLQPNode>& unoptimized_lqp,
                                 std::chrono::nanoseconds& cache_duration, const UseMvcc use_mvcc);
 
@@ -57,7 +58,7 @@ class ParameterizedPlanCacheHandler {
   static std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
   _split_lqp_values(const std::shared_ptr<AbstractLQPNode>& lqp);
 
-  const std::shared_ptr<SQLLogicalPlanCache>& _lqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache<use_parameterized_cache>>& _lqp_cache;
   std::shared_ptr<AbstractLQPNode> _cache_key;
   std::vector<std::shared_ptr<AbstractExpression>> _extracted_values;
   std::chrono::nanoseconds& _cache_duration;

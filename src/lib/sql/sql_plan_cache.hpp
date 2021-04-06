@@ -15,7 +15,18 @@ class AbstractLQPNode;
 using ParameterizedPlan = PreparedPlan;
 
 using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOperator>>;
-using SQLLogicalPlanCache = GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<ParameterizedPlan>,
-                                      LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
+
+template <ParameterizedLQPCache use_parameterized_cache = ParameterizedLQPCache::Yes, ParameterizedLQPCache = use_parameterized_cache>
+class SQLLogicalPlanCache;
+
+template <ParameterizedLQPCache use_parameterized_cache>
+class SQLLogicalPlanCache<use_parameterized_cache, ParameterizedLQPCache::Yes> : public GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<ParameterizedPlan>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual> {
+	using GDFSCache::GDFSCache;
+};
+
+template <ParameterizedLQPCache use_parameterized_cache>
+class SQLLogicalPlanCache<use_parameterized_cache, ParameterizedLQPCache::No> : public GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual> {
+	using GDFSCache::GDFSCache;
+};
 
 }  // namespace opossum
