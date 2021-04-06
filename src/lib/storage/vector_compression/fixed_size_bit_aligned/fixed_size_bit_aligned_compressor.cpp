@@ -9,15 +9,15 @@ namespace opossum {
 
 class FixedSizeBitAlignedVector;
 
-std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compress(const pmr_vector<uint32_t>& vector,
-                                                                           const PolymorphicAllocator<size_t>& alloc,
-                                                                           const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compress(
+    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
+    const UncompressedVectorInfo& meta_info) {
   const auto max_value = _find_max_value(vector);
   const auto required_bits = _get_required_bits(max_value);
 
   auto data = pmr_compact_vector<uint32_t>(required_bits, alloc);
   // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
-  data.resize(vector.size());  
+  data.resize(vector.size());
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<FixedSizeBitAlignedVector>(std::move(data));

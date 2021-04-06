@@ -1,9 +1,9 @@
 #pragma once
 
+#include "compact_vector.hpp"
 #include "fixed_size_bit_aligned_decompressor.hpp"
 #include "fixed_size_bit_aligned_iterator.hpp"
 #include "fixed_size_bit_aligned_vector_type.hpp"
-#include "compact_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
 namespace opossum {

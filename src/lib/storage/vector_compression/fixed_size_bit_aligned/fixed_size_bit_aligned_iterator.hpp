@@ -45,7 +45,9 @@ class FixedSizeBitAlignedIterator : public BaseCompressedVectorIterator<FixedSiz
 
   bool equal(const FixedSizeBitAlignedIterator& other) const { return _absolute_index == other._absolute_index; }
 
-  std::ptrdiff_t distance_to(const FixedSizeBitAlignedIterator& other) const { return other._absolute_index - _absolute_index; }
+  std::ptrdiff_t distance_to(const FixedSizeBitAlignedIterator& other) const {
+    return other._absolute_index - _absolute_index;
+  }
 
   uint32_t dereference() const { return _data[_absolute_index]; }
 

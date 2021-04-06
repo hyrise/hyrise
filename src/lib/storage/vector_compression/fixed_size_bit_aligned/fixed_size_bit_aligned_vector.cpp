@@ -16,11 +16,17 @@ std::unique_ptr<BaseVectorDecompressor> FixedSizeBitAlignedVector::on_create_bas
   return std::make_unique<FixedSizeBitAlignedDecompressor>(_data);
 }
 
-FixedSizeBitAlignedDecompressor FixedSizeBitAlignedVector::on_create_decompressor() const { return FixedSizeBitAlignedDecompressor(_data); }
+FixedSizeBitAlignedDecompressor FixedSizeBitAlignedVector::on_create_decompressor() const {
+  return FixedSizeBitAlignedDecompressor(_data);
+}
 
-FixedSizeBitAlignedIterator FixedSizeBitAlignedVector::on_begin() const { return FixedSizeBitAlignedIterator(_data, 0u); }
+FixedSizeBitAlignedIterator FixedSizeBitAlignedVector::on_begin() const {
+  return FixedSizeBitAlignedIterator(_data, 0u);
+}
 
-FixedSizeBitAlignedIterator FixedSizeBitAlignedVector::on_end() const { return FixedSizeBitAlignedIterator(_data, _data.size()); }
+FixedSizeBitAlignedIterator FixedSizeBitAlignedVector::on_end() const {
+  return FixedSizeBitAlignedIterator(_data, _data.size());
+}
 
 std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
