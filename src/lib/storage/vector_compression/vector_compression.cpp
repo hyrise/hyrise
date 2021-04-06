@@ -21,7 +21,7 @@ namespace {
 const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
     {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()},
-    {VectorCompressionType::Bitpacking, std::make_shared<FixedSizeBitAlignedCompressor>()}};
+    {VectorCompressionType::FixedSizeBitAligned, std::make_shared<FixedSizeBitAlignedCompressor>()}};
 
 std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressionType type) {
   auto it = vector_compressor_for_type.find(type);

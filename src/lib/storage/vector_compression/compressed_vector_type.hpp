@@ -31,7 +31,7 @@ enum class CompressedVectorType : uint8_t {
   FixedSize2ByteAligned,
   FixedSize1ByteAligned,
   SimdBp128,
-  Bitpacking
+  FixedSizeBitAligned
 };
 
 template <typename T>
@@ -52,7 +52,7 @@ constexpr auto compressed_vector_for_type = hana::make_map(
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
                     hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>),
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::Bitpacking>, hana::type_c<FixedSizeBitAlignedVector>));
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSizeBitAligned>, hana::type_c<FixedSizeBitAlignedVector>));
 
 /**
  * @brief Returns the CompressedVectorType of a given compressed vector
