@@ -54,6 +54,8 @@
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
+  * Prefer braced control statements (`if (...) { x(); }` over `if (...) x();`). For multi-line statements, this is
+    mandatory.
 
 # Formatting and Naming
 * Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
