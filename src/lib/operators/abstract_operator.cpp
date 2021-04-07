@@ -165,7 +165,8 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  Assert(executed(), "Trying to get_output of operator that was not executed yet.");
+  Assert(_state == OperatorState::Executed,
+         "Trying to get_output of operator which is not in state OperatorState::Executed.");
   return _output;
 }
 
