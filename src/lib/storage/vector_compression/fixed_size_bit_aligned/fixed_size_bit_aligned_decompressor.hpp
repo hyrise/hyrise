@@ -10,27 +10,27 @@ class FixedSizeBitAlignedVector;
 
 class FixedSizeBitAlignedDecompressor : public BaseVectorDecompressor {
  public:
-  explicit FixedSizeBitAlignedDecompressor(const pmr_compact_vector<uint32_t>& data) : _data{&data} {}
+  explicit FixedSizeBitAlignedDecompressor(const pmr_compact_vector<uint32_t>& data) : _data{data} {}
   FixedSizeBitAlignedDecompressor(const FixedSizeBitAlignedDecompressor& other) = default;
   FixedSizeBitAlignedDecompressor(FixedSizeBitAlignedDecompressor&& other) = default;
 
   FixedSizeBitAlignedDecompressor& operator=(const FixedSizeBitAlignedDecompressor& other) {
-    DebugAssert(_data == other._data, "Cannot reassign FixedSizeBitAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeBitAlignedDecompressor");
     return *this;
   }
   FixedSizeBitAlignedDecompressor& operator=(FixedSizeBitAlignedDecompressor&& other) {
-    DebugAssert(_data == other._data, "Cannot reassign FixedSizeBitAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeBitAlignedDecompressor");
     return *this;
   }
 
   ~FixedSizeBitAlignedDecompressor() override = default;
 
-  uint32_t get(size_t i) final { return (*_data)[i]; }
+  uint32_t get(size_t i) final { return _data[i]; }
 
-  size_t size() const final { return _data->size(); }
+  size_t size() const final { return _data.size(); }
 
  private:
-  const pmr_compact_vector<uint32_t>* _data;
+  const pmr_compact_vector<uint32_t>& _data;
 };
 
 }  // namespace opossum
