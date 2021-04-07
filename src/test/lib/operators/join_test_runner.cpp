@@ -724,7 +724,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     }
     expected_table = expected_output_table_iter->second;
 
-    // Executed the actual join
+    // Execute the actual join
     join_op->execute();
   } catch (...) {
     // If an error occurred in the join operator under test, we still want to see the test configuration
