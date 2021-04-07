@@ -53,6 +53,9 @@ enum class OperatorType {
   Mock  // for Tests that need to Mock operators
 };
 
+// All states must be in logical ascending order.
+enum class OperatorState { Created, Running, Executed, Cleared };
+
 /**
  * AbstractOperator is the abstract super class for all operators.
  * All operators have up to two input tables and one output table.
@@ -183,16 +186,18 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
-  // LQP node with which this operator has been created. Might be uninitialized.
-  std::shared_ptr<const AbstractLQPNode> lqp_node;
-
-  std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
+  OperatorState state() const;
 
   /**
    * TODO(Julian) weak pointer
    * @returns a shared pointer to the OperatorTask that owns this operator.
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
+
+  // LQP node with which this operator has been created. Might be uninitialized.
+  std::shared_ptr<const AbstractLQPNode> lqp_node;
+
+  std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
   // abstract method to actually execute the operator
@@ -235,10 +240,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
 
-  /**
-   * Order is important
-   */
-  enum class OperatorState { Created, Running, Executed, Cleared };
+  // State management
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(OperatorState new_state);
 

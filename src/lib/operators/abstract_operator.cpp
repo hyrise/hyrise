@@ -266,6 +266,8 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
+OperatorState AbstractOperator::state() const { return _state; }
+
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);
   // Return the OperatorTask that owns this operator if it already exists.
