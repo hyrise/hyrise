@@ -23,6 +23,7 @@ namespace opossum {
 class FixedSizeBitAlignedVector : public CompressedVector<FixedSizeBitAlignedVector> {
  public:
   explicit FixedSizeBitAlignedVector(const pmr_compact_vector<uint32_t>& data);
+  explicit FixedSizeBitAlignedVector(pmr_compact_vector<uint32_t>&& data);
   ~FixedSizeBitAlignedVector() override = default;
 
   const pmr_compact_vector<uint32_t>& data() const;
