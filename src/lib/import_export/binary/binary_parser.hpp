@@ -101,7 +101,7 @@ class BinaryParser {
   template <typename T>
   static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);
 
-  // Reads row_count many values from type T and returns them in a bitpacked compact_vector
+  // Reads bit width and row_count many values and returns them in a bitpacked compact_vector of type T
   template <typename T>
   static pmr_compact_vector<T> _read_values_compact_vector(std::ifstream& file, const size_t count);
 
