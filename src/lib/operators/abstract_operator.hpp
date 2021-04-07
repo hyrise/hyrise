@@ -53,7 +53,7 @@ enum class OperatorType {
   Mock  // for Tests that need to Mock operators
 };
 
-// All states must be in logical ascending order.
+// All states must be in a progressive order.
 enum class OperatorState { Created, Running, Executed, Cleared };
 
 /**
