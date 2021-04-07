@@ -64,6 +64,11 @@ std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operato
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
 
+void OperatorTask::skip_operator_task() {
+  Assert(_op->executed(), "Cannot skip an OperatorTask that has not yet executed.");
+  this->_try_transition_to(TaskState::Skipped);
+}
+
 void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();
   if (context) {

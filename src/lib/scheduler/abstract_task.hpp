@@ -126,15 +126,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void execute();
 
-  /**
-   * TODO(Julian)
-   */
-   void skip();
-
   TaskState state() const;
 
  protected:
   virtual void _on_execute() = 0;
+
+  bool _try_transition_to(TaskState new_state);
 
  private:
   /**
@@ -161,7 +158,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // State management
   std::atomic<TaskState> _state{TaskState::Created};
-  bool _try_transition_to(TaskState new_state);
   std::mutex _transition_to_mutex;
 
   // For making Tasks join()-able

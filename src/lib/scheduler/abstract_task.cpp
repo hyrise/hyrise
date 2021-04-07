@@ -23,7 +23,7 @@ NodeID AbstractTask::node_id() const { return _node_id; }
 
 bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
-bool AbstractTask::is_done() const { return _state == TaskState::Done; }
+bool AbstractTask::is_done() const { return _state == TaskState::Done || _state == TaskState::Skipped; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
@@ -116,10 +116,6 @@ void AbstractTask::execute() {
     _done_condition_variable.notify_all();
   }
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
-}
-
-void AbstractTask::skip() {
-  _try_transition_to(TaskState::Skipped);
 }
 
 TaskState AbstractTask::state() const { return _state; };

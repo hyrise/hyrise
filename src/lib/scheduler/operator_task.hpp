@@ -29,6 +29,11 @@ class OperatorTask : public AbstractTask {
 
   std::string description() const override;
 
+  /**
+   * TODO(Julian)
+   */
+  void skip_operator_task();
+
  protected:
   void _on_execute() override;
 

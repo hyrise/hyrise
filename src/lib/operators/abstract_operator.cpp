@@ -281,9 +281,9 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
   _operator_task = std::weak_ptr<OperatorTask>(operator_task);
   if (executed()) {
-    // Execute dummy task to reduce scheduling overhead.
-    operator_task->execute();
-    DebugAssert(operator_task->state() == TaskState::Done, "Expected OperatorTask to be in TaskState::Done.");
+    // Skip task to reduce scheduling overhead.
+    operator_task->skip_operator_task();
+    DebugAssert(operator_task->is_done(), "Expected OperatorTask to be marked as done.");
   }
 
   return operator_task;
