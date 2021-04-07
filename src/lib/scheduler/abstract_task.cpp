@@ -118,6 +118,10 @@ void AbstractTask::execute() {
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
 }
 
+void AbstractTask::skip() {
+  _try_transition_to(TaskState::Skipped);
+}
+
 TaskState AbstractTask::state() const { return _state; };
 
 void AbstractTask::_on_predecessor_done() {
@@ -180,6 +184,9 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       break;
     case TaskState::Done:
       Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done");
+      break;
+    case TaskState::Skipped:
+      Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Skipped");
       break;
     default:
       Fail("Unexpected target state in AbstractTask.");
