@@ -17,14 +17,10 @@ namespace opossum {
  * because the the bit-width is fixed for the whole sequence and not determined per value. The decoding runtime is 
  * vastly better than SimdBp128Vector and competitive to FixedSizeByteAlignedVector.
  * 
- *
- * @see SimdBp128Packing for more information
  */
 class FixedSizeBitAlignedVector : public CompressedVector<FixedSizeBitAlignedVector> {
  public:
-  explicit FixedSizeBitAlignedVector(const pmr_compact_vector<uint32_t>& data);
-  explicit FixedSizeBitAlignedVector(pmr_compact_vector<uint32_t>&& data);
-  ~FixedSizeBitAlignedVector() override = default;
+  explicit FixedSizeBitAlignedVector(pmr_compact_vector<uint32_t> data);
 
   const pmr_compact_vector<uint32_t>& data() const;
 
@@ -40,8 +36,6 @@ class FixedSizeBitAlignedVector : public CompressedVector<FixedSizeBitAlignedVec
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
-  friend class FixedSizeBitAlignedDecompressor;
-
   const pmr_compact_vector<uint32_t> _data;
 };
 

@@ -5,8 +5,7 @@
 
 namespace opossum {
 
-FixedSizeBitAlignedVector::FixedSizeBitAlignedVector(const pmr_compact_vector<uint32_t>& data) : _data{data} {}
-FixedSizeBitAlignedVector::FixedSizeBitAlignedVector(pmr_compact_vector<uint32_t>&& data) : _data{std::move(data)} {}
+FixedSizeBitAlignedVector::FixedSizeBitAlignedVector(pmr_compact_vector<uint32_t> data) : _data{std::move(data)} {}
 
 const pmr_compact_vector<uint32_t>& FixedSizeBitAlignedVector::data() const { return _data; }
 
