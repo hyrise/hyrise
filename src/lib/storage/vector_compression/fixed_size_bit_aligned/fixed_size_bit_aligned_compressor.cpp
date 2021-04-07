@@ -29,14 +29,14 @@ std::unique_ptr<BaseVectorCompressor> FixedSizeBitAlignedCompressor::create_new(
 
 uint32_t FixedSizeBitAlignedCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) const {
   const auto it = std::max_element(vector.cbegin(), vector.cend());
-  return it != vector.cend() ? *it : 0;
+  return it != vector.cend() ? *it : 0u;
 }
 
 uint32_t FixedSizeBitAlignedCompressor::_get_required_bits(uint32_t max_value) const {
-  if (max_value == 0) {
-    return 1;
+  if (max_value == 0u) {
+    return 1u;
   }
-  return static_cast<uint32_t>(std::ceil(log2(max_value + 1)));
+  return static_cast<uint32_t>(std::ceil(log2(max_value + 1u)));
 }
 
 }  // namespace opossum
