@@ -118,7 +118,7 @@ void AbstractTask::execute() {
   DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
 }
 
-TaskState AbstractTask::state() const { return _state; };
+TaskState AbstractTask::state() const { return _state; }
 
 void AbstractTask::_on_predecessor_done() {
   Assert(_pending_predecessors > 0, "The count of pending predecessors equals zero and cannot be decremented.");
