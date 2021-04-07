@@ -272,11 +272,10 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   if (!_operator_task.expired()) return _operator_task.lock();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether the weak pointer is uninitialized / points to null.
-    if (_operator_task.owner_before(std::weak_ptr<OperatorTask>{}) ||
-        std::weak_ptr<OperatorTask>{}.owner_before(_operator_task)) {
-      Assert(executed(), "This operator was owned by an OperatorTask that did not execute.");
-    }
+    // Check whether _operator_task points to null.
+    using wt = std::weak_ptr<OperatorTask>;
+    auto is_uninitialized = !_operator_task.owner_before(wt{}) && !wt{}.owner_before(_operator_task);
+    Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
   }
 
   auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
