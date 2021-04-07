@@ -321,7 +321,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     /**
-     * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
+     * 1.1. Materialize the build partition, which is expected to be smaller. Create a Bloom filter.
      */
 
     auto build_side_bloom_filter = BloomFilter{};
@@ -340,7 +340,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     };
 
     /**
-     * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
+     * 1.2. Materialize the larger probe partition. Use the Bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
@@ -357,14 +357,17 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
-      // When materializing the first side (here: the build side), we do not yet have a bloom filter. To keep the number
-      // of code paths low, materialize_*_side always expects a bloom filter. For the first step, we thus pass in a
-      // bloom filter that returns true for every probe.
+      // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
+      // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
+      // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
+      // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
+      // build side. Consequently, the passed Bloom filter in build() will have no effect as it has been already used
+      // during the materialization to filter non-matching values.
       materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
@@ -378,7 +381,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     /**
-     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
+     * 2. Perform radix partitioning for build and probe sides. The Bloom filters are not used in this step. Future work
      *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
@@ -432,7 +435,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
      *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
      *    all rows.
-     *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
+     *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
     Timer timer_hash_map_building;
@@ -446,14 +449,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
     _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
-    // Store the element counts of the built hash tables. Depending on the bloom filter, we might have significantly
+    // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.
     for (const auto& hash_table : hash_tables) {
-      if (hash_table) {
-        const auto [hash_table_size, position_count] = hash_table->get_hash_table_size_and_position_count();
-        _performance.build_side_hash_table_size += hash_table_size;
-        _performance.build_side_position_count += position_count;
-      }
+      if (!hash_table) continue;
+
+      _performance.build_side_hash_table_size += get_distinct_values_count();
+      _performance.build_side_position_count += get_position_count();
     }
 
     /**

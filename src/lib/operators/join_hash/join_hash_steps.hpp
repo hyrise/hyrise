@@ -191,14 +191,19 @@ class PosHashTable {
     return _offset_hash_table.find(casted_value) != _offset_hash_table.end();
   }
 
-  // Return the size of the hash table and the number of positions stored (in case the mode is AllPositions). We use
-  // the unified position list that is created in finalize(). For semi/anti* joins the number of positions is 0.
-  std::pair<size_t, size_t> get_hash_table_size_and_position_count() const {
-    const auto hash_table_size = _offset_hash_table.size();
+  // Return the number of distinct values (i.e., the size of the hash table).
+  size_t get_distinct_values_count() const {
+    return _offset_hash_table.size();
+  }
+
+  // Return the number of positions stored. For semi/anti joins, no positions are stored and thus 0 is returned.
+  // Otherwise, we use the unified position list that is created in finalize().
+  size_t get_position_count() const {
     if (_mode == JoinHashBuildMode::AllPositions) {
-      return {hash_table_size, _unified_pos_list->pos_list.size()};
+      Assert(_unified_pos_list, "");
+      return _unified_pos_list->pos_list.size();
     }
-    return {hash_table_size, 0ul};
+    return 0ul;
   }
 
  private:
@@ -219,31 +224,31 @@ class PosHashTable {
   std::optional<UnifiedPosList> _unified_pos_list{};
 };
 
-// The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
-// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
-// (1) Dynamically check whether bloom filters are worth the memory and computational costs. This could be based on the
+// The Bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
+// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the Bloom filter is used in the hash join could be improved:
+// (1) Dynamically check whether Bloom filters are worth the memory and computational costs. This could be based on the
 //     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
 // (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
 // (3) Evaluate whether using multiple hash functions (k>1) brings any improvement. In a first experiment, however, we
 //     saw no benefits for single-threaded TPC-H SF 10.
-// (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
-//     intermediary results. When a bloom filter-supported partitioning has been done (i.e., partitioning has not
-//     been skipped), we do not need to use a bloom filter in the build phase anymore.
+// (4) Use the probe side Bloom filter when partitioning the build side. By doing that, we reduce the size of the
+//     intermediary results. When a Bloom filter-supported partitioning has been done (i.e., partitioning has not
+//     been skipped), we do not need to use a Bloom filter in the build phase anymore.
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
-// We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
+// We did not yet work on this because the Bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
 static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
-// needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
+// needed for merging partial Bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
 using BloomFilter = boost::dynamic_bitset<>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
-// negation (~x). As the negation is surprisingly expensive, we create a static empty bloom filter and reference
-// it where needed. Having a bloom filter that always returns true avoids a branch in the hot loop.
+// negation (~x). As the negation is surprisingly expensive, we create a static empty Bloom filter and reference
+// it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
 static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
@@ -254,7 +259,7 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 // @param output_bloom_filter  Out: A filled BloomFilter where `value & BLOOM_FILTER_MASK == true` for each value
 //                             encountered in the input column
 // @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
-//                             bloom filter is false
+//                             Bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
