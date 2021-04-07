@@ -189,6 +189,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
   /**
+   * TODO(Julian) weak pointer
    * @returns a shared pointer to the OperatorTask that owns this operator.
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
