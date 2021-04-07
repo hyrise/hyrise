@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 
@@ -1294,34 +1295,64 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // to emit the row.
     if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
       auto null_output_left = RowIDPosList();
+      const auto null_rows_left_size = _null_rows_left.size();
+      std::vector<bool> left_null_rows_matches(null_rows_left_size, false);
+      null_output_left.reserve(null_rows_left_size);
 
-      null_output_left.reserve(_null_rows_left.size());
+      std::vector<std::shared_ptr<AbstractTask>> jobs;
+      const auto right_table_row_count = _right_input_table->row_count();
 
-      MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
-                                                                 *_sort_merge_join.right_input()->get_output(), _mode,
-                                                                 _secondary_join_predicates);
-      auto end_of_right_table = _end_of_table(_sorted_right_table);
-      auto right_range = TablePosition(0, 0).to(end_of_right_table);
-      for (const auto& row_id_left : _null_rows_left) {
-        auto match = false;
-        for (const auto& row_id_right : _null_rows_right) {
-          if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
-            match = true;
-            break;
-          }
-        }
-        if (!match) {
-          right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
-            if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
-              match = true;
-              return;
+      // We do not want to span to many threads. The upper limit is the number of CPU cores.
+      const auto num_cpus = Hyrise::get().topology.num_cpus();
+      size_t bunch_size = 1;
+      if (num_cpus < null_rows_left_size) {
+        // round up
+        bunch_size = (null_rows_left_size + num_cpus - 1) / num_cpus;
+      }
+
+      for(size_t row_id = 0; row_id < null_rows_left_size; row_id += bunch_size) {
+        const auto check_if_match_task = [this, &left_null_rows_matches, row_id, bunch_size, null_rows_left_size] {
+        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
+                                                                   *_sort_merge_join.right_input()->get_output(), _mode,
+                                                                   _secondary_join_predicates);
+          auto last = std::min(null_rows_left_size, row_id + bunch_size);
+          auto end_of_right_table = _end_of_table(_sorted_right_table);
+          auto right_range = TablePosition(0, 0).to(end_of_right_table);
+          for (size_t left_null_row = row_id; left_null_row < last ; left_null_row++) {
+            auto match = false;
+            auto& row_id_left = _null_rows_left[left_null_row];
+            for (const auto& row_id_right : _null_rows_right) {
+              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+                match = true;
+                break;
+              }
             }
-          });
-        }
-        if (!match) {
-          null_output_left.push_back(row_id_left);
+            if (!match) {
+              right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+                  match = true;
+                  return;
+                }
+              });
+            }
+            if (match) {
+              left_null_rows_matches[left_null_row] = true;
+            }
+          } 
+        };
+        if (right_table_row_count > JOB_SPAWN_THRESHOLD * 100) {
+          jobs.push_back(std::make_shared<JobTask>(check_if_match_task));
+        } else {
+          check_if_match_task();
         }
       }
+
+      for (size_t row = 0; row < left_null_rows_matches.size(); row++) {
+        if (!left_null_rows_matches[row]) {
+           null_output_left.push_back(_null_rows_left[row]);
+        }
+      }
+
       if (!null_output_left.empty()) {
         _output_pos_lists_left.push_back(std::move(null_output_left));
         _output_pos_lists_right.push_back(RowIDPosList());
