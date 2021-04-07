@@ -10,7 +10,7 @@
    you. Try to improve it as part of your PRs and do not hesitate to ask if anything is unclear. Chances are that it can
    be improved.
 4. Thou shalt properly test thy code. This includes unit *and* integration tests. Try to isolate parts that can be
-   individually tested.
+   independently tested.
 
 # C++
 * Use automatic memory management (RAII, smart pointers). `new` and `malloc` are evil words.
@@ -29,7 +29,7 @@
   * Use forward declarations instead of full header includes wherever possible.
 
 * Loops
-  * Use range-based for loops when possible: `for (const auto& item : items) {...}`.
+  * Use range-based `for` loops when possible: `for (const auto& item : items) {...}`.
   * If you have to use old-style loops, keep in mind that the loop condition is evaluated every time: Instead of
     `for (auto offset = size_t{0}; offset < something.size(); ++offset)`, the size should be retrieved just once. See
     also [this document](http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop).
@@ -47,7 +47,7 @@
       from Noncopyable to avoid these potentially expensive copies.
 
 * Miscellaneous
-  * Prefer `if (object) {` over `if (object != nullptr) {` or `if (object.has_value()) {`.
+  * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
   * Don't write `this->` if you don't have to.
   * Be explicit with types: Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or
@@ -60,7 +60,7 @@
   clang-tidy is a great help, do not rely on it.
 * Call ./scripts/format.sh before pushing.
 * Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`.
-* Formatting details: 2 spaces, 120 columns, comments above code.
+* Formatting details: 2 spaces for indentation, 120 columns, comments above code.
 * Use empty lines to structure your code.
 * Naming conventions:
     * Files: lowercase separated by underscores, e.g., abstract_operator.cpp, usually corresponding to a class, e.g.,
@@ -80,7 +80,7 @@
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished
   with a full stop.
   * Class names within comments are written in PascalCase - e.g., "As the input may be a ReferenceSegment, a valid RowID
-    may *point to* a row that is NULL."
+    may point to a row that is NULL."
 
 # Pull Requests
 ## Opening PRs
@@ -89,7 +89,7 @@
     costs.
   * We do not do this automatically as the CI server is not sufficiently isolated and the performance results would
     vary. Similarly, your personal laptop is likely to produce unreliable results.
-* If your PR is related to an existing issue, reference it in the PR's description (e.g., `fixes #123`).
+* If your PR is related to an existing issue, reference it in the PR's description (e.g., `fixes #123` or `refs #123`).
 * If you are not a member of the Hyrise organization, your PR will not be built by our CI server. Contact a maintainer
   for this. They can add you to the organization or manually trigger builds from within Jenkins.
 * For your PR to be merged, it must pass the FullCI run. Set the FullCI tag in Github before committing to trigger the
@@ -98,9 +98,9 @@
   message of the squash merge should NOT contain the individual commit messages from your branch.
 
 ## Reviewing PRs
-* Check if the PR sufficiently adds tests both for happy and unhappy cases.
 * Keep the whole picture in mind. Often, it makes sense to make two passes: One for the code style and line-level
   modifications; one for checking how it fits into the overall picture.
+* Check if the PR sufficiently adds tests both for happy and unhappy cases.
 * Do not shy away from requesting changes on surrounding code that was not modified in the PR. Remember that after a PR,
   the code base should be better than before.
 * Verify the CI results, including the change in procentual coverage, and check if the compile time or query performance
