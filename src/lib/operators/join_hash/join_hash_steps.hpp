@@ -192,7 +192,7 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t get_distinct_values_count() const {
+  size_t get_distinct_value_count() const {
     return _offset_hash_table.size();
   }
 

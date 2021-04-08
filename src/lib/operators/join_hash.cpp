@@ -365,6 +365,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       materialize_probe_side(build_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
+      std::cout << "probe larger build" << std::endl;
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
       // build side. Consequently, the passed Bloom filter in build() will have no effect as it has been already used
       // during the materialization to filter non-matching values.
@@ -374,10 +375,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
 
-    // Store the number of probe values after the probe side has been materialized. Depending on the input sizes, the
-    // probe side has potentially been filtered using the Bloom filter.
+    // Store the number of materialized values. Depending on the order of materialization (which depends on the input
+    // sizes), each side might or might not be filtered by the Bloom filter.
+    for (const auto& partition : materialized_build_column) {
+      _performance.build_side_materialized_value_count += partition.elements.size();
+    }
     for (const auto& partition : materialized_probe_column) {
-      _performance.probe_side_materialized_values += partition.elements.size();
+      _performance.probe_side_materialized_value_count += partition.elements.size();
     }
 
     /**
@@ -454,8 +458,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     for (const auto& hash_table : hash_tables) {
       if (!hash_table) continue;
 
-      _performance.build_side_hash_table_size += get_distinct_values_count();
-      _performance.build_side_position_count += get_position_count();
+      _performance.hash_table_distinct_value_count += hash_table->get_distinct_value_count();
+      _performance.hash_table_position_count += hash_table->get_position_count();
     }
 
     /**

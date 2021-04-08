@@ -54,11 +54,17 @@ class JoinHash : public AbstractJoinOperator {
     bool left_input_is_build_side{true};
 
     // Due to the used Bloom filters, the number of actually joined tuples can significantly differ from the sizes of
-    // the input tables. For the build side, the Bloom filter reduces the number of values in the hash table (i.e., the
-    // size of the hash table) and potentially the number of rows (in case of non-semi/anti* joins).
-    size_t probe_side_materialized_values{0};
-    size_t build_side_hash_table_size{0};
-    size_t build_side_position_count{0};
+    // the input tables. To enable analyses of the Bloom filter efficiency, we stored number of values that were
+    // eventually materialized; i.e., "input_row_count - filtered_values_by_Bloom_filter".
+    size_t build_side_materialized_value_count{0};
+    size_t probe_side_materialized_value_count{0};
+
+    // For the build side, the Bloom filter reduces the distinct values in the hash table (i.e., the size of the hash
+    // table) and potentially the number of rows (in case of non-semi/anti* joins).
+    // Note, depending on the order of materialization, build_side_materialized_value_count is not necessarily equal to
+    // build_side_position_count (see order of materialization in hash_join.cpp).
+    size_t hash_table_distinct_value_count{0};
+    size_t hash_table_position_count{0};
   };
 
  protected:
