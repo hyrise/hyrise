@@ -2,7 +2,7 @@
 1. Thy code shalt be the primary method of documentation. Part of this is to choose concise but descriptive names.
    Comments should be used to explain the concept and usage of classes (in the hpp file) and the structure of the
    algorithms (in the implementation).
-2. Thou shalt program defensively. Use Assert wherever it makes sense, use DebugAssert in performance-critical parts
+2. Thou shalt program defensively. Use `Assert` wherever it makes sense, use `DebugAssert` in performance-critical parts
    (e.g., within hot loops). Also, we do not handle exceptions in Hyrise. If an invalid state is reached, we crash
    immediately. This makes debugging easier. An exception to this is user-facing code where we handle, e.g., typos in
    SQL queries.
@@ -16,7 +16,7 @@
 * Use automatic memory management (RAII, smart pointers). `new` and `malloc` are evil words.
 * Be mindful of ownership. Not everything needs to be a smart pointer. Consider passing around references to the object
   or references to a shared_ptr instead of copying the shared_ptr. Remember that this might not be safe when passing
-  shared_ptrs into, i.e., JobTasks.
+  shared_ptrs into, e.g., JobTasks.
 * Use `const` whenever possible. Consider variables, methods, pointers, and their pointees.
 
 * Header files
@@ -38,13 +38,13 @@
   * When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and
     allocations.
   * Hash-based data structures are usually faster than tree-based data structures. Unless you have a reason to use the
-    latter, prefer unordered_(map|set) over map and set.
+    latter, prefer `unordered_(map|set)` over `map` and `set`.
 
 * Copies
-    * C++ makes it too easy to inadvertently copy objects.
-    * For larger elements (e.g., vectors), pass a (const) reference instead.
-    * When your implemented class does not need to be copied (e.g., a Table should never exist more than once), inherit
-      from Noncopyable to avoid these potentially expensive copies.
+    * Avoid unnecessary copies, C++ makes it too easy to inadvertently copy objects.
+    * For larger elements (e.g., vectors), pass a (`const`) reference instead.
+    * If your implemented class does not need to be copied (e.g., a `Table` should never exist more than once), inherit
+      from `Noncopyable` to avoid these potentially expensive copies.
 
 * Miscellaneous
   * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
@@ -60,7 +60,7 @@
 # Formatting and Naming
 * Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
   clang-tidy is a great help, do not rely on it.
-* Call ./scripts/format.sh before pushing.
+* Call ./scripts/format.sh before committing your code.
 * Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`.
 * Formatting details: 2 spaces for indentation, 120 columns, comments above code.
 * Use empty lines to structure your code.
@@ -87,14 +87,14 @@
 # Pull Requests
 ## Opening PRs
 * When you submit a non-trivial PR, include the results of benchmark_all.sh.
-  * These help in understanding potential performance changes as well as document potential changes to the compilation
+  * These results help in understanding potential performance changes as well as document potential changes to the compilation
     costs.
   * We do not do this automatically as the CI server is not sufficiently isolated and the performance results would
     vary. Similarly, your personal laptop is likely to produce unreliable results.
 * If your PR is related to an existing issue, reference it in the PR's description (e.g., `fixes #123` or `refs #123`).
 * If you are not a member of the Hyrise organization, your PR will not be built by our CI server. Contact a maintainer
   for this. They can add you to the organization or manually trigger builds from within Jenkins.
-* For your PR to be merged, it must pass the FullCI run. Set the FullCI tag in Github before committing to trigger the
+* For your PR to be merged, it must pass a FullCI run. Set the FullCI tag in GitHub before committing to trigger the
   complete (but more expensive!) run.
 * When merging your PR, copy your PR description (excluding the benchmark results) into the commit message. The commit
   message of the squash merge should NOT contain the individual commit messages from your branch.
@@ -105,6 +105,6 @@
 * Check if the PR sufficiently adds tests both for happy and unhappy cases.
 * Do not shy away from requesting changes on surrounding code that was not modified in the PR. Remember that after a PR,
   the code base should be better than before.
-* Verify the CI results, including the change in procentual coverage, and check if the compile time or query performance
+* Verify the CI results, including how the reported coverage changed, and check if the compile time or query performance
   have been negatively affected. For this, the author should have posted the results of benchmark_all.sh into the PR
   description.
