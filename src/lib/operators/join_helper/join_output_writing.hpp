@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <boost/functional/hash_fwd.hpp>
+
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -19,7 +22,11 @@ using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Table>& input_table) {
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
 
-  std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
+  struct PosListsHasher {
+    size_t operator()(const PosLists& pos_lists) const { return boost::hash_range(pos_lists.begin(), pos_lists.end()); }
+  };
+
+  std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;
 
   PosListsByChunk pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
@@ -66,7 +73,6 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
                                   std::shared_ptr<RowIDPosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
-  // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
 
   // Add segments from input table to output chunk
@@ -176,18 +182,18 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;
 
-  // left_side_pos_lists_by_segment will only be needed if build is a reference table and being output
   if (create_left_side_pos_lists_by_segment) {
     left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
   }
 
-  // right_side_pos_lists_by_segment will only be needed if right is a reference table
   if (create_right_side_pos_lists_by_segment) {
     right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
   }
 
+  const auto pos_lists_left_size = pos_lists_left.size();
+
   auto expected_output_chunk_count = size_t{0};
-  for (size_t partition_id = 0; partition_id < pos_lists_left.size(); ++partition_id) {
+  for (size_t partition_id = 0; partition_id < pos_lists_left_size; ++partition_id) {
     if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
       ++expected_output_chunk_count;
     }
@@ -199,7 +205,7 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
   auto output_chunk_id = size_t{0};
-  while (partition_id < pos_lists_left.size()) {
+  while (partition_id < pos_lists_left_size) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
     auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));

@@ -21,20 +21,24 @@ extern "C" {
 namespace opossum {
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
-                                                 bool use_prepared_statements, float scale_factor)
+                                                 bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration)
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
-      _scale_factor(scale_factor) {
+      _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration) {
   _items.resize(22);
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration,
                                                  const std::vector<BenchmarkItemID>& items)
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration),
       _items(items) {
   Assert(std::all_of(_items.begin(), _items.end(),
                      [&](const auto benchmark_item_id) {
@@ -71,7 +75,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that clustering, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
-  if (_config->clustering_configuration == ClusteringConfiguration::TPCHPruning) {
+  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   }
   if (_config->indexes) {

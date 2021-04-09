@@ -38,10 +38,14 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
   /**
    * Scan '10_ints' so that some values get excluded. UnionPositions the result with itself, and it should not change
    */
-
   auto get_table_op = std::make_shared<GetTable>("10_ints");
+  get_table_op->never_clear_output();
+
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_a_op->never_clear_output();
+
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_b_op->never_clear_output();
 
   execute_all({get_table_op, table_scan_a_op, table_scan_b_op});
 
@@ -82,6 +86,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
    */
 
   auto get_table_op = std::make_shared<GetTable>("10_ints");
+  get_table_op->never_clear_output();
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 20));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 100));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
@@ -95,10 +100,15 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
   /**
    * If one of the input tables is empty, an early result should be produced
    */
-
   auto get_table_op = std::make_shared<GetTable>("int_float4");
+  get_table_op->never_clear_output();
+
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
+  table_scan_a_op->never_clear_output();
+
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
+  table_scan_b_op->never_clear_output();
+
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -116,6 +126,8 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
+  get_table_op->never_clear_output();
+  table_scan_b_op->never_clear_output();
 
   execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 

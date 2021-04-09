@@ -37,9 +37,7 @@ extern "C" {
 }
 
 #include "benchmark_config.hpp"
-#include "import_export/binary/binary_parser.hpp"
 #include "table_builder.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -269,25 +267,12 @@ TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generate() {
-  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
-
-  // try to load cached tables
   const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    for (const auto& table_file : list_directory(cache_directory)) {
-      const auto table_name = table_file.stem();
-      auto timer = Timer{};
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
-
-      table_info_by_name[table_name].table = BinaryParser::parse(table_file);
-      table_info_by_name[table_name].loaded_from_binary = true;
-
-      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
-    }
-
-    return table_info_by_name;
+    return _load_binary_tables_from_path(cache_directory);
   }
 
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
                                  "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
                                  "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {

@@ -73,8 +73,8 @@ class SubqueryToJoinRule : public AbstractRule {
   /**
    * Searches for usages of correlated parameters.
    *
-   * The first boolean is false when a correlated parameter is used outside of predicate nodes (for example in joins).
-   * In this case we can never optimize this LQP. If it is true, the size_t contains the number of predicate nodes in
+   * The first boolean is false when a correlated parameter is used outside of PredicateNodes (for example in joins).
+   * In this case we can never optimize this LQP. If it is true, the size_t contains the number of PredicateNodes in
    * the LQP that use correlated parameters.
    */
   static std::pair<bool, size_t> assess_correlated_parameter_usage(
@@ -82,7 +82,7 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
   /**
-   * Tries to safely extract new join predicates from a predicate node.
+   * Tries to safely extract new join predicates from a PredicateNode.
    *
    * Returns a binary predicate expressions where the left operand is always the expression associated with the
    * correlated parameter (and thus a column from the left subtree) and the right operand a column from the subqueries
@@ -116,7 +116,7 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions);
 
   /**
-   * Walk the subquery LQP, removing all correlated predicate nodes and adapting other nodes as necessary.
+   * Walk the subquery LQP, removing all correlated PredicateNodes and adapting other nodes as necessary.
    */
   static PredicatePullUpResult pull_up_correlated_predicates(
       const std::shared_ptr<AbstractLQPNode>& node,

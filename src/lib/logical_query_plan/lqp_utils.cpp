@@ -82,7 +82,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
-void recursively_collect_subquery_expressions_by_lqp(
+void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node) return;
@@ -103,25 +103,25 @@ void recursively_collect_subquery_expressions_by_lqp(
                                           std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
-      recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                      visited_nodes);
+      recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
+                                                          visited_nodes);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  recursively_collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
 }  // namespace
 
 namespace opossum {
 
-SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
   auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
-  recursively_collect_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
 
   return subqueries_by_lqp;
 }
@@ -343,6 +343,33 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
+}
+
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                     const LQPNodeType type) {
+  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->type == type) {
+      nodes.emplace_back(node);
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  return nodes;
+}
+
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  visit_lqp(lqp, [&](const auto& node) {
+    if (node->input_count() > 0) {
+      return LQPVisitation::VisitInputs;
+    } else {
+      nodes.emplace_back(node);
+    }
+    return LQPVisitation::DoNotVisitInputs;
+  });
+
+  return nodes;
 }
 
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,

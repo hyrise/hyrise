@@ -911,7 +911,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
 }
 
 TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
-  // Test that sub query expressions whose result is available in an output column of the input operator are not
+  // Test that subquery expressions whose result is available in an output column of the input operator are not
   // evaluated redundantly
 
   // clang-format off

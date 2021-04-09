@@ -55,7 +55,8 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
 
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                     _secondary_predicates, _radix_bits);
 }
@@ -164,9 +165,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
 
   // Depending on which input table became the build/probe table we have to order the columns of the output table.
-  // Semi/Anti* Joins only emit tuples from the probe table
+  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
+  // For other join modes, we need to check which side has been chosen as the probe side (see variable
+  // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-
   if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
     output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
