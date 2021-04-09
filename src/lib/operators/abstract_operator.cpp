@@ -103,7 +103,7 @@ void AbstractOperator::execute() {
   }
   performance_data->walltime = performance_timer.lap();
 
-  _transition_to(OperatorState::Executed);
+  _transition_to(OperatorState::ExecutedAndAvailable);
 
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
@@ -173,7 +173,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
   if (!_never_clear_output) {
-    _transition_to(OperatorState::Cleared);
+    _transition_to(OperatorState::ExecutedAndCleared);
     _output = nullptr;
   }
 }
