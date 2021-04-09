@@ -13,14 +13,6 @@ namespace opossum {
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
-/**
- * Clustering to apply after loading the benchmark data:
- *   - "None" does not apply any clustering. For most TPC-H and TPC-DS that means that the order of the data generator
- *     is used.
- *   - "TPCHPruning" is a clustering that improves the pruning rates in TPC-H.
- */
-enum class ClusteringConfiguration { None, TPCHPruning };
-
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
@@ -36,7 +28,6 @@ class BenchmarkConfig {
   static BenchmarkConfig get_default_config();
 
   BenchmarkMode benchmark_mode = BenchmarkMode::Ordered;
-  ClusteringConfiguration clustering_configuration = ClusteringConfiguration::None;
   ChunkOffset chunk_size = Chunk::DEFAULT_SIZE;
   EncodingConfig encoding_config = EncodingConfig{};
   bool indexes = false;
