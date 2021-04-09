@@ -11,6 +11,18 @@
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
+
+
+
+/********
+   HACK
+ ********/
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "file_based_benchmark_item_runner.hpp"
+#include "hyrise.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
+
 namespace {
 
 void generate_benchmark_data(std::string argument_string) {
@@ -77,6 +89,11 @@ int main(int argc, char* argv[]) {
   if (parsed_options.count("help")) {
     std::cout << cli_options.help() << std::endl;
     return 0;
+  }
+
+  if (parsed_options.count("help") && parsed_options.count("benchmark_data")) {
+    auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+    opossum::TPCHBenchmarkItemRunner(config, false, 1.0f, ClusteringConfiguration::None);
   }
 
   /**
