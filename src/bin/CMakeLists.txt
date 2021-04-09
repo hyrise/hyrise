@@ -5,7 +5,7 @@ add_executable(
     server.cpp
 )
 target_link_libraries(
-    hyriseServer
+    hyriseServer PUBLIC -Wl,-force_load
     hyrise
     hyriseBenchmarkLib
 )
