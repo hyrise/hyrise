@@ -79,7 +79,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
-    if (pos_list_is_monotonously_increasing) {
+    if (!pos_list_is_monotonously_increasing) {
       // In case the pos list is large, LZ4 can benefit from sorting the pos list as the change of hitting the same
       // decompressed LZ4 block increases. For small pos lists, the sorting causes a unnecessary overhead.
       std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
@@ -220,3 +220,4 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 };
 
 }  // namespace opossum
+
