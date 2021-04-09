@@ -52,7 +52,7 @@ AbstractOperator::~AbstractOperator() {
 OperatorType AbstractOperator::type() const { return _type; }
 
 bool AbstractOperator::executed() const {
-  return _state == OperatorState::Executed || _state == OperatorState::Cleared;
+  return _state == OperatorState::ExecutedAndAvailable || _state == OperatorState::ExecutedAndCleared;
 }
 
 void AbstractOperator::execute() {
@@ -165,8 +165,8 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  Assert(_state == OperatorState::Executed,
-         "Trying to get_output of operator which is not in state OperatorState::Executed.");
+  Assert(_state == OperatorState::ExecutedAndAvailable,
+         "Trying to get_output of operator which is not in state OperatorState::ExecutedAndAvailable.");
   return _output;
 }
 
@@ -332,12 +332,12 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
     case OperatorState::Running:
       Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");
       break;
-    case OperatorState::Executed:
-      Assert(previous_state == OperatorState::Running, "Illegal state transition to OperatorState::Executed");
+    case OperatorState::ExecutedAndAvailable:
+      Assert(previous_state == OperatorState::Running, "Illegal state transition to OperatorState::ExecutedAndAvailable");
       break;
-    case OperatorState::Cleared:
-      Assert(previous_state == OperatorState::Executed || previous_state == OperatorState::Cleared,
-             "Illegal state transition to OperatorState::Cleared");
+    case OperatorState::ExecutedAndCleared:
+      Assert(previous_state == OperatorState::ExecutedAndAvailable || previous_state == OperatorState::ExecutedAndCleared,
+             "Illegal state transition to OperatorState::ExecutedAndCleared");
       break;
     default:
       Fail("Unexpected target state in AbstractOperator.");

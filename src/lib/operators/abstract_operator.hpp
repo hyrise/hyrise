@@ -54,7 +54,7 @@ enum class OperatorType {
 };
 
 // All states must be in a progressive order.
-enum class OperatorState { Created, Running, Executed, Cleared };
+enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
  * AbstractOperator is the abstract super class for all operators.
