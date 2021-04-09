@@ -91,9 +91,15 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
+  /********
+     HACK
+   ********/
   if (parsed_options.count("help") && parsed_options.count("benchmark_data")) {
     auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
     opossum::TPCHBenchmarkItemRunner(config, false, 1.0f, ClusteringConfiguration::None);
+    const auto query_path = std::string{};
+    const auto filename_blacklist = std::unordered_set<std::string>{};
+    opossum::FileBasedBenchmarkItemRunner(config, query_path, filename_blacklist);
   }
 
   /**
