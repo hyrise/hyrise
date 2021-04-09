@@ -23,7 +23,7 @@ NodeID AbstractTask::node_id() const { return _node_id; }
 
 bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
-bool AbstractTask::is_done() const { return _state == TaskState::Done || _state == TaskState::Skipped; }
+bool AbstractTask::is_done() const { return _state == TaskState::Done; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
@@ -180,9 +180,6 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       break;
     case TaskState::Done:
       Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done");
-      break;
-    case TaskState::Skipped:
-      Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Skipped");
       break;
     default:
       Fail("Unexpected target state in AbstractTask.");

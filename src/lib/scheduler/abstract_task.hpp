@@ -24,7 +24,7 @@ class Worker;
  * to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
  * else), _is_assigned_to_worker is set to true.
  */
-enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done, Skipped };
+enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
 
 /**
  * Base class for anything that can be scheduled by the Scheduler and gets executed by a Worker.

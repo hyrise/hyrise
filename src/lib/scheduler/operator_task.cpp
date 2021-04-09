@@ -62,7 +62,9 @@ const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { re
 
 void OperatorTask::skip_operator_task() {
   Assert(_op->executed(), "Cannot skip an OperatorTask that has not yet executed.");
-  this->_try_transition_to(TaskState::Skipped);
+  // TODO(Julian) Dummy transitions
+  this->_try_transition_to(TaskState::Scheduled);
+  this->_try_transition_to(TaskState::Done);
 }
 
 void OperatorTask::_on_execute() {
