@@ -610,23 +610,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   void _join_cluster(const size_t cluster_id,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
-    auto& left_cluster = _sorted_left_table[cluster_id];
-    auto& right_cluster = _sorted_right_table[cluster_id];
+    const auto& left_cluster = _sorted_left_table[cluster_id];
+    const auto& right_cluster = _sorted_right_table[cluster_id];
 
-    size_t left_run_start = 0;
-    size_t right_run_start = 0;
+    auto left_run_start = size_t{0};
+    auto right_run_start = size_t{0};
 
     auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
 
-    const size_t left_size = left_cluster.size();
-    const size_t right_size = right_cluster.size();
+    const auto left_size = left_cluster.size();
+    const auto right_size = right_cluster.size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = left_cluster[left_run_start].value;
-      auto& right_value = right_cluster[right_run_start].value;
+      const auto& left_value = left_cluster[left_run_start].value;
+      const auto& right_value = right_cluster[right_run_start].value;
 
-      auto compare_result = _compare(left_value, right_value);
+      const auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
       TableRange right_run(cluster_id, right_run_start, right_run_end);
@@ -634,6 +634,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       // Advance to the next run on the smaller side or both if equal
       if (compare_result == CompareResult::Equal) {
+      // TOOD: SWITCH
         // Advance both runs
         left_run_start = left_run_end;
         right_run_start = right_run_end;
@@ -651,8 +652,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(cluster_id, right_run_start, right_size);
-    auto left_rest = TableRange(cluster_id, left_run_start, left_size);
+    const auto right_rest = TableRange(cluster_id, right_run_start, right_size);
+    const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
     if (left_run_start < left_size) {
       _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
     } else if (right_run_start < right_size) {
@@ -686,7 +687,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
     const auto sorted_table_size = sorted_table.size();
-    for (auto partition_id = sorted_table.size() - 1; partition_id < sorted_table_size; --partition_id) {
+    for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
       if (!sorted_table[partition_id].empty()) {
         return sorted_table[partition_id].back().value;
       }
@@ -949,8 +950,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    const bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
-    const bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    const auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    const auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
