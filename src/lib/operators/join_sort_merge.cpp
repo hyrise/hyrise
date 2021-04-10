@@ -231,7 +231,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
   static TablePosition _end_of_table(const MaterializedSegmentList<T>& table) {
-    DebugAssert(!table->empty(), "table has no chunks");
+    DebugAssert(!table.empty(), "table has no chunks");
     auto last_cluster = table.size() - 1;
     return TablePosition(last_cluster, table[last_cluster].size());
   }
