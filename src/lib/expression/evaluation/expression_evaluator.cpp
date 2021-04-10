@@ -52,7 +52,7 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
   switch (predicate_condition) {
     case PredicateCondition::Equals:            functor(boost::hana::type<EqualsEvaluator>{});            break;
     case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
-    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
+    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator>{});          break;
     case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
@@ -937,21 +937,15 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
 std::shared_ptr<ExpressionEvaluator::UncorrelatedSubqueryResults>
 ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+    const std::vector<std::shared_ptr<PQPSubqueryExpression>>& expressions) {
   auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
   auto evaluator = ExpressionEvaluator{};
-  for (const auto& expression : expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
-        // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
-        auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
-        uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, std::move(result));
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
 
-      return ExpressionVisitation::VisitArguments;
-    });
+  for (const auto& pqp_subquery_expression : expressions) {
+    Assert(!pqp_subquery_expression->is_correlated(), "Did not expect a correlated subquery.");
+    // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
+    auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
+    uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, result);
   }
   return uncorrelated_subquery_results;
 }
@@ -973,9 +967,13 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     parameters.emplace(parameter_id, value);
   }
 
-  // TODO(moritz) deep_copy() shouldn't be necessary for every row if we could re-execute PQPs...
-  auto row_pqp = expression.pqp->deep_copy();
-  row_pqp->set_parameters(parameters);
+  auto row_pqp = expression.pqp;
+  if (expression.is_correlated()) {
+    // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters.
+    // Therefore, PQPs are deep-copied to ensure that we start without cached results.
+    row_pqp = expression.pqp->deep_copy();
+    row_pqp->set_parameters(parameters);
+  }
 
   const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
