@@ -142,10 +142,10 @@ class RadixClusterSort {
   /**
   * Determines the total size of a materialized segment list.
   **/
-  static size_t _materialized_table_size(MaterializedSegmentList<T>& table) {
-    size_t total_size = 0;
-    for (auto chunk : *table) {
-      total_size += chunk->size();
+  static size_t _materialized_table_size(const MaterializedSegmentList<T>& table) {
+    auto total_size = size_t{0};
+    for (const auto& chunk : table) {
+      total_size += chunk.size();
     }
 
     return total_size;
@@ -215,14 +215,15 @@ class RadixClusterSort {
     }
 
     // Move each entry into its appropriate cluster in parallel
-    std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
+    auto cluster_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    const auto input_chunk_count = input_chunks.size();
+    for (auto chunk_number = size_t{0}; chunk_number < input_chunk_count; ++chunk_number) {
       auto job =
           std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
             auto& chunk_information = table_information.chunk_information[chunk_number];
-            for (auto& entry : *(*input_chunks)[chunk_number]) {
-              auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = *(*output_table)[cluster_id];
+            for (const auto& entry : input_chunks[chunk_number]) {
+              const auto cluster_id = clusterer(entry.value);
+              auto& output_cluster = output_table[cluster_id];
               auto& insert_position = chunk_information.insert_position[cluster_id];
               output_cluster[insert_position] = entry;
               ++insert_position;
@@ -261,7 +262,7 @@ class RadixClusterSort {
   * value vector might contain less values than `_cluster_count - 1`.
   **/
   const std::vector<T> _pick_split_values(std::vector<T> sample_values) const {
-    std::sort(sample_values.begin(), sample_values.end());
+    boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
       const auto last = std::unique(sample_values.begin(), sample_values.end());

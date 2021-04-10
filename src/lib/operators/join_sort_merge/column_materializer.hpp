@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/sort/sort.hpp>
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
@@ -30,7 +32,7 @@ template <typename T>
 using MaterializedSegment = std::vector<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<T>>>;
+using MaterializedSegmentList = std::vector<MaterializedSegment<T>>;
 
 /**
  * This data structure is passed as a reference to the jobs which materialize
@@ -60,20 +62,20 @@ class ColumnMaterializer {
    * by creating multiple jobs that materialize chunks.
    * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
-  std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>> materialize(
-      const std::shared_ptr<const Table> input, const ColumnID column_id) {
+  std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
+      const std::shared_ptr<const Table>& input, const ColumnID column_id) {
     const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
-    auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
-    auto null_rows = std::make_unique<RowIDPosList>();
+    auto output = MaterializedSegmentList<T>(chunk_count);
+    auto null_rows = RowIDPosList();
 
     std::vector<Subsample<T>> subsamples;
     subsamples.reserve(chunk_count);
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = input->get_chunk(chunk_id);
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = input->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto samples_to_write = std::min(samples_per_chunk, chunk->size());
@@ -99,19 +101,19 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
-                                                                  std::unique_ptr<RowIDPosList>& null_rows_output,
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(MaterializedSegmentList<T>& output,
+                                                                  RowIDPosList& null_rows_output,
                                                                   const ChunkID chunk_id,
-                                                                  std::shared_ptr<const Table> input,
+                                                                  const std::shared_ptr<const Table>& input,
                                                                   const ColumnID column_id, Subsample<T>& subsample) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        (*output)[chunk_id] =
+        output[chunk_id] =
             _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
       } else {
-        (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
+        output[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
       }
     });
   }
@@ -142,10 +144,10 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const AbstractSegment& segment,
-                                                                       const ChunkID chunk_id,
-                                                                       std::unique_ptr<RowIDPosList>& null_rows_output,
-                                                                       Subsample<T>& subsample) {
+  MaterializedSegment<T> _materialize_generic_segment(const AbstractSegment& segment,
+                                                      const ChunkID chunk_id,
+                                                      RowIDPosList& null_rows_output,
+                                                      Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
@@ -153,7 +155,7 @@ class ColumnMaterializer {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
       if (position.is_null()) {
         if (_materialize_null) {
-          null_rows_output->emplace_back(row_id);
+          null_rows_output.emplace_back(row_id);
         }
       } else {
         output.emplace_back(row_id, position.value());
@@ -161,20 +163,20 @@ class ColumnMaterializer {
     });
 
     if (_sort) {
-      std::sort(output.begin(), output.end(),
+      boost::sort::pdqsort(output.begin(), output.end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
     _gather_samples_from_segment(output, subsample);
 
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
+    return output;
   }
 
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(
-      const DictionarySegment<T>& segment, const ChunkID chunk_id, std::unique_ptr<RowIDPosList>& null_rows_output,
+  MaterializedSegment<T> _materialize_dictionary_segment(
+      const DictionarySegment<T>& segment, const ChunkID chunk_id, RowIDPosList& null_rows_output,
       Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
@@ -206,7 +208,7 @@ class ColumnMaterializer {
             rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
           } else {
             if (_materialize_null) {
-              null_rows_output->push_back(RowID{chunk_id, chunk_offset});
+              null_rows_output.push_back(RowID{chunk_id, chunk_offset});
             }
           }
         }
@@ -226,7 +228,7 @@ class ColumnMaterializer {
         const auto row_id = RowID{chunk_id, position.chunk_offset()};
         if (position.is_null()) {
           if (_materialize_null) {
-            null_rows_output->emplace_back(row_id);
+            null_rows_output.emplace_back(row_id);
           }
         } else {
           output.emplace_back(row_id, position.value());
@@ -236,7 +238,7 @@ class ColumnMaterializer {
 
     _gather_samples_from_segment(output, subsample);
 
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
+    return output;
   }
 
  private:
