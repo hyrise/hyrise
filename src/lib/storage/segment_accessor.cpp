@@ -31,12 +31,16 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
           resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_referenced_segment) {
             using ReferencedSegment = std::decay_t<decltype(typed_referenced_segment)>;
             if constexpr (!std::is_same_v<ReferencedSegment, ReferenceSegment>) {
-              // accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T, ReferencedSegment>>(
-              //     pos_list, chunk_id, typed_referenced_segment);
-
-              auto iterable = create_iterable_from_segment<T>(typed_referenced_segment);
-              accessor = std::make_unique<SingleChunkReferenceSegmentAccessor2<T, ReferencedSegment, decltype(iterable)>>(
-                  pos_list, chunk_id, typed_referenced_segment, iterable);
+              // Adpated segment accessors for LZ4 segments, which extremly profit from always using iterables due to
+              // their internal block caching
+              if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) {
+                auto iterable = create_iterable_from_segment<T>(typed_referenced_segment);
+                accessor = std::make_unique<SingleChunkReferenceSegmentAccessorLZ4<T, ReferencedSegment, decltype(iterable)>>(
+                    pos_list, chunk_id, typed_referenced_segment, iterable);
+              } else {
+                accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T, ReferencedSegment>>(
+                    pos_list, chunk_id, typed_referenced_segment);
+              }
             } else {
               Fail("Encountered nested ReferenceSegments");
             }
@@ -46,9 +50,14 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
         accessor = std::make_unique<MultipleChunkReferenceSegmentAccessor<T>>(typed_segment);
       }
     } else {
-      // accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
-      auto iterable = create_iterable_from_segment<T>(typed_segment);
-      accessor = std::make_unique<SegmentAccessor2<T, SegmentType, decltype(iterable)>>(typed_segment, iterable);
+      // Adpated segment accessors for LZ4 segments, which extremly profit from always using iterables due to
+      // their internal block caching
+      if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) {
+        auto iterable = create_iterable_from_segment<T>(typed_segment);
+        accessor = std::make_unique<SegmentAccessorLZ4<T, SegmentType, decltype(iterable)>>(typed_segment, iterable);
+      } else {
+        accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
+      }
     }
   });
   return accessor;

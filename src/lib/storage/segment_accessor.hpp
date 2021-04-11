@@ -44,18 +44,24 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
 template <typename T, typename SegmentType>
 class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {} //, _iterable{create_iterable_from_segment(segment)} {
+  explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
-  const std::optional<T> access(const ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+  const std::optional<T> access(ChunkOffset offset) const final {
+    ++_accesses;
+    return _segment.get_typed_value(offset);
+  }
+
+  ~SegmentAccessor() override { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
 
  protected:
+  mutable uint64_t _accesses{0};
   const SegmentType& _segment;
 };
 
 template <typename T, typename SegmentType, typename IterableType>
-class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
+class SegmentAccessorLZ4 final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor2(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{std::move(iterable)} {}
+  explicit SegmentAccessorLZ4(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{std::move(iterable)} {}
 
   const std::optional<T> access(const ChunkOffset offset) const final {
     auto tmp_poslist = std::make_shared<RowIDPosList>(RowIDPosList{RowID{ChunkID{0u}, offset}});
@@ -67,10 +73,14 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
         ret = it->value();
       }
     });
+    ++_accesses;
     return ret;
   }
 
+  ~SegmentAccessorLZ4() override { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
+
  protected:
+  mutable uint64_t _accesses{0};
   const SegmentType& _segment;
   const IterableType _iterable;
 };
@@ -119,26 +129,31 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const RowIDPosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+  explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id, const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(const ChunkOffset offset) const final {
-    // std::cout << "ACCESS: single chunk ref accessor" << std::endl;
+    ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
   }
 
+  ~SingleChunkReferenceSegmentAccessor() override {
+    _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
+  }
+
  protected:
-  const RowIDPosList& _pos_list;
+  mutable uint64_t _accesses{0};
+  const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
 template <typename T, typename Segment, typename IterableType>
-class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccessor<T> {
+class SingleChunkReferenceSegmentAccessorLZ4 final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor2(const AbstractPosList& pos_list, const ChunkID chunk_id, const Segment& segment, IterableType iterable)
+  explicit SingleChunkReferenceSegmentAccessorLZ4(const AbstractPosList& pos_list, const ChunkID chunk_id, const Segment& segment, IterableType iterable)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _iterable{std::move(iterable)} {}
 
   const std::optional<T> access(const ChunkOffset offset) const final {
