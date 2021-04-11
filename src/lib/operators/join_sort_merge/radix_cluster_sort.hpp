@@ -187,11 +187,10 @@ class RadixClusterSort {
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
     for (auto chunk_number = size_t{0}; chunk_number < input_chunk_count; ++chunk_number) {
       auto& chunk_information = table_information.chunk_information[chunk_number];
-      auto input_chunk = input_chunks[chunk_number];
+      const auto input_chunk = input_chunks[chunk_number];
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([input_chunk, &clusterer, &chunk_information] {
-        // TODO: input_chunk by ref?
+      auto job = std::make_shared<JobTask>([&] {
         for (const auto& entry : input_chunk) {
           const auto cluster_id = clusterer(entry.value);
           ++chunk_information.cluster_histogram[cluster_id];

@@ -594,7 +594,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  CompareResult _compare(const T left, const T right) {
     if (left < right) {
       return CompareResult::Less;
     } else if (left == right) {
@@ -633,21 +633,26 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
       // Advance to the next run on the smaller side or both if equal
-      if (compare_result == CompareResult::Equal) {
-      // TOOD: SWITCH
-        // Advance both runs
-        left_run_start = left_run_end;
-        right_run_start = right_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
-      } else if (compare_result == CompareResult::Less) {
-        // Advance the left run
-        left_run_start = left_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-      } else {
-        // Advance the right run
-        right_run_start = right_run_end;
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+      switch (compare_result) {
+        case CompareResult::Equal:
+          // Advance both runs
+          left_run_start = left_run_end;
+          right_run_start = right_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+          break;
+        case CompareResult::Less:
+          // Advance the left run
+          left_run_start = left_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+          break;
+        case CompareResult::Greater:
+          // Advance the right run
+          right_run_start = right_run_end;
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+          break;
+        default:
+          throw std::logic_error("Unknown CompareResult");
       }
     }
 
