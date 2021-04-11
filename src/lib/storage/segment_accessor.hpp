@@ -64,6 +64,8 @@ class SegmentAccessorLZ4 final : public AbstractSegmentAccessor<T> {
   explicit SegmentAccessorLZ4(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{std::move(iterable)} {}
 
   const std::optional<T> access(const ChunkOffset offset) const final {
+    // TODO: specialize LZ4 iterable to support faster single tuple access with caching, without the need to create
+    // such a temporary throw-away pos list.
     auto tmp_poslist = std::make_shared<RowIDPosList>(RowIDPosList{RowID{ChunkID{0u}, offset}});
     tmp_poslist->guarantee_single_chunk();
 
