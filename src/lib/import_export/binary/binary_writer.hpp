@@ -101,7 +101,7 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * Width of attribute vector   | AttributeVectorWidth                | 1
+   * attribute vector compress ID| VectorCompressionID                 | 1
    * Size of dictionary vector   | ValueID                             | 4
    * Dictionary Values°          | T (int, float, double, long)        | Dictionary size * sizeof(T)
    * Dictionary String Length^   | size_t                              | Dictionary size * 2
@@ -124,7 +124,7 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * Width of attribute vector   | AttributeVectorWidth                | 1
+   * attribute vector compress ID| VectorCompressionID                | 1
    * Size of dictionary vector   | ValueID                             | 4
    * FixedString length          | uint32_t                            | 8
    * Dictionary Values           | char array                          | Dictionary size * FixedString length
@@ -161,7 +161,7 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * Width of offset vector      | AttributeVectorWidth                | 1
+   * attribute vector compress ID| VectorCompressionID                | 1
    * Number of Blocks            | uint32_t                            | 4
    * Block minima                | T                                   | Number of blocks * sizeof(T)
    * Stores NULL values          | bool (stored as BoolAsByteType)     | 1
@@ -207,7 +207,7 @@ class BinaryWriter {
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   template <typename T>
-  static uint32_t _compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment);
+  static VectorCompressionID _vector_compression_id(const AbstractEncodedSegment& abstract_encoded_segment);
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,

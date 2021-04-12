@@ -27,11 +27,11 @@ namespace hana = boost::hana;
  * depending on the range of the values in the vector.
  */
 enum class CompressedVectorType : uint8_t {
-  FixedSize4ByteAligned,  // uncompressed
-  FixedSize2ByteAligned,
+  FixedSizeBitAligned,
   FixedSize1ByteAligned,
+  FixedSize2ByteAligned,
   SimdBp128,
-  FixedSizeBitAligned
+  FixedSize4ByteAligned,  // uncompressed
 };
 
 template <typename T>

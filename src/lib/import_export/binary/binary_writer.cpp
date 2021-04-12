@@ -203,9 +203,9 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
-  // Write attribute vector width
-  const auto attribute_vector_width = _compressed_vector_width<T>(dictionary_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write attribute vector compression id
+  const auto vector_compression_id = _vector_compression_id<T>(dictionary_segment);
+  export_value(ofstream, vector_compression_id);
 
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
@@ -221,9 +221,9 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
                                   bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
-  // Write attribute vector width
-  const auto attribute_vector_width = _compressed_vector_width<T>(fixed_string_dictionary_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write attribute vector compression id
+  const auto vector_compression_id = _vector_compression_id<T>(fixed_string_dictionary_segment);
+  export_value(ofstream, vector_compression_id);
 
   // Write the dictionary size, string length and dictionary
   const auto dictionary_size = fixed_string_dictionary_segment.fixed_string_dictionary()->size();
@@ -258,9 +258,9 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
                                   bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
-  // Write attribute vector width
-  const auto offset_value_vector_width = _compressed_vector_width<int32_t>(frame_of_reference_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(offset_value_vector_width));
+  // Write attribute vector compression id
+  const auto vector_compression_id = _vector_compression_id<int32_t>(frame_of_reference_segment);
+  export_value(ofstream, vector_compression_id);
 
   // Write number of blocks and block minima
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.block_minima().size()));
@@ -335,28 +335,23 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
 }
 
 template <typename T>
-uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment) {
-  uint32_t vector_width = 0u;
-  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_width](auto& typed_segment) {
-    Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
-    switch (*typed_segment.compressed_vector_type()) {
+VectorCompressionID BinaryWriter::_vector_compression_id(const AbstractEncodedSegment& abstract_encoded_segment) {
+  uint8_t vector_compression_id = 0u;
+  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_compression_id](auto& typed_segment) {
+    const auto compressed_vector_type = typed_segment.compressed_vector_type();
+    Assert(compressed_vector_type, "Expected Segment to use vector compression");
+    switch (*compressed_vector_type) {
       case CompressedVectorType::FixedSize4ByteAligned:
-        vector_width = 4u;
-        break;
       case CompressedVectorType::FixedSize2ByteAligned:
-        vector_width = 2u;
-        break;
       case CompressedVectorType::FixedSize1ByteAligned:
-        vector_width = 1u;
-        break;
       case CompressedVectorType::FixedSizeBitAligned:
-        vector_width = 0u;
+        vector_compression_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
       default:
         Fail("Export of specified CompressedVectorType is not yet supported");
     }
   });
-  return vector_width;
+  return vector_compression_id;
 }
 
 void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,

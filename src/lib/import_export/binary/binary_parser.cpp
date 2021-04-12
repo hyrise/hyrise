@@ -193,21 +193,21 @@ std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstre
 template <typename T>
 std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
-  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto vector_compression_id = _read_value<VectorCompressionID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
 
-  auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
+  auto attribute_vector = _import_attribute_vector(file, row_count, vector_compression_id);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
     std::ifstream& file, ChunkOffset row_count) {
-  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto vector_compression_id = _read_value<VectorCompressionID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _import_fixed_string_vector(file, dictionary_size);
-  auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
+  auto attribute_vector = _import_attribute_vector(file, row_count, vector_compression_id);
 
   return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
 }
@@ -226,7 +226,7 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
-  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto vector_compression_id = _read_value<VectorCompressionID>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));
 
@@ -236,7 +236,7 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
     null_values = pmr_vector<bool>(_read_values<bool>(file, row_count));
   }
 
-  auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
+  auto offset_values = _import_offset_value_vector(file, row_count, vector_compression_id);
 
   return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
 }
@@ -292,34 +292,36 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
-    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
-  switch (attribute_vector_width) {
-    case 0:
+    std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
+  const auto type = static_cast<CompressedVectorType>(vector_compression_id);
+  switch (type) {
+    case CompressedVectorType::FixedSizeBitAligned:
       return std::make_shared<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
-    case 1:
+    case CompressedVectorType::FixedSize1ByteAligned:
       return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case 2:
+    case CompressedVectorType::FixedSize2ByteAligned:
       return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case 4:
+    case CompressedVectorType::FixedSize4ByteAligned:
       return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      Fail("Cannot import attribute vector with vector compression id: " + std::to_string(vector_compression_id));
   }
 }
 
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
-    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
-  switch (attribute_vector_width) {
-    case 0:
+    std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
+  const auto type = static_cast<CompressedVectorType>(vector_compression_id);
+  switch (type) {
+    case CompressedVectorType::FixedSizeBitAligned:
       return std::make_unique<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
-    case 1:
+    case CompressedVectorType::FixedSize1ByteAligned:
       return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case 2:
+    case CompressedVectorType::FixedSize2ByteAligned:
       return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case 4:
+    case CompressedVectorType::FixedSize4ByteAligned:
       return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      Fail("Cannot import attribute vector with vector compression id: " + std::to_string(vector_compression_id));
   }
 }
 
