@@ -5,5 +5,5 @@ int_int|0|1|b|int|null|null|192|2|4|0|0|0
 int_int|1|0|a|int|null|null|192|1|2|0|0|0
 int_int|1|1|b|int|null|null|192|1|2|0|0|0
 int_int_int_null|0|0|a|int|RunLength|null|144|0|8|0|0|0
-int_int_int_null|0|1|b|int|Dictionary|SimdBp128|132|0|4|0|0|4
+int_int_int_null|0|1|b|int|Dictionary|FixedSizeBitAligned|108|0|4|0|0|4
 int_int_int_null|0|2|c|int|null|null|600|4|8|0|0|0

@@ -13,9 +13,9 @@ namespace opossum {
  *
  * Bit-aligned Null Suppression.
  * All values of the sequences are compressed with the same bit length, which is determined by the bits required to 
- * represent the maximum value of the sequence. The compression ratio is worse than that of SimdBp128Vector 
+ * represent the maximum value of the sequence. The compression ratio is worse than that of SimdBp128 
  * because the the bit-width is fixed for the whole sequence and not determined per value. The decoding runtime is 
- * vastly better than SimdBp128Vector and competitive to FixedSizeByteAlignedVector.
+ * vastly better than SimdBp128 and competitive to FixedSizeByteAlignedVector.
  * 
  */
 class FixedSizeBitAlignedVector : public CompressedVector<FixedSizeBitAlignedVector> {

@@ -248,10 +248,6 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
           segment_type += ":1B";
           break;
         }
-        case CompressedVectorType::SimdBp128: {
-          segment_type += ":BP";
-          break;
-        }
         case CompressedVectorType::FixedSizeBitAligned: {
           segment_type += ":FBitP";
           break;

@@ -538,17 +538,6 @@ set(
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
-    storage/vector_compression/simd_bp128/oversized_types.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
     storage/vector_compression/fixed_size_bit_aligned/fixed_size_bit_aligned_compressor.cpp
     storage/vector_compression/fixed_size_bit_aligned/fixed_size_bit_aligned_compressor.hpp
     storage/vector_compression/fixed_size_bit_aligned/fixed_size_bit_aligned_iterator.hpp

@@ -32,7 +32,7 @@ auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<Vecto
 };
 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
-                         ::testing::Values(VectorCompressionType::SimdBp128,
+                         ::testing::Values(
                                            VectorCompressionType::FixedSizeByteAligned,
                                            VectorCompressionType::FixedSizeBitAligned),
                          dictionary_segment_test_formatter);

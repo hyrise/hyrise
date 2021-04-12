@@ -65,7 +65,7 @@ class MetaTableTest : public BaseTest {
 
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
                                {SegmentEncodingSpec{EncodingType::RunLength},
-                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeBitAligned},
                                 SegmentEncodingSpec{EncodingType::Unencoded}});
 
     storage_manager.add_table("int_int", int_int);

@@ -64,8 +64,6 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
     case CompressedVectorType::FixedSize1ByteAligned:
       return VectorCompressionType::FixedSizeByteAligned;
       break;
-    case CompressedVectorType::SimdBp128:
-      return VectorCompressionType::SimdBp128;
     case CompressedVectorType::FixedSizeBitAligned:
       return VectorCompressionType::FixedSizeBitAligned;
   }

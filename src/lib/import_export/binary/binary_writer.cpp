@@ -63,11 +63,6 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
-template <typename T>
-void export_values(std::ofstream& ofstream, const pmr_compact_vector<T>& values) {
-  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
-}
-
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
   ofstream.write(values.data(), values.size() * values.string_length());
 }
@@ -90,6 +85,12 @@ void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& valu
 template <typename T>
 void export_value(std::ofstream& ofstream, const T& value) {
   ofstream.write(reinterpret_cast<const char*>(&value), sizeof(T));
+}
+
+template <typename T>
+void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector<T>& values) {
+  export_value(ofstream, static_cast<uint8_t>(values.bits()));
+  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
 }
 
 }  // namespace
@@ -324,10 +325,7 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
     // Write string_offset size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.string_offsets()->size()));
     // Write string_offset data_size
-    export_value(ofstream, static_cast<uint32_t>(
-                               dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets()).data().size()));
-    // Write string offsets
-    _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *(lz4_segment.string_offsets()));
+    export_compact_vector(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(*lz4_segment.string_offsets()).data());
   } else {
     // Write string_offset size = 0
     export_value(ofstream, uint32_t{0});
@@ -366,13 +364,8 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::FixedSize1ByteAligned:
       export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::SimdBp128:
-      export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
-      return;
     case CompressedVectorType::FixedSizeBitAligned:
-      export_value(ofstream, static_cast<uint8_t>(
-                                 dynamic_cast<const FixedSizeBitAlignedVector&>(compressed_vector).data().bits()));
-      export_values(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(compressed_vector).data());
+      export_compact_vector(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(compressed_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");

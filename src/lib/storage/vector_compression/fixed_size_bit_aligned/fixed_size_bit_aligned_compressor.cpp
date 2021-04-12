@@ -16,8 +16,14 @@ std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compr
   const auto required_bits = _get_required_bits(max_value);
 
   auto data = pmr_compact_vector<uint32_t>(required_bits, alloc);
+
   // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
   data.resize(vector.size());
+
+  // compactvector does not zero initialize it's memory, which leads to non-reproducible tests that 
+  // use the binary writer. Hence, fill the internal memory with zeroes.
+  std::fill_n(const_cast<uint64_t*>(data.get()), data.bytes() / 8, 0);
+  
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<FixedSizeBitAlignedVector>(std::move(data));

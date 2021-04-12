@@ -214,14 +214,12 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
   // Encoding specifications which will be applied one after another to the chunk.
   const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
-       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
-       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-      {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
-       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeBitAligned}},
-      {SegmentEncodingSpec{EncodingType::Dictionary},
-       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+       {SegmentEncodingSpec{EncodingType::Dictionary},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeBitAligned}},
       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Unencoded},
        SegmentEncodingSpec{EncodingType::Unencoded}}};
   const auto column_data_types = _table->column_data_types();
