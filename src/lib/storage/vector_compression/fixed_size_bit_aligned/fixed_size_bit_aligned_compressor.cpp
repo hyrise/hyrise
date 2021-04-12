@@ -36,6 +36,7 @@ uint32_t FixedSizeBitAlignedCompressor::_get_required_bits(uint32_t max_value) c
   if (max_value == 0u) {
     return 1u;
   }
+  // add 1 to max_value because log2(1) = 0 but we need one bit to represent it.
   return static_cast<uint32_t>(std::ceil(log2(max_value + 1u)));
 }
 
