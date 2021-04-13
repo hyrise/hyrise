@@ -295,8 +295,6 @@ void BenchmarkRunner::_benchmark_ordered() {
     // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
     // unclear advantage of excluding those runs, we only take one snapshot here.
     _snapshot_segment_access_counters(name);
-
-    write_report_to_file();
   }
 }
 
