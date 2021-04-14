@@ -292,12 +292,27 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
-//  if (!_is_transaction_statement()) {
-  // TODO(Julian) Determine last executed operator / root operator
-//    const auto& last_executed_operator = static_cast<const OperatorTask&>(*tasks.back()).get_operator();
-//    _result_table = last_executed_operator->get_output();
-//    last_executed_operator->clear_output();
-//  }
+  if (!_is_transaction_statement()) {
+    if constexpr (HYRISE_DEBUG) {
+      auto last_executed_operator_count{0};
+      for (const auto& task : tasks) {
+        const auto& current_operator = static_cast<const OperatorTask&>(*task).get_operator();
+        if (current_operator->state() == OperatorState::ExecutedAndAvailable) last_executed_operator_count++;
+      }
+      Assert(last_executed_operator_count == 1,
+             "Expected to find only one operator with OperatorState::ExecutedAndAvailable.");
+    }
+
+    auto last_executed_operator_task_iter = std::find_if(tasks.cbegin(), tasks.cend(), [](const auto& task) {
+      return static_cast<const OperatorTask&>(*task).get_operator()->state() == OperatorState::ExecutedAndAvailable;
+    });
+    Assert(last_executed_operator_task_iter != tasks.cend(),
+           "Expected last executed operator to have OperatorState::ExecutedAndAvailable.");
+
+    const auto& last_executed_operator = static_cast<const OperatorTask&>(**last_executed_operator_task_iter).get_operator();
+    _result_table = last_executed_operator->get_output();
+    last_executed_operator->clear_output();
+  }
 
   if (!_result_table) _query_has_output = false;
 
