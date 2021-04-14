@@ -601,10 +601,10 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
        *     See ExpressionEvaluator::_evaluate_subquery_expression_for_row for evaluation details.
        */
       auto subquery_pqp = std::shared_ptr<AbstractOperator>();
-      if (subquery_expression->parameter_count() == 0) {
-        subquery_pqp = translate_node(subquery_expression->lqp);
-      } else {
+      if (subquery_expression->is_correlated()) {
         subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
+      } else {
+        subquery_pqp = translate_node(subquery_expression->lqp);
       }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};

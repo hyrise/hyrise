@@ -97,10 +97,10 @@ class LQPTranslatorTest : public BaseTest {
     int_float5_d = int_float5_node->get_column("d");
   }
 
-  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
-  std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b,
-      int_float5_a, int_float5_d;
+  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_int_string, table_alias_name;
+  std::shared_ptr<StoredTableNode> int_float_node, int_float2_node, int_float5_node, int_string_node;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a,
+      int_float5_d, int_string_a, int_string_b;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
