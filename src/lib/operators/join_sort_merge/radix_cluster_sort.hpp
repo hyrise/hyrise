@@ -116,7 +116,7 @@ class RadixClusterSort {
     TableInformation(size_t chunk_count, size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
       chunk_information.reserve(chunk_count);
-      for (size_t i = 0; i < chunk_count; ++i) {
+      for (auto i = size_t{0}; i < chunk_count; ++i) {
         chunk_information.push_back(ChunkInformation(cluster_count));
       }
     }
@@ -177,27 +177,31 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks, std::function<size_t(const T&)> clusterer) {
+  MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks, const std::function<size_t(const T&)>& clusterer) {
     auto output_table = MaterializedSegmentList<T>(_cluster_count);
-    TableInformation table_information(input_chunks.size(), _cluster_count);
 
     const auto input_chunk_count = input_chunks.size();
+    TableInformation table_information(input_chunk_count, _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
-    std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
+    auto histogram_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto chunk_number = size_t{0}; chunk_number < input_chunk_count; ++chunk_number) {
       auto& chunk_information = table_information.chunk_information[chunk_number];
-      const auto input_chunk = input_chunks[chunk_number];
+      const auto& input_chunk = input_chunks[chunk_number];
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([&] {
+      auto histogram_job = [&] {
         for (const auto& entry : input_chunk) {
           const auto cluster_id = clusterer(entry.value);
           ++chunk_information.cluster_histogram[cluster_id];
         }
-      });
+      };
 
-      histogram_jobs.push_back(job);
+      if (input_chunk.size() > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
+        histogram_jobs.push_back(std::make_shared<JobTask>(histogram_job));
+      } else {
+        histogram_job();
+      }
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(histogram_jobs);
@@ -219,18 +223,23 @@ class RadixClusterSort {
     // Move each entry into its appropriate cluster in parallel
     auto cluster_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto chunk_number = size_t{0}; chunk_number < input_chunk_count; ++chunk_number) {
-      auto job =
-          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
-            auto& chunk_information = table_information.chunk_information[chunk_number];
-            for (const auto& entry : input_chunks[chunk_number]) {
-              const auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = output_table[cluster_id];
-              auto& insert_position = chunk_information.insert_position[cluster_id];
-              output_cluster[insert_position] = entry;
-              ++insert_position;
-            }
-          });
-      cluster_jobs.push_back(job);
+      const auto& input_chunk = input_chunks[chunk_number];
+      auto cluster_job = [&, chunk_number] {
+        auto& chunk_information = table_information.chunk_information[chunk_number];
+        for (const auto& entry : input_chunk) {
+          const auto cluster_id = clusterer(entry.value);
+          auto& output_cluster = output_table[cluster_id];
+          auto& insert_position = chunk_information.insert_position[cluster_id];
+          output_cluster[insert_position] = entry;
+          ++insert_position;
+        }
+      };
+
+      if (input_chunk.size() > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
+        cluster_jobs.push_back(std::make_shared<JobTask>(cluster_job));
+      } else {
+        cluster_job();
+      }
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(cluster_jobs);
@@ -262,7 +271,7 @@ class RadixClusterSort {
   * skewed inputs. However, the final split values are unique. As a consequence, the split
   * value vector might contain less values than `_cluster_count - 1`.
   **/
-  const std::vector<T> _pick_split_values(std::vector<T> sample_values) const {
+  const std::vector<T> _pick_split_values(std::vector<T>& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
@@ -290,7 +299,7 @@ class RadixClusterSort {
   **/
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
       const MaterializedSegmentList<T>& left_input,
-      const MaterializedSegmentList<T>& right_input, const std::vector<T> sample_values) {
+      const MaterializedSegmentList<T>& right_input, std::vector<T>& sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
 
     // Implements range clustering

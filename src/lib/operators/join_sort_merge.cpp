@@ -212,19 +212,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   };
 
-  /**
-  * Determines the number of clusters to be used for the join.
-  * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of clusters?
-  **/
+  // Determines the number of clusters to be used for the join. The number of clusters must be a power of two.
   size_t _determine_number_of_clusters() {
-    // Get the next lower power of two of the bigger chunk number
-    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
+    // We try to have a partition size of roughly 256 KB to avoid out-of-L2 cache sorts. This value has been determined
+    // by an array of benchmarks. Ideally, it would incorporate hardware knowledge such as the L2 cache size.
     const auto max_sort_items_count = 256'000 / sizeof(T);
-    size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
-    size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
+    const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
+    const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
     return static_cast<size_t>(
-        std::pow(2, std::ceil(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
+        std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
   }
 
   /**
@@ -498,97 +494,41 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
   }
 
-  /**
-  * Determines the length of the run starting at start_index in the values vector.
-  * A run is a series of the same value.
-  **/
+  // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
+  // value. Even though the input vector is sorted, we first start by linearly scanning for the end of the run. The
+  // reason is that we know with a high probability that the item we are looking for is at the beginning of the input
+  // vector. If we do not find the run's end within the linearly scanned part, we use a binary search.
   size_t _run_length(size_t start_index, const MaterializedSegment<T>& values) {
     if (start_index >= values.size()) {
       return 0;
     }
 
-
-    constexpr auto LINEAR_SEARCH_ITEMS = 128;
-
     const auto begin = values.begin() + start_index;
     const auto run_value = begin->value;
 
+    constexpr auto LINEAR_SEARCH_ITEMS = size_t{128};
     auto end = begin + LINEAR_SEARCH_ITEMS;
     if (values.end() < end) {
+      // Set end of linear search to end of input vector if we would overshoot otherwise.
       end = values.end();
     }
 
-    ///////////////////
-    /*
-    std::cout << "values" << std::endl;
-    for (const auto el : values) {
-      std::cout << el.value << "-";
-    }
-    std::cout << std::endl;
-    std::cout << "run check" << std::endl;
-    auto begin2 = begin;
-    const auto end2 = end;
-    while (begin2 != end2) {
-      std::cout << begin2->value << "-";
-      ++begin2;
-    }
-    std::cout << std::endl;
-    */
-    ///////////////////
-
     const auto linear_search_result = std::find_if(begin, end, [&](const auto& v) { return v.value > run_value; });
     if (linear_search_result != end) {
-      // Match found within the linearly scanned part
-      //std::cout << "return1 " << std::distance(begin, linear_search_result) << std::endl;
+      // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);
     }
  
     if (linear_search_result == values.end()) {
-      Assert(linear_search_result == end, "nope");
-      Assert(values.end() == end, "nope");
-      // No larger value found than start value: all values match.
-      //std::cout << "return1 " << std::distance(begin, end) << std::endl;
+      // We found the value neither in the linearly scanned part nor in the input vector. That means that all values
+      // are part of the run.
       return std::distance(begin, end);
     }
 
+    // Binary search in case the run did not end within the linearly scanned part.
     const auto binary_search_result = std::upper_bound(end, values.end(), *end,
                                                        [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
-    //std::cout << "return3 " << std::distance(begin, binary_search_result) << std::endl;
     return std::distance(begin, binary_search_result);
-
-
-
-
-
-
-
-
-
-    /*
-    const auto start_position = values.cbegin() + start_index;
-    
-    const auto max_offset = values.size() - start_index;
-    const auto start_value = start_position->value;
-
-    // Values are sorted. Thus, the run will probably end in the beginning of the value vector. Thus, we do no need to
-    // do a binary search. The iteration should not come at a cost, since it loads data into the cache which will be 
-    // proccessed anyways. Moreover, the loop is likely to be vetorized by the compiler.
-    auto offset = size_t{start_index};
-    for (; offset < 256 && offset <= max_offset; ++offset) {
-      if (values[offset].value > start_value) {
-        return offset;
-      } 
-    }
-    // If the run end is not in the first linearly searched items, use a binary search. Note: an exponential would
-    // actually be an even better fit.
-    auto result = std::upper_bound(values.cbegin() + offset, values.cend(), *start_position,
-                                   [](const auto& a, const auto& b) { return a.value < b.value; });
-    
-    //auto result = std::upper_bound(values.cbegin() + start_index, values.cend(), *start_position,
-     //                              [](const auto& a, const auto& b) { return a.value < b.value; });
-
-    return result - start_position;
-    */
   }
 
   /**
@@ -922,7 +862,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
 
-      if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
+      if (merge_row_count > JOB_SPAWN_THRESHOLD) {
         jobs.push_back(std::make_shared<JobTask>(join_cluster_task));
       } else {
         join_cluster_task();
