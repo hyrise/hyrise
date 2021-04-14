@@ -177,7 +177,8 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks, const std::function<size_t(const T&)>& clusterer) {
+  MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks,
+                                      const std::function<size_t(const T&)>& clusterer) {
     auto output_table = MaterializedSegmentList<T>(_cluster_count);
 
     const auto input_chunk_count = input_chunks.size();
@@ -298,8 +299,8 @@ class RadixClusterSort {
   * right table in a pair.
   **/
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
-      const MaterializedSegmentList<T>& left_input,
-      const MaterializedSegmentList<T>& right_input, std::vector<T>& sample_values) {
+      const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
+      std::vector<T>& sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
 
     // Implements range clustering
@@ -329,8 +330,8 @@ class RadixClusterSort {
   **/
   void _sort_clusters(MaterializedSegmentList<T>& clusters) {
     for (auto& cluster : clusters) {
-      //std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
-      boost::sort::pdqsort(cluster.begin(), cluster.end(), [](const auto& left, const auto& right) { return left.value < right.value; });
+      boost::sort::pdqsort(cluster.begin(), cluster.end(),
+                           [](const auto& left, const auto& right) { return left.value < right.value; });
     }
   }
 

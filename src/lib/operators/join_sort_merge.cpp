@@ -518,7 +518,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);
     }
- 
+
     if (linear_search_result == values.end()) {
       // We found the value neither in the linearly scanned part nor in the input vector. That means that all values
       // are part of the run.
@@ -526,8 +526,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     // Binary search in case the run did not end within the linearly scanned part.
-    const auto binary_search_result = std::upper_bound(end, values.end(), *end,
-                                                       [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
+    const auto binary_search_result = std::upper_bound(
+        end, values.end(), *end, [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
     return std::distance(begin, binary_search_result);
   }
 
@@ -646,7 +646,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
   template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies(const MaterializedSegmentList<T>& sorted_table, const Function& condition) {
+  std::optional<TablePosition> _first_value_that_satisfies(const MaterializedSegmentList<T>& sorted_table,
+                                                           const Function& condition) {
     const auto sorted_table_size = sorted_table.size();
     for (auto partition_id = size_t{0}; partition_id < sorted_table_size; ++partition_id) {
       const auto& partition = sorted_table[partition_id];
@@ -668,8 +669,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
   template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies_reverse(
-      const MaterializedSegmentList<T>& sorted_table, const Function& condition) {
+  std::optional<TablePosition> _first_value_that_satisfies_reverse(const MaterializedSegmentList<T>& sorted_table,
+                                                                   const Function& condition) {
     const auto sorted_table_size = sorted_table.size();
     for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
       const auto& partition = sorted_table[partition_id];
@@ -848,8 +849,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _left_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
-      const auto merge_row_count =
-          _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
+      const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
       const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;

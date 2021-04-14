@@ -110,8 +110,7 @@ class ColumnMaterializer {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        output[chunk_id] =
-            _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
+        output[chunk_id] = _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
       } else {
         output[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
       }
@@ -144,10 +143,8 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  MaterializedSegment<T> _materialize_generic_segment(const AbstractSegment& segment,
-                                                      const ChunkID chunk_id,
-                                                      RowIDPosList& null_rows_output,
-                                                      Subsample<T>& subsample) {
+  MaterializedSegment<T> _materialize_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id,
+                                                      RowIDPosList& null_rows_output, Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
@@ -164,7 +161,7 @@ class ColumnMaterializer {
 
     if (_sort) {
       boost::sort::pdqsort(output.begin(), output.end(),
-                [](const auto& left, const auto& right) { return left.value < right.value; });
+                           [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
     _gather_samples_from_segment(output, subsample);
@@ -175,9 +172,8 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  MaterializedSegment<T> _materialize_dictionary_segment(
-      const DictionarySegment<T>& segment, const ChunkID chunk_id, RowIDPosList& null_rows_output,
-      Subsample<T>& subsample) {
+  MaterializedSegment<T> _materialize_dictionary_segment(const DictionarySegment<T>& segment, const ChunkID chunk_id,
+                                                         RowIDPosList& null_rows_output, Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
