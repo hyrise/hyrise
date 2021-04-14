@@ -66,6 +66,7 @@ void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& 
   const auto [status, result_tables] = pipeline.get_result_tables();
   Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful");
   Assert(result_tables.size() == 1, "Expected exactly one result table");
+  Assert(result_tables.back(), "Expected non-empty table");
 
   auto table_wrapper = std::make_shared<TableWrapper>(result_tables[0]);
   table_wrapper->execute();
