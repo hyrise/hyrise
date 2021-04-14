@@ -6,7 +6,7 @@
 #include "abstract_rule.hpp"
 
 /**
- * The deduplication of StoredTableNodes in PQPs (see LQPTranslator::_operator_by_lqp_node) is sensitive to the
+ * The deduplication of StoredTableNodes in PQPs (see LQPTranslator::_operator_by_lqp_node_cache) is sensitive to the
  * node's table name, set of pruned chunks and set of pruned columns. Consequently, for multiple nodes with the same
  * table name, same pruned chunks and same pruned columns, only one GetTable operator is created and executed. In some
  * queries, the ColumnPruningRule and ChunkPruningRule provide an LQP with multiple StoredTableNodes where the table
