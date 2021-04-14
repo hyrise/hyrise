@@ -67,6 +67,8 @@ void OperatorTask::skip_operator_task() {
   // following dummy transitions are required:
   auto success_scheduled = this->_try_transition_to(TaskState::Scheduled);
   Assert(success_scheduled, "Expected successful transition to TaskState::Scheduled.");
+  auto success_started = this->_try_transition_to(TaskState::Started);
+  Assert(success_started, "Expected successful transition to TaskState::Started.");
   auto success_done = this->_try_transition_to(TaskState::Done);
   Assert(success_done, "Expected successful transition to TaskState::Done.");
 }
