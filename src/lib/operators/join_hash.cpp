@@ -366,8 +366,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
-      // build side. Consequently, the passed Bloom filter in build() will have no effect as it has been already used
-      // during the materialization to filter non-matching values.
+      // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
+      // been used here to filter non-matching values.
       materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
