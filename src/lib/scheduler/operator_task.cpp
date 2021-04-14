@@ -61,6 +61,7 @@ std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operato
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
 
 void OperatorTask::skip_operator_task() {
+  Assert(shared_from_this().use_count() == 2, "Expected OperatorTask to have a single owner only.");
   Assert(_op->executed(), "Cannot skip an OperatorTask that has not yet executed.");
   // For consistency reasons, the underlying AbstractTask cannot switch to TaskState::Done directly. Therefore, the
   // following dummy transitions are required:
