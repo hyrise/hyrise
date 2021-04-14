@@ -453,7 +453,7 @@ void BenchmarkRunner::write_report_to_file() const {
                         {"summary", std::move(summary)},
                         {"table_generation", _table_generator->metrics}};
 
-  // Add information that was gathered asynchronously to the output data
+  // Add information that was temporarily stored in the `benchmark_...` tables during the benchmark execution
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }

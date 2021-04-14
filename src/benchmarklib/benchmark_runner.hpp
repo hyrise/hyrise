@@ -52,8 +52,8 @@ class BenchmarkRunner : public Noncopyable {
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
-  // This is idempotent, i.e., you can call it multiple times and the result will be updated. Be aware that this may
-  // affect the performance of concurrently running queries.
+  // This is idempotent, i.e., you can call it multiple times and the resulting file will be overwritten. Be aware
+  // writing the file may affect the performance of concurrently running queries.
   void write_report_to_file() const;
 
  private:
