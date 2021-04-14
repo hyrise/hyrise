@@ -52,7 +52,8 @@ try {
       // Print the hostname to let us know on which node the docker image was executed for reproducibility.
       sh "hostname"
     }
-
+  
+  docker.withRegistry('https://registry.hub.docker.com', 'docker') {
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
@@ -319,7 +320,7 @@ try {
         deleteDir()
       }
     }
-  }
+    }}
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   node('mac') {
