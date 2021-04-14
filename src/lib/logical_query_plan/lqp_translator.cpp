@@ -590,7 +590,6 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
       Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-
       /**
        * Notes on generating subquery PQPs:
        *  a) For uncorrelated subqueries, this LQPTranslator's cache is used to create subquery PQPs. By using the
