@@ -92,7 +92,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    * would result in multiple operators created from predicate_c and thus in performance drops.
    *
    * Deduplication:
-   * _operator_by_lqp_node compares entries by value (i.e., AbstractOperator::operator==), not by identity
+   * _operator_by_lqp_node_cache compares entries by value (i.e., AbstractOperator::operator==), not by identity
    * (shared_ptr::operator==). As a result, two separate, but equal LQP nodes will be translated into a single PQP
    * node. This prevents us from executing the same operation twice.
    *   Excursus: You would be right to wonder why this is not done on the LQP by some type of optimizer rule. That would
@@ -101,8 +101,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *   instances would also become indistinguishable. That breaks things left and right.
    */
 
-  const auto operator_iter = _operator_by_lqp_node.find(node);
-  if (operator_iter != _operator_by_lqp_node.end()) {
+  const auto operator_iter = _operator_by_lqp_node_cache.find(node);
+  if (operator_iter != _operator_by_lqp_node_cache.end()) {
     return operator_iter->second;
   }
 
@@ -112,7 +112,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
   // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
   // only the merging union node (all three PQP nodes share the same originating LQP node).
   pqp->lqp_node = node;
-  _operator_by_lqp_node.emplace(node, pqp);
+  _operator_by_lqp_node_cache.emplace(node, pqp);
 
   return pqp;
 }
