@@ -237,7 +237,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance(performance_data),
+        _performance_data(performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -248,7 +248,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  JoinHash::PerformanceData& _performance;
+  JoinHash::PerformanceData& _performance_data;
 
   OutputColumnOrder _output_column_order;
 
@@ -361,27 +361,26 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
       // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
-      std::cout << "probe larger build" << std::endl;
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
       // build side. Consequently, the passed Bloom filter in build() will have no effect as it has been already used
       // during the materialization to filter non-matching values.
       materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
 
     // Store the number of materialized values. Depending on the order of materialization (which depends on the input
     // sizes), each side might or might not be filtered by the Bloom filter.
     for (const auto& partition : materialized_build_column) {
-      _performance.build_side_materialized_value_count += partition.elements.size();
+      _performance_data.build_side_materialized_value_count += partition.elements.size();
     }
     for (const auto& partition : materialized_probe_column) {
-      _performance.probe_side_materialized_value_count += partition.elements.size();
+      _performance_data.probe_side_materialized_value_count += partition.elements.size();
     }
 
     /**
@@ -427,7 +426,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       histograms_build_column.clear();
       histograms_probe_column.clear();
 
-      _performance.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
+      _performance_data.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);
@@ -451,15 +450,15 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
                                                        probe_side_bloom_filter);
     }
-    _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
     // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.
     for (const auto& hash_table : hash_tables) {
       if (!hash_table) continue;
 
-      _performance.hash_table_distinct_value_count += hash_table->get_distinct_value_count();
-      _performance.hash_table_position_count += hash_table->get_position_count();
+      _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
+      _performance_data.hash_tables_position_count += hash_table->position_count() ? *hash_table->position_count() : 0;
     }
 
     /**
@@ -475,7 +474,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
           if (null_value) {
             Timer timer_output_writing;
             const auto result = _join_hash._build_output_table({});
-            _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+            _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
             return result;
           }
         }
@@ -537,7 +536,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
     radix_probe_column.clear();
     hash_tables.clear();
@@ -566,7 +565,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
                             _output_column_order, ALLOW_PARTITION_MERGE);
 
-    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

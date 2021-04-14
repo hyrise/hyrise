@@ -192,18 +192,18 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t get_distinct_value_count() const {
+  size_t distinct_value_count() const {
     return _offset_hash_table.size();
   }
 
-  // Return the number of positions stored. For semi/anti joins, no positions are stored and thus 0 is returned.
-  // Otherwise, we use the unified position list that is created in finalize().
-  size_t get_position_count() const {
+  // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
+  // table. For other join types, we return the size of the unified position list that is created in finalize().
+  std::optional<size_t> position_count() const {
     if (_mode == JoinHashBuildMode::AllPositions) {
-      Assert(_unified_pos_list, "");
+      Assert(_unified_pos_list, "Expected unified position list to be set (i.e., finalize() has been called).");
       return _unified_pos_list->pos_list.size();
     }
-    return 0ul;
+    return std::nullopt;
   }
 
  private:
