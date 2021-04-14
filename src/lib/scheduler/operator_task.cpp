@@ -62,9 +62,12 @@ const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { re
 
 void OperatorTask::skip_operator_task() {
   Assert(_op->executed(), "Cannot skip an OperatorTask that has not yet executed.");
-  // TODO(Julian) Dummy transitions
-  this->_try_transition_to(TaskState::Scheduled);
-  this->_try_transition_to(TaskState::Done);
+  // For consistency reasons, the underlying AbstractTask cannot switch to TaskState::Done directly. Therefore, the
+  // following dummy transitions are required:
+  auto success_scheduled = this->_try_transition_to(TaskState::Scheduled);
+  Assert(success_scheduled, "Expected successful transition to TaskState::Scheduled.");
+  auto success_done = this->_try_transition_to(TaskState::Done);
+  Assert(success_done, "Expected successful transition to TaskState::Done.");
 }
 
 void OperatorTask::_on_execute() {

@@ -133,7 +133,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
  protected:
   virtual void _on_execute() = 0;
 
-  bool _try_transition_to(TaskState new_state);
+  [[nodiscard]] bool _try_transition_to(TaskState new_state);
 
  private:
   /**

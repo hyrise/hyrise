@@ -90,8 +90,10 @@ void AbstractTask::_join() {
 }
 
 void AbstractTask::execute() {
-  _try_transition_to(TaskState::Started);
-
+  {
+    auto success_started = _try_transition_to(TaskState::Started);
+    Assert(success_started, "Expected successful transition to TaskState::Started.");
+  }
   DTRACE_PROBE3(HYRISE, JOB_START, _id.load(), _description.c_str(), reinterpret_cast<uintptr_t>(this));
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
@@ -110,7 +112,11 @@ void AbstractTask::execute() {
 
   if (_done_callback) _done_callback();
 
-  _try_transition_to(TaskState::Done);
+  {
+    auto success_done = _try_transition_to(TaskState::Done);
+    Assert(success_done, "Expected successful transition to TaskState::Done.");
+  }
+
   {
     std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
     _done_condition_variable.notify_all();
