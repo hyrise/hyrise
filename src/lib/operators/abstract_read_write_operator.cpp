@@ -11,7 +11,6 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
     : AbstractOperator(type, left, right) {}
 
 void AbstractReadWriteOperator::execute() {
-  DebugAssert(!_output, "Operator has already been executed");
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
   Assert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
