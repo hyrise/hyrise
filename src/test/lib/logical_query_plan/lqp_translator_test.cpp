@@ -99,8 +99,8 @@ class LQPTranslatorTest : public BaseTest {
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_int_string, table_alias_name;
   std::shared_ptr<StoredTableNode> int_float_node, int_float2_node, int_float5_node, int_string_node;
-  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a,
-      int_float5_d, int_string_a, int_string_b;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d,
+      int_string_a, int_string_b;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
@@ -298,89 +298,6 @@ TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   ASSERT_TRUE(expression_b);
 }
 
-TEST_F(LQPTranslatorTest, DeduplicationUncorrelatedSubquery) {
-  // Prepare uncorrelated subquery that uses int_float_a from root LQP
-  // clang-format off
-  auto subquery_lqp =
-  ProjectionNode::make(expression_vector(int_float_b),
-    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
-      int_float_node,
-      int_float2_node));
-  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp);
-
-  auto root_lqp =
-  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
-    int_float_node);
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
-
-  // Get operators of root PQP
-  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
-  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
-  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
-  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
-  // Get operators of subquery PQP
-  const auto greater_than_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
-  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
-  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
-  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
-  const auto pqp_subquery_expression = std::static_pointer_cast<const PQPSubqueryExpression>
-      (greater_than_predicate->right_operand());
-  ASSERT_FALSE(pqp_subquery_expression->is_correlated());
-  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
-  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
-  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
-  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
-  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
-  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
-
-  // Compare addresses to check if the uncorrelated PQP subquery reuses the GetTable instance from its owning PQP.
-  EXPECT_EQ(subquery_join->left_input().get(), get_table_int_float.get());
-}
-
-TEST_F(LQPTranslatorTest, DeduplicationCorrelatedSubquery) {
-  // Prepare correlated subquery
-  // clang-format off
-  const auto correlated_parameter_a = correlated_parameter_(ParameterID{0}, int_float_a);
-  auto subquery_lqp =
-  ProjectionNode::make(expression_vector(sub_(int_float_b, correlated_parameter_a)),
-    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
-      int_float_node,
-      int_float2_node));
-  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, int_float_a));
-
-  auto root_lqp =
-  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
-    int_float_node);
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
-
-  // Get operators of root PQP
-  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
-  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
-  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
-  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
-  // Get operators of subquery PQP
-  const auto greater_than_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
-  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
-  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
-  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
-  const auto pqp_subquery_expression = std::static_pointer_cast<const PQPSubqueryExpression>
-      (greater_than_predicate->right_operand());
-  ASSERT_TRUE(pqp_subquery_expression->is_correlated());
-  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
-  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
-  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
-  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
-  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
-  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
-
-  // Compare addresses to check if the correlated PQP subquery uses a different GetTable instance than its owning PQP.
-  EXPECT_NE(subquery_join->left_input().get(), get_table_int_float.get());
-}
-
 TEST_F(LQPTranslatorTest, Sort) {
   /**
    * Build LQP and translate to PQP
@@ -481,7 +398,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
 }
 
 // Tests accessing the original LQP node after translation.
-TEST_F(LQPTranslatorTest, LqpNodeAccess) {
+TEST_F(LQPTranslatorTest, LQPNodeAccess) {
   auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
   auto validate_node = ValidateNode::make(predicate_node);
   auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a), validate_node, int_float2_node);
@@ -521,7 +438,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 
 // Check if the LQP that is referenced in the PQP is really cleaned up. This test is intended to check that no cyclic
 // references are accidentally introduced a later point in time.
-TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
+TEST_F(LQPTranslatorTest, PQPReferencedLQPNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
     auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline();
@@ -831,6 +748,108 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   EXPECT_EQ(*limit_op->row_count_expression(), *value_(2));
 }
 
+TEST_F(LQPTranslatorTest, CreateTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto lqp =
+      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
+
+  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+  EXPECT_EQ(create_table->table_name, "t");
+
+  // CreateTable input must be executed to enable access to column definitions
+  create_table->mutable_left_input()->execute();
+  EXPECT_EQ(create_table->column_definitions(), column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, StaticTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto dummy_table = Table::create_dummy_table(column_definitions);
+
+  const auto lqp = StaticTableNode::make(dummy_table);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
+
+  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
+  EXPECT_EQ(table_wrapper->table, dummy_table);
+}
+
+TEST_F(LQPTranslatorTest, DropTable) {
+  const auto lqp = DropTableNode::make("t", false);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+  EXPECT_EQ(drop_table->table_name, "t");
+}
+
+TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
+  const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
+  const auto lqp = CreatePreparedPlanNode::make("p", prepared_plan);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
+  EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
+}
+
+TEST_F(LQPTranslatorTest, Export) {
+  // clang-format off
+  const auto lqp =
+  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
+    ValidateNode::make(int_float_node));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
+
+  EXPECT_EQ(exporter->type(), OperatorType::Export);
+  EXPECT_EQ(exporter->left_input()->type(), OperatorType::Validate);
+}
+
+TEST_F(LQPTranslatorTest, Import) {
+  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto importer = std::dynamic_pointer_cast<Import>(pqp);
+
+  EXPECT_EQ(importer->type(), OperatorType::Import);
+  EXPECT_EQ(importer->left_input(), nullptr);
+}
+
+TEST_F(LQPTranslatorTest, ChangeMetaTable) {
+  // clang-format off
+  const auto lqp =
+  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
+    DummyTableNode::make(),
+    DummyTableNode::make());
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
+
+  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
+  EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
+}
+
 TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   /**
    * Test that
@@ -877,6 +896,95 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   ASSERT_NE(pqp->right_input()->left_input(), nullptr);
   EXPECT_EQ(pqp->left_input()->left_input(), pqp->right_input()->left_input());
   EXPECT_EQ(pqp->left_input()->left_input()->left_input(), pqp->right_input()->left_input()->left_input());
+}
+
+TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
+  // Tests if uncorrelated subqueries become part of the root diamond shape.
+
+  // Prepare uncorrelated subquery that uses int_float_a from root LQP
+  // clang-format off
+  auto subquery_lqp =
+  ProjectionNode::make(expression_vector(int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+      int_float_node,
+      int_float2_node));
+  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp);
+
+  auto root_lqp =
+  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
+    int_float_node);
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
+
+  // Get operators of root PQP
+  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
+  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
+  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+  // Get operators of subquery PQP
+  const auto greater_than_predicate =
+      std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
+  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
+  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
+  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+  const auto pqp_subquery_expression =
+      std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
+  ASSERT_FALSE(pqp_subquery_expression->is_correlated());
+  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
+  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
+  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
+  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
+
+  // Compare addresses to check if the uncorrelated PQP subquery reuses the GetTable instance from its owning PQP.
+  EXPECT_EQ(subquery_join->left_input().get(), get_table_int_float.get());
+}
+
+TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
+  // Tests if correlated subqueries stay separate to root diamond shapes.
+
+  // Prepare correlated subquery
+  // clang-format off
+  const auto correlated_parameter_a = correlated_parameter_(ParameterID{0}, int_float_a);
+  auto subquery_lqp =
+  ProjectionNode::make(expression_vector(sub_(int_float_b, correlated_parameter_a)),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+      int_float_node,
+      int_float2_node));
+  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, int_float_a));
+
+  auto root_lqp =
+  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
+    int_float_node);
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
+
+  // Get operators of root PQP
+  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
+  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
+  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+  // Get operators of subquery PQP
+  const auto greater_than_predicate =
+      std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
+  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
+  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
+  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+  const auto pqp_subquery_expression =
+      std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
+  ASSERT_TRUE(pqp_subquery_expression->is_correlated());
+  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
+  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
+  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
+  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
+
+  // Compare addresses to check if the correlated PQP subquery uses a different GetTable instance than its owning PQP.
+  EXPECT_NE(subquery_join->left_input().get(), get_table_int_float.get());
 }
 
 TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
@@ -1027,108 +1135,6 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
-}
-
-TEST_F(LQPTranslatorTest, CreateTable) {
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a", DataType::Int, false);
-  column_definitions.emplace_back("b", DataType::Float, true);
-
-  const auto lqp =
-      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
-
-  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
-  EXPECT_EQ(create_table->table_name, "t");
-
-  // CreateTable input must be executed to enable access to column definitions
-  create_table->mutable_left_input()->execute();
-  EXPECT_EQ(create_table->column_definitions(), column_definitions);
-}
-
-TEST_F(LQPTranslatorTest, StaticTable) {
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a", DataType::Int, false);
-  column_definitions.emplace_back("b", DataType::Float, true);
-
-  const auto dummy_table = Table::create_dummy_table(column_definitions);
-
-  const auto lqp = StaticTableNode::make(dummy_table);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
-
-  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
-  EXPECT_EQ(table_wrapper->table, dummy_table);
-}
-
-TEST_F(LQPTranslatorTest, DropTable) {
-  const auto lqp = DropTableNode::make("t", false);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
-  EXPECT_EQ(pqp->left_input(), nullptr);
-
-  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
-  EXPECT_EQ(drop_table->table_name, "t");
-}
-
-TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
-  const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
-  const auto lqp = CreatePreparedPlanNode::make("p", prepared_plan);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
-  EXPECT_EQ(pqp->left_input(), nullptr);
-
-  const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
-  EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
-}
-
-TEST_F(LQPTranslatorTest, Export) {
-  // clang-format off
-  const auto lqp =
-  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
-    ValidateNode::make(int_float_node));
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
-
-  EXPECT_EQ(exporter->type(), OperatorType::Export);
-  EXPECT_EQ(exporter->left_input()->type(), OperatorType::Validate);
-}
-
-TEST_F(LQPTranslatorTest, Import) {
-  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto importer = std::dynamic_pointer_cast<Import>(pqp);
-
-  EXPECT_EQ(importer->type(), OperatorType::Import);
-  EXPECT_EQ(importer->left_input(), nullptr);
-}
-
-TEST_F(LQPTranslatorTest, ChangeMetaTable) {
-  // clang-format off
-  const auto lqp =
-  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
-    DummyTableNode::make());
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
-
-  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
-  EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
-  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
 }
 
 }  // namespace opossum
