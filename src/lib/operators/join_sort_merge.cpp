@@ -224,8 +224,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
     const auto radix_bits = std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})));
     _performance.radix_bits = static_cast<size_t>(radix_bits);
-    return static_cast<size_t>(
-        std::pow(2, radix_bits));
+    return static_cast<size_t>(std::pow(2, radix_bits));
   }
 
   /**
