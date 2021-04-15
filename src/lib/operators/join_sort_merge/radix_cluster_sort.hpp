@@ -17,9 +17,7 @@
 
 namespace opossum {
 
-/**
-* The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
-*/
+// The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
 template <typename T>
 struct RadixClusterOutput {
   MaterializedSegmentList<T> clusters_left;
@@ -28,28 +26,24 @@ struct RadixClusterOutput {
   RowIDPosList null_rows_right;
 };
 
-/*
-*
-* Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis
-* of the least significant bits of the values because the values there are much more evenly distributed than for the
-* most significant bits. As a result, equal values always get moved to the same cluster and the clusters are
-* sorted in themselves but not in between the clusters. This is okay for the equi join, because we are only interested
-* in equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist
-* beyond cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
-* General clustering process:
-* -> Input chunks are materialized and sorted. Every value is stored together with its row id.
-* -> Then, either radix clustering or range clustering is performed.
-* -> At last, the resulting clusters are sorted.
-*
-* Radix clustering example:
-* cluster_count = 4
-* bits for 4 clusters: 2
-*
-*   000001|01
-*   000000|11
-*          ˆ right bits are used for clustering
-*
-**/
+// Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis of the least
+// significant bits of the values because the values there are much more evenly distributed than for the most
+// significant bits. As a result, equal values always get moved to the same cluster and the clusters are sorted in
+// themselves but not in between the clusters. This is okay for the equi join, because we are only interested in
+// equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist beyond
+// cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
+// General clustering process:
+//  -> Input chunks are materialized and sorted. Every value is stored together with its row id.
+//  -> Then, either radix clustering or range clustering is performed.
+//  -> At last, the resulting clusters are sorted.
+//
+// Radix clustering example:
+//  cluster_count = 4
+//  bits for 4 clusters: 2
+//
+//    000001|01
+//    000000|11
+//           ˆ right-most bits are used for clustering
 template <typename T>
 class RadixClusterSort {
  public:
@@ -86,10 +80,8 @@ class RadixClusterSort {
   }
 
  protected:
-  /**
-  * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
-  * be able to appropriately reserve space for the clustering output.
-  **/
+  // The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to be able to
+  // appropriately reserve space for the clustering output.
   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
   struct ChunkInformation {
@@ -108,10 +100,8 @@ class RadixClusterSort {
     std::vector<size_t> insert_position;
   };
 
-  /**
-  * The TableInformation structure is used to gather statistics regarding the value distribution of a table
-  *  and its chunks in order to be able to appropriately reserve space for the clustering output.
-  **/
+  // The TableInformation structure is used to gather statistics regarding the value distribution of a table and its
+  // chunks in order to be able to appropriately reserve space for the clustering output.
   struct TableInformation {
     TableInformation(size_t chunk_count, size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
@@ -139,9 +129,7 @@ class RadixClusterSort {
   bool _materialize_null_left;
   bool _materialize_null_right;
 
-  /**
-  * Determines the total size of a materialized segment list.
-  **/
+  // Determines the total size of a materialized segment list.
   static size_t _materialized_table_size(const MaterializedSegmentList<T>& table) {
     auto total_size = size_t{0};
     for (const auto& chunk : table) {
@@ -151,9 +139,7 @@ class RadixClusterSort {
     return total_size;
   }
 
-  /**
-  * Concatenates multiple materialized segments to a single materialized segment.
-  **/
+  // Concatenates multiple materialized segments to a single materialized segment.
   static MaterializedSegmentList<T> _concatenate_chunks(const MaterializedSegmentList<T>& input_chunks) {
     auto output_table = MaterializedSegmentList<T>(1);
     output_table[0] = MaterializedSegment<T>();
@@ -168,15 +154,13 @@ class RadixClusterSort {
     return output_table;
   }
 
-  /**
-  * Performs the clustering on a materialized table using a clustering function that determines for each
-  * value the appropriate cluster id. This is how the clustering works:
-  * -> Count for each chunk how many of its values belong in each of the clusters using histograms.
-  * -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where
-  *    it will be inserting values in each cluster.
-  * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
-  * -> At last, each value of each chunk is moved to the appropriate cluster.
-  **/
+  // Performs the clustering on a materialized table using a clustering function that determines for each value the
+  // appropriate cluster id. This is how the clustering works:
+  //    -> Count for each chunk how many of its values belong in each of the clusters using histograms.
+  //    -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where it
+  //       will be inserting values in each cluster.
+  //    -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
+  //    -> At last, each value of each chunk is moved to the appropriate cluster./
   MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks,
                                       const std::function<size_t(const T&)>& clusterer) {
     auto output_table = MaterializedSegmentList<T>(_cluster_count);
@@ -248,30 +232,23 @@ class RadixClusterSort {
     return output_table;
   }
 
-  /**
-  * Performs least significant bit radix clustering which is used in the equi join case.
-  * Note: if we used the most significant bits, we could also use this for non-equi joins.
-  * Then, however we would have to deal with skewed clusters. Other ideas:
-  * - manually select the clustering bits based on statistics.
-  * - consolidate clusters in order to reduce skew.
-  **/
+  // Performs least significant bit radix clustering which is used in the equi join case. Note: if we used the most
+  // significant bits, we could also use this for non-equi joins. Then, however we would have to deal with skewed
+  // clusters. Other ideas:
+  //    - manually select the clustering bits based on statistics.
+  //    - consolidate clusters in order to reduce skew.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
     return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
-  /**
-  * Picks split values from the given sample values. Each split value denotes the inclusive
-  * upper bound of its corresponding cluster (i.e., split #0 is the upper bound of cluster #0).
-  * As the last cluster does not require an upper bound, the returned vector size is usually
-  * the cluster count minus one. However, it can be even shorter (e.g., attributes where
-  * #distinct values < #cluster count).
-  *
-  * Procedure: passed values are sorted and samples are picked from the whole sample
-  * value range in fixed widths. Repeated values are not removed before picking to handle
-  * skewed inputs. However, the final split values are unique. As a consequence, the split
-  * value vector might contain less values than `_cluster_count - 1`.
-  **/
+  // Picks split values from the given sample values. Each split value denotes the inclusive upper bound of its
+  // corresponding cluster (i.e., split #0 is the upper bound of cluster #0). As the last cluster does not require an
+  // upper bound, the returned vector size is usually the cluster count minus one. However, it can be even shorter
+  // (e.g., attributes where #distinct values < #cluster count). Procedure: passed values are sorted and samples are
+  // picked from the whole sample value range in fixed widths. Repeated values are not removed before picking to handle
+  // skewed inputs. However, the final split values are unique. As a consequence, the split value vector might contain
+  // less values than `_cluster_count - 1`.
   const std::vector<T> _pick_split_values(std::vector<T>& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
@@ -293,11 +270,9 @@ class RadixClusterSort {
     return split_values;
   }
 
-  /**
-  * Performs the range cluster sort for the non-equi case (>, >=, <, <=, !=) which requires the complete table to
-  * be sorted and not only the clusters in themselves. Returns the clustered data from the left table and the
-  * right table in a pair.
-  **/
+  // Performs the range cluster sort for the non-equi case (>, >=, <, <=, !=) which requires the complete table to be
+  // sorted and not only the clusters in themselves. Returns the clustered data from the left table and the right table
+  // sin a pair.
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
       const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
       std::vector<T>& sample_values) {
@@ -325,20 +300,24 @@ class RadixClusterSort {
     return {std::move(output_left), std::move(output_right)};
   }
 
-  /**
-  * Sorts all clusters of a materialized table.
-  **/
+  // Sorts all clusters of a materialized table.
   void _sort_clusters(MaterializedSegmentList<T>& clusters) {
+    auto sort_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto& cluster : clusters) {
-      boost::sort::pdqsort(cluster.begin(), cluster.end(),
-                           [](const auto& left, const auto& right) { return left.value < right.value; });
+      auto sort_job = [&] {
+        boost::sort::pdqsort(cluster.begin(), cluster.end(),
+                             [](const auto& left, const auto& right) { return left.value < right.value; });
+      };
+      if (cluster.size() > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
+        sort_jobs.push_back(std::make_shared<JobTask>(sort_job));
+      } else {
+        sort_job();
+      }
     }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(sort_jobs);
   }
 
  public:
-  /**
-  * Executes the clustering and sorting.
-  **/
   RadixClusterOutput<T> execute() {
     RadixClusterOutput<T> output;
 
@@ -373,11 +352,8 @@ class RadixClusterSort {
     }
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Clustering, timer.lap());
 
-    // Sort each cluster (right now std::sort -> but maybe can be replaced with
-    // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
-
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer.lap());
 
     return output;
