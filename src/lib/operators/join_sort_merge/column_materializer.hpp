@@ -39,7 +39,7 @@ using MaterializedSegmentList = std::vector<MaterializedSegment<T>>;
 // sample list with which the split values for the radix partitioning are determined.
 template <typename T>
 struct Subsample {
-  explicit Subsample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples() {}
+  explicit Subsample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples(sample_count) {}
   const ChunkOffset samples_to_collect;
   std::vector<T> samples;
 };
@@ -76,7 +76,7 @@ class ColumnMaterializer {
 
       auto materialize_job = [&, chunk_id] {
         const auto& segment = input->get_chunk(chunk_id)->get_segment(column_id);
-        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples.back());
+        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples[chunk_id]);
       };
 
       if (chunk->size() > 500) {
@@ -107,7 +107,7 @@ class ColumnMaterializer {
   // collection to limit non-local writes.
   void _gather_samples_from_segment(const MaterializedSegment<T>& segment, Subsample<T>& subsample) const {
     const auto samples_to_collect = subsample.samples_to_collect;
-    std::vector<T> collected_samples;
+    auto collected_samples = std::vector<T>{};
     collected_samples.reserve(samples_to_collect);
 
     if (segment.size() > 0 && samples_to_collect > 0) {
