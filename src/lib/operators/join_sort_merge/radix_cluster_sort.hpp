@@ -88,7 +88,7 @@ class RadixClusterSort {
   * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
   * be able to appropriately reserve space for the clustering output.
   **/
-  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
+  JoinSortMerge::PerformanceData& _performance;
 
   struct ChunkInformation {
     explicit ChunkInformation(size_t cluster_count) {
@@ -382,6 +382,7 @@ class RadixClusterSort {
     };
 
     if (_left_input_table->row_count() < _right_input_table->row_count() || !_equi_case) {
+      _performance.bloomfilter_used_on_left_side = false;
       materialize_left_side(ALL_TRUE_BLOOM_FILTER);
       materialize_right_side(left_side_bloom_filter);
     } else {

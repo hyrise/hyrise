@@ -45,9 +45,10 @@ class JoinSortMerge : public AbstractJoinOperator {
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
 
-    size_t radix_bits{0};
+    size_t radix_bits = 0;
     // Initially, the left input is the build side and the right side is the probe side.
-    bool left_input_is_build_side{true};
+    bool bloomfilter = true;
+    bool bloomfilter_used_on_left_side = true;
   };
 
  protected:

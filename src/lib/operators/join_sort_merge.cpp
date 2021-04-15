@@ -962,7 +962,9 @@ void JoinSortMerge::PerformanceData::output_to_stream(std::ostream& stream, Desc
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   stream << separator << "Radix bits: " << radix_bits << ".";
-  stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
+  if (bloomfilter) {
+    stream << separator << "Bloom-filter used on " << (bloomfilter_used_on_left_side ? "left side." : "right side.");
+  }
 }
 
 }  // namespace opossum
