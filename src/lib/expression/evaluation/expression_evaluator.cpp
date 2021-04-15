@@ -52,7 +52,7 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
   switch (predicate_condition) {
     case PredicateCondition::Equals:            functor(boost::hana::type<EqualsEvaluator>{});            break;
     case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
-    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
+    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator>{});          break;
     case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:

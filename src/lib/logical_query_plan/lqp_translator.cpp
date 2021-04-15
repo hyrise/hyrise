@@ -92,7 +92,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    * would result in multiple operators created from predicate_c and thus in performance drops.
    *
    * Deduplication:
-   * _operator_by_lqp_node_cache compares entries by value (i.e., AbstractOperator::operator==), not by identity
+   * _operator_by_lqp_node compares entries by value (i.e., AbstractOperator::operator==), not by identity
    * (shared_ptr::operator==). As a result, two separate, but equal LQP nodes will be translated into a single PQP
    * node. This prevents us from executing the same operation twice.
    *   Excursus: You would be right to wonder why this is not done on the LQP by some type of optimizer rule. That would
@@ -101,8 +101,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *   instances would also become indistinguishable. That breaks things left and right.
    */
 
-  const auto operator_iter = _operator_by_lqp_node_cache.find(node);
-  if (operator_iter != _operator_by_lqp_node_cache.end()) {
+  const auto operator_iter = _operator_by_lqp_node.find(node);
+  if (operator_iter != _operator_by_lqp_node.end()) {
     return operator_iter->second;
   }
 
@@ -112,7 +112,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
   // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
   // only the merging union node (all three PQP nodes share the same originating LQP node).
   pqp->lqp_node = node;
-  _operator_by_lqp_node_cache.emplace(node, pqp);
+  _operator_by_lqp_node.emplace(node, pqp);
 
   return pqp;
 }
@@ -590,22 +590,23 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
       Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-
       /**
        * Notes on generating subquery PQPs:
-       *  a) For uncorrelated subqueries, this LQPTranslator's cache is used to create subquery PQPs. By using the
-       *     cache, operator results can be shared between identical parts in subquery PQPs and owning PQPs.
+       *  a) For uncorrelated subqueries, operator results can be shared between identical parts in uncorrelated
+       *     subqueries and outer queries. Therefore, this LQPTranslator instance is used to deduplicate subquery PQPs
+       *     with _operator_by_lqp_node.
        *
-       *  b) For correlated subqueries, a new LQPTranslator instance is used to create subquery PQPs.
-       *     In contrast to uncorrelated subqueries, operator results cannot be shared easily between subquery PQPs
-       *     and owning PQPs because correlated subqueries imply changing parameters on a row-by-row basis.
-       *     See ExpressionEvaluator::_evaluate_subquery_expression_for_row for evaluation details.
+       *  b) In contrast to uncorrelated subqueries, correlated subqueries cannot share identical parts with outer
+       *     queries because ExpressionEvaluator::_evaluate_subquery_expression_for_row always deep-copies the whole PQP
+       *     at evaluation time. The deep copy includes both correlated and uncorrelated parts.
+       *     Consequently, a new LQPTranslator instance is used for correlated subqueries to prevent deduplication
+       *     with outer queries.
        */
       auto subquery_pqp = std::shared_ptr<AbstractOperator>();
-      if (subquery_expression->parameter_count() == 0) {
-        subquery_pqp = translate_node(subquery_expression->lqp);
-      } else {
+      if (subquery_expression->is_correlated()) {
         subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
+      } else {
+        subquery_pqp = translate_node(subquery_expression->lqp);
       }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};

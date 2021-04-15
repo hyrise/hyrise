@@ -20,7 +20,7 @@ std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
 
 std::string PlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "Placeholder[id=" << std::to_string(parameter_id) << "]";
+  stream << "Placeholder[ParameterID=" << std::to_string(parameter_id) << "]";
   return stream.str();
 }
 
