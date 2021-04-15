@@ -797,7 +797,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
 }
 
 TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
-  // Tests if uncorrelated subqueries become part of the root diamond shape.
+  // Tests that PQP parts that are shared between an uncorrelated subquery and the outer plan are deduplicated.
 
   // Prepare uncorrelated subquery that uses int_float_a from root LQP
   // clang-format off
@@ -846,7 +846,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
 }
 
 TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
-  // Tests if correlated subqueries stay separate to root diamond shapes.
+  // Tests that PQP parts that are shared between a correlated subquery and the outer plan are NOT deduplicated.
 
   // Prepare correlated subquery
   // clang-format off
