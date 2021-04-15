@@ -48,7 +48,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const OperatorJoinPredicate& primary_predicate,
                              const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
+                           std::make_unique<PerformanceData>()) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -81,7 +81,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
     _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
         *this, left_input_table_ptr, right_input_table_ptr, _primary_predicate.column_ids.first,
         _primary_predicate.column_ids.second, _primary_predicate.predicate_condition, _mode, _secondary_predicates,
-        dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
+        dynamic_cast<PerformanceData&>(*performance_data));
   });
 
   return _impl->_on_execute();
@@ -104,7 +104,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                        const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
                        ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
                        const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
-                       OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+                       JoinSortMerge::PerformanceData& performance_data)
       : _sort_merge_join{sort_merge_join},
         _left_input_table{left_input_table},
         _right_input_table{right_input_table},
@@ -123,7 +123,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   JoinSortMerge& _sort_merge_join;
   const std::shared_ptr<const Table> _left_input_table, _right_input_table;
 
-  OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
+  JoinSortMerge::PerformanceData& _performance;
 
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
@@ -954,5 +954,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     return result_table;
   }
 };
+
+void JoinSortMerge::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
+
+  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  stream << separator << "Radix bits: " << radix_bits << ".";
+  stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
+}
 
 }  // namespace opossum
