@@ -303,12 +303,15 @@ class RadixClusterSort {
   // Sorts all clusters of a materialized table.
   void _sort_clusters(MaterializedSegmentList<T>& clusters) {
     auto sort_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    for (auto& cluster : clusters) {
-      auto sort_job = [&] {
+    for (auto cluster_id = size_t{0}; cluster_id < clusters.size(); ++cluster_id) {
+      const auto cluster_size = clusters[cluster_id].size();
+      auto sort_job = [&, cluster_id] {
+        auto& cluster = clusters[cluster_id];
         boost::sort::pdqsort(cluster.begin(), cluster.end(),
                              [](const auto& left, const auto& right) { return left.value < right.value; });
       };
-      if (cluster.size() > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
+
+      if (cluster_size > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
         sort_jobs.push_back(std::make_shared<JobTask>(sort_job));
       } else {
         sort_job();
