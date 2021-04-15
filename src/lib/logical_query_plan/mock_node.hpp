@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+
 #include <boost/variant.hpp>
 
 #include "abstract_lqp_node.hpp"
