@@ -837,7 +837,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
   ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
 
   // Compare addresses to check if the uncorrelated PQP subquery reuses the GetTable instance from its owning PQP.
-  EXPECT_EQ(subquery_join->left_input().get(), get_table_int_float.get());
+  EXPECT_EQ(subquery_join->left_input(), get_table_int_float);
 }
 
 TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
@@ -882,7 +882,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
   ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
 
   // Compare addresses to check if the correlated PQP subquery uses a different GetTable instance than its owning PQP.
-  EXPECT_NE(subquery_join->left_input().get(), get_table_int_float.get());
+  EXPECT_NE(subquery_join->left_input(), get_table_int_float);
 }
 
 TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
