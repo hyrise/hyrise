@@ -16,7 +16,7 @@
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <bytell_hash_map.hpp>
 #include <uninitialized_vector.hpp>
 

@@ -2,8 +2,9 @@
 
 #include <shared_mutex>
 
+#include <boost/heap/fibonacci_heap.hpp>
+
 #include "abstract_cache.hpp"
-#include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
