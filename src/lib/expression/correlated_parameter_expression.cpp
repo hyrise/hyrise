@@ -32,8 +32,8 @@ std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::_on_deep_copy
 std::string CorrelatedParameterExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Parameter[";
-  stream << "name=" << _referenced_expression_info.column_name << ";";
-  stream << "id=" << std::to_string(parameter_id);
+  stream << "name=" << _referenced_expression_info.column_name << "; ";
+  stream << "ParameterID=" << std::to_string(parameter_id);
   stream << "]";
 
   return stream.str();
