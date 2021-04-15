@@ -819,19 +819,24 @@ TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
   ASSERT_EQ(pqp->type(), OperatorType::TableScan);
   const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
   ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+
   const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+
   // Get operators of subquery PQP
   const auto greater_than_predicate =
       std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
   ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
   ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
   ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+
   const auto pqp_subquery_expression =
       std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
   ASSERT_FALSE(pqp_subquery_expression->is_correlated());
   ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+
   const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
   ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+
   const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
   ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
   ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
@@ -864,19 +869,24 @@ TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
   ASSERT_EQ(pqp->type(), OperatorType::TableScan);
   const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
   ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+
   const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+
   // Get operators of subquery PQP
   const auto greater_than_predicate =
       std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
   ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
   ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
   ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+
   const auto pqp_subquery_expression =
       std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
   ASSERT_TRUE(pqp_subquery_expression->is_correlated());
   ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+
   const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
   ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+
   const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
   ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
   ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
