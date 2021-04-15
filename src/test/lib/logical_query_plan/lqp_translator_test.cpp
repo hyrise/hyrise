@@ -748,108 +748,6 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   EXPECT_EQ(*limit_op->row_count_expression(), *value_(2));
 }
 
-TEST_F(LQPTranslatorTest, CreateTable) {
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a", DataType::Int, false);
-  column_definitions.emplace_back("b", DataType::Float, true);
-
-  const auto lqp =
-      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
-
-  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
-  EXPECT_EQ(create_table->table_name, "t");
-
-  // CreateTable input must be executed to enable access to column definitions
-  create_table->mutable_left_input()->execute();
-  EXPECT_EQ(create_table->column_definitions(), column_definitions);
-}
-
-TEST_F(LQPTranslatorTest, StaticTable) {
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a", DataType::Int, false);
-  column_definitions.emplace_back("b", DataType::Float, true);
-
-  const auto dummy_table = Table::create_dummy_table(column_definitions);
-
-  const auto lqp = StaticTableNode::make(dummy_table);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
-
-  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
-  EXPECT_EQ(table_wrapper->table, dummy_table);
-}
-
-TEST_F(LQPTranslatorTest, DropTable) {
-  const auto lqp = DropTableNode::make("t", false);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
-  EXPECT_EQ(pqp->left_input(), nullptr);
-
-  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
-  EXPECT_EQ(drop_table->table_name, "t");
-}
-
-TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
-  const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
-  const auto lqp = CreatePreparedPlanNode::make("p", prepared_plan);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-
-  EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
-  EXPECT_EQ(pqp->left_input(), nullptr);
-
-  const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
-  EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
-}
-
-TEST_F(LQPTranslatorTest, Export) {
-  // clang-format off
-  const auto lqp =
-  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
-    ValidateNode::make(int_float_node));
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
-
-  EXPECT_EQ(exporter->type(), OperatorType::Export);
-  EXPECT_EQ(exporter->left_input()->type(), OperatorType::Validate);
-}
-
-TEST_F(LQPTranslatorTest, Import) {
-  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto importer = std::dynamic_pointer_cast<Import>(pqp);
-
-  EXPECT_EQ(importer->type(), OperatorType::Import);
-  EXPECT_EQ(importer->left_input(), nullptr);
-}
-
-TEST_F(LQPTranslatorTest, ChangeMetaTable) {
-  // clang-format off
-  const auto lqp =
-  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
-    DummyTableNode::make());
-  // clang-format on
-
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
-
-  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
-  EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
-  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
-}
-
 TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   /**
    * Test that
@@ -1135,6 +1033,108 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, CreateTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto lqp =
+      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
+
+  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+  EXPECT_EQ(create_table->table_name, "t");
+
+  // CreateTable input must be executed to enable access to column definitions
+  create_table->mutable_left_input()->execute();
+  EXPECT_EQ(create_table->column_definitions(), column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, StaticTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto dummy_table = Table::create_dummy_table(column_definitions);
+
+  const auto lqp = StaticTableNode::make(dummy_table);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
+
+  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
+  EXPECT_EQ(table_wrapper->table, dummy_table);
+}
+
+TEST_F(LQPTranslatorTest, DropTable) {
+  const auto lqp = DropTableNode::make("t", false);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+  EXPECT_EQ(drop_table->table_name, "t");
+}
+
+TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
+  const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
+  const auto lqp = CreatePreparedPlanNode::make("p", prepared_plan);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
+  EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
+}
+
+TEST_F(LQPTranslatorTest, Export) {
+  // clang-format off
+  const auto lqp =
+  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
+    ValidateNode::make(int_float_node));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
+
+  EXPECT_EQ(exporter->type(), OperatorType::Export);
+  EXPECT_EQ(exporter->left_input()->type(), OperatorType::Validate);
+}
+
+TEST_F(LQPTranslatorTest, Import) {
+  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto importer = std::dynamic_pointer_cast<Import>(pqp);
+
+  EXPECT_EQ(importer->type(), OperatorType::Import);
+  EXPECT_EQ(importer->left_input(), nullptr);
+}
+
+TEST_F(LQPTranslatorTest, ChangeMetaTable) {
+  // clang-format off
+  const auto lqp =
+  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
+    DummyTableNode::make(),
+    DummyTableNode::make());
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
+
+  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
+  EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
 }
 
 }  // namespace opossum
