@@ -4,7 +4,7 @@
 #include <string>
 #include <type_traits>
 
-#include "boost/lexical_cast.hpp"
+#include <boost/lexical_cast.hpp>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
