@@ -192,9 +192,7 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t distinct_value_count() const {
-    return _offset_hash_table.size();
-  }
+  size_t distinct_value_count() const { return _offset_hash_table.size(); }
 
   // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().

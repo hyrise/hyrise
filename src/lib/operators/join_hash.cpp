@@ -458,7 +458,14 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       if (!hash_table) continue;
 
       _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
-      _performance_data.hash_tables_position_count += hash_table->position_count() ? *hash_table->position_count() : 0;
+      const auto position_count = hash_table->position_count();
+      if (position_count) {
+        // Update or set hash_tables_position_count when hash table stores positions.
+        _performance_data.hash_tables_position_count =
+            _performance_data.hash_tables_position_count
+                ? *_performance_data.hash_tables_position_count + *position_count
+                : *position_count;
+      }
     }
 
     /**

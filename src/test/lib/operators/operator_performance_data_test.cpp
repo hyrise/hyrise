@@ -228,8 +228,8 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   const auto& inner_perf = dynamic_cast<JoinHash::PerformanceData&>(*inner_join->performance_data);
   EXPECT_EQ(inner_perf.build_side_materialized_value_count, 4ul);  // matching values 2,6,2
   EXPECT_EQ(inner_perf.probe_side_materialized_value_count, 4ul);  // matching values 2,6,2
-  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2ul);      // values 2,6
-  EXPECT_EQ(inner_perf.hash_tables_position_count, 3ul);            // positions 1,2,3
+  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2ul);     // values 2,6
+  EXPECT_EQ(inner_perf.hash_tables_position_count, 3ul);           // positions 1,2,3
   EXPECT_TRUE(inner_perf.left_input_is_build_side);
 
   // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
@@ -245,7 +245,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4ul);
   EXPECT_EQ(semi_perf.probe_side_materialized_value_count, table_a->row_count());
   EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2ul);
-  EXPECT_EQ(semi_perf.hash_tables_position_count, 0ul);
+  EXPECT_FALSE(semi_perf.hash_tables_position_count);
   EXPECT_FALSE(semi_perf.left_input_is_build_side);
 }
 

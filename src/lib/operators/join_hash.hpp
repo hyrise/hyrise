@@ -64,7 +64,7 @@ class JoinHash : public AbstractJoinOperator {
     // Note, depending on the order of materialization, build_side_materialized_value_count is not necessarily equal to
     // build_side_position_count (see order of materialization in hash_join.cpp).
     size_t hash_tables_distinct_value_count{0};
-    size_t hash_tables_position_count{0};
+    std::optional<size_t> hash_tables_position_count;
   };
 
  protected:
