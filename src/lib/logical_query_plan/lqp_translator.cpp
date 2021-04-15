@@ -600,7 +600,8 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
        *     queries because ExpressionEvaluator::_evaluate_subquery_expression_for_row always deep-copies the whole PQP
        *     at evaluation time. The deep copy includes both correlated and uncorrelated parts.
        *     Consequently, a new LQPTranslator instance is used for correlated subqueries to prevent deduplication
-       *     with outer queries.
+       *     with outer queries. Besides, we also prevent correlated subqueries from increasing the consumer count of
+       *     outer query operators, which would otherwise block the automatic clearing of results.
        */
       auto subquery_pqp = std::shared_ptr<AbstractOperator>();
       if (subquery_expression->is_correlated()) {
