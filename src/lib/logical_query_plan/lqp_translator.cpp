@@ -592,13 +592,15 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
       /**
        * Notes on generating subquery PQPs:
-       *  a) For uncorrelated subqueries, this LQPTranslator's cache is used to create subquery PQPs. By using the
-       *     cache, operator results can be shared between identical parts in subquery PQPs and owning PQPs.
+       *  a) For uncorrelated subqueries, operator results can be shared between identical parts in uncorrelated
+       *     subqueries and outer queries. Therefore, this LQPTranslator instance is used to deduplicate subquery PQPs
+       *     with _operator_by_lqp_node.
        *
-       *  b) For correlated subqueries, a new LQPTranslator instance is used to create subquery PQPs.
-       *     In contrast to uncorrelated subqueries, operator results cannot be shared easily between subquery PQPs
-       *     and owning PQPs because correlated subqueries imply changing parameters on a row-by-row basis.
-       *     See ExpressionEvaluator::_evaluate_subquery_expression_for_row for evaluation details.
+       *  b) In contrast to uncorrelated subqueries, correlated subqueries cannot share identical parts with outer
+       *     queries because ExpressionEvaluator::_evaluate_subquery_expression_for_row always deep-copies the whole PQP
+       *     at evaluation time. The deep copy includes both correlated and uncorrelated parts.
+       *     Consequently, a new LQPTranslator instance is used for correlated subqueries to prevent deduplication
+       *     with outer queries.
        */
       auto subquery_pqp = std::shared_ptr<AbstractOperator>();
       if (subquery_expression->is_correlated()) {
