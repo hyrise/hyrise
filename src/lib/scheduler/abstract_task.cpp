@@ -157,15 +157,16 @@ void AbstractTask::_on_predecessor_done() {
 }
 
 bool AbstractTask::_try_transition_to(TaskState new_state) {
-  // Lock critical section
-  std::lock_guard<std::mutex> lock(_transition_to_mutex);
-
   /**
-   * Before switching to the new state, check the validity of the state transition.
-   *  a) Fail if the transition is illegal or unexpected.
-   *  b) Return false when conflicts arrive. E.g., when another thread already changed the task's state to
-   *     TaskState::Scheduled.
+   * Before switching state, the validity of the transition must be checked:
+   *  a) If the transition is illegal or unexpected, this function fails.
+   *  b) If another thread was faster and the state has already progressed to, e.g., TaskState::Scheduled, this
+   *     function returns false.
+   *
+   * This function must be locked to prevent race conditions. A different thread might be able to change _state
+   * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
+  std::lock_guard<std::mutex> lock(_transition_to_mutex);
   switch (new_state) {
     case TaskState::Scheduled:
       if (_state >= TaskState::Scheduled) return false;

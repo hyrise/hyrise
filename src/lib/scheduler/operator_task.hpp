@@ -29,7 +29,8 @@ class OperatorTask : public AbstractTask {
   std::string description() const override;
 
   /**
-   * TODO(Julian)
+   * Transitions this OperatorTask to TaskState::Done if its operator has already been executed. Otherwise, this
+   * function fails.
    */
   void skip_operator_task();
 

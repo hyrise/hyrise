@@ -189,8 +189,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   OperatorState state() const;
 
   /**
-   * TODO(Julian) weak pointer
-   * @returns a shared pointer to the OperatorTask that owns this operator.
+   * If not already existing this function creates an OperatorTask that owns this operator.
+   * @returns a shared pointer to the OperatorTask.
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
 

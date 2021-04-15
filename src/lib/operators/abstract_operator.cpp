@@ -166,7 +166,7 @@ void AbstractOperator::execute() {
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
   Assert(_state == OperatorState::ExecutedAndAvailable,
-         "Trying to get_output of operator which is not in state OperatorState::ExecutedAndAvailable.");
+         "Trying to get_output of operator which is not in OperatorState::ExecutedAndAvailable.");
   return _output;
 }
 
@@ -327,7 +327,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 void AbstractOperator::_transition_to(OperatorState new_state) {
   OperatorState previous_state = _state.exchange(new_state);
 
-  // Check validity of state transition
+  // Check the validity of the state transition
   switch (new_state) {
     case OperatorState::Running:
       Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");

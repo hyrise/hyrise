@@ -106,7 +106,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
-   * @returns true when the task was scheduled successfully // TODO(Julian) add "it may already be done"
+   * @returns true when the task is scheduled or was scheduled successfully.
    */
   bool is_scheduled() const;
 
@@ -133,6 +133,13 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
  protected:
   virtual void _on_execute() = 0;
 
+  /**
+   * TODO(Julian) Doc
+   * @param new_state
+   * Fail if the transition is illegal or unexpected.
+   * @return false when conflicts arrive. E.g., when another thread already changed the task's state to
+   *     TaskState::Scheduled.
+   */
   [[nodiscard]] bool _try_transition_to(TaskState new_state);
 
  private:
