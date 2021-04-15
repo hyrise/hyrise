@@ -77,7 +77,7 @@ class LQPTranslator {
   // Cache operator subtrees by LQP node to avoid redundantly executing
   //   - identical operators (operators below a diamond shape)
   //   - equal but not identical operators
-  mutable LQPNodeUnorderedMap<std::shared_ptr<AbstractOperator>> _operator_by_lqp_node_cache;
+  mutable LQPNodeUnorderedMap<std::shared_ptr<AbstractOperator>> _operator_by_lqp_node;
 };
 
 }  // namespace opossum
