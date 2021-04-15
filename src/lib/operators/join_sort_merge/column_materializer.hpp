@@ -141,7 +141,7 @@ class ColumnMaterializer {
       auto chunk_output = MaterializedSegment<T>{};
       chunk_output.reserve(segment.size());
 
-      if constexpr (use_bloom_filter) {
+      if (use_bloom_filter) {
         bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
       }
 
@@ -154,7 +154,7 @@ class ColumnMaterializer {
             null_rows_output->emplace_back(row_id);
           }
         } else {
-          if constexpr (use_bloom_filter) {
+          if (use_bloom_filter) {
             const Hash hashed_value = hash_function(static_cast<T>(position.value()));
             // If Value in not present in input bloom filter and can be skipped
             if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] || _materialize_null) {
@@ -162,7 +162,7 @@ class ColumnMaterializer {
               chunk_output.emplace_back(row_id, position.value());
             }
           }
-          if constexpr (!use_bloom_filter) {
+          if (!use_bloom_filter) {
             chunk_output.emplace_back(row_id, position.value());
           }
         }
