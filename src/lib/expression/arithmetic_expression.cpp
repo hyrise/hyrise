@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include <boost/container_hash/hash.hpp>
+
 #include "expression_utils.hpp"
 
 namespace opossum {

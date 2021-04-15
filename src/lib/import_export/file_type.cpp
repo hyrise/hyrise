@@ -1,6 +1,7 @@
 #include "file_type.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>
+
 #include "utils/assert.hpp"
 
 namespace opossum {
