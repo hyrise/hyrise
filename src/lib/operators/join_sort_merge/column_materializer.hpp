@@ -70,12 +70,12 @@ class ColumnMaterializer {
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk = input->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-      const auto& segment = chunk->get_segment(column_id);
 
       const auto samples_to_write = std::min(SAMPLES_PER_CHUNK, chunk->size());
       subsamples.push_back(Subsample<T>(samples_to_write));
 
       auto materialize_job = [&, chunk_id] {
+        const auto& segment = input->get_chunk(chunk_id)->get_segment(column_id);
         output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples.back());
       };
 
