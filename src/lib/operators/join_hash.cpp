@@ -460,11 +460,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
       const auto position_count = hash_table->position_count();
       if (position_count) {
-        // Update or set hash_tables_position_count when hash table stores positions.
+        // Update or set hash_tables_position_count if hash table stores positions.
         _performance_data.hash_tables_position_count =
-            _performance_data.hash_tables_position_count
-                ? *_performance_data.hash_tables_position_count + *position_count
-                : *position_count;
+            _performance_data.hash_tables_position_count.value_or(0) + *position_count;
       }
     }
 
