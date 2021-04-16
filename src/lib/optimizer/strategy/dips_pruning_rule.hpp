@@ -151,11 +151,13 @@ class DipsPruningRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
   void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                    std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
+                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
 
-  void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<DipsJoinGraph>& join_graph) const;
+  void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
+                         const std::shared_ptr<DipsJoinGraph>& join_graph) const;
 
-  static void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node, const std::set<ChunkID>& pruned_chunk_ids);
+  static void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
+                                    const std::set<ChunkID>& pruned_chunk_ids);
   void _top_down_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
   void _bottom_up_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
 
@@ -209,7 +211,8 @@ class DipsPruningRule : public AbstractRule {
   }
 
   template <typename COLUMN_TYPE>
-  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
+  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
+                        std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
     return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }

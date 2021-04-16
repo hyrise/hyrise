@@ -32,7 +32,8 @@ namespace opossum {
 class DipsPruningRuleTestClass : DipsPruningRule {
  public:
   template <typename COLUMN_TYPE>
-  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
+  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
+                        std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
     return DipsPruningRule::_range_intersect<COLUMN_TYPE>(range_a, range_b);
   }
 
