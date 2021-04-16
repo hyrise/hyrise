@@ -382,7 +382,6 @@ class RadixClusterSort {
     };
 
     if (_left_input_table->row_count() < _right_input_table->row_count() || !_equi_case) {
-      _performance.bloomfilter_used_on_left_side = false;
       materialize_left_side(ALL_TRUE_BLOOM_FILTER);
       materialize_right_side(left_side_bloom_filter);
     } else {
