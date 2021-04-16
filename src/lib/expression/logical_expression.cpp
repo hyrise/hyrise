@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 #include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {

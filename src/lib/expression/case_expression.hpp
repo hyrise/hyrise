@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
 
 #include "abstract_expression.hpp"
 #include "resolve_type.hpp"
