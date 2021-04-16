@@ -166,8 +166,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   OperatorPerformanceData<JoinSortMerge::OperatorSteps>& _performance;
 
   // Contains the materialized sorted input tables
-  std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
-  std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
+  MaterializedSegmentList<T> _sorted_left_table;
+  MaterializedSegmentList<T> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
   RowIDPosList _null_rows_left;
@@ -237,42 +237,39 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
+    void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
-        for (size_t index = start_index; index < end_index; ++index) {
-          action((*(*table)[cluster])[index].row_id);
+      for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
+        const auto start_index = (cluster == start.cluster) ? start.index : 0;
+        const auto end_index = (cluster == end.cluster) ? end.index : table[cluster].size();
+        for (auto index = start_index; index < end_index; ++index) {
+          action(table[cluster][index].row_id);
         }
       }
 #pragma GCC diagnostic pop
     }
   };
 
-  /**
-  * Determines the number of clusters to be used for the join.
-  * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of clusters?
-  **/
+  // Determines the number of clusters to be used for the join. The number of clusters must be a power of two.
   size_t _determine_number_of_clusters() {
-    // Get the next lower power of two of the bigger chunk number
-    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join.left_input_table()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join.right_input_table()->chunk_count();
+    // We try to have a partition size of roughly 256 KB to avoid out-of-L2 cache sorts. This value has been determined
+    // by an array of benchmarks. Ideally, it would incorporate hardware knowledge such as the L2 cache size.
+    const auto max_sort_items_count = 256'000 / sizeof(T);
+    const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
+    const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
     return static_cast<size_t>(
-        std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
+        std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
   }
 
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-  static TablePosition _end_of_table(std::unique_ptr<MaterializedSegmentList<T>>& table) {
-    DebugAssert(!table->empty(), "table has no chunks");
-    auto last_cluster = table->size() - 1;
-    return TablePosition(last_cluster, (*table)[last_cluster]->size());
+  static TablePosition _end_of_table(const MaterializedSegmentList<T>& table) {
+    DebugAssert(!table.empty(), "table has no chunks");
+    auto last_cluster = table.size() - 1;
+    return TablePosition(last_cluster, table[last_cluster].size());
   }
 
   /**
@@ -737,26 +734,47 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                 [&](RowID left_row_id) { _emit_left_only(output_cluster, left_row_id); });
   }
 
-  /**
-  * Determines the length of the run starting at start_index in the values vector.
-  * A run is a series of the same value.
-  **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
-    if (start_index >= values->size()) {
+  // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
+  // value. Even though the input vector is sorted, we first start by linearly scanning for the end of the run. The
+  // reason is that we know with a high probability that the item we are looking for is at the beginning of the input
+  // vector. If we do not find the run's end within the linearly scanned part, we use a binary search.
+  size_t _run_length(size_t start_index, const MaterializedSegment<T>& values) {
+    if (start_index >= values.size()) {
       return 0;
     }
 
-    auto start_position = values->begin() + start_index;
-    auto result = std::upper_bound(start_position, values->end(), *start_position,
-                                   [](const auto& a, const auto& b) { return a.value < b.value; });
+    const auto begin = values.begin() + start_index;
+    const auto run_value = begin->value;
 
-    return result - start_position;
+    constexpr auto LINEAR_SEARCH_ITEMS = size_t{128};
+    auto end = begin + LINEAR_SEARCH_ITEMS;
+    if (values.end() < end) {
+      // Set end of linear search to end of input vector if we would overshoot otherwise.
+      end = values.end();
+    }
+
+    const auto linear_search_result = std::find_if(begin, end, [&](const auto& v) { return v.value > run_value; });
+    if (linear_search_result != end) {
+      // Match found within the linearly scanned part.
+      return std::distance(begin, linear_search_result);
+    }
+
+    if (linear_search_result == values.end()) {
+      // We found the value neither in the linearly scanned part nor in the input vector. That means that all values
+      // are part of the run.
+      return std::distance(begin, end);
+    }
+
+    // Binary search in case the run did not end within the linearly scanned part.
+    const auto binary_search_result = std::upper_bound(
+        end, values.end(), *end, [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
+    return std::distance(begin, binary_search_result);
   }
 
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  CompareResult _compare(const T left, const T right) {
     if (left < right) {
       return CompareResult::Less;
     } else if (left == right) {
@@ -786,23 +804,23 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // and run.
   void _join_cluster(const size_t cluster_id,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
-    auto& left_cluster = (*_sorted_left_table)[cluster_id];
-    auto& right_cluster = (*_sorted_right_table)[cluster_id];
+    const auto& left_cluster = _sorted_left_table[cluster_id];
+    const auto& right_cluster = _sorted_right_table[cluster_id];
 
-    size_t left_run_start = 0;
-    size_t right_run_start = 0;
+    auto left_run_start = size_t{0};
+    auto right_run_start = size_t{0};
 
     auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
 
-    const size_t left_size = left_cluster->size();
-    const size_t right_size = right_cluster->size();
+    const auto left_size = left_cluster.size();
+    const auto right_size = right_cluster.size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_cluster)[left_run_start].value;
-      auto& right_value = (*right_cluster)[right_run_start].value;
+      const auto& left_value = left_cluster[left_run_start].value;
+      const auto& right_value = right_cluster[right_run_start].value;
 
-      auto compare_result = _compare(left_value, right_value);
+      const auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
       TableRange right_run(cluster_id, right_run_start, right_run_end);
@@ -818,25 +836,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
 
       // Advance to the next run on the smaller side or both if equal
-      if (compare_result == CompareResult::Equal) {
-        // Advance both runs
-        left_run_start = left_run_end;
-        right_run_start = right_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
-      } else if (compare_result == CompareResult::Less) {
-        // Advance the left run
-        left_run_start = left_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-      } else {
-        // Advance the right run
-        right_run_start = right_run_end;
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+      switch (compare_result) {
+        case CompareResult::Equal:
+          // Advance both runs
+          left_run_start = left_run_end;
+          right_run_start = right_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+          break;
+        case CompareResult::Less:
+          // Advance the left run
+          left_run_start = left_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+          break;
+        case CompareResult::Greater:
+          // Advance the right run
+          right_run_start = right_run_end;
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+          break;
+        default:
+          throw std::logic_error("Unknown CompareResult");
       }
     }
+
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(cluster_id, right_run_start, right_size);
-    auto left_rest = TableRange(cluster_id, left_run_start, left_size);
+    const auto right_rest = TableRange(cluster_id, right_run_start, right_size);
+    const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
 
     if (left_run_start < left_size) {
       if (_mode == JoinMode::AntiNullAsFalse) {
@@ -877,14 +902,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   /**
   * Determines the smallest value in a sorted materialized table.
   **/
-  T& _table_min_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
+  const T& _table_min_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
                 "Complete table order is required for _table_min_value() which is only available in the non-equi case");
-    DebugAssert(!sorted_table->empty(), "Sorted table has no partitions");
+    DebugAssert(!sorted_table.empty(), "Sorted table has no partitions");
 
-    for (const auto& partition : *sorted_table) {
-      if (!partition->empty()) {
-        return (*partition)[0].value;
+    for (const auto& partition : sorted_table) {
+      if (!partition.empty()) {
+        return partition[0].value;
       }
     }
 
@@ -894,7 +919,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   /**
   * Determines the largest value in a sorted materialized table.
   **/
-  T& _table_max_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
+
+  const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(
         !(_primary_predicate_condition == PredicateCondition::Equals &&
           !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
@@ -902,9 +928,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table is empty");
 
-    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      if (!(*sorted_table)[partition_id]->empty()) {
-        return (*sorted_table)[partition_id]->back().value;
+    const auto sorted_table_size = sorted_table.size();
+    for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
+      if (!sorted_table[partition_id].empty()) {
+        return sorted_table[partition_id].back().value;
       }
     }
 
@@ -916,13 +943,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
   template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table,
-                                                           Function condition) {
-    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
-      auto partition = (*sorted_table)[partition_id];
-      if (!partition->empty() && condition(partition->back().value)) {
-        for (size_t index = 0; index < partition->size(); ++index) {
-          if (condition((*partition)[index].value)) {
+  std::optional<TablePosition> _first_value_that_satisfies(const MaterializedSegmentList<T>& sorted_table,
+                                                           const Function& condition) {
+    const auto sorted_table_size = sorted_table.size();
+    for (auto partition_id = size_t{0}; partition_id < sorted_table_size; ++partition_id) {
+      const auto& partition = sorted_table[partition_id];
+      if (!partition.empty() && condition(partition.back().value)) {
+        const auto partition_size = partition.size();
+        for (auto index = size_t{0}; index < partition_size; ++index) {
+          if (condition(partition[index].value)) {
             return TablePosition(partition_id, index);
           }
         }
@@ -937,13 +966,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
   template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies_reverse(
-      std::unique_ptr<MaterializedSegmentList<T>>& sorted_table, Function condition) {
-    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      auto partition = (*sorted_table)[partition_id];
-      if (!partition->empty() && condition((*partition)[0].value)) {
-        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
-          if (condition((*partition)[index].value)) {
+  std::optional<TablePosition> _first_value_that_satisfies_reverse(const MaterializedSegmentList<T>& sorted_table,
+                                                                   const Function& condition) {
+    const auto sorted_table_size = sorted_table.size();
+    for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
+      const auto& partition = sorted_table[partition_id];
+      if (!partition.empty() && condition(partition[0].value)) {
+        const auto partition_size = partition.size();
+        for (auto index = partition_size - 1; index < partition_size; --index) {
+          if (condition(partition[index].value)) {
             return TablePosition(partition_id, index + 1);
           }
         }
@@ -966,8 +997,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       return;
     }
 
-    auto& left_min_value = _table_min_value(_sorted_left_table);
-    auto& left_max_value = _table_max_value(_sorted_left_table);
+    const auto& left_min_value = _table_min_value(_sorted_left_table);
+    const auto& left_max_value = _table_max_value(_sorted_left_table);
 
     auto unmatched_range = std::optional<TableRange>{};
 
@@ -1012,8 +1043,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
     if (!_secondary_join_predicates.empty()) {
-      for (const auto& cluster : *_sorted_right_table) {
-        for (const auto& row : *cluster) {
+      for (const auto& cluster : _sorted_right_table) {
+        for (const auto& row : cluster) {
           if (!_right_row_ids_emitted.contains(row.row_id)) {
             _emit_combination(0, NULL_ROW_ID, row.row_id);
           }
@@ -1035,8 +1066,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       return;
     }
 
-    auto& right_min_value = _table_min_value(_sorted_right_table);
-    auto& right_max_value = _table_max_value(_sorted_right_table);
+    const auto& right_min_value = _table_min_value(_sorted_right_table);
+    const auto& right_max_value = _table_max_value(_sorted_right_table);
 
     auto unmatched_range = std::optional<TableRange>{};
 
@@ -1081,8 +1112,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
     if (!_secondary_join_predicates.empty()) {
-      for (const auto& cluster : *_sorted_left_table) {
-        for (const auto& row : *cluster) {
+      for (const auto& cluster : _sorted_left_table) {
+        for (const auto& row : cluster) {
           if (!_left_row_ids_emitted.contains(row.row_id)) {
             _emit_combination(0, row.row_id, NULL_ROW_ID);
           }
@@ -1095,7 +1126,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
@@ -1115,9 +1147,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _output_pos_lists_right[cluster_id] = RowIDPosList{};
 
       // Avoid empty jobs for inner equi joins
-      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) &&
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi || _mode == JoinMode::Inner) &&
           _primary_predicate_condition == PredicateCondition::Equals) {
-        if ((*_sorted_left_table)[cluster_id]->empty() || (*_sorted_right_table)[cluster_id]->empty()) {
+        if (_sorted_left_table[cluster_id].empty() || _sorted_right_table[cluster_id].empty()) {
           continue;
         }
       }
@@ -1126,7 +1158,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
       const auto merge_row_count =
-          (*_sorted_left_table)[cluster_id]->size() + (*_sorted_right_table)[cluster_id]->size();
+          _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
       const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
@@ -1141,9 +1173,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           // is NULL. If there is only one value, we need to run the join algorithm and check for equality.
           if (right_min_value != right_max_value) {
             size_t start_index = 0;
-            size_t end_index = (*_sorted_left_table)[cluster_id]->size();
+            size_t end_index = _sorted_left_table[cluster_id].size();
             for (size_t index = start_index; index < end_index; ++index) {
-              _output_pos_lists_left[cluster_id].push_back((*(*_sorted_left_table)[cluster_id])[index].row_id);
+              _output_pos_lists_left[cluster_id].push_back(_sorted_left_table[cluster_id][index].row_id);
             }
             return;
           }
@@ -1151,7 +1183,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
 
-      if (merge_row_count > JOB_SPAWN_THRESHOLD * 2) {
+      if (merge_row_count > JOB_SPAWN_THRESHOLD) {
         jobs.push_back(std::make_shared<JobTask>(join_cluster_task));
       } else {
         join_cluster_task();
@@ -1264,8 +1296,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
     _sorted_right_table = std::move(sort_output.clusters_right);
-    _null_rows_left = std::move(*sort_output.null_rows_left);
-    _null_rows_right = std::move(*sort_output.null_rows_right);
+    _null_rows_left = std::move(sort_output.null_rows_left);
+    _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
@@ -1417,7 +1449,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                            SortColumnDefinition(right_join_column, SortMode::Ascending)});
       }
     }
-
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
