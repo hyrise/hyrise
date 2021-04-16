@@ -3,7 +3,7 @@
 #include <map>
 #include <unordered_map>
 
-#include "boost/dynamic_bitset.hpp"
+#include <boost/dynamic_bitset.hpp>
 
 #include "expression/abstract_expression.hpp"
 
