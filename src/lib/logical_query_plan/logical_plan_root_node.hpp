@@ -20,7 +20,7 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
  protected:

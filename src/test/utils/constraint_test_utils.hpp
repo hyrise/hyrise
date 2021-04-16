@@ -10,7 +10,7 @@ namespace opossum {
  * Verifies whether a given table key constraint is represented in a given set of unique constraints.
  */
 static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& table_key_constraint,
-                                                     const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+                                                     const std::shared_ptr<LQPUniqueConstraintVector>& unique_constraints) {
   const auto& column_ids = table_key_constraint.columns();
 
   for (const auto& unique_constraint : *unique_constraints) {

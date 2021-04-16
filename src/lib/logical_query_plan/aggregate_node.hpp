@@ -30,7 +30,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
    * (1) Forwards left input node's unique constraints if its expressions are a subset of the group-by expressions.
    * (2) Creates a new unique constraint from the group-by expressions if not already existing.
    */
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;

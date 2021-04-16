@@ -160,7 +160,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return Unique constraints valid for the current LQP. See lqp_unique_constraint.hpp for more documentation.
    */
-  virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
+  virtual std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const = 0;
 
   /**
    * @return True, if there is a unique constraint matching the given subset of output expressions.
@@ -236,7 +236,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
    * @return All unique constraints from the left input node.
    */
-  std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
+  std::shared_ptr<LQPUniqueConstraintVector> _forward_left_unique_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

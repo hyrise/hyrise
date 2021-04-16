@@ -84,8 +84,8 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<LQPUniqueConstraintVector> AggregateNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraintVector>();
 
   /**
    * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.

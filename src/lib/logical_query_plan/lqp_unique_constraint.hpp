@@ -30,7 +30,7 @@ inline std::size_t hash_value(const LQPUniqueConstraint& unique_constraint) {
   return unique_constraint.hash();
 }
 
-using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
+using LQPUniqueConstraintVector = std::vector<LQPUniqueConstraint>;
 using LQPUniqueConstraintUnorderedSet = std::unordered_set<LQPUniqueConstraint, boost::hash<LQPUniqueConstraint>>;
 
 }  // namespace opossum

@@ -20,7 +20,7 @@ class DummyTableNode : public EnableMakeForLQPNode<DummyTableNode>, public Abstr
 
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

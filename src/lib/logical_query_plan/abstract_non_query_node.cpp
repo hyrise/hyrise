@@ -12,7 +12,7 @@ bool AbstractNonQueryNode::is_column_nullable(const ColumnID column_id) const {
   Fail("Node does not return any column");
 }
 
-std::shared_ptr<LQPUniqueConstraints> AbstractNonQueryNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraintVector> AbstractNonQueryNode::unique_constraints() const {
   Fail("Node does not support unique constraints.");
 }
 

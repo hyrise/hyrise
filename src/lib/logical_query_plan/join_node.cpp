@@ -72,7 +72,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   return output_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraintVector> JoinNode::unique_constraints() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing unique constraints remain valid.
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
@@ -85,18 +85,18 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   return _output_unique_constraints(left_unique_constraints, right_unique_constraints);
 }
 
-std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
-    const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
-    const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
+std::shared_ptr<LQPUniqueConstraintVector> JoinNode::_output_unique_constraints(
+    const std::shared_ptr<LQPUniqueConstraintVector>& left_unique_constraints,
+    const std::shared_ptr<LQPUniqueConstraintVector>& right_unique_constraints) const {
   if (left_unique_constraints->empty() && right_unique_constraints->empty()) {
     // Early exit
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<LQPUniqueConstraintVector>();
   }
 
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<LQPUniqueConstraintVector>();
   }
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
@@ -106,7 +106,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
     // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<LQPUniqueConstraintVector>();
   }
 
   // Check uniqueness of join columns
@@ -120,7 +120,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
     auto unique_constraints =
-        std::make_shared<LQPUniqueConstraints>(left_unique_constraints->begin(), left_unique_constraints->end());
+        std::make_shared<LQPUniqueConstraintVector>(left_unique_constraints->begin(), left_unique_constraints->end());
     std::copy(right_unique_constraints->begin(), right_unique_constraints->end(),
               std::back_inserter(*unique_constraints));
     return unique_constraints;
@@ -133,7 +133,7 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     return left_unique_constraints;
   }
 
-  return std::make_shared<LQPUniqueConstraints>();
+  return std::make_shared<LQPUniqueConstraintVector>();
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {

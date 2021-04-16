@@ -395,7 +395,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
-bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraintVector>& unique_constraints,
                                          const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_constraints->empty(), "Invalid input: Set of unique constraints should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
@@ -417,7 +417,7 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
 
 std::vector<FunctionalDependency> fds_from_unique_constraints(
     const std::shared_ptr<const AbstractLQPNode>& lqp,
-    const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+    const std::shared_ptr<LQPUniqueConstraintVector>& unique_constraints) {
   Assert(!unique_constraints->empty(), "Did not expect empty vector of unique constraints");
 
   auto fds = std::vector<FunctionalDependency>{};

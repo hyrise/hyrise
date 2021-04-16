@@ -21,7 +21,7 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Forwards unique constraints from the left input node
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
   // Passes FDs from the left input node
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 

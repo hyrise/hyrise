@@ -94,8 +94,8 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<LQPUniqueConstraintVector> StoredTableNode::unique_constraints() const {
+  auto unique_constraints = std::make_shared<LQPUniqueConstraintVector>();
 
   // We create unique constraints from selected table key constraints
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);

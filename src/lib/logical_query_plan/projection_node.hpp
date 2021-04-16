@@ -19,7 +19,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
    * Forwards unique constraints from the left input node that fulfill the following criteria:
    *  - unique constraint's expressions remain part of the ProjectionNode's output expressions
    */
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;

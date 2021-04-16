@@ -387,7 +387,7 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraintVector> AbstractLQPNode::_forward_left_unique_constraints() const {
   Assert(left_input(), "Cannot forward unique constraints without an input node.");
   const auto& input_unique_constraints = left_input()->unique_constraints();
 

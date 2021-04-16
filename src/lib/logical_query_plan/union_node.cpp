@@ -30,7 +30,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraintVector> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Positions: {
       /**
@@ -52,7 +52,7 @@ std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
        * To forward constraints from child nodes, we would have to ensure that both input tables are completely
        * distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
        */
-      return std::make_shared<LQPUniqueConstraints>();
+      return std::make_shared<LQPUniqueConstraintVector>();
     }
     case SetOperationMode::Unique:
       Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");

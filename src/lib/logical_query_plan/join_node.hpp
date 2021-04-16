@@ -36,7 +36,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
    * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
    */
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<LQPUniqueConstraintVector> unique_constraints() const override;
 
   /**
    * (a) Semi- & Anti-Joins:
@@ -56,7 +56,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   /**
-   * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
+   * @return A subset of the given LQPUniqueConstraintVector @param left_unique_constraints and @param
    *         right_unique_constraints that remains valid despite the join operation.
    *         Depending on the join columns,
    *          (a) the left,
@@ -66,9 +66,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    *         of the given unique constraint sets are returned.
    * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
-  std::shared_ptr<LQPUniqueConstraints> _output_unique_constraints(
-      const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
-      const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const;
+  std::shared_ptr<LQPUniqueConstraintVector> _output_unique_constraints(
+      const std::shared_ptr<LQPUniqueConstraintVector>& left_unique_constraints,
+      const std::shared_ptr<LQPUniqueConstraintVector>& right_unique_constraints) const;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

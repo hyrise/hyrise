@@ -230,7 +230,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
  * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
  *         set of expressions. A unique constraint matches if it covers a subset of @param expressions.
  */
-bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraintVector>& unique_constraints,
                                          const ExpressionUnorderedSet& expressions);
 
 /**
@@ -238,7 +238,7 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
  *         given @param lqp node.
  */
 std::vector<FunctionalDependency> fds_from_unique_constraints(
-    const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
+    const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraintVector>& unique_constraints);
 
 /**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at

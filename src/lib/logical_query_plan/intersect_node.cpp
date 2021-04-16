@@ -28,7 +28,7 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const {
+std::shared_ptr<LQPUniqueConstraintVector> IntersectNode::unique_constraints() const {
   /**
    * Because INTERSECT acts as a pure filter for both input tables, all unique constraints remain valid.
    *
