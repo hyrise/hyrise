@@ -110,7 +110,7 @@ void visit_expression(Expression& expression, Visitor visitor) {
   expression_queue.push(expression);
 
   while (!expression_queue.empty()) {
-    auto expression_reference = expression_queue.front();
+    const auto& expression_reference = expression_queue.front();
     expression_queue.pop();
 
     if (visitor(expression_reference.get()) == ExpressionVisitation::VisitArguments) {
