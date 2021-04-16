@@ -1,6 +1,7 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
@@ -10,7 +11,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 
@@ -41,18 +41,18 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     case JoinMode::Cross:
       return false;
     case JoinMode::Semi:
-      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
-      if (config.predicate_condition == PredicateCondition::Equals) {
+      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsTrue:
-      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
-      if (config.predicate_condition == PredicateCondition::Equals) {
+      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
         return true;
       }
       return false;
@@ -277,6 +277,30 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
   enum class CompareResult { Less, Greater, Equal };
 
+  // In the case of the anti-join, we need to check that there is no combination where all predicates are satisfied. In
+  // the case of the semi-join, we need to check that there is at least one combination where all predicates are
+  // satisfied.
+  void _emit_multipredicate_semi_anti_null_as_false(size_t output_cluster, TableRange left_range,
+                                                    TableRange right_range,
+                                                    MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      auto match = false;
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          match = true;
+          return;
+        }
+      });
+      if (match && _mode == JoinMode::Semi) {
+        _emit_left_only(output_cluster, left_row_id);
+      } else {
+        if (!match && _mode == JoinMode::AntiNullAsFalse) {
+          _emit_left_only(output_cluster, left_row_id);
+        }
+      }
+    });
+  }
+
   void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range,
                                               MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
@@ -305,8 +329,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     });
   }
 
-  void _emit_left_range_only_anti_null_as_true(size_t output_cluster, TableRange left_range,
-                                               MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+  void _emit_multipredicate_anti_null_as_true_left_range_only(
+      size_t output_cluster, TableRange left_range, MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
       // We need to make sure that there is not one combination between the left rows from the run and the null rows
@@ -354,7 +378,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         // there is no combination where the multiple predicates are satisfied, because of as a result of that the
         // predicate expression is always false.
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
-          _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
+          _emit_multipredicate_semi_anti_null_as_false(cluster_id, left_run, right_run,
+                                                       *multi_predicate_join_evaluator);
         }
         break;
       case PredicateCondition::NotEquals:
@@ -385,7 +410,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_run);
         }
         if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
-          _emit_left_range_only_anti_null_as_true(cluster_id, left_run, *multi_predicate_join_evaluator);
+          _emit_multipredicate_anti_null_as_true_left_range_only(cluster_id, left_run, *multi_predicate_join_evaluator);
         }
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
           _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
@@ -418,7 +443,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           // In the case of Semi equals all rows that have an equal match on the right table need to be checked that
           // there is at least one match where all multiple predicates are satisfied.
           if (multi_predicate_join_evaluator) {
-            _emit_multipredicate_semi_anti(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
+            _emit_multipredicate_semi_anti_null_as_false(cluster_id, left_run, right_run,
+                                                         *multi_predicate_join_evaluator);
           } else {
             // If there are no equal predicates a single equal match is sufficient.
             _emit_left_range_only(cluster_id, left_run);
@@ -688,29 +714,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  // In the case of the anti-join, we need to check that there is no combination where all predicates are satisfied. In
-  // the case of the semi-join, we need to check that there is at least one combination where all predicates are
-  // satisfied.
-  void _emit_multipredicate_semi_anti(size_t output_cluster, TableRange left_range, TableRange right_range,
-                                      MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      auto match = false;
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-          match = true;
-          return;
-        }
-      });
-      if (match && _mode == JoinMode::Semi) {
-        _emit_left_only(output_cluster, left_row_id);
-      } else {
-        if (!match && _mode == JoinMode::AntiNullAsFalse) {
-          _emit_left_only(output_cluster, left_row_id);
-        }
-      }
-    });
-  }
-
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side
   * (regarding the primary predicate) to the join output.
@@ -825,14 +828,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       TableRange left_run(cluster_id, left_run_start, left_run_end);
       TableRange right_run(cluster_id, right_run_start, right_run_end);
 
-      if (_mode == JoinMode::AntiNullAsFalse) {
-        _join_runs_anti_null_as_false(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      } else if (_mode == JoinMode::AntiNullAsTrue) {
-        _join_runs_anti_null_as_true(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      } else if (_mode == JoinMode::Semi) {
-        _join_runs_semi(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
-      } else {
-        _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      switch (_mode) {
+        case JoinMode::AntiNullAsFalse:
+          _join_runs_anti_null_as_false(left_run, right_run, compare_result, multi_predicate_join_evaluator,
+                                        cluster_id);
+          break;
+        case JoinMode::AntiNullAsTrue:
+          _join_runs_anti_null_as_true(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          break;
+        case JoinMode::Semi:
+          _join_runs_semi(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          break;
+        default:
+          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
       }
 
       // Advance to the next run on the smaller side or both if equal
@@ -876,7 +884,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       } else if (_mode == JoinMode::AntiNullAsTrue) {
         if (_primary_predicate_condition == PredicateCondition::Equals) {
           if (multi_predicate_join_evaluator) {
-            _emit_left_range_only_anti_null_as_true(cluster_id, left_rest, *multi_predicate_join_evaluator);
+            _emit_multipredicate_anti_null_as_true_left_range_only(cluster_id, left_rest,
+                                                                   *multi_predicate_join_evaluator);
           } else {
             _emit_left_range_only(cluster_id, left_rest);
           }
@@ -921,11 +930,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   **/
 
   const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
+    DebugAssert(!(_primary_predicate_condition == PredicateCondition::Equals),
+                "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(
-        !(_primary_predicate_condition == PredicateCondition::Equals &&
-          !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
-            _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count())),
-        "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
+        !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
+          _primary_predicate_condition == PredicateCondition::NotEquals),
+        "The table needs to be sorted for _table_max_value() which is only the case in the anti/semi equi case");
     DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
     const auto sorted_table_size = sorted_table.size();
@@ -1126,7 +1136,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
-
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
@@ -1147,7 +1156,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _output_pos_lists_right[cluster_id] = RowIDPosList{};
 
       // Avoid empty jobs for inner equi joins
-      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi || _mode == JoinMode::Inner) &&
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) &&
           _primary_predicate_condition == PredicateCondition::Equals) {
         if (_sorted_left_table[cluster_id].empty() || _sorted_right_table[cluster_id].empty()) {
           continue;
@@ -1157,8 +1166,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _left_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
-      const auto merge_row_count =
-          _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
+      const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
       const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
@@ -1215,7 +1223,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         table->column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
     if (table_column_definition.nullable == false) return false;
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     const auto chunk_count = table->chunk_count();
     std::vector<bool> null_per_chunk{};
     null_per_chunk.resize(chunk_count);
@@ -1303,14 +1311,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer;
 
-    if (_mode == JoinMode::AntiNullAsFalse) {
-      include_null_right = false;
-    }
-    if (_mode == JoinMode::AntiNullAsTrue) {
-      include_null_right = false;
-      include_null_left = false;
-    }
-
     if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals &&
         !_null_rows_right.empty()) {
       // We only want to emit the rows where the value is NULL.
@@ -1320,78 +1320,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _perform_join();
     }
 
-    // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
-    // 1. There is no match with one of the right null rows where all predicates are satisfied.
-    // 2. There is no match with one of the left rows (not null) where all predicates are satisfied.
-    // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
-    // to emit the row.
-    if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
-      auto null_output_left = RowIDPosList();
-      const auto null_rows_left_size = _null_rows_left.size();
-      std::vector<bool> left_null_rows_matches(null_rows_left_size, false);
-      null_output_left.reserve(null_rows_left_size);
-
-      std::vector<std::shared_ptr<AbstractTask>> jobs;
-      const auto right_table_row_count = _right_input_table->row_count();
-
-      // We do not want to span to many threads. The upper limit is the number of CPU cores.
-      const auto num_cpus = Hyrise::get().topology.num_cpus();
-      size_t bunch_size = 1;
-      if (num_cpus < null_rows_left_size) {
-        // round up
-        bunch_size = (null_rows_left_size + num_cpus - 1) / num_cpus;
-      }
-
-      for(size_t row_id = 0; row_id < null_rows_left_size; row_id += bunch_size) {
-        const auto check_if_match_task = [this, &left_null_rows_matches, row_id, bunch_size, null_rows_left_size] {
-        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
-                                                                   *_sort_merge_join.right_input()->get_output(), _mode,
-                                                                   _secondary_join_predicates);
-          auto last = std::min(null_rows_left_size, row_id + bunch_size);
-          auto end_of_right_table = _end_of_table(_sorted_right_table);
-          auto right_range = TablePosition(0, 0).to(end_of_right_table);
-          for (size_t left_null_row = row_id; left_null_row < last ; left_null_row++) {
-            auto match = false;
-            auto& row_id_left = _null_rows_left[left_null_row];
-            for (const auto& row_id_right : _null_rows_right) {
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
-                match = true;
-                break;
-              }
-            }
-            if (!match) {
-              right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
-                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
-                  match = true;
-                  return;
-                }
-              });
-            }
-            if (match) {
-              left_null_rows_matches[left_null_row] = true;
-            }
-          } 
-        };
-        if (right_table_row_count > JOB_SPAWN_THRESHOLD * 100) {
-          jobs.push_back(std::make_shared<JobTask>(check_if_match_task));
-        } else {
-          check_if_match_task();
-        }
-      }
-
-      for (size_t row = 0; row < left_null_rows_matches.size(); row++) {
-        if (!left_null_rows_matches[row]) {
-           null_output_left.push_back(_null_rows_left[row]);
-        }
-      }
-
-      if (!null_output_left.empty()) {
-        _output_pos_lists_left.push_back(std::move(null_output_left));
-        _output_pos_lists_right.push_back(RowIDPosList());
-      }
+    if (_mode == JoinMode::AntiNullAsFalse) {
+      include_null_right = false;
     }
 
-    if (include_null_left || include_null_right) {
+    if ((include_null_left || include_null_right) && _mode != JoinMode::AntiNullAsTrue) {
       auto null_output_left = RowIDPosList();
       auto null_output_right = RowIDPosList();
 
@@ -1416,6 +1349,79 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (!null_output_left.empty()) {
         _output_pos_lists_left.push_back(std::move(null_output_left));
         _output_pos_lists_right.push_back(std::move(null_output_right));
+      }
+    }
+
+    if (_mode == JoinMode::AntiNullAsTrue) {
+      // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
+      // 1. There is no match with one of the right null rows where all predicates are satisfied.
+      // 2. There is no match with one of the left rows (not null) where all predicates are satisfied.
+      // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
+      // to emit the row.
+      if (!_secondary_join_predicates.empty()) {
+        auto null_output_left = RowIDPosList();
+        const auto null_rows_left_size = _null_rows_left.size();
+        std::vector<bool> left_null_rows_matches(null_rows_left_size, false);
+        null_output_left.reserve(null_rows_left_size);
+
+        auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+        const auto right_table_row_count = _right_input_table->row_count();
+
+        // We do not want to span to many threads. The upper limit is the number of CPU cores.
+        const auto num_cpus = Hyrise::get().topology.num_cpus();
+        size_t bunch_size = 1;
+        if (num_cpus < null_rows_left_size) {
+          // round up
+          bunch_size = (null_rows_left_size + num_cpus - 1) / num_cpus;
+        }
+
+        for (size_t row_id = 0; row_id < null_rows_left_size; row_id += bunch_size) {
+          const auto check_if_match_task = [this, &left_null_rows_matches, row_id, bunch_size, null_rows_left_size] {
+            MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
+                                                                       *_sort_merge_join.right_input()->get_output(),
+                                                                       _mode, _secondary_join_predicates);
+            const auto last = std::min(null_rows_left_size, row_id + bunch_size);
+            const auto end_of_right_table = _end_of_table(_sorted_right_table);
+            auto right_range = TablePosition(0, 0).to(end_of_right_table);
+            for (size_t left_null_row = row_id; left_null_row < last; left_null_row++) {
+              auto match = false;
+              const auto& row_id_left = _null_rows_left[left_null_row];
+              for (const auto& row_id_right : _null_rows_right) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+                  match = true;
+                  break;
+                }
+              }
+              if (!match) {
+                right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
+                  if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+                    match = true;
+                    return;
+                  }
+                });
+              }
+              if (match) {
+                left_null_rows_matches[left_null_row] = true;
+              }
+            }
+          };
+          if (right_table_row_count > JOB_SPAWN_THRESHOLD * 100) {
+            jobs.push_back(std::make_shared<JobTask>(check_if_match_task));
+          } else {
+            check_if_match_task();
+          }
+        }
+
+        for (size_t row = 0; row < left_null_rows_matches.size(); row++) {
+          if (!left_null_rows_matches[row]) {
+            null_output_left.push_back(_null_rows_left[row]);
+          }
+        }
+
+        if (!null_output_left.empty()) {
+          _output_pos_lists_left.push_back(std::move(null_output_left));
+          _output_pos_lists_right.push_back(RowIDPosList());
+        }
       }
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
