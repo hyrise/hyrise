@@ -148,18 +148,18 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   std::string _enclose_argument(const AbstractExpression& argument, const DescriptionMode mode) const;
 };
 
-// So that google test, e.g., prints readable error messages
+// So that GoogleTest, e.g., prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
   return stream << expression.description();
 }
 
-// Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
+// Wrapper around expression->hash(), to enable hash-based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
   size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const { return expression->hash(); }
 };
 
-// Wrapper around AbstractExpression::operator==(), to enable hash based containers containing
+// Wrapper around AbstractExpression::operator==(), to enable hash-based containers containing
 // std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<const AbstractExpression>& expression_a,

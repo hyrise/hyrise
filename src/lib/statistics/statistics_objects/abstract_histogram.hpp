@@ -34,14 +34,14 @@ struct HistogramBin {
   HistogramCountType distinct_count{};
 };
 
-// For googletest
+// For GoogleTest
 template <typename T>
 bool operator==(const HistogramBin<T>& bin_a, const HistogramBin<T>& bin_b) {
   return bin_a.min == bin_b.min && bin_a.max == bin_b.max && bin_a.height == bin_b.height &&
          bin_a.distinct_count == bin_b.distinct_count;
 }
 
-// For googletest
+// For GoogleTest
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
   if constexpr (std::is_same_v<T, std::string>) {

@@ -13,7 +13,7 @@ struct IndexStatistics {
   SegmentIndexType type;
 };
 
-// For googletest
+// For GoogleTest
 bool operator==(const IndexStatistics& left, const IndexStatistics& right);
 
 }  // namespace opossum

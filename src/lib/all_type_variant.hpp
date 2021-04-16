@@ -125,8 +125,7 @@ static const auto NULL_VALUE = AllTypeVariant{};
 /**
  * This function returns the DataType of an AllTypeVariant
  *
- * Note: DataType and AllTypeVariant are defined in a way such that
- *       the indices in DataType and AllTypeVariant match.
+ * Note: DataType and AllTypeVariant are defined in a way such that the indices in DataType and AllTypeVariant match.
  */
 inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
   return static_cast<DataType>(all_type_variant.which());
