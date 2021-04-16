@@ -25,15 +25,14 @@ struct LQPUniqueConstraint final {
 
 std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint);
 
+// Hash function required by Boost.ContainerHash
+inline std::size_t hash_value(const LQPUniqueConstraint& unique_constraint) {
+  return unique_constraint.hash();
+}
+
 using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
+using LQPUniqueConstraintUnorderedSet = std::unordered_set<LQPUniqueConstraint, boost::hash<LQPUniqueConstraint>>;
 
 }  // namespace opossum
 
-namespace std {
 
-template <>
-struct hash<opossum::LQPUniqueConstraint> {
-  size_t operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const;
-};
-
-}  // namespace std

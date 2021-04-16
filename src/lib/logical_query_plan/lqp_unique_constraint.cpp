@@ -40,10 +40,3 @@ std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique
 
 }  // namespace opossum
 
-namespace std {
-
-size_t hash<opossum::LQPUniqueConstraint>::operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const {
-  return lqp_unique_constraint.hash();
-}
-
-}  // namespace std
