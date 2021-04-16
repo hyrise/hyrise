@@ -13,8 +13,8 @@
 namespace opossum {
 
 template <typename T>
-DipsMinMaxFilter<T>::DipsMinMaxFilter(T init_min, T init_max, CommitID init_commitID)
-    : MinMaxFilter<T>(init_min, init_max), commitID(init_commitID) {}
+DipsMinMaxFilter<T>::DipsMinMaxFilter(T init_min, T init_max, CommitID init_commit_id)
+    : MinMaxFilter<T>(init_min, init_max), commit_id(init_commit_id) {}
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DipsMinMaxFilter);
 

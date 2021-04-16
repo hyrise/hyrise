@@ -14,14 +14,14 @@ namespace opossum {
 template <typename T>
 class DipsMinMaxFilter : public MinMaxFilter<T> {
  public:
-  explicit DipsMinMaxFilter(T init_min, T init_max, CommitID init_commitID);
+  explicit DipsMinMaxFilter(T init_min, T init_max, CommitID init_commit_id);
 
-  const CommitID commitID;
+  const CommitID commit_id;
 };
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const DipsMinMaxFilter<T>& filter) {
-  stream << "{" << filter.min << " " << filter.max << "} t: " << filter.commitID;
+  stream << "{" << filter.min << " " << filter.max << "} t: " << filter.commit_id;
   return stream;
 }
 

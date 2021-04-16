@@ -36,24 +36,24 @@ void DipsPruningRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& 
         join_graph
             ->nodes[0];  // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
     join_graph->set_root(root);
-    bottom_up_dip_traversal(root);
-    top_down_dip_traversal(root);
+    _bottom_up_dip_traversal(root);
+    _top_down_dip_traversal(root);
   } else {
     // Assumption: Hyrise handles cycles itself
   }
 }
 
-void DipsPruningRule::bottom_up_dip_traversal(
-    std::shared_ptr<DipsJoinGraphNode> node) const {  // expects root in the first call
-  for (std::shared_ptr<DipsJoinGraphNode> child : node->children) {
-    bottom_up_dip_traversal(child);
+void DipsPruningRule::_bottom_up_dip_traversal(
+    const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
+  for (const auto & child : node->children) {
+    _bottom_up_dip_traversal(child);
   }
   if (node->parent == nullptr) {  // handle root
     return;
   }
   auto edge = node->get_edge_for_table(node->parent);
 
-  for (auto predicate : edge->predicates) {
+  for (const auto & predicate : edge->predicates) {
     auto left_operand = predicate->left_operand();
     auto right_operand = predicate->right_operand();
 
@@ -70,21 +70,21 @@ void DipsPruningRule::bottom_up_dip_traversal(
     }
 
     // LEFT -> RIGHT
-    dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
+    _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
                  right_lqp->original_column_id);
 
     // RIGHT -> LEFT
-    dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
+    _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
                  left_lqp->original_column_id);
   }
 }
 
-void DipsPruningRule::top_down_dip_traversal(
-    std::shared_ptr<DipsJoinGraphNode> node) const {  // expects root in the first call
+void DipsPruningRule::_top_down_dip_traversal(
+    const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
   if (node->parent != nullptr) {                      // handle root
     auto edge = node->get_edge_for_table(node->parent);
 
-    for (auto predicate : edge->predicates) {
+    for (const auto & predicate : edge->predicates) {
       auto left_operand = predicate->left_operand();
       auto right_operand = predicate->right_operand();
 
@@ -101,22 +101,22 @@ void DipsPruningRule::top_down_dip_traversal(
       }
 
       // LEFT -> RIGHT
-      dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
+      _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
                    right_lqp->original_column_id);
 
       // RIGHT -> LEFT
-      dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
+      _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
                    left_lqp->original_column_id);
     }
   }
 
-  for (std::shared_ptr<DipsJoinGraphNode> child : node->children) {
-    top_down_dip_traversal(child);
+  for (const auto & child : node->children) {
+    _top_down_dip_traversal(child);
   }
 }
 
 void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
-                                        std::shared_ptr<DipsJoinGraph> join_graph) const {
+                                        const std::shared_ptr<DipsJoinGraph>& join_graph) const {
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
   }
@@ -130,9 +130,9 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
       return;
     }
     const auto& join_node = static_cast<JoinNode&>(*node);
-    const auto join_predicates = join_node.join_predicates();
+    const auto& join_predicates = join_node.join_predicates();
 
-    for (auto predicate : join_predicates) {
+    for (const auto & predicate : join_predicates) {
       std::shared_ptr<BinaryPredicateExpression> binary_predicate =
           std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
 
@@ -171,8 +171,8 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
   }
 }
 
-void DipsPruningRule::extend_pruned_chunks(std::shared_ptr<StoredTableNode> table_node,
-                                           std::set<ChunkID> pruned_chunk_ids) const {
+void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
+                                           const std::set<ChunkID>& pruned_chunk_ids) {
   const auto& already_pruned_chunk_ids = table_node->pruned_chunk_ids();
 
   if (!already_pruned_chunk_ids.empty()) {
@@ -185,7 +185,7 @@ void DipsPruningRule::extend_pruned_chunks(std::shared_ptr<StoredTableNode> tabl
   }
 }
 
-void DipsPruningRule::dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
+void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                                    std::shared_ptr<StoredTableNode> join_partner_table_node,
                                    ColumnID join_partner_column_id) const {
   auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
@@ -194,11 +194,11 @@ void DipsPruningRule::dips_pruning(const std::shared_ptr<const StoredTableNode> 
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // TODO(somebody): check if pointers would be more efficient
-    auto base_ranges = get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
+    auto base_ranges = _get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
     auto partner_ranges =
-        get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);
-    auto pruned_chunks = calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
-    extend_pruned_chunks(join_partner_table_node, pruned_chunks);
+        _get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);
+    auto pruned_chunks = _calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
+    _extend_pruned_chunks(join_partner_table_node, pruned_chunks);
   });
 }
 
@@ -214,7 +214,7 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
       stream << "      ==== Parent ====" << std::endl;
       stream << "          " << node->parent << std::endl;
       stream << "      ==== Children ====" << std::endl;
-      for (auto child : node->children) {
+      for (const auto & child : node->children) {
         stream << "          " << child << std::endl;
       }
 
@@ -222,7 +222,7 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
       for (const auto & edge : node->edges) {
         stream << "      " << edge->partner_node->table_node->description() << std::endl;
         stream << "            ==== Predicates ====" << std::endl;
-        for (auto predicate : edge->predicates) {
+        for (const auto & predicate : edge->predicates) {
           stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
                  << std::endl;
         }

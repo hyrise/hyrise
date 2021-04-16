@@ -32,23 +32,23 @@ namespace opossum {
 class DipsPruningRuleTestClass : DipsPruningRule {
  public:
   template <typename COLUMN_TYPE>
-  bool range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
-    return DipsPruningRule::range_intersect<COLUMN_TYPE>(range_a, range_b);
+  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a, std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
+    return DipsPruningRule::_range_intersect<COLUMN_TYPE>(range_a, range_b);
   }
 
   template <typename COLUMN_TYPE>
-  std::set<ChunkID> calculate_pruned_chunks(
+  std::set<ChunkID> _calculate_pruned_chunks(
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) const {
-    return DipsPruningRule::calculate_pruned_chunks<COLUMN_TYPE>(base_chunk_ranges, partner_chunk_ranges);
+    return DipsPruningRule::_calculate_pruned_chunks<COLUMN_TYPE>(base_chunk_ranges, partner_chunk_ranges);
   }
 
-  void bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
-    return DipsPruningRule::bottom_up_dip_traversal(node);
+  void _bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+    return DipsPruningRule::_bottom_up_dip_traversal(node);
   }
 
-  void top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
-    return DipsPruningRule::top_down_dip_traversal(node);
+  void _top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+    return DipsPruningRule::_top_down_dip_traversal(node);
   }
 };
 
@@ -83,8 +83,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   std::pair<int32_t, int32_t> first_range(1, 2);
   std::pair<int32_t, int32_t> second_range(3, 4);
 
-  bool result_1 = _rule->range_intersect<int32_t>(first_range, second_range);
-  bool result_2 = _rule->range_intersect<int32_t>(second_range, first_range);
+  bool result_1 = _rule->_range_intersect<int32_t>(first_range, second_range);
+  bool result_2 = _rule->_range_intersect<int32_t>(second_range, first_range);
 
   EXPECT_FALSE(result_1);
   EXPECT_FALSE(result_2);
@@ -92,8 +92,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range = std::pair<int32_t, int32_t>(1, 8);
   second_range = std::pair<int32_t, int32_t>(3, 6);
 
-  result_1 = _rule->range_intersect<int32_t>(first_range, second_range);
-  result_2 = _rule->range_intersect<int32_t>(second_range, first_range);
+  result_1 = _rule->_range_intersect<int32_t>(first_range, second_range);
+  result_2 = _rule->_range_intersect<int32_t>(second_range, first_range);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -101,8 +101,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range = std::pair<int32_t, int32_t>(1, 8);
   second_range = std::pair<int32_t, int32_t>(0, 1);
 
-  result_1 = _rule->range_intersect<int32_t>(first_range, second_range);
-  result_2 = _rule->range_intersect<int32_t>(second_range, first_range);
+  result_1 = _rule->_range_intersect<int32_t>(first_range, second_range);
+  result_2 = _rule->_range_intersect<int32_t>(second_range, first_range);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -112,8 +112,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   std::pair<double, double> first_range_double(1.4, 2.3);
   std::pair<double, double> second_range_double(3.3, 4.5);
 
-  result_1 = _rule->range_intersect<double>(first_range_double, second_range_double);
-  result_2 = _rule->range_intersect<double>(second_range_double, first_range_double);
+  result_1 = _rule->_range_intersect<double>(first_range_double, second_range_double);
+  result_2 = _rule->_range_intersect<double>(second_range_double, first_range_double);
 
   EXPECT_FALSE(result_1);
   EXPECT_FALSE(result_2);
@@ -121,8 +121,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range_double = std::pair<double, double>(2.1, 8.4);
   second_range_double = std::pair<double, double>(3.4, 6.9);
 
-  result_1 = _rule->range_intersect<double>(first_range_double, second_range_double);
-  result_2 = _rule->range_intersect<double>(second_range_double, first_range_double);
+  result_1 = _rule->_range_intersect<double>(first_range_double, second_range_double);
+  result_2 = _rule->_range_intersect<double>(second_range_double, first_range_double);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -130,8 +130,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range_double = std::pair<double, double>(1.0, 8.0);
   second_range_double = std::pair<double, double>(0.0, 1.0);
 
-  result_1 = _rule->range_intersect<double>(first_range_double, second_range_double);
-  result_2 = _rule->range_intersect<double>(second_range_double, first_range_double);
+  result_1 = _rule->_range_intersect<double>(first_range_double, second_range_double);
+  result_2 = _rule->_range_intersect<double>(second_range_double, first_range_double);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -141,8 +141,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   std::pair<pmr_string, pmr_string> first_range_string("aa", "bb");
   std::pair<pmr_string, pmr_string> second_range_string("cc", "dd");
 
-  result_1 = _rule->range_intersect<pmr_string>(first_range_string, second_range_string);
-  result_2 = _rule->range_intersect<pmr_string>(second_range_string, first_range_string);
+  result_1 = _rule->_range_intersect<pmr_string>(first_range_string, second_range_string);
+  result_2 = _rule->_range_intersect<pmr_string>(second_range_string, first_range_string);
 
   EXPECT_FALSE(result_1);
   EXPECT_FALSE(result_2);
@@ -150,8 +150,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range_string = std::pair<pmr_string, pmr_string>("aa", "gg");
   second_range_string = std::pair<pmr_string, pmr_string>("cc", "ee");
 
-  result_1 = _rule->range_intersect<pmr_string>(first_range_string, second_range_string);
-  result_2 = _rule->range_intersect<pmr_string>(second_range_string, first_range_string);
+  result_1 = _rule->_range_intersect<pmr_string>(first_range_string, second_range_string);
+  result_2 = _rule->_range_intersect<pmr_string>(second_range_string, first_range_string);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -159,8 +159,8 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
   first_range_string = std::pair<pmr_string, pmr_string>("cc", "ff");
   second_range_string = std::pair<pmr_string, pmr_string>("aa", "cc");
 
-  result_1 = _rule->range_intersect<pmr_string>(first_range_string, second_range_string);
-  result_2 = _rule->range_intersect<pmr_string>(second_range_string, first_range_string);
+  result_1 = _rule->_range_intersect<pmr_string>(first_range_string, second_range_string);
+  result_2 = _rule->_range_intersect<pmr_string>(second_range_string, first_range_string);
 
   EXPECT_TRUE(result_1);
   EXPECT_TRUE(result_2);
@@ -176,7 +176,7 @@ TEST_F(DipsPruningRuleTest, CalculatePrunedChunks) {
       {ChunkID{1}, std::vector{std::pair<int32_t, int32_t>(9, 11)}},
       {ChunkID{2}, std::vector{std::pair<int32_t, int32_t>(12, 16)}}};
 
-  auto pruned_chunks = _rule->calculate_pruned_chunks<int32_t>(base_ranges, partner_ranges);
+  auto pruned_chunks = _rule->_calculate_pruned_chunks<int32_t>(base_ranges, partner_ranges);
   std::set<ChunkID> expected_pruned_chunk_ids{ChunkID{0}};
 
   EXPECT_EQ(pruned_chunks.size(), 1);
@@ -364,7 +364,7 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
   EXPECT_TRUE(join_graph->is_tree());
 
   join_graph->set_root(table1_node);  // prune based on dips
-  _rule->bottom_up_dip_traversal(table1_node);
+  _rule->_bottom_up_dip_traversal(table1_node);
 
   std::vector<ChunkID> expected_table1_pruned_ids{ChunkID{1}};
   std::vector<ChunkID> expected_table2_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
@@ -374,7 +374,7 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
   EXPECT_EQ(table2->pruned_chunk_ids(), expected_table2_pruned_ids);
   EXPECT_EQ(table3->pruned_chunk_ids(), expected_table3_pruned_ids);
 
-  _rule->top_down_dip_traversal(table1_node);
+  _rule->_top_down_dip_traversal(table1_node);
 
   expected_table1_pruned_ids = std::vector<ChunkID>{ChunkID{1}};
   expected_table2_pruned_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}, ChunkID{3}};
