@@ -29,6 +29,7 @@ inline bool operator>(const NullValue&, const NullValue&) { return false; }
 inline bool operator>=(const NullValue&, const NullValue&) { return false; }
 inline NullValue operator-(const NullValue&) { return NullValue{}; }
 
+// Hash function required by Boost.ContainerHash
 inline size_t hash_value(const NullValue&) {
   // Aggregate wants all NULLs in one bucket
   return 0;

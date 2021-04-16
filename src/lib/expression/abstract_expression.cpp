@@ -79,7 +79,7 @@ std::string AbstractExpression::_enclose_argument(const AbstractExpression& argu
 
   if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
       static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
-    return "("s + argument.description(mode) + ")";
+    return "(" + argument.description(mode) + ")";
   } else {
     return argument.description(mode);
   }
