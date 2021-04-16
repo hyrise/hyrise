@@ -111,7 +111,7 @@ size_t LQPColumnExpression::_shallow_hash() const {
   // It is important not to combine the address of the original_node with the hash code as it was done before #1795.
   // If this address is combined with the return hash code, equal LQP nodes that are not identical and that have
   // LQPColumnExpressions or child nodes with LQPColumnExpressions would have different hash codes.
-  auto hash = boost::hash(original_node.lock()->hash());
+  auto hash = boost::hash_value(original_node.lock()->hash());
   boost::hash_combine(hash, static_cast<size_t>(original_column_id));
   return hash;
 }

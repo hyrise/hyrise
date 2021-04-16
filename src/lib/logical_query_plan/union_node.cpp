@@ -92,7 +92,7 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
   }
 }
 
-size_t UnionNode::_on_shallow_hash() const { return boost::hash(set_operation_mode); }
+size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(set_operation_mode);

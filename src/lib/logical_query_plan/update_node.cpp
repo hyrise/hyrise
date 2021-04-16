@@ -29,7 +29,7 @@ bool UpdateNode::is_column_nullable(const ColumnID column_id) const { Fail("Upda
 
 std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions() const { return {}; }
 
-size_t UpdateNode::_on_shallow_hash() const { return boost::hash(table_name); }
+size_t UpdateNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& update_node_rhs = static_cast<const UpdateNode&>(rhs);

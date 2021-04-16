@@ -20,7 +20,7 @@ std::string ImportNode::description(const DescriptionMode mode) const {
 }
 
 size_t ImportNode::_on_shallow_hash() const {
-  auto hash = boost::hash(table_name);
+  auto hash = boost::hash_value(table_name);
   boost::hash_combine(hash, file_name);
   boost::hash_combine(hash, file_type);
   return hash;

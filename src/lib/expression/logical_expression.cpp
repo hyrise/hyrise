@@ -50,7 +50,7 @@ bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) co
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
 }
 
-size_t LogicalExpression::_shallow_hash() const { return boost::hash(static_cast<size_t>(logical_operator)); }
+size_t LogicalExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(logical_operator)); }
 
 ExpressionPrecedence LogicalExpression::_precedence() const { return ExpressionPrecedence::Logical; }
 

@@ -17,7 +17,7 @@ DropViewNode::DropViewNode(const std::string& init_view_name, const bool init_if
 std::string DropViewNode::description(const DescriptionMode mode) const { return "[Drop] View: '"s + view_name + "'"; }
 
 size_t DropViewNode::_on_shallow_hash() const {
-  auto hash = boost::hash(view_name);
+  auto hash = boost::hash_value(view_name);
   boost::hash_combine(hash, if_exists);
   return hash;
 }

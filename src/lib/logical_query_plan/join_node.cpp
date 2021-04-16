@@ -228,7 +228,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
-size_t JoinNode::_on_shallow_hash() const { return boost::hash(join_mode); }
+size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {

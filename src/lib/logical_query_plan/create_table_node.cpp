@@ -20,7 +20,7 @@ std::string CreateTableNode::description(const DescriptionMode mode) const {
 }
 
 size_t CreateTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash(table_name);
+  auto hash = boost::hash_value(table_name);
   boost::hash_combine(hash, if_not_exists);
   return hash;
 }

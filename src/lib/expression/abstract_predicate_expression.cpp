@@ -22,7 +22,7 @@ bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expr
 }
 
 size_t AbstractPredicateExpression::_shallow_hash() const {
-  return boost::hash(static_cast<size_t>(predicate_condition));
+  return boost::hash_value(static_cast<size_t>(predicate_condition));
 }
 
 }  // namespace opossum
