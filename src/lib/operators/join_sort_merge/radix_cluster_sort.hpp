@@ -381,6 +381,9 @@ class RadixClusterSort {
       _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
     };
 
+    _performance.left_side_row_count = _left_input_table->row_count();
+    _performance.right_side_row_count = _right_input_table->row_count();
+
     if (_left_input_table->row_count() < _right_input_table->row_count() || !_equi_case) {
       materialize_left_side(ALL_TRUE_BLOOM_FILTER);
       materialize_right_side(left_side_bloom_filter);
@@ -388,6 +391,7 @@ class RadixClusterSort {
       materialize_right_side(ALL_TRUE_BLOOM_FILTER);
       materialize_left_side(right_side_bloom_filter);
     }
+
     // Append right samples to left samples and sort (reserve not necessary when insert can
     // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
@@ -409,6 +413,15 @@ class RadixClusterSort {
     // an more efficient algorithm if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
+
+    // Store the number of materialized values. Depending on the order of materialization (which depends on the input
+    // sizes), each side might or might not be filtered by the Bloom filter.
+    for (const auto& materialized_segment : *(output.clusters_left)) {
+      _performance.left_side_materialized_value_count += materialized_segment->size();
+    }
+    for (const auto& materialized_segment : *(output.clusters_right)) {
+      _performance.right_side_materialized_value_count += materialized_segment->size();
+    }
 
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::Sorting, timer.lap());
 

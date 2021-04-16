@@ -46,6 +46,10 @@ class JoinSortMerge : public AbstractJoinOperator {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
 
     size_t radix_bits = 0;
+    size_t left_side_materialized_value_count{0};
+    size_t right_side_materialized_value_count{0};
+    size_t left_side_row_count{0};
+    size_t right_side_row_count{0};
   };
 
  protected:
