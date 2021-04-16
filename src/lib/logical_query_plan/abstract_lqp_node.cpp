@@ -280,7 +280,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (1) Gather non-trivial FDs and perform sanity checks
   auto non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    auto fds_set = std::unordered_set<FunctionalDependency>{};
+    auto fds_set = FunctionalDependencyUnorderedSet{};
     const auto& output_expressions = this->output_expressions();
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 

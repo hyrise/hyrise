@@ -62,10 +62,10 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
   return stream;
 }
 
-std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds) {
+FunctionalDependencyUnorderedSet inflate_fds(const std::vector<FunctionalDependency>& fds) {
   if (fds.empty()) return {};
 
-  auto inflated_fds = std::unordered_set<FunctionalDependency>();
+  auto inflated_fds = FunctionalDependencyUnorderedSet();
   inflated_fds.reserve(fds.size());
 
   for (const auto& fd : fds) {
@@ -117,8 +117,8 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
 std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependency>& fds_a,
                                             const std::vector<FunctionalDependency>& fds_b) {
   if constexpr (HYRISE_DEBUG) {
-    auto fds_a_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
-    auto fds_b_set = std::unordered_set<FunctionalDependency>(fds_b.begin(), fds_b.end());
+    auto fds_a_set = FunctionalDependencyUnorderedSet(fds_a.begin(), fds_a.end());
+    auto fds_b_set = FunctionalDependencyUnorderedSet(fds_b.begin(), fds_b.end());
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
@@ -154,11 +154,3 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
 }
 
 }  // namespace opossum
-
-namespace std {
-
-size_t hash<opossum::FunctionalDependency>::operator()(const opossum::FunctionalDependency& fd) const {
-  return fd.hash();
-}
-
-}  // namespace std

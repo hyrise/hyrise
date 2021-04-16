@@ -32,6 +32,11 @@ struct FunctionalDependency {
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
+
+  /**
+   * Please note that FDs with the same determinant expressions are expected to be merged into single FD objects
+   * (e.g., for unordered sets). Therefore, we hash the determinant expressions only.
+   */
   size_t hash() const;
 
   ExpressionUnorderedSet determinants;
@@ -39,6 +44,12 @@ struct FunctionalDependency {
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
+
+// Hash function required by Boost.ContainerHash
+inline std::size_t hash_value(const FunctionalDependency& fd) {
+  return fd.hash();
+}
+using FunctionalDependencyUnorderedSet = std::unordered_set<FunctionalDependency, boost::hash<FunctionalDependency>>;
 
 /**
  * @return The given FDs as an unordered set in an inflated form.
@@ -48,7 +59,7 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
  *                             {a} => {b, c, d}   -->   {a} => {c}
  *                                                      {a} => {d}
  */
-std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds);
+FunctionalDependencyUnorderedSet inflate_fds(const std::vector<FunctionalDependency>& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
@@ -83,16 +94,3 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
  */
 
 }  // namespace opossum
-
-namespace std {
-
-/**
- * Please note: FDs with the same determinant expressions are expected to be merged into single FD objects (e.g. for
- * unordered sets). Therefore, we hash the determinant expressions only.
- */
-template <>
-struct hash<opossum::FunctionalDependency> {
-  size_t operator()(const opossum::FunctionalDependency& fd) const;
-};
-
-}  // namespace std
