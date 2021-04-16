@@ -926,7 +926,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
             _sort_merge_join.left_input_table()->row_count() > _sort_merge_join.right_input_table()->row_count())),
         "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
-    DebugAssert(!sorted_table->empty(), "Sorted table is empty");
+    DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
     const auto sorted_table_size = sorted_table.size();
     for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
