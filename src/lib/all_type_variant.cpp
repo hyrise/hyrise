@@ -17,7 +17,7 @@ bool is_floating_point_data_type(const DataType data_type) {
 namespace std {
 
 size_t hash<opossum::AllTypeVariant>::operator()(const opossum::AllTypeVariant& all_type_variant) const {
-  return boost::hash_value(all_type_variant);
+  return boost::hash(all_type_variant);
 }
 
 }  // namespace std

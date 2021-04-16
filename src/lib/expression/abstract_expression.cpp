@@ -50,7 +50,7 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
 bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
 
 size_t AbstractExpression::hash() const {
-  auto hash = boost::hash_value(type);
+  auto hash = boost::hash(type);
   for (const auto& argument : arguments) {
     // Include the hash value of the inputs, but do not recurse any deeper. We will have to perform a deep comparison
     // anyway.

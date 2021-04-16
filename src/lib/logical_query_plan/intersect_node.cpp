@@ -43,7 +43,7 @@ std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependen
   Fail("Merging of FDs should be implemented.");
 }
 
-size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
+size_t IntersectNode::_on_shallow_hash() const { return boost::hash(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return IntersectNode::make(set_operation_mode);

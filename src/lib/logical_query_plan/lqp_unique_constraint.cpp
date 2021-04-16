@@ -22,7 +22,7 @@ size_t LQPUniqueConstraint::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - expressions.size());
+  return boost::hash(hash - expressions.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint) {

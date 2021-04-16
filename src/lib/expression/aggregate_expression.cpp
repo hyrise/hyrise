@@ -114,7 +114,7 @@ bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) 
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }
 
-size_t AggregateExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
+size_t AggregateExpression::_shallow_hash() const { return boost::hash(static_cast<size_t>(aggregate_function)); }
 
 bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an

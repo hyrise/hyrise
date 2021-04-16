@@ -19,7 +19,7 @@ std::shared_ptr<AbstractLQPNode> ChangeMetaTableNode::_on_shallow_copy(LQPNodeMa
 }
 
 size_t ChangeMetaTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = boost::hash(table_name);
   boost::hash_combine(hash, change_type);
   return hash;
 }

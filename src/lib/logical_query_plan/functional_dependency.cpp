@@ -38,7 +38,7 @@ size_t FunctionalDependency::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - determinants.size());
+  return boost::hash(hash - determinants.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {
