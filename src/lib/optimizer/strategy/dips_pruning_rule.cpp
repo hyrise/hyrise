@@ -187,7 +187,7 @@ void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNod
 
 void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                                     std::shared_ptr<StoredTableNode> join_partner_table_node,
-                                    ColumnID join_partner_column_id) const {
+                                    ColumnID join_partner_column_id) {
   auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
   resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
@@ -202,7 +202,7 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
   });
 }
 
-std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph) {
+std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
   stream << "==== Vertices ====" << std::endl;
   if (join_graph.nodes.empty()) {
     stream << "<none>" << std::endl;

@@ -150,8 +150,8 @@ class DipsPruningRule : public AbstractRule {
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
-  void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id) const;
+  static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
+                            std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
 
   void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
                          const std::shared_ptr<DipsJoinGraph>& join_graph) const;
@@ -162,8 +162,8 @@ class DipsPruningRule : public AbstractRule {
   void _bottom_up_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
 
   template <typename COLUMN_TYPE>
-  std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
-      const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) const {
+  static std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
+      const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) {
     /* For every non pruned chunk, return its ranges for the given attribute (segment) */
     std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> ranges;
 
@@ -211,16 +211,16 @@ class DipsPruningRule : public AbstractRule {
   }
 
   template <typename COLUMN_TYPE>
-  bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
-                        std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) const {
+  static bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
+                               std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
     return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }
 
   template <typename COLUMN_TYPE>
-  std::set<ChunkID> _calculate_pruned_chunks(
+  static std::set<ChunkID> _calculate_pruned_chunks(
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
-      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) const {
+      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) {
     /* Calculate the chunks ids of the partner table which can be pruned (based on base_chunk_ranges) */
     std::set<ChunkID> pruned_chunk_ids;
 
