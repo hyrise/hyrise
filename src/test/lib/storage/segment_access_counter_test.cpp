@@ -37,7 +37,6 @@ TEST_F(SegmentAccessCounterTest, ToString) {
   counter[AccessType::Sequential] = 20;
   counter[AccessType::Monotonic] = 300;
   counter[AccessType::Random] = 4'000;
-  counter[AccessType::Dictionary] = 50'000;
 
   const auto expected_str = "1,20,300,4000,50000";
   EXPECT_EQ(expected_str, counter.to_string());
@@ -49,7 +48,6 @@ TEST_F(SegmentAccessCounterTest, CopyConstructor) {
   counter1[AccessType::Sequential] = 20;
   counter1[AccessType::Monotonic] = 300;
   counter1[AccessType::Random] = 4'000;
-  counter1[AccessType::Dictionary] = 50'000;
 
   SegmentAccessCounter counter2{counter1};
   for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
@@ -63,7 +61,6 @@ TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
   counter1[AccessType::Sequential] = 20;
   counter1[AccessType::Monotonic] = 300;
   counter1[AccessType::Random] = 4'000;
-  counter1[AccessType::Dictionary] = 50'000;
 
   SegmentAccessCounter counter2;
   counter2 = counter1;

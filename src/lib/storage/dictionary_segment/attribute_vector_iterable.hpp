@@ -18,6 +18,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    // The AttributeVectorIterable is an alternative method to access a DictionarySegment. Because its use bypasses the
+    // DictionarySegmentIterable, we need to track the accesses here, too.
+    _access_counter[SegmentAccessCounter::AccessType::Sequential] += _attribute_vector.size();
+
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
 
@@ -26,12 +30,12 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
                                                     static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
     });
-
-    _access_counter[SegmentAccessCounter::AccessType::Sequential] += _attribute_vector.size();
   }
 
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
+    _access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
 
@@ -42,8 +46,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
-
-    _access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
   }
 
   size_t _on_size() const { return _attribute_vector.size(); }

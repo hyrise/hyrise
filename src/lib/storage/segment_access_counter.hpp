@@ -26,7 +26,6 @@ class SegmentAccessCounter {
     Sequential /* 0, 1, 1, 2, 3, 4 */,
     Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
     Random /* 0, 1, 0, 42 */,
-    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */,
     Count /* Dummy entry to describe the number of elements in this enum class. */
   };
 
@@ -34,8 +33,7 @@ class SegmentAccessCounter {
       {AccessType::Point, "Point"},
       {AccessType::Sequential, "Sequential"},
       {AccessType::Monotonic, "Monotonic"},
-      {AccessType::Random, "Random"},
-      {AccessType::Dictionary, "Dictionary"}};
+      {AccessType::Random, "Random"}};
 
   SegmentAccessCounter();
   SegmentAccessCounter(const SegmentAccessCounter& other);
