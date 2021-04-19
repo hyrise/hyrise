@@ -249,7 +249,7 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
           break;
         }
         case CompressedVectorType::BitPacking: {
-          segment_type += ":FBitP";
+          segment_type += ":BitP";
           break;
         }
       }
