@@ -57,7 +57,6 @@ class JoinSortMerge : public AbstractJoinOperator {
   // best performance.
   static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 
-
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;

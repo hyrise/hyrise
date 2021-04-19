@@ -60,7 +60,6 @@ struct Subsample {
   std::vector<T> samples;
 };
 
-
 // Materializes a column and sorts it if requested. Result is a triple of materialized values, positions of NULL
 // values, and a list of samples.
 template <typename T, bool use_bloom_filter>
@@ -75,7 +74,7 @@ class ColumnMaterializer {
   std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id, BloomFilter& output_bloom_filter,
       const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
-    constexpr ChunkOffset SAMPLES_PER_CHUNK = 10; // rather arbitrarily chosen number
+    constexpr ChunkOffset SAMPLES_PER_CHUNK = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
     std::vector<BloomFilter> bloom_filter_per_chunk;
@@ -101,7 +100,8 @@ class ColumnMaterializer {
 
       auto materialize_job = [&, chunk_id] {
         const auto& segment = input->get_chunk(chunk_id)->get_segment(column_id);
-        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples[chunk_id], bloom_filter_per_chunk, input_bloom_filter);
+        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples[chunk_id],
+                                                bloom_filter_per_chunk, input_bloom_filter);
       };
 
       if (chunk->size() > 500) {
@@ -134,7 +134,6 @@ class ColumnMaterializer {
   }
 
  private:
-
   // Sample values from a materialized segment. We collect samples locally and write once to the global sample
   // collection to limit non-local writes.
   void _gather_samples_from_segment(const MaterializedSegment<T>& segment, Subsample<T>& subsample) const {
@@ -157,7 +156,9 @@ class ColumnMaterializer {
   }
 
   MaterializedSegment<T> _materialize_segment(const std::shared_ptr<AbstractSegment>& segment, const ChunkID chunk_id,
-                                              RowIDPosList& null_rows_output, Subsample<T>& subsample, std::vector<BloomFilter>& bloom_filter_per_chunk, const BloomFilter& input_bloom_filter) {
+                                              RowIDPosList& null_rows_output, Subsample<T>& subsample,
+                                              std::vector<BloomFilter>& bloom_filter_per_chunk,
+                                              const BloomFilter& input_bloom_filter) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment->size());
 
@@ -183,7 +184,7 @@ class ColumnMaterializer {
           }
         } else {
           output.emplace_back(row_id, position.value());
-        } 
+        }
       }
     });
 

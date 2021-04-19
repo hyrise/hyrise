@@ -80,7 +80,6 @@ class RadixClusterSort {
   }
 
  protected:
-
   // The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to be able to
   // appropriately reserve space for the clustering output.
   JoinSortMerge::PerformanceData& _performance;
@@ -337,8 +336,7 @@ class RadixClusterSort {
     // Sort the chunks of the input tables in the non-equi cases
 
     auto materialize_left_side = [&](const auto& input_bloom_filter) {
-      auto materialization_results =
-          std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>>{};
+      auto materialization_results = std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>>{};
       if (_equi_case) {
         ColumnMaterializer<T, true> left_column_materializer(!_equi_case, _materialize_null_left);
         materialization_results = left_column_materializer.materialize(_left_input_table, _left_column_id,
@@ -355,8 +353,7 @@ class RadixClusterSort {
     };
 
     auto materialize_right_side = [&](const auto& input_bloom_filter) {
-      auto materialization_results =
-          std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>>{};
+      auto materialization_results = std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>>{};
       if (_equi_case) {
         ColumnMaterializer<T, true> right_column_materializer(!_equi_case, _materialize_null_right);
         materialization_results = right_column_materializer.materialize(_right_input_table, _right_column_id,
