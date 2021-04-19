@@ -52,6 +52,12 @@ class JoinSortMerge : public AbstractJoinOperator {
     size_t right_side_row_count{0};
   };
 
+  // Tasks are added to the scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not,
+  // the task is executed directly. This threshold needs to be re-evaluated over time to find the value which gives the
+  // best performance.
+  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
+
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
@@ -67,11 +73,6 @@ class JoinSortMerge : public AbstractJoinOperator {
   friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-
-  // Tasks are added to the scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not,
-  // the task is executed directly. This threshold needs to be re-evaluated over time to find the value which gives the
-  // best performance.
-  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 };
 
 }  // namespace opossum
