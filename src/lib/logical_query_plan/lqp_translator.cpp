@@ -590,7 +590,25 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
       Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-      const auto subquery_pqp = translate_node(subquery_expression->lqp);
+      /**
+       * Notes on generating subquery PQPs:
+       *  a) For uncorrelated subqueries, operator results can be shared between identical parts in uncorrelated
+       *     subqueries and outer queries. Therefore, this LQPTranslator instance is used to deduplicate subquery PQPs
+       *     with _operator_by_lqp_node.
+       *
+       *  b) In contrast to uncorrelated subqueries, correlated subqueries cannot share identical parts with outer
+       *     queries because ExpressionEvaluator::_evaluate_subquery_expression_for_row always deep-copies the whole PQP
+       *     at evaluation time. The deep copy includes both correlated and uncorrelated parts.
+       *     Consequently, a new LQPTranslator instance is used for correlated subqueries to avoid deduplication
+       *     with outer queries. This prevents correlated subqueries from increasing the consumer count of
+       *     outer query operators, which would otherwise block the automatic clearing of results.
+       */
+      auto subquery_pqp = std::shared_ptr<AbstractOperator>();
+      if (subquery_expression->is_correlated()) {
+        subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
+      } else {
+        subquery_pqp = translate_node(subquery_expression->lqp);
+      }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
       subquery_parameters.reserve(subquery_expression->parameter_count());

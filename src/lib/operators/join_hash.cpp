@@ -237,7 +237,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance(performance_data),
+        _performance_data(performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -248,7 +248,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  JoinHash::PerformanceData& _performance;
+  JoinHash::PerformanceData& _performance_data;
 
   OutputColumnOrder _output_column_order;
 
@@ -321,7 +321,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     /**
-     * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
+     * 1.1. Materialize the build partition, which is expected to be smaller. Create a Bloom filter.
      */
 
     auto build_side_bloom_filter = BloomFilter{};
@@ -340,7 +340,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     };
 
     /**
-     * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
+     * 1.2. Materialize the larger probe partition. Use the Bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
@@ -357,22 +357,34 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
-      // When materializing the first side (here: the build side), we do not yet have a bloom filter. To keep the number
-      // of code paths low, materialize_*_side always expects a bloom filter. For the first step, we thus pass in a
-      // bloom filter that returns true for every probe.
+      // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
+      // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
+      // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
+      // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
+      // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
+      // been used here to filter non-matching values.
       materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+    }
+
+    // Store the number of materialized values. Depending on the order of materialization (which depends on the input
+    // sizes), each side might or might not be filtered by the Bloom filter.
+    for (const auto& partition : materialized_build_column) {
+      _performance_data.build_side_materialized_value_count += partition.elements.size();
+    }
+    for (const auto& partition : materialized_probe_column) {
+      _performance_data.probe_side_materialized_value_count += partition.elements.size();
     }
 
     /**
-     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
+     * 2. Perform radix partitioning for build and probe sides. The Bloom filters are not used in this step. Future work
      *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
@@ -414,7 +426,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       histograms_build_column.clear();
       histograms_probe_column.clear();
 
-      _performance.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
+      _performance_data.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);
@@ -426,7 +438,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
      *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
      *    all rows.
-     *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
+     *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
     Timer timer_hash_map_building;
@@ -438,7 +450,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
                                                        probe_side_bloom_filter);
     }
-    _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+
+    // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
+    // less values stored than in the initial input table.
+    for (const auto& hash_table : hash_tables) {
+      if (!hash_table) continue;
+
+      _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
+      const auto position_count = hash_table->position_count();
+      if (position_count) {
+        // Update or set hash_tables_position_count if hash table stores positions.
+        _performance_data.hash_tables_position_count =
+            _performance_data.hash_tables_position_count.value_or(0) + *position_count;
+      }
+    }
 
     /**
      * Short cut for AntiNullAsTrue:
@@ -453,7 +479,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
           if (null_value) {
             Timer timer_output_writing;
             const auto result = _join_hash._build_output_table({});
-            _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+            _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
             return result;
           }
         }
@@ -515,7 +541,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
     radix_probe_column.clear();
     hash_tables.clear();
@@ -544,7 +570,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
                             _output_column_order, ALLOW_PARTITION_MERGE);
 
-    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

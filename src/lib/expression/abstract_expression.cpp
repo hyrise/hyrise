@@ -3,7 +3,8 @@
 #include <queue>
 #include <string>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
+
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
