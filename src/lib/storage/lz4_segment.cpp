@@ -483,7 +483,7 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
   return std::nullopt;
 }
 
-// Right now, vector compression is fixed to FixedSizeBitAligned. This method nonetheless checks for the actual vector
+// Right now, vector compression is fixed to BitPacking. This method nonetheless checks for the actual vector
 // compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {

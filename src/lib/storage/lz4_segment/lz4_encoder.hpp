@@ -221,12 +221,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                       null_values.size());
     }
 
-    // Compress the offsets with FixedSizeBitAligned vector compression to reduce the memory footprint of the LZ4 segment.
-    // FixedSizeBitAligned is chosen over fixed size byte-aligned (FSBA) vector compression, since it compresses better and the
+    // Compress the offsets with BitPacking vector compression to reduce the memory footprint of the LZ4 segment.
+    // BitPacking is chosen over fixed size byte-aligned (FSBA) vector compression, since it compresses better and the
     // performance advantage of FSBA is neglectable, because runtime is dominated by the LZ4 encoding/decoding anyways.
     // Prohibiting FSBA here reduces the compile time.
-    Assert(vector_compression_type() == VectorCompressionType::FixedSizeBitAligned, "Only FixedSizeBitAligned is supported for LZ4");
-    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::FixedSizeBitAligned, allocator, {offsets.back()});
+    Assert(vector_compression_type() == VectorCompressionType::BitPacking, "Only BitPacking is supported for LZ4");
+    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {offsets.back()});
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows

@@ -5,7 +5,7 @@
 
 #include "utils/assert.hpp"
 
-#include "fixed_size_bit_aligned/fixed_size_bit_aligned_compressor.hpp"
+#include "bitpacking/bitpacking_compressor.hpp"
 #include "fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp"
 
 namespace opossum {
@@ -19,7 +19,7 @@ namespace {
  */
 const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
-    {VectorCompressionType::FixedSizeBitAligned, std::make_shared<FixedSizeBitAlignedCompressor>()}};
+    {VectorCompressionType::BitPacking, std::make_shared<BitPackingCompressor>()}};
 
 std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressionType type) {
   auto it = vector_compressor_for_type.find(type);

@@ -271,7 +271,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
   if (string_offsets_size > 0) {
 
     auto string_offsets =
-        std::make_unique<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
+        std::make_unique<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
                                            std::move(string_offsets), block_size, last_block_size, compressed_size,
                                            num_elements);
@@ -291,8 +291,8 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
     std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
   const auto type = static_cast<CompressedVectorType>(vector_compression_id);
   switch (type) {
-    case CompressedVectorType::FixedSizeBitAligned:
-      return std::make_shared<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
+    case CompressedVectorType::BitPacking:
+      return std::make_shared<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedSize1ByteAligned:
       return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case CompressedVectorType::FixedSize2ByteAligned:
@@ -308,8 +308,8 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
     std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
   const auto type = static_cast<CompressedVectorType>(vector_compression_id);
   switch (type) {
-    case CompressedVectorType::FixedSizeBitAligned:
-      return std::make_unique<FixedSizeBitAlignedVector>(_read_values_compact_vector<uint32_t>(file, row_count));
+    case CompressedVectorType::BitPacking:
+      return std::make_unique<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedSize1ByteAligned:
       return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case CompressedVectorType::FixedSize2ByteAligned:

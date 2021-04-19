@@ -1,4 +1,4 @@
-#include "fixed_size_bit_aligned_compressor.hpp"
+#include "bitpacking_compressor.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,9 +7,9 @@
 
 namespace opossum {
 
-class FixedSizeBitAlignedVector;
+class BitPackingVector;
 
-std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compress(
+std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
     const UncompressedVectorInfo& meta_info) {
   const auto max_value = _find_max_value(vector);
@@ -26,19 +26,19 @@ std::unique_ptr<const BaseCompressedVector> FixedSizeBitAlignedCompressor::compr
   
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
-  return std::make_unique<FixedSizeBitAlignedVector>(std::move(data));
+  return std::make_unique<BitPackingVector>(std::move(data));
 }
 
-std::unique_ptr<BaseVectorCompressor> FixedSizeBitAlignedCompressor::create_new() const {
-  return std::make_unique<FixedSizeBitAlignedCompressor>();
+std::unique_ptr<BaseVectorCompressor> BitPackingCompressor::create_new() const {
+  return std::make_unique<BitPackingCompressor>();
 }
 
-uint32_t FixedSizeBitAlignedCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) const {
+uint32_t BitPackingCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) const {
   const auto it = std::max_element(vector.cbegin(), vector.cend());
   return it != vector.cend() ? *it : 0u;
 }
 
-uint32_t FixedSizeBitAlignedCompressor::_get_required_bits(uint32_t max_value) const {
+uint32_t BitPackingCompressor::_get_required_bits(uint32_t max_value) const {
   if (max_value == 0u) {
     return 1u;
   }

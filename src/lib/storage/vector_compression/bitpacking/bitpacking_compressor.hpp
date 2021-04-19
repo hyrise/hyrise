@@ -1,12 +1,12 @@
 #pragma once
 
-#include "fixed_size_bit_aligned_vector.hpp"
-#include "fixed_size_bit_aligned_vector_type.hpp"
+#include "bitpacking_vector.hpp"
+#include "bitpacking_vector_type.hpp"
 #include "storage/vector_compression/base_vector_compressor.hpp"
 
 namespace opossum {
 
-class FixedSizeBitAlignedCompressor : public BaseVectorCompressor {
+class BitPackingCompressor : public BaseVectorCompressor {
  public:
   std::unique_ptr<const BaseCompressedVector> compress(const pmr_vector<uint32_t>& vector,
                                                        const PolymorphicAllocator<size_t>& alloc,

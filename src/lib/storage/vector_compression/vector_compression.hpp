@@ -16,7 +16,7 @@ namespace opossum {
  * Also known as null suppression and
  * zero suppression in the literature.
  */
-enum class VectorCompressionType : uint8_t { FixedSizeByteAligned, FixedSizeBitAligned };
+enum class VectorCompressionType : uint8_t { FixedSizeByteAligned, BitPacking };
 
 /**
  * @brief Meta information about an uncompressed vector

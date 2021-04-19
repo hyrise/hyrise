@@ -9,7 +9,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
-#include "storage/vector_compression/fixed_size_bit_aligned/fixed_size_bit_aligned_vector.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
@@ -325,7 +325,7 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
     // Write string_offset size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.string_offsets()->size()));
     // Write string_offset data_size
-    export_compact_vector(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(*lz4_segment.string_offsets()).data());
+    export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(*lz4_segment.string_offsets()).data());
   } else {
     // Write string_offset size = 0
     export_value(ofstream, uint32_t{0});
@@ -342,7 +342,7 @@ VectorCompressionID BinaryWriter::_vector_compression_id(const AbstractEncodedSe
       case CompressedVectorType::FixedSize4ByteAligned:
       case CompressedVectorType::FixedSize2ByteAligned:
       case CompressedVectorType::FixedSize1ByteAligned:
-      case CompressedVectorType::FixedSizeBitAligned:
+      case CompressedVectorType::BitPacking:
         vector_compression_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
       default:
@@ -364,8 +364,8 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::FixedSize1ByteAligned:
       export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::FixedSizeBitAligned:
-      export_compact_vector(ofstream, dynamic_cast<const FixedSizeBitAlignedVector&>(compressed_vector).data());
+    case CompressedVectorType::BitPacking:
+      export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(compressed_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");

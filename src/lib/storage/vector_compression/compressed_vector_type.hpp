@@ -27,7 +27,7 @@ namespace hana = boost::hana;
  * depending on the range of the values in the vector.
  */
 enum class CompressedVectorType : uint8_t {
-  FixedSizeBitAligned,
+  BitPacking,
   FixedSize1ByteAligned,
   FixedSize2ByteAligned,
   FixedSize4ByteAligned,  // uncompressed
@@ -35,7 +35,7 @@ enum class CompressedVectorType : uint8_t {
 
 template <typename T>
 class FixedSizeByteAlignedVector;
-class FixedSizeBitAlignedVector;
+class BitPackingVector;
 
 /**
  * Mapping of compressed vector types to compressed vectors
@@ -49,8 +49,8 @@ constexpr auto compressed_vector_for_type = hana::make_map(
                     hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
                     hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSizeBitAligned>,
-                    hana::type_c<FixedSizeBitAlignedVector>));
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::BitPacking>,
+                    hana::type_c<BitPackingVector>));
 
 /**
  * @brief Returns the CompressedVectorType of a given compressed vector

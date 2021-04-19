@@ -34,7 +34,7 @@ auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<Vecto
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          ::testing::Values(
                                            VectorCompressionType::FixedSizeByteAligned,
-                                           VectorCompressionType::FixedSizeBitAligned),
+                                           VectorCompressionType::BitPacking),
                          dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
