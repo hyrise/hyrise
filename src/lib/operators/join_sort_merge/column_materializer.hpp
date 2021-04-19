@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include <boost/dynamic_bitset.hpp>
 #include <boost/sort/sort.hpp>
@@ -17,6 +18,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
+#include "utils/murmur_hash.hpp"
 
 namespace opossum {
 
@@ -165,8 +167,7 @@ class ColumnMaterializer {
     if (use_bloom_filter) {
       bloom_filter_per_chunk[chunk_id] = BloomFilter(BLOOM_FILTER_SIZE, false);
     }
-
-    const std::hash<T> hash_function;
+    constexpr std::array<uint32_t, 2> seeds{42, 102787};
 
     segment_iterate<T>(*segment, [&](const auto& position) {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
@@ -176,7 +177,9 @@ class ColumnMaterializer {
         }
       } else {
         if (use_bloom_filter) {
-          const Hash hashed_value = hash_function(static_cast<T>(position.value()));
+          const auto first_hashed_value = murmur3<T>(static_cast<T>(position.value()), seeds[0]).second;
+          const auto second_hashed_value = murmur3<T>(static_cast<T>(position.value()), seeds[1]).second;
+          const auto hashed_value = first_hashed_value | second_hashed_value;
           // If Value in not present in input bloom filter and can be skipped
           if (input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] || _materialize_null) {
             bloom_filter_per_chunk[chunk_id][hashed_value & BLOOM_FILTER_MASK] = true;

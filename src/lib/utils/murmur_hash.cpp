@@ -12,8 +12,8 @@ namespace opossum {
 // murmur_hash3, by Austin Appleby
 
 // Note - This is the x64 version, on x84 it does _not_ produce the same results, as the
-// algorithm is optimized for the x64 platform. You can still
-// compile and run it on any platform, but your performance with the
+// algorithm is optimized for the x64 platform. It can still
+// compile and run on any platform, but the performance with the
 // non-native version will be less than optimal.
 
 inline uint64_t rotl64(uint64_t x, int8_t r) { return (x << r) | (x >> (64 - r)); }
