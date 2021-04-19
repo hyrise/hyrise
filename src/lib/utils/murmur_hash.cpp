@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+//-----------------------------------------------------------------------------
+// murmur_hash3, by Austin Appleby
+
 inline uint64_t rotl64 ( uint64_t x, int8_t r ){
   return (x << r) | (x >> (64 - r));
 }
@@ -139,6 +142,20 @@ std::pair<uint64_t, uint64_t> murmur_hash3 ( const void * key, const int len,
   // The 128-bit hash is split and stored in two 64-bit unsigned integers
   return std::pair<uint64_t, uint64_t> {h1, h2};
 }
+
+//-----------------------------------------------------------------------------
+// murmur_hash2, by Austin Appleby
+
+// Note - This code makes a few assumptions about how your machine behaves -
+
+// 1. We can read a 4-byte value from any address without crashing
+// 2. sizeof(int) == 4
+
+// And it has a few limitations -
+
+// 1. It will not work incrementally.
+// 2. It will not produce the same results on little-endian and big-endian
+//    machines.
 
 unsigned int murmur_hash2(const void* key, int len, unsigned int seed) {
   // 'm' and 'r' are mixing constants generated offline.
