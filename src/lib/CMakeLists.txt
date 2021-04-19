@@ -611,6 +611,8 @@ set(
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
     utils/meta_tables/segment_meta_data.hpp
+    utils/murmur_hash.cpp
+    utils/murmur_hash.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
