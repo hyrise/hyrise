@@ -106,6 +106,7 @@ class BinaryWriter {
    * Dictionary Values°          | T (int, float, double, long)        | Dictionary size * sizeof(T)
    * Dictionary String Length^   | size_t                              | Dictionary size * 2
    * Dictionary Values^          | std::string                         | Sum of all string lengths
+   * vector compress. bit width² | uint8_t                             | 1
    * Attribute vector values     | uintX                               | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -113,6 +114,7 @@ class BinaryWriter {
    *
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is written if the type of the column is NOT a string
+   * ²: This field is only written if the vector compression is BitPacking
    */
   template <typename T>
   static void _write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
@@ -124,14 +126,16 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * attribute vector compress ID| VectorCompressionID                | 1
+   * attribute vector compress ID| VectorCompressionID                 | 1
    * Size of dictionary vector   | ValueID                             | 4
    * FixedString length          | uint32_t                            | 8
    * Dictionary Values           | char array                          | Dictionary size * FixedString length
+   * vector compress. bit width² | uint8_t                             | 1
    * Attribute vector values     | uintX                               | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
+   * ²: This field is only written if the vector compression is BitPacking
    */
   template <typename T>
   static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
@@ -161,17 +165,19 @@ class BinaryWriter {
    * Description                 | Type                                | Size in bytes
    * --------------------------------------------------------------------------------------------------------
    * Encoding Type               | EncodingType                        | 1
-   * attribute vector compress ID| VectorCompressionID                | 1
+   * attribute vector compress ID| VectorCompressionID                 | 1
    * Number of Blocks            | uint32_t                            | 4
    * Block minima                | T                                   | Number of blocks * sizeof(T)
    * Stores NULL values          | bool (stored as BoolAsByteType)     | 1
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
-   * Offset values               | uint32_t                            | size * 4
+   * vector compress. bit width² | uint8_t                             | 1
+   * Offset values               | uintX                               | Rows * width of offset vector
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
    * ¹: This field is only written when the optional NULL values are stored
+   * ²: This field is only written if the vector compression is BitPacking
    */
   template <typename T>
   static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool column_is_nullable,
@@ -194,14 +200,15 @@ class BinaryWriter {
    * Dictionary size             | uint32_t                            | 4
    * Dictionary                  | vector<char>                        | Dictionary size * 1
    * string offset size          | uint32_t                            | 4
-   * string offset data size²    | uint32_t                            | 4
-   * string offset²              | uint32_t                            | size * 4
+   * vector compress. bit width³ | uint8_t                             | 1
+   * string offset values        | uintX                               | Rows * width of offset vector
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
    * ¹: This field is only written if NULL values' size is not 0
    * ²: These fields are only written if string offset size is not 0
+   * ³: This field is only written if the vector compression is BitPacking
    */
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
