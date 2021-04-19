@@ -47,7 +47,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     Assert(dict_segment->compressed_vector_type(),
            "Expected DictionarySegment to use vector compression for attribute vector");
     Assert(is_fixed_width_integer(*dict_segment->compressed_vector_type()),
-           "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
+           "CompositeGroupKeyIndex only works with Fixed-width integer compressed attribute vectors.");
     _indexed_segments.emplace_back(dict_segment);
   }
 

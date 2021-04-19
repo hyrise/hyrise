@@ -17,7 +17,7 @@ inline bool is_fixed_width_integer(CompressedVectorType type) {
 }
 
 inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type) {
-  DebugAssert(is_fixed_width_integer(type), "Type must be one of the fixed-size byte-aligned types.");
+  DebugAssert(is_fixed_width_integer(type), "Type must be one of the Fixed-width integer types.");
 
   switch (type) {
     case CompressedVectorType::FixedWidthInteger4Byte:

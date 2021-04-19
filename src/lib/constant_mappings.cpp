@@ -50,8 +50,8 @@ const boost::bimap<LogLevel, std::string> log_level_to_string = make_bimap<LogLe
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
-        {VectorCompressionType::FixedWidthInteger, "Fixed-size byte-aligned"},
-        {VectorCompressionType::BitPacking, "Fixed-size bit-aligned"},
+        {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
+        {VectorCompressionType::BitPacking, "BitPacking"},
     });
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
