@@ -532,11 +532,11 @@ set(
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
     storage/vector_compression/compressed_vector_type.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_decompressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/bitpacking/bitpacking_compressor.cpp
     storage/vector_compression/bitpacking/bitpacking_compressor.hpp

@@ -22,19 +22,19 @@ namespace hana = boost::hana;
  * @brief Class types of compressed vectors
  *
  * This enum is not identical to VectorCompressionType. It differs
- * because VectorCompressionType::FixedSizeByteAligned can yield three
+ * because VectorCompressionType::FixedWidthInteger can yield three
  * different vector types (one, two, or four bytes)
  * depending on the range of the values in the vector.
  */
 enum class CompressedVectorType : uint8_t {
   BitPacking,
-  FixedSize1ByteAligned,
-  FixedSize2ByteAligned,
-  FixedSize4ByteAligned,  // uncompressed
+  FixedWidthInteger1Byte,
+  FixedWidthInteger2Byte,
+  FixedWidthInteger4Byte,  // uncompressed
 };
 
 template <typename T>
-class FixedSizeByteAlignedVector;
+class FixedWidthIntegerVector;
 class BitPackingVector;
 
 /**
@@ -43,12 +43,12 @@ class BitPackingVector;
  * Note: Add your vector class here!
  */
 constexpr auto compressed_vector_for_type = hana::make_map(
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize4ByteAligned>,
-                    hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize2ByteAligned>,
-                    hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
-                    hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger4Byte>,
+                    hana::type_c<FixedWidthIntegerVector<uint32_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger2Byte>,
+                    hana::type_c<FixedWidthIntegerVector<uint16_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger1Byte>,
+                    hana::type_c<FixedWidthIntegerVector<uint8_t>>),
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::BitPacking>,
                     hana::type_c<BitPackingVector>));
 

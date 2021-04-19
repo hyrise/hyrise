@@ -214,11 +214,11 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
   // Encoding specifications which will be applied one after another to the chunk.
   const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger}},
        {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger}},
        {SegmentEncodingSpec{EncodingType::Dictionary},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger},
         SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking}},
       {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Unencoded},
        SegmentEncodingSpec{EncodingType::Unencoded}}};

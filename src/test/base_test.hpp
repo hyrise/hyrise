@@ -95,9 +95,9 @@ std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<con
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::Unencoded},
-    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger},
     SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking},
-    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedWidthInteger},
     SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::BitPacking},
     SegmentEncodingSpec{EncodingType::FrameOfReference},
     SegmentEncodingSpec{EncodingType::LZ4},

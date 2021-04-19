@@ -8,7 +8,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
@@ -33,7 +33,7 @@ auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<Vecto
 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          ::testing::Values(
-                                           VectorCompressionType::FixedSizeByteAligned,
+                                           VectorCompressionType::FixedWidthInteger,
                                            VectorCompressionType::BitPacking),
                          dictionary_segment_test_formatter);
 
@@ -160,19 +160,19 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   EXPECT_TRUE(variant_is_null((*dict_segment)[4]));
 }
 
-TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
+TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerVectorSize) {
   vs_int->append(0);
   vs_int->append(1);
   vs_int->append(2);
 
   auto segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
-      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   auto attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
+      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
   auto attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_segment->attribute_vector());
+      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
 
   EXPECT_NE(attribute_vector_uint8_t, nullptr);
   EXPECT_EQ(attribute_vector_uint16_t, nullptr);
@@ -183,18 +183,18 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
 
   segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
-      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
+      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
   attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_segment->attribute_vector());
+      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
 
   EXPECT_EQ(attribute_vector_uint8_t, nullptr);
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
 }
 
-TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) {
+TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {
   /**
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
@@ -203,7 +203,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
   const auto empty_memory_usage =
       ChunkEncoder::encode_segment(
           vs_int, DataType::Int,
-          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
+          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger})
           ->memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int->append(0);
@@ -211,7 +211,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
   vs_int->append(2);
   auto compressed_segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
-      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;

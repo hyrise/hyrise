@@ -13,7 +13,7 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
 #include "utils/assert.hpp"
 
@@ -293,12 +293,12 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
   switch (type) {
     case CompressedVectorType::BitPacking:
       return std::make_shared<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
-    case CompressedVectorType::FixedSize1ByteAligned:
-      return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case CompressedVectorType::FixedSize2ByteAligned:
-      return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case CompressedVectorType::FixedSize4ByteAligned:
-      return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      return std::make_shared<FixedWidthIntegerVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      return std::make_shared<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      return std::make_shared<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with vector compression id: " + std::to_string(vector_compression_id));
   }
@@ -310,12 +310,12 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
   switch (type) {
     case CompressedVectorType::BitPacking:
       return std::make_unique<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
-    case CompressedVectorType::FixedSize1ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case CompressedVectorType::FixedSize2ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case CompressedVectorType::FixedSize4ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      return std::make_unique<FixedWidthIntegerVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      return std::make_unique<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      return std::make_unique<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with vector compression id: " + std::to_string(vector_compression_id));
   }

@@ -148,7 +148,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   // LZ4Encoder only supports BitPacking in order to reduce the compile time, see the comment in lz4_encoder.hpp.
    VectorCompressionType _vector_compression_type = std::is_same_v<Derived, LZ4Encoder>
                                                         ? VectorCompressionType::BitPacking
-                                                        : VectorCompressionType::FixedSizeByteAligned;
+                                                        : VectorCompressionType::FixedWidthInteger;
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }
   const Derived& _self() const { return static_cast<const Derived&>(*this); }

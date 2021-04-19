@@ -10,8 +10,8 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -339,9 +339,9 @@ VectorCompressionID BinaryWriter::_vector_compression_id(const AbstractEncodedSe
     const auto compressed_vector_type = typed_segment.compressed_vector_type();
     Assert(compressed_vector_type, "Expected Segment to use vector compression");
     switch (*compressed_vector_type) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize1ByteAligned:
+      case CompressedVectorType::FixedWidthInteger4Byte:
+      case CompressedVectorType::FixedWidthInteger2Byte:
+      case CompressedVectorType::FixedWidthInteger1Byte:
       case CompressedVectorType::BitPacking:
         vector_compression_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
@@ -355,14 +355,14 @@ VectorCompressionID BinaryWriter::_vector_compression_id(const AbstractEncodedSe
 void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                              const BaseCompressedVector& compressed_vector) {
   switch (type) {
-    case CompressedVectorType::FixedSize4ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint32_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::FixedSize2ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint16_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::FixedSize1ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint8_t>&>(compressed_vector).data());
       return;
     case CompressedVectorType::BitPacking:
       export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(compressed_vector).data());

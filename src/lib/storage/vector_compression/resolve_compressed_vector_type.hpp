@@ -5,7 +5,7 @@
 
 // Include your compressed vector file here!
 #include "bitpacking/bitpacking_vector.hpp"
-#include "fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "fixed_width_integer/fixed_width_integer_vector.hpp"
 
 #include "compressed_vector_type.hpp"
 

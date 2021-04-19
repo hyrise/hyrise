@@ -83,7 +83,7 @@ auto compressed_vector_test_formatter = [](const ::testing::TestParamInfo<Vector
 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
                          ::testing::Values(
-                                           VectorCompressionType::FixedSizeByteAligned,
+                                           VectorCompressionType::FixedWidthInteger,
                                            VectorCompressionType::BitPacking),
                          compressed_vector_test_formatter);
 

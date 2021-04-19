@@ -1,0 +1,34 @@
+#pragma once
+
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "utils/assert.hpp"
+
+namespace opossum {
+
+inline bool is_fixed_width_integer(CompressedVectorType type) {
+  switch (type) {
+    case CompressedVectorType::FixedWidthInteger4Byte:
+    case CompressedVectorType::FixedWidthInteger2Byte:
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      return true;
+    default:
+      return false;
+  }
+}
+
+inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type) {
+  DebugAssert(is_fixed_width_integer(type), "Type must be one of the fixed-size byte-aligned types.");
+
+  switch (type) {
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      return 4u;
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      return 2u;
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      return 1u;
+    default:
+      return 0u;
+  }
+}
+
+}  // namespace opossum
