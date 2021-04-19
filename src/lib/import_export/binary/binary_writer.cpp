@@ -8,8 +8,8 @@
 
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 

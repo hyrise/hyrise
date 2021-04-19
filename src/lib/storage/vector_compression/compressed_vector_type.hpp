@@ -49,8 +49,7 @@ constexpr auto compressed_vector_for_type = hana::make_map(
                     hana::type_c<FixedWidthIntegerVector<uint16_t>>),
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger1Byte>,
                     hana::type_c<FixedWidthIntegerVector<uint8_t>>),
-    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::BitPacking>,
-                    hana::type_c<BitPackingVector>));
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::BitPacking>, hana::type_c<BitPackingVector>));
 
 /**
  * @brief Returns the CompressedVectorType of a given compressed vector

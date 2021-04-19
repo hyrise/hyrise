@@ -222,9 +222,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     // Compress the offsets with BitPacking vector compression to reduce the memory footprint of the LZ4 segment.
-    // BitPacking is chosen over fixed size byte-aligned (FixedWidthInteger) vector compression, since it compresses better and the
-    // performance advantage of FixedWidthInteger is neglectable, because runtime is dominated by the LZ4 encoding/decoding anyways.
-    // Prohibiting FixedWidthInteger here reduces the compile time.
+    // BitPacking is chosen over fixed size byte-aligned (FixedWidthInteger) vector compression, since it compresses
+    // better and the performance advantage of FixedWidthInteger is neglectable, because runtime is dominated by the
+    // LZ4 encoding/decoding anyways. Prohibiting FixedWidthInteger here reduces the compile time.
     Assert(vector_compression_type() == VectorCompressionType::BitPacking, "Only BitPacking is supported for LZ4");
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {offsets.back()});
 

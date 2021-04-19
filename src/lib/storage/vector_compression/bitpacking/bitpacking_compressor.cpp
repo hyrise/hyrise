@@ -9,9 +9,9 @@ namespace opossum {
 
 class BitPackingVector;
 
-std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
-    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
-    const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const pmr_vector<uint32_t>& vector,
+                                                                           const PolymorphicAllocator<size_t>& alloc,
+                                                                           const UncompressedVectorInfo& meta_info) {
   const auto max_value = _find_max_value(vector);
   const auto required_bits = _get_required_bits(max_value);
 
@@ -20,10 +20,10 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
   // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
   data.resize(vector.size());
 
-  // compactvector does not zero initialize it's memory, which leads to non-reproducible tests that 
+  // compactvector does not zero initialize it's memory, which leads to non-reproducible tests that
   // use the binary writer. Hence, fill the internal memory with zeroes.
   std::fill_n(const_cast<uint64_t*>(data.get()), data.bytes() / 8, 0);
-  
+
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data));
