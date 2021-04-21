@@ -721,8 +721,10 @@ if(NOT APPLE)
     target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
     target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
 
-    # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions
-    target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR}/third_party/jemalloc/include)
+    # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions.
+    # We need to use a path relative to CMAKE_CURRENT_BINARY_DIR instead of using CMAKE_BINARY_DIR because Hyrise might
+    # not be the top-level CMake project (e.g., if it is used as a submodule in a Hyrise plugin repository).
+    target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
