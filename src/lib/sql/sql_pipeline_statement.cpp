@@ -295,20 +295,18 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
   if (!_is_transaction_statement()) {
-    const auto task_is_executed_and_available = [](std::shared_ptr<AbstractTask> task) {
-        return static_cast<const OperatorTask&>(*task).get_operator()->state() == OperatorState::ExecutedAndAvailable;
-    };
     if constexpr (HYRISE_DEBUG) {
       // TODO(Julian) Why are we looking for that one operator that is ExecutedAndAvailable?
-      auto executed_and_available_count = std::count_if(tasks.cbegin(), tasks.cend(), task_is_executed_and_available);
+      auto executed_and_available_count =
+          std::count_if(tasks.cbegin(), tasks.cend(), [](std::shared_ptr<AbstractTask> task) {
+            return static_cast<const OperatorTask&>(*task).get_operator()->state() ==
+                   OperatorState::ExecutedAndAvailable;
+          });
       Assert(executed_and_available_count == 1,
              "Expected to find only one operator with OperatorState::ExecutedAndAvailable.");
     }
-
-    auto last_executed_task_iter = std::find_if(tasks.cbegin(), tasks.cend(), task_is_executed_and_available);
-    const auto& last_executed_operator = static_cast<const OperatorTask&>(**last_executed_task_iter).get_operator();
-    _result_table = last_executed_operator->get_output();
-    last_executed_operator->clear_output();
+    _result_table = _root_operator_task->get_operator()->get_output();
+    _root_operator_task->get_operator()->clear_output();
   }
 
   if (!_result_table) _query_has_output = false;
