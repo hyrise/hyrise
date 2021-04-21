@@ -13,8 +13,6 @@
 
 namespace opossum {
 
-namespace {}  // namespace
-
 class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
   void SetUp() override {}
