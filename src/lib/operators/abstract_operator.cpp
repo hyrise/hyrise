@@ -333,11 +333,13 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
       Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");
       break;
     case OperatorState::ExecutedAndAvailable:
-      Assert(previous_state == OperatorState::Running, "Illegal state transition to OperatorState::ExecutedAndAvailable");
+      Assert(previous_state == OperatorState::Running,
+             "Illegal state transition to OperatorState::ExecutedAndAvailable");
       break;
     case OperatorState::ExecutedAndCleared:
-      Assert(previous_state == OperatorState::ExecutedAndAvailable || previous_state == OperatorState::ExecutedAndCleared,
-             "Illegal state transition to OperatorState::ExecutedAndCleared");
+      Assert(
+          previous_state == OperatorState::ExecutedAndAvailable || previous_state == OperatorState::ExecutedAndCleared,
+          "Illegal state transition to OperatorState::ExecutedAndCleared");
       break;
     default:
       Fail("Unexpected target state in AbstractOperator.");
