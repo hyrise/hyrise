@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/functional/hash.hpp"
-#include "boost/lexical_cast.hpp"
+#include <boost/container_hash/hash.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
