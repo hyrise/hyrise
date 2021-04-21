@@ -237,17 +237,16 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline().get_result_table();
 
   const auto copied_plan = sql_pipeline.get_physical_plans()[0]->deep_copy();
-  const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(copied_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  // TODO(Julian)
-//  const auto copied_result = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
-//
-//  auto expected_copied = std::make_shared<Table>(column_definitions, TableType::Data);
-//  expected_copied->append({11, 10, 11});
-//  expected_copied->append({11, 11, 11});
-//
-//  EXPECT_TABLE_EQ_UNORDERED(copied_result, expected_copied);
+  const auto copied_result = root_operator_task->get_operator()->get_output();
+
+  auto expected_copied = std::make_shared<Table>(column_definitions, TableType::Data);
+  expected_copied->append({11, 10, 11});
+  expected_copied->append({11, 11, 11});
+
+  EXPECT_TABLE_EQ_UNORDERED(copied_result, expected_copied);
 }
 
 TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {

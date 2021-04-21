@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
@@ -20,8 +21,9 @@ class OperatorTask : public AbstractTask {
 
   /**
    * Create tasks recursively from result operator and set task dependencies automatically.
+   * TODO(Julian) Doc returned pair
    */
-  static std::vector<std::shared_ptr<AbstractTask>> make_tasks_from_operator(
+  static std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>> make_tasks_from_operator(
       const std::shared_ptr<AbstractOperator>& op);
 
   const std::shared_ptr<AbstractOperator>& get_operator() const;

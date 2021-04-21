@@ -212,7 +212,9 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
-    _tasks = OperatorTask::make_tasks_from_operator(get_physical_plan());
+    auto [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(get_physical_plan());
+    _tasks = tasks;
+    _root_operator_task = root_operator_task;
   }
   return _tasks;
 }

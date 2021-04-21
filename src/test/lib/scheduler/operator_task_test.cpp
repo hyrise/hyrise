@@ -33,11 +33,10 @@ class OperatorTaskTest : public BaseTest {
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto tasks = OperatorTask::make_tasks_from_operator(gt);
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(gt);
 
   ASSERT_EQ(tasks.size(), 1);
-  auto task = tasks.back();
-  task->schedule();
+  root_operator_task->schedule();
 
   EXPECT_TABLE_EQ_UNORDERED(_test_table_a, gt->get_output());
 }
@@ -47,7 +46,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
-  auto tasks = OperatorTask::make_tasks_from_operator(ts);
+  const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(ts);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -64,7 +63,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
       gt_a, gt_b, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
-  auto tasks = OperatorTask::make_tasks_from_operator(join);
+  const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(join);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -83,10 +82,10 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto scan_c = std::make_shared<TableScan>(scan_a, greater_than_(b, 2000));
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(union_positions);
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(union_positions);
 
+  ASSERT_EQ(tasks.size(), 5u);
   // TODO(Julian) Fix this:
-//  ASSERT_EQ(tasks.size(), 5u);
 //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[0]).get_operator(), gt_a);
 //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[1]).get_operator(), scan_a);
 //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[2]).get_operator(), scan_b);

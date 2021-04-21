@@ -1,8 +1,8 @@
 #include "operator_task.hpp"
 
 #include <memory>
-#include <utility>
 #include <unordered_set>
+#include <utility>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
@@ -19,21 +19,20 @@ using namespace opossum;  // NOLINT
  * @returns the root of the subtree that was added.
  * @param task_by_op is used as a cache to avoid creating duplicate tasks. For example, in the case of diamond shapes.
  */
-std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::shared_ptr<AbstractOperator>& op,
-                                                                  std::unordered_set<std::shared_ptr<AbstractTask>>&
-                                                                      tasks) {
+std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_ptr<AbstractOperator>& op,
+                                                             std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
   const auto task = op->get_or_create_operator_task();
   // By using an unordered set, we can avoid adding duplicate tasks.
   const auto& [_, inserted] = tasks.insert(task);
-  if(!inserted) return task;
+  if (!inserted) return task;
 
   if (auto left = op->mutable_left_input()) {
-    if (auto left_subtree_root = add_tasks_from_operator_recursively(left, tasks)) {
+    if (auto left_subtree_root = add_operator_tasks_recursively(left, tasks)) {
       left_subtree_root->set_as_predecessor_of(task);
     }
   }
   if (auto right = op->mutable_right_input()) {
-    if (auto right_subtree_root = add_tasks_from_operator_recursively(right, tasks)) {
+    if (auto right_subtree_root = add_operator_tasks_recursively(right, tasks)) {
       right_subtree_root->set_as_predecessor_of(task);
     }
   }
@@ -51,11 +50,14 @@ std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
 }
 
-std::vector<std::shared_ptr<AbstractTask>> OperatorTask::make_tasks_from_operator(
-    const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<AbstractTask>> tasks;
-  add_tasks_from_operator_recursively(op, tasks);
-  return std::vector<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>
+OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
+  std::unordered_set<std::shared_ptr<OperatorTask>> operator_tasks_set;
+  const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  return std::make_pair(
+      std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),
+      root_operator_task);
 }
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
