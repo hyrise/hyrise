@@ -23,6 +23,9 @@ std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::sha
                                                                   std::unordered_set<std::shared_ptr<AbstractTask>>&
                                                                       tasks) {
   const auto task = op->get_or_create_operator_task();
+  // By using an unordered set, we can avoid adding duplicate tasks.
+  const auto& [_, inserted] = tasks.insert(task);
+  if(!inserted) return task;
 
   if (auto left = op->mutable_left_input()) {
     if (auto left_subtree_root = add_tasks_from_operator_recursively(left, tasks)) {
@@ -34,9 +37,6 @@ std::shared_ptr<AbstractTask> add_tasks_from_operator_recursively(const std::sha
       right_subtree_root->set_as_predecessor_of(task);
     }
   }
-
-  // By using an unordered set, we ensure that we do not add any duplicate tasks.
-  tasks.insert(task);
 
   return task;
 }

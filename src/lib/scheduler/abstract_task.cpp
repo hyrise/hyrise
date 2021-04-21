@@ -40,12 +40,12 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
-  if (std::find(_successors.cbegin(), _successors.cend(), successor) == _successors.cend()) {
-    _successors.emplace_back(successor);
-    successor->_predecessors.emplace_back(shared_from_this());
-    std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
-    if (!is_done()) successor->_pending_predecessors++;
-  }
+  if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) return;
+
+  _successors.emplace_back(successor);
+  successor->_predecessors.emplace_back(shared_from_this());
+  std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
+  if (!is_done()) successor->_pending_predecessors++;
 }
 
 const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
