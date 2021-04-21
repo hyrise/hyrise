@@ -18,67 +18,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from tpot import TPOTRegressor
 
-from prepare_calibration_data import import_operator_data
-
-
-plt.style.use("ggplot")
-
-
-def preprocess_data(data):
-    # one-hot encoding
-    orig_cols = data.columns
-    ohe_candidates = [
-        "OPERATOR_NAME",
-        "COLUMN_TYPE",
-        "DATA_TYPE",
-        "ENCODING",
-        "OPERATOR_IMPLEMENTATION",
-        "COMPRESSION_TYPE",
-        "SORTED",
-        "JOIN_IMPLEMENTATION",
-        "JOIN_MODE",
-    ]
-    ohe_columns = np.concatenate([[label for label in data.columns if keyword in label] for keyword in ohe_candidates])
-    ohe_data = pd.get_dummies(data, columns=ohe_columns)
-    ohe_columns = ohe_data.columns
-    b = remove_dummy_types(ohe_data)
-    return b
-
-
-def train_model(train_data, model_type):
-    ohe_data = train_data.copy()
-    y = np.ravel(ohe_data[["RUNTIME_NS"]])
-    X = ohe_data.drop(labels=["RUNTIME_NS"], axis=1)
-    tpot = TPOTRegressor(verbosity=1, random_state=1337, max_time_mins=300)
-    tpot.fit(X, y)
-
-    # if model_type == "linear":
-    #    model = LinearRegression().fit(X, y)
-    # elif model_type == "ridge":
-    #    model = Ridge(alpha=10).fit(X, y)
-    # elif model_type == "lasso":
-    #    model = Lasso(alpha=10).fit(X, y)
-    # elif model_type == "boost":
-    #    model = GradientBoostingRegressor(loss="huber").fit(X, y)
-
-    return tpot
-
-
-def generate_model_plot(
-    model,
-    test_data,
-    operator,
-    method,
-    encoding_left,
-    encoding_right,
-    implementation,
-    left_column_type,
-    right_column_type,
-    data_type,
-    out,
-):
-=======
-
 from prepare_calibration_data import import_operator_data, preprocess_joins
 from util import (
     save_model_input_columns,
@@ -117,7 +56,6 @@ def train_model(train_data, model_type):
 
 
 def generate_model_plot(model, test_data, operator, method, implementation, further_args, out):
->>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
     ohe_data = test_data.copy()
     real_y = np.ravel(ohe_data[["RUNTIME_NS"]])
     ohe_data = ohe_data.drop(labels=["RUNTIME_NS"], axis=1)
@@ -186,7 +124,6 @@ def parse_cost_model_arguments(opt=None):
     # in case no test data is given, the training data will be split into training and test data
     parser.add_argument(
         "-test", help="Directory of test data. If absent, training data will be split", metavar="TEST_DIR", nargs="+",
-
     )
     # We have achieved the best results with boost
     parser.add_argument(
@@ -246,60 +183,6 @@ def import_train_test_data(train_path, test_path):
                 "Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!"
             )
 
-    general_inter = train_general.columns.intersection(test_general.columns)
-    join_inter = train_joins.columns.intersection(test_joins.columns)
-    test_general = test_general[general_inter.tolist()]
-    train_general = train_general[general_inter.tolist()]
-    test_joins = test_joins[join_inter.tolist()]
-    train_joins = train_joins[join_inter.tolist()]
-
-    return {"general": train_general, "join": train_joins}, {"general": test_general, "join": test_joins}
-
-
-def equalize_columns(df_left, df_right):
-    df_left = df_left.rename(
-        columns={
-            "MAX_CHUNK_SIZE": "MAX_CHUNK_SIZE_LEFT",
-            "DATA_TYPE": "DATA_TYPE_LEFT",
-            "ENCODING": "ENCODING_LEFT",
-            "SORTED": "LEFT_SORTED",
-            "COMPRESSION_TYPE": "COMPRESSION_TYPE_LEFT",
-            "INPUT_COLUMNS": "INPUT_COLUMNS_LEFT",
-            "INPUT_ROWS": "INPUT_ROWS_LEFT",
-        }
-    )
-    left_exclusive_columns = df_left.columns.difference(df_right.columns)
-    right_exclusive_columns = df_right.columns.difference(df_left.columns)
-    categorical_column_names = [
-        "OPERATOR_NAME",
-        "COLUMN_TYPE",
-        "DATA_TYPE",
-        "ENCODING",
-        "OPERATOR_IMPLEMENTATION",
-        "COMPRESSION_TYPE",
-        "SORTED",
-        "JOIN_MODE",
-    ]
-    left_categorical_columns = np.concatenate(
-        [[label for label in left_exclusive_columns if keyword in label] for keyword in categorical_column_names]
-    )
-    right_categorical_columns = np.concatenate(
-        [[label for label in right_exclusive_columns if keyword in label] for keyword in categorical_column_names]
-    )
-    left_continuous_columns = left_exclusive_columns.difference(left_categorical_columns)
-    right_continuous_columns = right_exclusive_columns.difference(right_categorical_columns)
-
-    for col in left_categorical_columns:
-        df_right[col] = "0"
-    for col in right_categorical_columns:
-        df_left[col] = "0"
-    for col in left_continuous_columns:
-        df_right[col] = 0
-    for col in right_continuous_columns:
-        df_left[col] = 0
-
-    return df_left, df_right
-=======
     aggregate_inter = train_aggregate.columns.intersection(test_aggregate.columns)
     scan_inter = train_scans.columns.intersection(test_scans.columns)
     join_inter = train_joins.columns.intersection(test_joins.columns)
@@ -365,9 +248,9 @@ def get_join_scores(model_types, train_data, test_data, implementation, ohe_cand
                 "BUILD_COLUMN_TYPE",
                 "PROBE_COLUMN_TYPE",
                 "PROBE_INPUT_COLUMN_SORTED",
-                #"PROBE_INPUT_CHUNKS",
+                # "PROBE_INPUT_CHUNKS",
                 "BUILD_INPUT_COLUMN_SORTED",
-                #"BUILD_INPUT_CHUNKS",
+                # "BUILD_INPUT_CHUNKS",
                 "RUNTIME_NS",
                 "JOIN_MODE",
                 "PROBE_TABLE_PRUNED_CHUNK_RATIO",
@@ -544,7 +427,6 @@ def get_aggregate_scores(model_types, train_data, test_data, implementation, ohe
                     model, model_test_data, "Aggregate", model_type, implementation, [], out,
                 )
     return scores
->>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
 
 
 def train_cost_models(train_data, test_data, args):
@@ -557,7 +439,6 @@ def train_cost_models(train_data, test_data, args):
 
     if not os.path.exists(out + "plots"):
         os.makedirs(out + "plots")
-
 
     ohe_candidates = [
         "OPERATOR_NAME",

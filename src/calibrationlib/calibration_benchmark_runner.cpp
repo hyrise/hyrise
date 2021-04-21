@@ -58,10 +58,6 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     }
   }();
 
-  const std::string plugin_filename = "build-release/lib/libhyriseClusteringPlugin.so";
-  const std::filesystem::path plugin_path(plugin_filename);
-  Hyrise::get().plugin_manager.load_plugin(plugin_path);
-
   for (int execution_index = 0; execution_index < number_of_executions; ++execution_index) {
     Hyrise::get().benchmark_runner = benchmark_runner;
     benchmark_runner->run();
