@@ -7,19 +7,24 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
+    hyriseBenchmarkLib
 )
 
 # Configure playground
 add_executable(
     hyrisePlayground
 
+    clustering/util.cpp
+    clustering/util.hpp
     playground.cpp
 )
 
 target_link_libraries(
     hyrisePlayground
+
     hyrise
     hyriseBenchmarkLib
+    nlohmann_json::nlohmann_json
 )
 
 # Configure client

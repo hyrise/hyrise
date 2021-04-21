@@ -227,6 +227,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
+
         index_joining_duration += timer.lap();
         join_index_performance_data.chunks_scanned_with_index++;
       } else {
@@ -255,6 +256,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       _write_output_segments(output_segments, _index_input_table, _index_pos_list);
     }
   }
+
   join_index_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
   join_index_performance_data.set_step_runtime(OperatorSteps::IndexJoining, index_joining_duration);
   join_index_performance_data.set_step_runtime(OperatorSteps::NestedLoopJoining, nested_loop_joining_duration);
@@ -267,6 +269,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                       join_index_performance_data.chunks_scanned_without_index) +
                        " chunks processed using an index.");
   }
+  join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer.lap();
 
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};
   if (output_segments.at(0)->size() > 0) {

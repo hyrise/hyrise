@@ -50,8 +50,6 @@ class Optimizer final {
  private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;
-
-  void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
 
 }  // namespace opossum

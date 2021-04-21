@@ -53,6 +53,7 @@ void TableFeatureExporter::_export_column_data(std::shared_ptr<const Calibration
       if (!(sorted_ascending || sorted_descending)) break;
 
       const auto chunk = table->get_chunk(chunk_id);
+      if (!chunk) continue;
       const auto& sort_definitions = chunk->individually_sorted_by();
       if (sort_definitions.empty()) {
         sorted_ascending = false;
@@ -101,7 +102,9 @@ void TableFeatureExporter::_export_segment_data(std::shared_ptr<const Calibratio
     const auto column_name = pmr_string{table->column_name(column_id)};
 
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto const segment = table->get_chunk(chunk_id)->get_segment(column_id);
+      const auto chunk = table->get_chunk(chunk_id);
+      if (!chunk) continue;
+      auto const segment = chunk->get_segment(column_id);
       AllTypeVariant encoding_type = {pmr_string{encoding_type_to_string.left.at(EncodingType::Unencoded)}};
       AllTypeVariant compression_type = "";
       // if segment is encoded write out values

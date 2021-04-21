@@ -188,6 +188,10 @@ set(
     operators/alias_operator.hpp
     operators/change_meta_table.cpp
     operators/change_meta_table.hpp
+    operators/clustering_partitioner.cpp
+    operators/clustering_partitioner.hpp
+    operators/clustering_sorter.cpp
+    operators/clustering_sorter.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -309,6 +313,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
     optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/null_scan_removal_rule.cpp
+    optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp
     optimizer/strategy/predicate_merge_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp

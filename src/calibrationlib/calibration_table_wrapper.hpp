@@ -17,6 +17,7 @@ class CalibrationTableWrapper {
   CalibrationTableWrapper(const std::shared_ptr<Table> table, const std::string& table_name);
 
   const ColumnDataDistribution get_column_data_distribution(ColumnID id) const;
+  bool has_column_data_distribution() const;
 
   const std::shared_ptr<Table> get_table() const;
 

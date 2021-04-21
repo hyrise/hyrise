@@ -42,8 +42,10 @@ cmake-build-*
 default.profdata
 default.profraw
 
+tpch_cached_tables/
 tpcds_cached_tables/
-cost_model_output/
+
+# cost_model_output/
 __pycache__/
 
 # Ignore python notebook saves

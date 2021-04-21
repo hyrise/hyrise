@@ -66,6 +66,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   class Iterator
       : public AbstractSegmentIterator<Iterator<CompressedVectorIterator, DictionaryIteratorType>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
@@ -119,6 +120,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
                                   PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>,
                                   SegmentPosition<T>, PosListIteratorType> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 

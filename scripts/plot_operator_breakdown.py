@@ -13,9 +13,10 @@ import re
 import sys
 import seaborn as sns
 import matplotlib.colors as mplcolors
+import matplotlib.ticker as ticker
 from matplotlib.colors import LinearSegmentedColormap
 
-if len(sys.argv) not in [1, 2]:
+if len(sys.argv) not in [1, 2] or len(glob.glob("*-PQP.svg")) == 0:
     exit("Call in a folder containing *-PQP.svg files, pass `paper` as an argument to change legend and hatching")
 paper_mode = len(sys.argv) == 2 and sys.argv[1] == "paper"
 
@@ -65,21 +66,20 @@ df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 df = df.fillna(0)
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
-df.loc["Absolute"] = df.sum() / df.count()
+df.loc["Total"] = df.sum() / df.count()
 
-# Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
-# the row it appears in)
-df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / x.sum(), axis=1)
-
-# Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
-# row for that
-df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
+# Normalize data from nanoseconds to milliseconds
+df.iloc[:, 0:] = df.iloc[:, 0:].apply(lambda x: x / 1000000, axis=1)
 
 # Print the dataframe for easy access to the raw numbers
 print(df)
+print(df["AggregateHash"].sum())
+print(df["JoinHash"].sum())
+print(df["TableScan"].sum())
 
-# Drop all operators that do not exceed 1% in any query
-df = df[df > 0.01].dropna(axis="columns", how="all")
+# Drop all operators that do not exceed 1ms in any query
+# TODO maybe something percentual would be better
+df = df[df > 10].dropna(axis="columns", how="all")
 
 # Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
 colors = sns.cubehelix_palette(n_colors=len(df), rot=2, reverse=True, light=0.9, dark=0.1, hue=1)
@@ -117,7 +117,7 @@ if paper_mode:
         bar.set_linewidth(0)
 
 # Set labels
-ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()])
+ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
 ax.set_ylabel("Share of run time\n(Hiding ops <1%)")
 
 # Reverse legend so that it matches the stacked bars

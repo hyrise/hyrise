@@ -31,6 +31,7 @@ std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; 
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
+  ++dictionary_segment_accesses;
   // For dictionary segments where the number of unique values is not higher than the number of (potentially filtered)
   // input rows, use an optimized implementation.
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
@@ -98,7 +99,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   // LIKE matches no rows
   if (match_count == 0u) {
-    ++chunk_scans_skipped;
+    ++num_chunks_with_early_out;
     return;
   }
 
@@ -123,7 +124,7 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
 #ifdef __clang__
-// For the loop through the dictionary, we want to use const auto& for DictionaySegments. However,
+// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
 // FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
 // error about a potential copy for the loop value.
 #pragma GCC diagnostic push

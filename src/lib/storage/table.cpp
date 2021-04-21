@@ -29,6 +29,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _type(type),
       _use_mvcc(use_mvcc),
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
+      _insert_chunk_id(ChunkID{0}),
       _append_mutex(std::make_unique<std::mutex>()) {
   DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
   DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables");
@@ -132,7 +133,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
   last_chunk->append(values);
 }
 
-void Table::append_mutable_chunk() {
+void Table::append_mutable_chunk(const bool insert_chunk) {
   Segments segments;
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
@@ -147,7 +148,17 @@ void Table::append_mutable_chunk() {
     mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
   }
 
+  // Assumption: The caller of this function holds the append mutex (e.g., the Insert operator)
+  if (insert_chunk) {
+    _insert_chunk_id = chunk_count();
+  }
+
   append_chunk(segments, mvcc_data);
+}
+
+ChunkID Table::get_insert_chunk_id() const {
+  Assert(_insert_chunk_id < chunk_count(), "Invalid _insert_chunk_id: " + std::to_string(_insert_chunk_id));
+  return _insert_chunk_id;
 }
 
 uint64_t Table::row_count() const {

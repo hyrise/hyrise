@@ -27,43 +27,98 @@
 namespace {
 using namespace opossum;  // NOLINT
 
-// Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
-// AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
-// This is important so that we can reconstruct the original values later. In any case, a reference to the result is
-// returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-template <typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key,
-                                              const RowID& row_id) {
-  // Get the result id for the current key or add it to the id map
+// `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
+// been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
+// stored in `Results` so that we can later use it to reconstruct the values in the group-by columns. If the operator
+// calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
+// By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
+// aggregate functions can then retrieve the index from the AggregateKey.
+template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
+                                              AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+    // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
+    // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result
+    // reference.
     if (results.empty()) {
       results.emplace_back();
       results[0].row_id = row_id;
     }
     return results[0];
   } else {
+    // As described above, we may store the index into the results vector in the AggregateKey. If the AggregateKey
+    // contains multiple entries, we use the first one. As such, we store a (non-owning, raw) pointer to either the only
+    // or the first entry in first_key_entry. We need a raw pointer as a reference cannot be null or reset.
+    AggregateKeyEntry* first_key_entry;
+    if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+      first_key_entry = &key;
+    } else {
+      first_key_entry = &key[0];
+    }
+
+    // If we store the result of the hashmap lookup (i.e., the index into results) in the AggregateKeyEntry, we do this
+    // by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
+    // marker that the AggregateKeyEntry now contains a cached result. We can do this because AggregateKeyEntry can not
+    // become larger than the maximum size of a table (i.e., the maximum representable RowID), which is 2^31 * 2^31 ==
+    // 2^62. This avoids making the AggregateKey bigger: Adding another 64-bit value (for an index of 2^62 values) for
+    // the cached value would double the size of the AggregateKey in the case of a single group-by column, thus halving
+    // the utilization of the CPU cache. Same for a discriminating union, where the data structure alignment would also
+    // result in another 8 bytes being used.
+    static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
+                  "Expected AggregateKeyEntry to be unsigned 64-bit value");
+    constexpr auto MASK = AggregateKeyEntry{1} << 63u;
+
+    // Check if the AggregateKey already contains a stored index.
+    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+      if (*first_key_entry & MASK) {
+        // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
+        const auto result_id = *first_key_entry ^ MASK;
+
+        // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
+        // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
+        // column(s) later
+        results.resize(std::max(results.size(), static_cast<size_t>(result_id + 1)));
+        results[result_id].row_id = row_id;
+
+        return results[result_id];
+      }
+    }
+
+    // Lookup the key in the result_ids map
     auto it = result_ids.find(key);
-    if (it != result_ids.end()) return results[it->second];
+    if (it != result_ids.end()) {
+      // We have already seen this group and need to return a reference to the group's result.
+      const auto result_id = it->second;
+      if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+        // If requested, store the index the the first_key_entry and set the most significant bit to 1.
+        *first_key_entry = MASK | result_id;
+      }
+      return results[result_id];
+    }
 
-    auto result_id = results.size();
-
+    // We are seeing this group (i.e., this AggregateKey) for the first time, so we need to add it to the list of
+    // results and set the row_id needed for restoring the GroupBy column(s).
+    const auto result_id = results.size();
     result_ids.emplace_hint(it, key, result_id);
 
-    // If it was added to the id map, add the current row id to the result list so that we can revert the
-    // value(s) -> key mapping
     results.emplace_back();
     results[result_id].row_id = row_id;
+
+    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+      // If requested, store the index the the first_key_entry and set the most significant bit to 1.
+      *first_key_entry = MASK | result_id;
+    }
 
     return results[result_id];
   }
 }
 
 template <typename AggregateKey>
-const AggregateKey& get_aggregate_key([[maybe_unused]] const KeysPerChunk<AggregateKey>& keys_per_chunk,
-                                      [[maybe_unused]] const ChunkID chunk_id,
-                                      [[maybe_unused]] const ChunkOffset chunk_offset) {
+AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& keys_per_chunk,
+                                [[maybe_unused]] const ChunkID chunk_id,
+                                [[maybe_unused]] const ChunkOffset chunk_offset) {
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-    const auto& hash_keys = keys_per_chunk[chunk_id];
+    auto& hash_keys = keys_per_chunk[chunk_id];
 
     return hash_keys[chunk_offset];
   } else {
@@ -81,6 +136,7 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
+
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
   _has_aggregate_functions =
@@ -108,18 +164,18 @@ void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
 AggregateKey, the AggregateContext is the "full" version.
 */
-template <typename ColumnDataType, typename AggregateType>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 struct AggregateResultContext : SegmentVisitorContext {
-  using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, AggregateType>>;
+  using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, aggregate_function>>;
 
   AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
-  AggregateResults<ColumnDataType, AggregateType> results;
+  AggregateResults<ColumnDataType, aggregate_function> results;
 };
 
-template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
-struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
+template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
+struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregate_function> {
   AggregateContext() {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
@@ -132,15 +188,16 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
   std::unique_ptr<AggregateResultIdMap<AggregateKey>> result_ids;
 };
 
-template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
 __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
                                                             const AbstractSegment& abstract_segment,
-                                                            const KeysPerChunk<AggregateKey>& keys_per_chunk) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
+                                                            KeysPerChunk<AggregateKey>& keys_per_chunk) {
+  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
 
-  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
+  auto aggregator =
+      AggregateFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
 
-  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType, AggregateKey>>(
+  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
       _contexts_per_column[column_index]);
 
   auto& result_ids = *context.result_ids;
@@ -148,35 +205,37 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
-    auto& result =
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                          RowID{chunk_id, chunk_offset});
+  // CacheResultIds is a boolean type parameter that is forwarded to get_or_add_result, see the documentation over there
+  // for details.
+  const auto process_position = [&](const auto cache_result_ids, const auto& position) {
+    auto& result = get_or_add_result(cache_result_ids, result_ids, results,
+                                     get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                     RowID{chunk_id, chunk_offset});
 
-    /**
-    * If the value is NULL, the current aggregate value does not change.
-    */
+    // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
-      if constexpr (function == AggregateFunction::CountDistinct) {
+      if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
-        result.ensure_distinct_values_initialized(context.buffer);
-        result.distinct_values().emplace(position.value());
-      } else if constexpr (function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        result.ensure_secondary_aggregates_initialized(context.buffer);
-        aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates());
+        result.accumulator.emplace(position.value());
       } else {
-        aggregator(position.value(), result.current_primary_aggregate);
+        aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.accumulator);
       }
 
-      if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
-                    function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        // Increase the counter of non-NULL values only for aggregation functions that use it.
-        ++result.aggregate_count;
-      }
+      ++result.aggregate_count;
     }
 
     ++chunk_offset;
-  });
+  };
+
+  // If we have more than one aggregate function (and thus more than one context), it makes sense to cache the results
+  // indexes, see get_or_add_result for details.
+  if (_contexts_per_column.size() > 1) {
+    segment_iterate<ColumnDataType>(abstract_segment,
+                                    [&](const auto& position) { process_position(std::true_type{}, position); });
+  } else {
+    segment_iterate<ColumnDataType>(abstract_segment,
+                                    [&](const auto& position) { process_position(std::false_type{}, position); });
+  }
 }
 
 /**
@@ -192,7 +251,6 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
     const auto chunk_count = input_table->chunk_count();
 
     // Create the actual data structure
-    keys_per_chunk = KeysPerChunk<AggregateKey>{};
     keys_per_chunk.reserve(chunk_count);
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
@@ -249,6 +307,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
+              auto& keys = keys_per_chunk[chunk_id];
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 const auto int_to_uint = [](const int32_t value) {
                   // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
@@ -261,15 +320,15 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
 
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0;
+                    keys[chunk_offset] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
+                    keys[chunk_offset] = int_to_uint(position.value()) + 1;
                   }
                 } else {
                   if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
+                    keys[chunk_offset][group_column_index] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
+                    keys[chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
                   }
                 }
                 ++chunk_offset;
@@ -301,14 +360,16 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
 
+              auto& keys = keys_per_chunk[chunk_id];
+
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0u;
+                    keys[chunk_offset] = 0u;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+                    keys[chunk_offset][group_column_index] = 0u;
                   }
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
@@ -380,9 +441,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
                   }
 
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = id;
+                    keys[chunk_offset] = id;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
+                    keys[chunk_offset][group_column_index] = id;
                   }
                 }
 
@@ -419,7 +480,7 @@ void AggregateHash::_aggregate() {
   /**
    * PARTITIONING STEP
    */
-  const auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
+  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
   step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /**
@@ -432,10 +493,9 @@ void AggregateHash::_aggregate() {
     Insert a dummy context for the DISTINCT implementation.
     That way, _contexts_per_column will always have at least one context with results.
     This is important later on when we write the group keys into the table.
-
-    We choose int8_t for column type and aggregate type because it's small.
+    The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
-    auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
+    auto context = std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>();
     _contexts_per_column.push_back(context);
   }
 
@@ -453,7 +513,7 @@ void AggregateHash::_aggregate() {
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
-      auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
+      auto context = std::make_shared<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>();
       _contexts_per_column[aggregate_idx] = context;
       continue;
     }
@@ -475,34 +535,27 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In Opossum we handle the SQL keyword DISTINCT by grouping without aggregation.
+       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
+       * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
-       * For a query like "SELECT DISTINCT * FROM A;"
-       * we would assume that all columns from A are part of 'groupby_columns',
-       * respectively any columns that were specified in the projection.
-       * The optimizer is responsible to take care of passing in the correct columns.
-       *
-       * How does this operation work?
-       * Distinct rows are retrieved by grouping by vectors of values. Similar as for the usual aggregation
-       * these vectors are used as keys in the 'column_results' map.
-       *
-       * At this point we've got all the different keys from the chunks and accumulate them in 'column_results'.
-       * In order to reuse the aggregation implementation, we add a dummy AggregateResult.
-       * One could optimize here in the future.
-       *
-       * Obviously this implementation is also used for plain GroupBy's.
+       * As the grouping happens as part of the aggregation but no aggregate function exists , we use
+       * `AggregateFunction::Min` as a fake aggregate function whose result will be discarded. From here on, the steps
+       * are the same as they are for a regular grouped aggregate.
        */
 
       auto context =
-          std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(
+          std::static_pointer_cast<AggregateContext<DistinctColumnType, AggregateFunction::Min, AggregateKey>>(
               _contexts_per_column[0]);
 
       auto& result_ids = *context->result_ids;
       auto& results = context->results;
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-        // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        // Make sure the value or combination of values is added to the list of distinct value(s). Do not cache result
+        // ids as there is no aggregate function that could reuse the cached indexes.
+        get_or_add_result(std::false_type{}, result_ids, results,
+                          get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
       }
     } else {
@@ -521,8 +574,9 @@ void AggregateHash::_aggregate() {
 
         if (input_column_id == INVALID_COLUMN_ID) {
           Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
-          auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
-              _contexts_per_column[aggregate_idx]);
+          auto context =
+              std::static_pointer_cast<AggregateContext<CountColumnType, AggregateFunction::Count, AggregateKey>>(
+                  _contexts_per_column[aggregate_idx]);
 
           auto& result_ids = *context->result_ids;
           auto& results = context->results;
@@ -532,12 +586,24 @@ void AggregateHash::_aggregate() {
             results.resize(1);
             results[0].aggregate_count += input_chunk_size;
           } else {
-            // count occurrences for each group key
-            for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-              auto& result = get_or_add_result(result_ids, results,
-                                               get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                               RowID{chunk_id, chunk_offset});
-              ++result.aggregate_count;
+            // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
+            // one context), it makes sense to cache the results indexes, see get_or_add_result for details.
+            if (_contexts_per_column.size() > 1) {
+              for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+                auto& result =
+                    get_or_add_result(std::true_type{}, result_ids, results,
+                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                      RowID{chunk_id, chunk_offset});
+                ++result.aggregate_count;
+              }
+            } else {
+              for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+                auto& result =
+                    get_or_add_result(std::false_type{}, result_ids, results,
+                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                      RowID{chunk_id, chunk_offset});
+                ++result.aggregate_count;
+              }
             }
           }
 
@@ -628,7 +694,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
    * Otherwise, it is called by the first call to _write_aggregate_output.
    **/
   if (!_has_aggregate_functions) {
-    auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
+    auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, AggregateFunction::Min>>(
         _contexts_per_column[0]);
     auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
@@ -637,10 +703,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-
-  // _aggregate and _write_groupby_output have their own, internal timer. Start measuring once they are done.
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
 
   /*
   Write the aggregated columns to the output
@@ -661,15 +723,21 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
 
   // Write the output
+  Timer timer;
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
   }
 
+  // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
+  // stored in members and later written to the operator performance data struct.
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, aggregate_columns_writing_duration);
 
   return output;
 }
@@ -679,31 +747,32 @@ The following template functions write the aggregated values for the different a
 They are separate and templated to avoid compiler errors for invalid type/function combinations.
 */
 // MIN, MAX, SUM, ANY write the current aggregated value
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
-                     func == AggregateFunction::Any,
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Min || aggregate_func == AggregateFunction::Max ||
+                     aggregate_func == AggregateFunction::Sum || aggregate_func == AggregateFunction::Any,
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
   null_values.resize(results.size());
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    null_values[output_offset] = !result.current_primary_aggregate;
-
-    if (result.current_primary_aggregate) {
-      values[output_offset] = *result.current_primary_aggregate;
+    if (result.aggregate_count > 0) {
+      values[output_offset] = result.accumulator;
+    } else {
+      null_values[output_offset] = true;
     }
+
     ++output_offset;
   }
 }
 
 // COUNT writes the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
 
   size_t output_offset = 0;
@@ -714,60 +783,31 @@ std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
 }
 
 // COUNT(DISTINCT) writes the number of distinct values
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+    const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
 
   size_t output_offset = 0;
   for (const auto& result : results) {
-    values[output_offset] = result.distinct_values().size();
+    values[output_offset] = result.accumulator.size();
     ++output_offset;
   }
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
-  values.resize(results.size());
-  null_values.resize(results.size());
-
-  auto output_offset = ChunkOffset{0};
-  for (const auto& result : results) {
-    null_values[output_offset] = !result.current_primary_aggregate;
-
-    if (result.current_primary_aggregate) {
-      values[output_offset] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
-    }
-    ++output_offset;
-  }
-}
-
-// AVG is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
-  Fail("Invalid aggregate");
-}
-
-// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.resize(results.size());
   null_values.resize(results.size());
 
   auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
-    const auto count = static_cast<AggregateType>(result.aggregate_count);
-
-    if (result.current_primary_aggregate && count > 1) {
-      values[output_offset] = *result.current_primary_aggregate;
+    if (result.aggregate_count > 0) {
+      values[output_offset] = result.accumulator / static_cast<AggregateType>(result.aggregate_count);
     } else {
       null_values[output_offset] = true;
     }
@@ -775,18 +815,46 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   }
 }
 
-// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>, void>
+// AVG is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+  Fail("Invalid aggregate");
+}
+
+// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>,
+                 void>
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+  values.resize(results.size());
+  null_values.resize(results.size());
+
+  auto output_offset = ChunkOffset{0};
+  for (const auto& result : results) {
+    if (result.aggregate_count > 1) {
+      values[output_offset] = result.accumulator[3];
+    } else {
+      // STDDEV_SAMP is undefined for lists with less than two elements
+      null_values[output_offset] = true;
+    }
+    ++output_offset;
+  }
+}
+
+// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
+std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
+                 void>
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
   Fail("Invalid aggregate");
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;  // _aggregate above has its own, internal timer. Start measuring once _aggregate is done.
-
+  Timer timer;
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -859,13 +927,13 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     });
   }
 
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
+  groupby_columns_writing_duration += timer.lap();
 }
 
 template <typename ColumnDataType>
 void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                                            AggregateFunction function) {
-  switch (function) {
+                                            AggregateFunction aggregate_function) {
+  switch (aggregate_function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);
       break;
@@ -893,11 +961,17 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
   }
 }
 
-template <typename ColumnDataType, AggregateFunction function>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
+  // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
+  // subtracted from the runtime of this method (thus, it's either non-zero for the first aggregate column or zero for
+  // the remaining columns).
+  auto excluded_time = std::chrono::nanoseconds{};
+  Timer timer;
+
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnDataType, function>::AggregateType aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnDataType, function>::AGGREGATE_DATA_TYPE;
+  typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
+  auto aggregate_data_type = AggregateTraits<ColumnDataType, aggregate_function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
@@ -909,7 +983,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
-  auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, decltype(aggregate_type)>>(
+  auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
       _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
@@ -918,11 +992,13 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   if (aggregate_index == 0) {
     auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
-    for (auto& result : context->results) {
-      pos_list[chunk_offset] = (result.row_id);
+    for (const auto& result : context->results) {
+      pos_list[chunk_offset] = result.row_id;
       ++chunk_offset;
     }
+    Timer write_groupby_output_timer;
     _write_groupby_output(pos_list);
+    excluded_time = write_groupby_output_timer.lap();
   }
 
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
@@ -931,10 +1007,11 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   auto values = pmr_vector<decltype(aggregate_type)>{};
   auto null_values = pmr_vector<bool>{};
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL =
+      (aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct);
 
   if (!results.empty()) {
-    write_aggregate_values<ColumnDataType, decltype(aggregate_type), function>(values, null_values, results);
+    write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
   } else if (_groupby_column_ids.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
     values.push_back(decltype(aggregate_type){});
@@ -956,55 +1033,41 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
         std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
+
+  aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>
 std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
-    const DataType data_type, const AggregateFunction function) const {
+    const DataType data_type, const AggregateFunction aggregate_function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    switch (function) {
+    switch (aggregate_function) {
       case AggregateFunction::Min:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Min, AggregateKey>>();
         break;
       case AggregateFunction::Max:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Max, AggregateKey>>();
         break;
       case AggregateFunction::Sum:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Sum, AggregateKey>>();
         break;
       case AggregateFunction::Avg:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Avg, AggregateKey>>();
         break;
       case AggregateFunction::Count:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Count, AggregateKey>>();
         break;
       case AggregateFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>>();
         break;
       case AggregateFunction::StandardDeviationSample:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType,
-            typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<
+            AggregateContext<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>>();
         break;
       case AggregateFunction::Any:
-        context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType,
-            AggregateKey>>();
+        context = std::make_shared<AggregateContext<ColumnDataType, AggregateFunction::Any, AggregateKey>>();
         break;
     }
   });

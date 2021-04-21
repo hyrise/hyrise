@@ -19,7 +19,9 @@ class MetaTableManager : public Noncopyable {
   // Returns a sorted list of all meta table names (without prefix)
   const std::vector<std::string>& table_names() const;
 
+  void add_table(const std::shared_ptr<AbstractMetaTable>& table);
   bool has_table(const std::string& table_name) const;
+  std::shared_ptr<AbstractMetaTable> get_table(const std::string& table_name) const;
 
   // Generates the meta table specified by table_name (which can include the prefix)
   std::shared_ptr<Table> generate_table(const std::string& table_name) const;
@@ -35,13 +37,9 @@ class MetaTableManager : public Noncopyable {
 
  protected:
   friend class Hyrise;
-  friend class MetaTableManagerTest;
-  friend class MetaTableTest;
-  friend class ChangeMetaTableTest;
 
   MetaTableManager();
 
-  void _add(const std::shared_ptr<AbstractMetaTable>& table);
   static std::string _trim_table_name(const std::string& table_name);
 
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;

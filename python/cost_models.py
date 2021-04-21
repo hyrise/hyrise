@@ -3,12 +3,13 @@
 import argparse
 import joblib
 import matplotlib.pyplot as plt
+import math
 import numpy as np
 import os
 import pandas as pd
 import warnings
 
-from prepare_calibration_data import import_operator_data
+from random import randrange
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import LinearRegression
@@ -16,6 +17,9 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from tpot import TPOTRegressor
+
+from prepare_calibration_data import import_operator_data
+
 
 plt.style.use("ggplot")
 
@@ -73,6 +77,47 @@ def generate_model_plot(
     data_type,
     out,
 ):
+=======
+
+from prepare_calibration_data import import_operator_data, preprocess_joins
+from util import (
+    save_model_input_columns,
+    get_join_model_name,
+    get_aggregate_model_name,
+    get_table_scan_model_name,
+    preprocess_data,
+    add_dummy_types,
+)
+
+
+def train_model(train_data, model_type):
+    print(f"\t{train_data.shape[0]} training samples")
+    ohe_data = train_data.copy()
+    y = np.ravel(ohe_data[["RUNTIME_NS"]])
+    X = ohe_data.drop(labels=["RUNTIME_NS"], axis=1)
+    # model = TPOTRegressor(verbosity=1, random_state=1337, max_time_mins=10)
+    # model.fit(X, y)
+
+    for column in train_data.columns:
+        un_v = train_data[column].unique()
+        if any([type(x) == str for x in un_v]):
+            print(column)
+
+    if model_type == "linear":
+        model = LinearRegression().fit(X, y)
+    elif model_type == "ridge":
+        model = Ridge(alpha=10).fit(X, y)
+    elif model_type == "lasso":
+        model = Lasso(alpha=10).fit(X, y)
+    elif model_type == "boost":
+        model = GradientBoostingRegressor(loss="huber").fit(X, y)
+    # model = LinearRegression().fit(X, y)
+
+    return model
+
+
+def generate_model_plot(model, test_data, operator, method, implementation, further_args, out):
+>>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
     ohe_data = test_data.copy()
     real_y = np.ravel(ohe_data[["RUNTIME_NS"]])
     ohe_data = ohe_data.drop(labels=["RUNTIME_NS"], axis=1)
@@ -84,9 +129,7 @@ def generate_model_plot(
     axis_min = min(np.amin(pred_y), np.amin(real_y)) * 0.95
     abline_values = range(int(axis_min), int(axis_max), int((axis_max - axis_min) / 100))
     sample_size = "{:,}".format(ohe_data.shape[0]).replace(",", "'")
-    plt.title(
-        f'{encoding_left}_{encoding_right}_{operator}_{implementation}_{method}; Score: {model_scores["R2"]} ({sample_size} samples)'
-    )
+    plt.title(f'{operator} {implementation} {method}; Score: {model_scores["R2"]} ({sample_size} samples)')
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
@@ -95,10 +138,9 @@ def generate_model_plot(
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c="r", linestyle="-")
 
-    output_path = os.path.join(
-        out + "plots",
-        f"{method}_{encoding_left}_{encoding_right}_{operator}_{implementation}_{left_column_type}_{right_column_type}_{data_type}.png",
-    )
+    further_args_str = "_".join(further_args)
+    further_args_str = "_" + further_args_str if further_args_str else ""
+    output_path = os.path.join(out + "plots", f"{method}_{operator}_{implementation}{further_args_str}.png")
     plt.savefig(output_path, bbox_inches="tight")
     plt.close()
 
@@ -136,38 +178,15 @@ def log(scores, out):
             file.write(f"{entry}: {scores[entry]} \n")
 
 
-# needed for prediction with one-hot-encoding in case training and test data don't have the same set of values in a
-# categorical data column
-def add_dummy_types(train, test, cols):
-    train["DUMMY"] = "0"
-    test["DUMMY"] = "0"
-    for col in cols:
-        diff1 = np.setdiff1d(
-            train[train["DUMMY"] != "Dummy"][col].unique(), test[test["DUMMY"] != "Dummy"][col].unique()
-        )
-        diff2 = np.setdiff1d(
-            test[test["DUMMY"] != "Dummy"][col].unique(), train[train["DUMMY"] != "Dummy"][col].unique()
-        )
-        for d1 in diff1:
-            test = test.append({"DUMMY": "Dummy", col: d1}, ignore_index=True)
-        for d2 in diff2:
-            train = train.append({"DUMMY": "Dummy", col: d2}, ignore_index=True)
-    return [train, test]
-
-
-def remove_dummy_types(data):
-    if "DUMMY" in data:
-        data = data[data["DUMMY"] != "Dummy"]
-        data = data.drop(labels=["DUMMY"], axis=1)
-    return data
-
-
 def parse_cost_model_arguments(opt=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-train", help="Directory of training data", metavar="TRAIN_DIR")
+    parser.add_argument(
+        "-train", help="Directory of training data", metavar="TRAIN_DIR", nargs="+", required=True,
+    )
     # in case no test data is given, the training data will be split into training and test data
     parser.add_argument(
-        "--test", help="Directory of test data. If absent, training data will be split", metavar="TEST_DIR",
+        "-test", help="Directory of test data. If absent, training data will be split", metavar="TEST_DIR", nargs="+",
+
     )
     # We have achieved the best results with boost
     parser.add_argument(
@@ -187,40 +206,41 @@ def parse_cost_model_arguments(opt=None):
         help="Generate plots comparing actual and predicted run-times (default: False)",
     )
 
+    parser.add_argument(
+        "--set_random_state", action="store_true", help="Use a fixed random state to split train data if necessary"
+    )
+
     if opt:
         return parser.parse_args(opt)
     else:
         return parser.parse_args()
 
 
-def import_data(train_path, test_path):
+def import_data(path):
     drop_columns_general = ["ESTIMATED_INPUT_ROWS", "ESTIMATED_CARDINALITY"]
     drop_columns_join = [
         "ESTIMATED_INPUT_ROWS_LEFT",
         "ESTIMATED_INPUT_ROWS_RIGHT",
         "ESTIMATED_CARDINALITY",
-        "PREDICATE_CONDITION",
     ]
-    test_general = import_operator_data(test_path, "operators.csv")
-    test_joins = import_operator_data(test_path, "joins.csv")
-    test_joins = test_joins.drop(labels=["JOIN_ID"], axis=1)
-    test_general = test_general.dropna()
-    test_joins = test_joins.dropna()
-    test_general = test_general.drop(labels=drop_columns_general, axis=1)
-    test_joins = test_joins.drop(labels=drop_columns_join, axis=1)
-    test_general = test_general[test_general["OPERATOR_NAME"] != "Aggregate"]
 
-    train_general = import_operator_data(train_path, "operators.csv")
-    train_joins = import_operator_data(train_path, "joins.csv")
-    train_joins = train_joins.drop(labels=["JOIN_ID"], axis=1)
-    train_general = train_general.dropna()
-    train_joins = train_joins.dropna()
-    train_general = train_general.drop(labels=drop_columns_general, axis=1)
-    train_joins = train_joins.drop(labels=drop_columns_join, axis=1)
-    train_general = train_general[train_general["OPERATOR_NAME"] != "Aggregate"]
+    data_aggregate = import_operator_data(path, "aggregates.csv")
+    data_scans = import_operator_data(path, "scans.csv")
+    data_joins = import_operator_data(path, "joins.csv")
+    data_joins = data_joins.drop(labels=["JOIN_ID"], axis=1)
+    data_aggregate = data_aggregate.drop(labels=drop_columns_general, axis=1)
+    data_scans = data_scans.drop(labels=drop_columns_general, axis=1)
+    data_joins = data_joins.drop(labels=drop_columns_join, axis=1)
+    return data_aggregate, data_scans, preprocess_joins(data_joins)
+
+
+def import_train_test_data(train_path, test_path):
+    train_aggregate, train_scans, train_joins = import_data(train_path)
+    test_aggregate, train_scans, test_joins = import_data(test_path)
 
     # check whether training and test data have the same format
-    for test, train in zip([test_general, test_joins], [train_general, train_joins]):
+    for test, train in zip([test_aggregate, test_scans, test_joins], [train_aggregate, train_scans, train_joins]):
+
         if test.columns.all() != train.columns.all():
             warnings.warn(
                 "Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!"
@@ -279,6 +299,252 @@ def equalize_columns(df_left, df_right):
         df_left[col] = 0
 
     return df_left, df_right
+=======
+    aggregate_inter = train_aggregate.columns.intersection(test_aggregate.columns)
+    scan_inter = train_scans.columns.intersection(test_scans.columns)
+    join_inter = train_joins.columns.intersection(test_joins.columns)
+    test_aggregate = test_aggregate[aggregate_inter.tolist()]
+    train_aggregate = train_aggregate[aggregate_inter.tolist()]
+    test_scans = test_scans[scan_inter.tolist()]
+    train_scans = train_scans[scan_inter.tolist()]
+    test_joins = test_joins[join_inter.tolist()]
+    train_joins = train_joins[join_inter.tolist()]
+
+    return (
+        {"aggregate": train_aggregate, "scan": train_scans, "join": train_joins},
+        {"aggregate": test_aggregate, "scan": test_scans, "join": test_joins},
+    )
+
+
+def get_join_scores(model_types, train_data, test_data, implementation, ohe_candidates, out):
+    scores = dict()
+
+    train_data = train_data.copy()
+    test_data = test_data.copy()
+
+    train_data = train_data.dropna()
+    test_data = test_data.dropna()
+
+    CHUNK_SIZE = 65535
+    train_data["PROBE_TABLE_PRUNED_CHUNK_RATIO"] = train_data.apply(
+        lambda x: x["PROBE_TABLE_PRUNED_CHUNKS"] / (math.ceil(x["PROBE_TABLE_ROW_COUNT"] / CHUNK_SIZE)), axis=1
+    )
+    train_data["BUILD_TABLE_PRUNED_CHUNK_RATIO"] = train_data.apply(
+        lambda x: x["BUILD_TABLE_PRUNED_CHUNKS"] / (math.ceil(x["BUILD_TABLE_ROW_COUNT"] / CHUNK_SIZE)), axis=1
+    )
+    test_data["PROBE_TABLE_PRUNED_CHUNK_RATIO"] = test_data.apply(
+        lambda x: x["PROBE_TABLE_PRUNED_CHUNKS"] / (math.ceil(x["PROBE_TABLE_ROW_COUNT"] / CHUNK_SIZE)), axis=1
+    )
+    test_data["BUILD_TABLE_PRUNED_CHUNK_RATIO"] = test_data.apply(
+        lambda x: x["BUILD_TABLE_PRUNED_CHUNKS"] / (math.ceil(x["BUILD_TABLE_ROW_COUNT"] / CHUNK_SIZE)), axis=1
+    )
+
+    for build_column_type in train_data["BUILD_COLUMN_TYPE"].unique():
+        for probe_column_type in train_data["PROBE_COLUMN_TYPE"].unique():
+            print(" ", build_column_type, probe_column_type)
+            # for join_mode in train_data["JOIN_MODE"].unique():
+            model_train_data = train_data.loc[
+                (train_data["OPERATOR_NAME"] == "Join")
+                & (train_data["OPERATOR_IMPLEMENTATION"] == implementation)
+                & (train_data["BUILD_COLUMN_TYPE"] == build_column_type)
+                & (train_data["PROBE_COLUMN_TYPE"] == probe_column_type)
+                # & (train_data["JOIN_MODE"] == join_mode)
+            ]
+            model_test_data = test_data.loc[
+                (test_data["OPERATOR_NAME"] == "Join")
+                & (test_data["OPERATOR_IMPLEMENTATION"] == implementation)
+                & (test_data["BUILD_COLUMN_TYPE"] == build_column_type)
+                & (test_data["PROBE_COLUMN_TYPE"] == probe_column_type)
+                # & (test_data["JOIN_MODE"] == join_mode)
+            ]
+
+            keep_labels = [
+                "PROBE_INPUT_ROWS",
+                "BUILD_INPUT_ROWS",
+                "OUTPUT_ROWS",
+                "BUILD_COLUMN_TYPE",
+                "PROBE_COLUMN_TYPE",
+                "PROBE_INPUT_COLUMN_SORTED",
+                #"PROBE_INPUT_CHUNKS",
+                "BUILD_INPUT_COLUMN_SORTED",
+                #"BUILD_INPUT_CHUNKS",
+                "RUNTIME_NS",
+                "JOIN_MODE",
+                "PROBE_TABLE_PRUNED_CHUNK_RATIO",
+                "BUILD_TABLE_PRUNED_CHUNK_RATIO",
+            ]
+
+            model_train_data = model_train_data[keep_labels]
+            model_test_data = model_test_data[keep_labels]
+
+            dummy_columns = np.concatenate(
+                [[label for label in model_train_data.columns if keyword in label] for keyword in ohe_candidates]
+            )
+            model_train_data, model_test_data = add_dummy_types(
+                model_train_data.copy(), model_test_data.copy(), dummy_columns,
+            )
+            model_train_data = preprocess_data(model_train_data)
+            model_test_data = preprocess_data(model_test_data)
+
+            # if there is training data for this combination, train a model
+            if not model_train_data.empty:
+                for model_type in model_types:
+                    model = train_model(model_train_data, model_type)
+                    model_name = get_join_model_name(model_type, implementation, build_column_type, probe_column_type)
+                    filename = os.path.join(out + "models", f"{model_name}.sav")
+                    joblib.dump(model, filename)
+                    save_model_input_columns(
+                        model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                        os.path.join(out, "models", f"{model_name}_columns.csv"),
+                    )
+
+                    if not model_test_data.empty:
+                        scores[model_name] = generate_model_plot(
+                            model,
+                            model_test_data,
+                            "Join",
+                            model_type,
+                            implementation,
+                            [build_column_type, probe_column_type],
+                            out,
+                        )
+    return scores
+
+
+def get_table_scan_scores(model_types, train_data, test_data, implementation, ohe_candidates, out):
+    scores = dict()
+    model_train_data = train_data.loc[
+        (train_data["OPERATOR_NAME"] == "TableScan") & (train_data["OPERATOR_IMPLEMENTATION"] == implementation)
+    ].copy()
+    model_test_data = test_data.loc[
+        (test_data["OPERATOR_NAME"] == "TableScan") & (test_data["OPERATOR_IMPLEMENTATION"] == implementation)
+    ].copy()
+
+    model_train_data["NONE_MATCH_RATIO"] = np.where(
+        model_train_data.SEGMENTS_SCANNED != 0,
+        model_train_data.SHORTCUT_NONE_MATCH / model_train_data.SEGMENTS_SCANNED,
+        0,
+    )
+    model_train_data["ALL_MATCH_RATIO"] = np.where(
+        model_train_data.SEGMENTS_SCANNED != 0,
+        model_train_data.SHORTCUT_ALL_MATCH / model_train_data.SEGMENTS_SCANNED,
+        0,
+    )
+    model_test_data["NONE_MATCH_RATIO"] = np.where(
+        model_test_data.SEGMENTS_SCANNED != 0, model_test_data.SHORTCUT_NONE_MATCH / model_test_data.SEGMENTS_SCANNED, 0
+    )
+    model_test_data["ALL_MATCH_RATIO"] = np.where(
+        model_test_data.SEGMENTS_SCANNED != 0, model_test_data.SHORTCUT_ALL_MATCH / model_test_data.SEGMENTS_SCANNED, 0
+    )
+
+    if len(model_train_data["NONE_MATCH_RATIO"].unique()) > 0:
+        assert model_train_data["NONE_MATCH_RATIO"].min() >= 0
+        assert model_train_data["NONE_MATCH_RATIO"].max() <= 1
+    if len(model_train_data["ALL_MATCH_RATIO"].unique()) > 0:
+        assert model_train_data["ALL_MATCH_RATIO"].min() >= 0
+        assert model_train_data["ALL_MATCH_RATIO"].max() <= 1
+
+    if len(model_test_data["NONE_MATCH_RATIO"].unique()) > 0:
+        assert model_test_data["NONE_MATCH_RATIO"].min() >= 0
+        assert model_test_data["NONE_MATCH_RATIO"].max() <= 1
+    if len(model_test_data["ALL_MATCH_RATIO"].unique()) > 0:
+        assert model_test_data["ALL_MATCH_RATIO"].min() >= 0
+        assert model_test_data["ALL_MATCH_RATIO"].max() <= 1
+
+    keep_labels = [
+        "INPUT_ROWS",
+        "OUTPUT_ROWS",
+        "SELECTIVITY_LEFT",
+        "COLUMN_TYPE",
+        "INPUT_COLUMN_SORTED",
+        "INPUT_CHUNKS",
+        "RUNTIME_NS",
+        "NONE_MATCH_RATIO",
+        "ALL_MATCH_RATIO",
+        "DATA_TYPE",
+    ]
+
+    model_train_data = model_train_data[keep_labels]
+    model_test_data = model_test_data[keep_labels]
+    model_train_data.dropna()
+    model_test_data.dropna()
+
+    dummy_columns = np.concatenate(
+        [[label for label in model_train_data.columns if keyword in label] for keyword in ohe_candidates]
+    )
+
+    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), dummy_columns)
+    model_train_data = preprocess_data(model_train_data)
+    model_test_data = preprocess_data(model_test_data)
+
+    # if there is training data for this combination, train a model
+    if not model_train_data.empty:
+        for model_type in model_types:
+            model = train_model(model_train_data, model_type)
+            model_name = get_table_scan_model_name(model_type, implementation)
+            filename = os.path.join(out + "models", f"{model_name}.sav")
+            joblib.dump(model, filename)
+            save_model_input_columns(
+                model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                os.path.join(out, "models", f"{model_name}_columns.csv"),
+            )
+            if not model_test_data.empty:
+                scores[model_name] = generate_model_plot(
+                    model, model_test_data, "TableScan", model_type, implementation, [], out,
+                )
+    return scores
+
+
+def get_aggregate_scores(model_types, train_data, test_data, implementation, ohe_candidates, out):
+    scores = dict()
+    model_train_data = train_data.loc[
+        (train_data["OPERATOR_NAME"] == "Aggregate") & (train_data["OPERATOR_IMPLEMENTATION"] == implementation)
+    ]
+    model_test_data = test_data.loc[
+        (test_data["OPERATOR_NAME"] == "Aggregate") & (test_data["OPERATOR_IMPLEMENTATION"] == implementation)
+    ]
+
+    keep_labels = [
+        "INPUT_ROWS",
+        "OUTPUT_ROWS",
+        "COLUMN_TYPE",
+        "INPUT_COLUMN_SORTED",
+        "INPUT_CHUNKS",
+        "GROUP_COLUMNS",
+        "AGGREGATE_COLUMNS",
+        "IS_COUNT_STAR",
+        "RUNTIME_NS",
+    ]
+
+    model_train_data = model_train_data[keep_labels]
+    model_test_data = model_test_data[keep_labels]
+    model_train_data.dropna()
+    model_test_data.dropna()
+
+    dummy_columns = np.concatenate(
+        [[label for label in model_train_data.columns if keyword in label] for keyword in ohe_candidates]
+    )
+    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), dummy_columns,)
+    model_train_data = preprocess_data(model_train_data)
+    model_test_data = preprocess_data(model_test_data)
+
+    # if there is training data for this combination, train a model
+    if not model_train_data.empty:
+        for model_type in model_types:
+            model = train_model(model_train_data, model_type)
+            model_name = get_aggregate_model_name(model_type, implementation)
+            filename = os.path.join(out + "models", f"{model_name}.sav")
+            joblib.dump(model, filename)
+            save_model_input_columns(
+                model_train_data.drop(labels=["RUNTIME_NS"], axis=1),
+                os.path.join(out, "models", f"{model_name}_columns.csv"),
+            )
+            if not model_test_data.empty:
+                scores[model_name] = generate_model_plot(
+                    model, model_test_data, "Aggregate", model_type, implementation, [], out,
+                )
+    return scores
+>>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
 
 
 def train_cost_models(train_data, test_data, args):
@@ -292,14 +558,10 @@ def train_cost_models(train_data, test_data, args):
     if not os.path.exists(out + "plots"):
         os.makedirs(out + "plots")
 
-    # one single model for everything
-    gtrain, gjoin_train = equalize_columns(train_data["general"].copy(), train_data["join"].copy())
-    gtest, gjoin_test = equalize_columns(test_data["general"].copy(), test_data["join"].copy())
-    gtrain = gtrain.append(gjoin_train, sort=False)
-    gtest = gtest.append(gjoin_test, sort=False)
 
     ohe_candidates = [
         "OPERATOR_NAME",
+        "INPUT_COLUMN_SORTED",
         "COLUMN_TYPE",
         "DATA_TYPE",
         "ENCODING",
@@ -308,166 +570,73 @@ def train_cost_models(train_data, test_data, args):
         "SORTED",
         "JOIN_MODE",
     ]
-    dummy_columns = np.concatenate(
-        [[label for label in gtrain.columns if keyword in label] for keyword in ohe_candidates]
-    )
-    """for model_type in model_types:
-        gtrain_data, gtest_data = add_dummy_types(
-            gtrain.copy(),
-            gtest.copy(),
-            dummy_columns,
-        )
-        gtrain_data = preprocess_data(gtrain_data)
-        gtest_data = preprocess_data(gtest_data)
-        gmodel = train_model(gtrain_data, model_type)
-        scores[f"{model_type}_general_model"] = generate_model_plot(
-            gmodel, gtest_data, "all", model_type, "all", "all", "all", "all", "all", "all", out
-        )
-        filename = os.path.join(out + "models", f"{model_type}_general_model.py")
-        #joblib.dump(gmodel, filename)
-        gmodel.export(filename)
-    """
 
-    # make separate models for different operators and combinations of encodings/compressions
+    # make separate models for different operators
     for operator_data in train_data:
-        for operator in train_data[operator_data]["OPERATOR_NAME"].unique():
-            for encoding_left in train_data[operator_data]["ENCODING_LEFT"].unique():
-                for encoding_right in train_data[operator_data]["ENCODING_RIGHT"].unique():
-                    for implementation_type in train_data[operator_data]["OPERATOR_IMPLEMENTATION"].unique():
-                        for left_column_type in train_data[operator_data]["LEFT_COLUMN_TYPE"].unique():
-                            for right_column_type in train_data[operator_data]["RIGHT_COLUMN_TYPE"].unique():
-                                data_types = (
-                                    train_data[operator_data]["DATA_TYPE_LEFT"].unique()
-                                    if operator == "Join"
-                                    else train_data[operator_data]["DATA_TYPE"].unique()
-                                )
-                                for data_type in data_types:
-                                    if operator == "Join" and not data_type == "int":
-                                        continue
-                                    print(
-                                        f"{encoding_left}_{encoding_right}_{operator}_{implementation_type}_{left_column_type}_{right_column_type}_{data_type}"
-                                    )
-                                    # print(f"{model_type}_{encoding_left}_{encoding_right}_{operator}_{implementation_type}")
-                                    train_data_copy = train_data[operator_data].copy()
-                                    test_data_copy = test_data[operator_data].copy()
-                                    model_train_data = train_data_copy.loc[
-                                        (train_data_copy["OPERATOR_NAME"] == operator)
-                                        & (train_data_copy["ENCODING_LEFT"] == encoding_left)
-                                        & (train_data_copy["ENCODING_RIGHT"] == encoding_right)
-                                        & (train_data_copy["OPERATOR_IMPLEMENTATION"] == implementation_type)
-                                        & (train_data_copy["LEFT_COLUMN_TYPE"] == left_column_type)
-                                        & (train_data_copy["RIGHT_COLUMN_TYPE"] == right_column_type)
-                                    ]
-                                    model_test_data = test_data_copy.loc[
-                                        (test_data_copy["OPERATOR_NAME"] == operator)
-                                        & (test_data_copy["ENCODING_LEFT"] == encoding_left)
-                                        & (test_data_copy["ENCODING_RIGHT"] == encoding_right)
-                                        & (test_data_copy["OPERATOR_IMPLEMENTATION"] == implementation_type)
-                                        & (test_data_copy["LEFT_COLUMN_TYPE"] == left_column_type)
-                                        & (test_data_copy["RIGHT_COLUMN_TYPE"] == right_column_type)
-                                    ]
+        op_data = train_data[operator_data]
+        model_test_data = test_data[operator_data]
 
-                                    drop_labels = [
-                                        "OPERATOR_NAME",
-                                        "ENCODING_LEFT",
-                                        "ENCODING_RIGHT",
-                                        "OPERATOR_IMPLEMENTATION",
-                                        "LEFT_COLUMN_TYPE",
-                                        "RIGHT_COLUMN_TYPE",
-                                    ]
-
-                                    model_train_data = model_train_data.drop(labels=drop_labels, axis=1,)
-                                    model_test_data = model_test_data.drop(labels=drop_labels, axis=1,)
-                                    if operator == "Join":
-                                        model_test_data = model_test_data.loc[
-                                            (model_test_data["DATA_TYPE_LEFT"] == data_type)
-                                        ]
-                                        model_train_data = model_train_data.loc[
-                                            (model_train_data["DATA_TYPE_LEFT"] == data_type)
-                                        ]
-
-                                        model_train_data = model_train_data.drop(
-                                            # labels=["JOIN_MODE", "SELECTIVITY_LEFT", "SELECTIVITY_RIGHT", "DATA_TYPE_LEFT", "DATA_TYPE_RIGHT"], axis=1,
-                                            labels=["DATA_TYPE_LEFT", "DATA_TYPE_RIGHT"],
-                                            axis=1,
-                                        )
-                                        model_test_data = model_test_data.drop(
-                                            # labels=["JOIN_MODE", "SELECTIVITY_LEFT", "SELECTIVITY_RIGHT", "DATA_TYPE_LEFT", "DATA_TYPE_RIGHT"], axis=1,
-                                            labels=["DATA_TYPE_LEFT", "DATA_TYPE_RIGHT"],
-                                            axis=1,
-                                        )
-
-                                    dummy_columns = np.concatenate(
-                                        [
-                                            [label for label in model_train_data.columns if keyword in label]
-                                            for keyword in ohe_candidates
-                                        ]
-                                    )
-                                    model_train_data, model_test_data = add_dummy_types(
-                                        model_train_data.copy(), model_test_data.copy(), dummy_columns,
-                                    )
-                                    model_train_data = preprocess_data(model_train_data)
-                                    model_test_data = preprocess_data(model_test_data)
-
-                                    # if there is training data for this combination, train a model
-                                    if not model_train_data.empty:
-                                        print("model train != empty")
-                                        for model_type in model_types:
-                                            model = train_model(model_train_data, model_type)
-                                            model_name = f"{model_type}_{encoding_left}_{encoding_right}_{operator}_{implementation_type}_{left_column_type}_{right_column_type}_{data_type}_model"
-                                            filename = os.path.join(out + "models", f"split_{model_name}.py")
-                                            # joblib.dump(model, filename)
-                                            model.export(filename)
-                                            if not model_test_data.empty:
-                                                print("model test != empty")
-                                                scores[model_name] = generate_model_plot(
-                                                    model,
-                                                    model_test_data,
-                                                    operator,
-                                                    model_type,
-                                                    encoding_left,
-                                                    encoding_right,
-                                                    implementation_type,
-                                                    left_column_type,
-                                                    right_column_type,
-                                                    data_type,
-                                                    out,
-                                                )
-                                    if not operator == "Join":
-                                        break
+        for operator in op_data["OPERATOR_NAME"].unique():
+            for implementation_type in op_data[op_data.OPERATOR_NAME.eq(operator)]["OPERATOR_IMPLEMENTATION"].unique():
+                print(operator, implementation_type)
+                if operator == "TableScan":
+                    operator_scores = get_table_scan_scores(
+                        model_types, op_data.copy(), model_test_data.copy(), implementation_type, ohe_candidates, out,
+                    )
+                elif operator == "Aggregate":
+                    operator_scores = get_aggregate_scores(
+                        model_types, op_data.copy(), model_test_data.copy(), implementation_type, ohe_candidates, out,
+                    )
+                elif operator == "Join":
+                    operator_scores = get_join_scores(
+                        model_types, op_data.copy(), model_test_data.copy(), implementation_type, ohe_candidates, out,
+                    )
+                else:
+                    continue
+                scores.update(operator_scores)
     log(scores, out)
 
 
-def equalize_data(data):
-    data["join"]["OPERATOR_NAME"] = "Join"
-    data["join"] = data["join"].rename(columns={"JOIN_IMPLEMENTATION": "OPERATOR_IMPLEMENTATION"})
-    data["general"]["ENCODING_RIGHT"] = "0"
-    data["general"] = data["general"].rename(columns={"ENCODING": "ENCODING_LEFT", "COLUMN_TYPE": "LEFT_COLUMN_TYPE"})
-    data["general"]["RIGHT_COLUMN_TYPE"] = "0"
+def equalize_data(abc):
+    abc["join"]["OPERATOR_NAME"] = "Join"
+    abc["join"] = abc["join"].rename(columns={"JOIN_IMPLEMENTATION": "OPERATOR_IMPLEMENTATION"})
+    return abc
+
+
+def load_all_directories(directories):
+    data = None
+    for directory in directories:
+        aggregates, scans, joins = import_data(directory)
+        if data is None:
+            data = {"aggregate": aggregates, "scan": scans, "join": joins}
+        else:
+            data["aggregate"] = pd.concat([data["aggregate"], aggregates], ignore_index=True)
+            data["scan"] = pd.concat([data["scan"], scans], ignore_index=True)
+            data["join"] = pd.concat([data["join"], joins], ignore_index=True)
     return data
 
 
-def main(arguments):
+def main(args):
     if args.test:
-        train_data, test_data = import_data(args.train, args.test)
+        test_data = load_all_directories(args.test)
+        train_data = load_all_directories(args.train)
     else:
-        train_data = import_operator_data(args.train)
-        train_data = train_data.dropna()
-        train_data, test_data = train_test_split(train_data)
-        train_general = import_operator_data(train_path, "operators.csv")
-        train_joins = import_operator_data(train_path, "joins.csv")
-        train_joins = join_data.drop(labels=["JOIN_ID"], axis=1)
-        train_general = train_general.dropna()
-        train_joins = train_joins.dropna()
-        train_general, test_general = train_test_split(train_general)
-        train_joins, test_joins = train_test_split(train_joins)
-        train_data = {"general": train_general, "join": train_joins}
-        test_data = {"general": test_general, "join": test_joins}
+        random_state = 42 if args.set_random_state else randrange(2 ** 32)
+        shared_data = load_all_directories(args.train)
+        aggregate_train, aggregate_test = train_test_split(
+            shared_data["aggregate"], random_state=random_state, test_size=0.2
+        )
+        scan_train, scan_test = train_test_split(shared_data["scan"], random_state=random_state, test_size=0.2)
+        join_train, join_test = train_test_split(shared_data["join"], random_state=random_state, test_size=0.2)
+        test_data = {"aggregate": aggregate_test.copy(), "scan": scan_test.copy(), "join": join_test.copy()}
+        train_data = {"aggregate": aggregate_train.copy(), "scan": scan_train.copy(), "join": join_train.copy()}
+
     test_data = equalize_data(test_data)
     train_data = equalize_data(train_data)
-    train_cost_models(train_data, test_data, arguments)
+    train_cost_models(train_data, test_data, args)
 
 
 if __name__ == "__main__":
+    plt.style.use("ggplot")
     arguments = parse_cost_model_arguments()
     main(arguments)

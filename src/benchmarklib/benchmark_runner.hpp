@@ -53,6 +53,8 @@ class BenchmarkRunner : public Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
+  const BenchmarkConfig _config;
+
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
@@ -79,7 +81,7 @@ class BenchmarkRunner : public Noncopyable {
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
-  const BenchmarkConfig _config;
+  //const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;

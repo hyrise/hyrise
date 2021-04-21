@@ -5,7 +5,6 @@
 #include "abstract_join_operator.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,6 +21,14 @@ class JoinHash : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);
   static bool satisfies_join_preference(const JoinType join_type);
+<<<<<<< HEAD
+=======
+
+  // The jobs that perform the actual materialization, radix partitioning, building, and probing are added to the
+  // scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not, the job is executed
+  // directly. This threshold needs to be re-evaluated over time to find the value which gives the best performance.
+  static constexpr auto JOB_SPAWN_THRESHOLD = 500;
+>>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
@@ -32,7 +39,7 @@ class JoinHash : public AbstractJoinOperator {
   std::string description(DescriptionMode description_mode) const override;
 
   template <typename T>
-  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
+  static size_t calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode);
 
   enum class OperatorSteps : uint8_t {
     BuildSideMaterializing,
@@ -41,6 +48,14 @@ class JoinHash : public AbstractJoinOperator {
     Building,
     Probing,
     OutputWriting
+  };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
+
+    size_t radix_bits{0};
+    // Initially, the left input is the build side and the right side is the probe side.
+    bool left_input_is_build_side{true};
   };
 
  protected:

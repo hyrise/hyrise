@@ -1,7 +1,12 @@
 #include "benchmark_runner.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <random>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
@@ -30,8 +35,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _table_generator(std::move(table_generator)),
       _context(context),
       _operator_exporter(operator_exporter) {
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  size_t cache_size = static_cast<size_t>(std::max(_config.max_runs, static_cast<int64_t>(DEFAULT_CACHE_CAPACITY)));
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>(cache_size);
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>(cache_size);
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
@@ -85,10 +91,12 @@ void BenchmarkRunner::run() {
     // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
     // supported.
     SQLPipelineBuilder{
-        "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+        "CREATE TABLE IF NOT EXISTS benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS "
+        "\"timestamp\", * FROM "
         "meta_system_utilization"}
         .create_pipeline()
         .get_result_table();
+    SQLPipelineBuilder{"DELETE FROM benchmark_system_utilization_log"}.create_pipeline().get_result_table();
 
     while (track_system_utilization) {
       const auto timestamp =
@@ -108,7 +116,8 @@ void BenchmarkRunner::run() {
   if (_config.metrics) {
     // Create a table for the segment access counter log
     SQLPipelineBuilder{
-        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        "CREATE TABLE IF NOT EXISTS benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM "
+        "meta_segments"}
         .create_pipeline()
         .get_result_table();
   }
@@ -261,26 +270,40 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
+    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+    if (_currently_running_clients > 0) std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    Hyrise::get().scheduler()->wait_for_all_tasks();
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
-    const auto num_successful_runs = result.successful_runs.size();
-    const auto duration_per_item =
-        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
+
+    // Compute mean by using accumulators
+    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
+        accumulator;
+    for (const auto& entry : result.successful_runs) {
+      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
+      accumulator(static_cast<double>(duration.count()));
+    }
+    const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
+    // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
+    const auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
 
     if (!_config.verify && !_config.enable_visualization) {
-      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
+      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
+                << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
+                << " iter/s)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
 
-    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+    if (_operator_exporter) {
+      _export_pqps();
+    }
 
     if (_operator_exporter) {
       _export_pqps();
@@ -539,8 +562,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 void BenchmarkRunner::_export_pqps() const {
   const auto& pqp_cache = Hyrise::get().default_pqp_cache;
   const auto cache_map = pqp_cache->snapshot();
-  for (const auto& [_, entry] : cache_map) {
-    _operator_exporter->export_to_csv(entry.value);
+  for (const auto& [query, entry] : cache_map) {
+    _operator_exporter->export_to_csv(entry.value, query);
   }
   // Clear pqp cache for next benchmark run
   pqp_cache->clear();

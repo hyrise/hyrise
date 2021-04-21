@@ -89,7 +89,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *          |
    *     table_int_float2
    *
-   * would result in multiple operators created from predicate_c and thus in performance drops
+   * would result in multiple operators created from predicate_c and thus in performance drops.
+   *
+   * Subplan Deduplication:
+   * _operator_by_lqp_node compares entries by value (i.e., AbstractOperator::operator==), not by identity
+   * (shared_ptr::operator==). As a result, two separate, but equal LQP nodes will be translated into a single PQP
+   * node. This prevents us from executing the same operation twice.
+   *   Excursus: You would be right to wonder why this is not done on the LQP by some type of optimizer rule. That would
+   *   indeed be the cleaner way to do it. The problem is that self-joins are only representable in the LQP if we use
+   *   two independent StoredTableNodes. If we de-duplicate these StoredTableNodes, the LQPColumnExpressions of the two
+   *   instances would also become indistinguishable. That breaks things left and right.
    */
 
   const auto operator_iter = _operator_by_lqp_node.find(node);

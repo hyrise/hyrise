@@ -19,6 +19,8 @@ enum class OperatorType {
   Aggregate,
   Alias,
   ChangeMetaTable,
+  ClusteringPartitioner,
+  ClusteringSorter,
   CreateTable,
   CreatePreparedPlan,
   CreateView,

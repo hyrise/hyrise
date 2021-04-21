@@ -32,12 +32,10 @@ CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_t
 }
 
 void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const float scale_factor,
-                                               const int number_of_executions, const int item_runs) {
-  _config->max_runs = item_runs;
-  _config->cache_binary_tables = true;
-  auto subdirectory = std::string{magic_enum::enum_name(type)};
-  boost::algorithm::to_lower(subdirectory);
-  const auto path = _path_to_dir + "/" + subdirectory;
+                                               const int number_of_executions) {
+  //auto subdirectory = std::string{magic_enum::enum_name(type)};
+  //boost::algorithm::to_lower(subdirectory);
+  const auto path = _path_to_dir;  // + "/" + subdirectory;
   std::filesystem::create_directories(path);
   const auto feature_exporter = std::make_shared<OperatorFeatureExporter>(path);
   auto table_exporter = TableFeatureExporter(path);
@@ -54,15 +52,22 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
         return _build_job(feature_exporter);
       case BenchmarkType::JCC_H:
         return _build_jcch(scale_factor, feature_exporter);
+      default:
+        std::cout << "Unhandled case, please address this" << std::endl;
+        return std::shared_ptr<BenchmarkRunner>();
     }
   }();
+
+  const std::string plugin_filename = "build-release/lib/libhyriseClusteringPlugin.so";
+  const std::filesystem::path plugin_path(plugin_filename);
+  Hyrise::get().plugin_manager.load_plugin(plugin_path);
 
   for (int execution_index = 0; execution_index < number_of_executions; ++execution_index) {
     Hyrise::get().benchmark_runner = benchmark_runner;
     benchmark_runner->run();
   }
 
-  std::cout << std::endl << "- Exporting test data for " << magic_enum::enum_name(type) << std::endl;
+  std::cout << std::endl << "Exporting data for " << magic_enum::enum_name(type) << std::endl;
   feature_exporter->flush();
 
   const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
@@ -125,13 +130,13 @@ std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tpcc(
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_job(
     const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const {
-  const std::string table_path = "../imdb_data";
-  const std::string query_path = "../third_party/join-order-benchmark";
+  const std::string table_path = "imdb_data";
+  const std::string query_path = "third_party/join-order-benchmark";
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
 
-  const auto setup_imdb_command = std::string{"python3 ../scripts/setup_imdb.py "} + table_path;
+  const auto setup_imdb_command = std::string{"python3 scripts/setup_imdb.py "} + table_path;
   const auto setup_imdb_return_code = system(setup_imdb_command.c_str());
-  Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the build dir?");
+  Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the root dir?");
 
   auto table_generator = std::make_unique<FileBasedTableGenerator>(_config, table_path);
   auto item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(_config, query_path, non_query_file_names);

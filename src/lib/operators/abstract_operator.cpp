@@ -62,6 +62,14 @@ void AbstractOperator::execute() {
     performance_data->output_row_count = _output->row_count();
     performance_data->output_chunk_count = _output->chunk_count();
     performance_data->output_column_count = _output->column_count();
+<<<<<<< HEAD
+=======
+    for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+      const auto& chunk = _output->get_chunk(chunk_id);
+      if (!chunk) continue;
+      performance_data->chunks_sorted_by.push_back(chunk->individually_sorted_by());
+    }
+>>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
   }
   performance_data->walltime = performance_timer.lap();
   performance_data->executed = true;
@@ -112,7 +120,7 @@ void AbstractOperator::execute() {
             if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
               // If segment is nullable, the column must be nullable as well
               Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
-                     "Nullable segment found in non-nullable column");
+                     std::string{"Nullable segment found in non-nullable column "} + _output->column_name(column_id));
             }
           });
         }
@@ -215,9 +223,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                 << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-      fn_stream << "/";
-      fn_stream << *abstract_operator.performance_data;
-      fn_stream << ")";
+      fn_stream << "/" << *abstract_operator.performance_data << ")";
     }
   };
 

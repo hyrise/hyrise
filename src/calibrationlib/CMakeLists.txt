@@ -11,14 +11,14 @@ set(
     calibration_benchmark_runner.hpp
     calibration_lqp_generator.cpp
     calibration_lqp_generator.hpp
+    calibration_table_generator.cpp
+    calibration_table_generator.hpp
     calibration_table_wrapper.cpp
     calibration_table_wrapper.hpp
     operator_feature_exporter.cpp
     operator_feature_exporter.hpp
     table_feature_exporter.cpp
     table_feature_exporter.hpp
-    calibration_table_generator.cpp
-    calibration_table_generator.hpp
 )
 
 add_library(hyriseCalibrationLib ${SOURCES})

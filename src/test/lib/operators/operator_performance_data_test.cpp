@@ -60,6 +60,8 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({1});
   table->append({2});
   table->append({2});
+  table->append({2});
+  table->append({2});
   table->append({3});
 
   table->last_chunk()->finalize();
@@ -73,10 +75,11 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
         std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
     table_scan->execute();
 
-    auto& performance_data = static_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   {
@@ -87,15 +90,17 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
         std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 1));
     table_scan->execute();
 
-    const auto& performance_data = static_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 1ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   // Check counters for sorted segment scanning (value scan)
   table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
+  table->get_chunk(ChunkID{2})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   {
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -104,10 +109,11 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
         std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
     table_scan->execute();
 
-    const auto& performance_data = static_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 3ul);
   }
 
   // Between scan
@@ -116,13 +122,69 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_wrapper->execute();
 
     const auto table_scan = std::make_shared<TableScan>(
-        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 2));
+        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
     table_scan->execute();
 
-    const auto& performance_data = static_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    /*
+     * TODO(anyone) actually, there could be 3 chunks with all rows matching, and none with binary search.
+     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between
+     * when checking for the all-match-shortcut, and an inclusive between when checking for the no-match-shortcut.
+     * This is not wrong, so it should not break anything, but it may lead to unnecessary sorted scans.
+     */
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_skipped, 0ul);
-    EXPECT_EQ(performance_data.chunk_scans_sorted, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 1ul);
+  }
+
+  // Test that nullable columns do not contribute all-rows-matching shortcuts
+  const TableColumnDefinitions nullable_column_definition = {{"a", DataType::Int, true}};
+  table = std::make_shared<Table>(nullable_column_definition, TableType::Data, 2);
+  table->append({1});
+  table->append({2});
+  table->append({2});
+  table->append({2});
+  table->append({2});
+  table->append({3});
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table);
+
+  // ColumnVsValue scan
+  {
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    const auto table_scan =
+        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    table_scan->execute();
+
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+  }
+
+  // Between scan on nullable columns
+  {
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    const auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
+    table_scan->execute();
+
+    const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
+    /*
+     * TODO(anyone) actually, there could be 3 chunks with all rows matching, and none with binary search.
+     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between.
+     * Consequently, the first chunk must be scanned
+     */
+    EXPECT_GT(performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 }
 
@@ -132,7 +194,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
-  const auto& perf = static_cast<const OperatorPerformanceData<JoinHash::OperatorSteps>&>(*join->performance_data);
+  const auto& perf = dynamic_cast<const OperatorPerformanceData<JoinHash::OperatorSteps>&>(*join->performance_data);
 
   for (const auto step : magic_enum::enum_values<JoinHash::OperatorSteps>()) {
     if (step == JoinHash::OperatorSteps::Clustering) {
@@ -156,7 +218,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
+    auto& perf = dynamic_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_EQ(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
@@ -174,7 +236,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
+    auto& perf = dynamic_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
     EXPECT_EQ(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
@@ -190,7 +252,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
+    auto& perf = dynamic_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
@@ -211,7 +273,7 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStepRuntimes) {
   aggregate->execute();
 
   auto& performance_data =
-      static_cast<const OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*aggregate->performance_data);
+      dynamic_cast<const OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*aggregate->performance_data);
 
   for (const auto step : magic_enum::enum_values<AggregateHash::OperatorSteps>()) {
     EXPECT_GT(performance_data.get_step_runtime(step).count(), 0);
@@ -279,12 +341,19 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   performance_data.has_output = true;
   performance_data.output_row_count = 1u;
   performance_data.output_chunk_count = 1u;
-  performance_data.walltime = std::chrono::nanoseconds{2u};
 
+  if constexpr (HYRISE_DEBUG) {
+    performance_data.walltime = std::chrono::nanoseconds{2u};
+    std::stringstream stringstream_throw;
+    // output_to_stream() throws when cumulative step runtimes are larger than operator runtime.
+    EXPECT_THROW(performance_data.output_to_stream(stringstream_throw, DescriptionMode::SingleLine), std::logic_error);
+  }
+
+  performance_data.walltime = std::chrono::nanoseconds{35u};
   std::stringstream stringstream;
   stringstream << performance_data;
   EXPECT_TRUE(
-      stringstream.str().starts_with("Output: 1 row in 1 chunk, 2 ns. Operator step runtimes: BuildSideMaterializing"
+      stringstream.str().starts_with("Output: 1 row in 1 chunk, 35 ns. Operator step runtimes: BuildSideMaterializing"
                                      " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Probing"
                                      " 17 ns, OutputWriting 0 ns."));
 }

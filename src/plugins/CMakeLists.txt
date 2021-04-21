@@ -31,7 +31,9 @@ endfunction(add_plugin)
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+add_plugin(NAME hyriseClusteringPlugin SRCS clustering_plugin.cpp clustering_plugin.hpp clustering/abstract_clustering_algo.hpp clustering/abstract_clustering_algo.cpp clustering/simple_clustering_algo.hpp clustering/simple_clustering_algo.cpp clustering/chunkwise_clustering_algo.hpp clustering/chunkwise_clustering_algo.cpp clustering/disjoint_clusters_algo.hpp clustering/disjoint_clusters_algo.cpp)
 
+target_link_libraries_system(hyriseClusteringPlugin nlohmann_json::nlohmann_json)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")

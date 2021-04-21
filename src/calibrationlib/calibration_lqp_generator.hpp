@@ -7,17 +7,16 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/join_hash.hpp"
-#include "operators/join_nested_loop.hpp"
-#include "operators/join_sort_merge.hpp"
+#include "optimizer/optimizer.hpp"
 
 namespace opossum {
 class CalibrationLQPGenerator {
  public:
   CalibrationLQPGenerator();
   void generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table);
-  void generate_joins(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables);
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_lqps();
+  void generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables, const float scale_factor);
+  void generate_aggregates(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& table_wrappers);
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& lqps();
 
  private:
   using ColumnPair = std::pair<const std::string, const std::string>;
@@ -25,20 +24,23 @@ class CalibrationLQPGenerator {
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const;
-  void _generate_index_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
-  void _generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& left_table,
-                       const std::shared_ptr<const CalibrationTableWrapper>& right);
+  void _generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
+                            const std::shared_ptr<const CalibrationTableWrapper>& right);
+  void _generate_semi_join_unordered_probe(const std::shared_ptr<const CalibrationTableWrapper>& left,
+                                           const std::shared_ptr<const CalibrationTableWrapper>& right);
+
+  template <typename ColumnDataType>
+  std::shared_ptr<PredicateNode> _get_predicate_node_based_on(const std::shared_ptr<LQPColumnExpression>& column,
+                                                              const ColumnDataType& lower_bound,
+                                                              const std::shared_ptr<AbstractLQPNode>& base);
 
   std::vector<std::shared_ptr<AbstractLQPNode>> _generated_lqps;
+  const std::shared_ptr<Optimizer> _optimizer = std::make_shared<Optimizer>();
 
   // feature flags for the LQPGeneration
   static constexpr bool _enable_like_predicates = true;
   static constexpr bool _enable_reference_scans = true;
-  static constexpr bool _enable_index_scans = true;
   static constexpr bool _enable_column_vs_column_scans = true;
   static constexpr bool _enable_between_predicates = true;
-  static constexpr bool _enable_reference_joins = true;
-  static constexpr auto _join_operators = hana::to_tuple(hana::tuple_t<JoinHash>);  //, JoinSortMerge, JoinNestedLoop>);
-  const std::vector<JoinType> _join_types = {JoinType::Hash};  //, JoinType::SortMerge, JoinType::NestedLoop};
 };
 }  // namespace opossum

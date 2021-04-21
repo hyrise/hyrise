@@ -542,11 +542,18 @@ const char* const tpch_query_13 =
  *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- */
+*/
 const char* const tpch_query_14 =
     R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1-l_discount) else 0 end)
       / SUM(l_extendedprice * (1 - l_discount)) as promo_revenue FROM lineitem, part WHERE l_partkey = p_partkey
       AND l_shipdate >= ? AND l_shipdate < ?;)";
+
+/*
+const char* const tpch_query_14 =
+    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1-l_discount) else 0 end)
+      / SUM(l_extendedprice * (1 - l_discount)) as promo_revenue FROM lineitem, part WHERE l_partkey = p_partkey
+      AND l_shipdate >= ? AND l_shipdate < ? AND l_orderkey <= 7000000)";
+*/
 
 /**
  * TPC-H 15

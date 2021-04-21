@@ -4,9 +4,47 @@
 
 # Welcome to Hyrise
 
-This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
+Hyrise is a research in-memory database system that has been developed [by HPI since 2009](https://www.vldb.org/pvldb/vol4/p105-grund.pdf) and has been entirely [rewritten in 2017](https://openproceedings.org/2019/conf/edbt/EDBT19_paper_152.pdf). Our goal is to provide a clean and flexible platform for research in the area of in-memory data management. Its architecture allows us, our students, and other researchers to conduct experiments around new data management concepts. To enable realistic experiments, Hyrise features comprehensive SQL support and performs powerful query plan optimizations. Well-known benchmarks, such as TPC-H or TPC-DS, can be executed with a single command and without any preparation.
 
-Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
+This readme file focuses on the technical aspects of the repository. For more background on our research and for a list of publications, please visit the [Hyrise project page](https://hpi.de/plattner/projects/hyrise.html).
+
+You can still find the (archived) previous version of Hyrise on [Github](https://github.com/hyrise/hyrise-v1).
+
+## Citation
+
+When referencing this version of Hyrise, please use the following bibtex entry:
+<details><summary>(click to expand)</summary>
+  
+```bibtex
+@inproceedings{DBLP:conf/edbt/DreselerK0KUP19,
+  author    = {Markus Dreseler and
+               Jan Kossmann and
+               Martin Boissier and
+               Stefan Klauck and
+               Matthias Uflacker and
+               Hasso Plattner},
+  editor    = {Melanie Herschel and
+               Helena Galhardas and
+               Berthold Reinwald and
+               Irini Fundulaki and
+               Carsten Binnig and
+               Zoi Kaoudi},
+  title     = {Hyrise Re-engineered: An Extensible Database System for Research in
+               Relational In-Memory Data Management},
+  booktitle = {Advances in Database Technology - 22nd International Conference on
+               Extending Database Technology, {EDBT} 2019, Lisbon, Portugal, March
+               26-29, 2019},
+  pages     = {313--324},
+  publisher = {OpenProceedings.org},
+  year      = {2019},
+  url       = {https://doi.org/10.5441/002/edbt.2019.28},
+  doi       = {10.5441/002/edbt.2019.28},
+  timestamp = {Mon, 18 Mar 2019 16:09:00 +0100},
+  biburl    = {https://dblp.org/rec/conf/edbt/DreselerK0KUP19.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+```
+</details>
 
 ## Supported Systems
 Hyrise is developed for Linux (preferrably the most current Ubuntu version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
@@ -32,7 +70,7 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 
 ## Native Setup
 You can install the dependencies on your own or use the install_dependencies.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS Catalina (10.15) and Ubuntu 20.04 (apt-get).
+The install script was tested under macOS Big Sur (10.16) and Ubuntu 20.10 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -122,6 +160,7 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Lukas     Böhme
 -   Timo      Djürken
+-   Alexander Dubrawski
 -   Fabian    Dumke
 -   Leonard   Geier
 -   Richard   Ebeling

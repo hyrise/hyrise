@@ -17,9 +17,7 @@ struct TableGeneratorConfig {
   std::vector<ColumnDataDistribution> column_data_distributions;
   std::set<ChunkOffset> chunk_sizes;
   std::set<int> row_counts;
-  bool generate_sorted_tables;
-  bool generate_foreign_key_tables;
-  int foreign_key_threshold;
+  float scale_factor;
 };
 
 class CalibrationTableGenerator {
@@ -28,11 +26,14 @@ class CalibrationTableGenerator {
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> _generate_aggregate_tables() const;
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> _generate_semi_join_tables() const;
+  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_table(const size_t row_count) const;
+  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_sorted_table(const size_t row_count) const;
+  std::shared_ptr<const CalibrationTableWrapper> _generate_semi_join_unordered_probe_table(
+      const size_t row_count) const;
   std::shared_ptr<const CalibrationTableWrapper> _generate_sorted_table(
       const std::shared_ptr<const CalibrationTableWrapper>& original_table) const;
-  std::shared_ptr<const CalibrationTableWrapper> _generate_foreign_key_table(
-      const std::shared_ptr<const CalibrationTableWrapper>& original_table,
-      const std::shared_ptr<const SyntheticTableGenerator>& table_generator) const;
   std::shared_ptr<TableGeneratorConfig> _config;
   std::vector<ColumnDataDistribution> _column_data_distributions;
   std::vector<ColumnSpecification> _column_specs;

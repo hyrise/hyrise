@@ -57,6 +57,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   template <typename CompressedVectorIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = ValueID;
     explicit Iterator(const ValueID null_value_id, CompressedVectorIterator&& attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
@@ -101,6 +102,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       : public AbstractPointAccessSegmentIterator<PointAccessIterator<Decompressor, PosListIteratorType>,
                                                   SegmentPosition<ValueID>, PosListIteratorType> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, Decompressor&& attribute_decompressor,
                         const PosListIteratorType&& position_filter_begin, PosListIteratorType&& position_filter_it)
