@@ -298,7 +298,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     if constexpr (HYRISE_DEBUG) {
       // TODO(Julian) Why are we looking for that one operator that is ExecutedAndAvailable?
       auto executed_and_available_count =
-          std::count_if(tasks.cbegin(), tasks.cend(), [](std::shared_ptr<AbstractTask> task) {
+          std::count_if(tasks.cbegin(), tasks.cend(), [](const std::shared_ptr<AbstractTask>& task) {
             return static_cast<const OperatorTask&>(*task).get_operator()->state() ==
                    OperatorState::ExecutedAndAvailable;
           });

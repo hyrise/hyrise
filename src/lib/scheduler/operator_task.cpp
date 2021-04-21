@@ -21,7 +21,7 @@ using namespace opossum;  // NOLINT
  */
 std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_ptr<AbstractOperator>& op,
                                                              std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
-  const auto task = op->get_or_create_operator_task();
+  auto task = op->get_or_create_operator_task();
   // By using an unordered set, we can avoid adding duplicate tasks.
   const auto& [_, inserted] = tasks.insert(task);
   if (!inserted) return task;
