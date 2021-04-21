@@ -19,8 +19,6 @@ class ParameterizedPlanCacheHandlerTest : public BaseTest {
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_b", _table_b);
-
-    _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   }
 
   const std::vector<std::shared_ptr<SQLPipelineStatement>>& get_sql_pipeline_statements(SQLPipeline& sql_pipeline) {
@@ -60,14 +58,20 @@ class ParameterizedPlanCacheHandlerTest : public BaseTest {
   const std::string _parameter_query_c = "SELECT table_a.a + 3, (SELECT table_a.b * 2 FROM table_a) AS b FROM table_a";
 };
 
-class ParameterizedPlanCacheHandlerMvccTest : public ParameterizedPlanCacheHandlerTest,
-                                              public ::testing::WithParamInterface<UseMvcc> {};
+class ParameterizedPlanCacheHandlerMvccTest
+    : public ParameterizedPlanCacheHandlerTest,
+      public ::testing::WithParamInterface<std::tuple<UseMvcc, ParameterizedLQPCache>> {};
 
 INSTANTIATE_TEST_SUITE_P(MvccYesNo, ParameterizedPlanCacheHandlerMvccTest,
-                         ::testing::Values(UseMvcc::Yes, UseMvcc::No));
+                         ::testing::Combine(::testing::Values(UseMvcc::Yes, UseMvcc::No),
+                                            ::testing::Values(ParameterizedLQPCache::Yes, ParameterizedLQPCache::No)));
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromWhere) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
+
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_a, use_mvcc);
 
   auto cache_duration = std::chrono::nanoseconds(0);
@@ -75,15 +79,23 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromWhere) {
 
   const auto cached_plan_optional = cache_handler.try_get();
 
-  // Expect two extracted values from plan
-  EXPECT_EQ(extracted_values(cache_handler).size(), 2);
-  // Check if right values are extracted
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{1000});
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{458});
+  if (use_parameterized_lqp == ParameterizedLQPCache::No) {
+    EXPECT_EQ(extracted_values(cache_handler).size(), 0);
+  } else {
+    // Expect two extracted values from plan
+    EXPECT_EQ(extracted_values(cache_handler).size(), 2);
+    // Check if right values are extracted
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{1000});
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{458});
+  }
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSelect) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
+
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_b, use_mvcc);
 
   auto cache_duration = std::chrono::nanoseconds(0);
@@ -91,15 +103,23 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSelect) {
 
   const auto cached_plan_optional = cache_handler.try_get();
 
-  // Expect two extracted values from plan
-  EXPECT_EQ(extracted_values(cache_handler).size(), 2);
-  // Check if right values are extracted
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{8.2});
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{23});
+  if (use_parameterized_lqp == ParameterizedLQPCache::No) {
+    EXPECT_EQ(extracted_values(cache_handler).size(), 0);
+  } else {
+    // Expect two extracted values from plan
+    EXPECT_EQ(extracted_values(cache_handler).size(), 2);
+    // Check if right values are extracted
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{8.2});
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{23});
+  }
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSubquery) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
+
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_c, use_mvcc);
 
   auto cache_duration = std::chrono::nanoseconds(0);
@@ -107,18 +127,25 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, ValueExtractionFromSubquery) {
 
   const auto cached_plan_optional = cache_handler.try_get();
 
-  // Expect two distinct extracted values from plan
-  EXPECT_EQ(extracted_values(cache_handler).size(), 4);
-  // Check if right values are extracted
-  // Values appear double here, due to alias (AS) nodes
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{3});
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{3});
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(2)), AllTypeVariant{2});
-  EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(3)), AllTypeVariant{2});
+  if (use_parameterized_lqp == ParameterizedLQPCache::No) {
+    EXPECT_EQ(extracted_values(cache_handler).size(), 0);
+  } else {
+    // Expect two distinct extracted values from plan
+    EXPECT_EQ(extracted_values(cache_handler).size(), 4);
+    // Check if right values are extracted
+    // Values appear double here, due to alias (AS) nodes
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(0)), AllTypeVariant{3});
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(1)), AllTypeVariant{3});
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(2)), AllTypeVariant{2});
+    EXPECT_EQ(value_from_value_expression(extracted_values(cache_handler).at(3)), AllTypeVariant{2});
+  }
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
 
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_a, use_mvcc);
 
@@ -153,7 +180,10 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQP) {
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQPDifferntQuery) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
 
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_b, use_mvcc);
 
@@ -187,12 +217,20 @@ TEST_P(ParameterizedPlanCacheHandlerMvccTest, GetCachedOptimizedLQPDifferntQuery
 
   cached_plan_optional = cache_handler_2.try_get();
 
-  // Expect cache hit
-  EXPECT_TRUE(cached_plan_optional);
+  if (use_parameterized_lqp == ParameterizedLQPCache::No) {
+    // Expect cache miss
+    EXPECT_FALSE(cached_plan_optional);
+  } else {
+    // Expect cache hit
+    EXPECT_TRUE(cached_plan_optional);
+  }
 }
 
 TEST_P(ParameterizedPlanCacheHandlerMvccTest, DontEvictSamePlanWithDifferentMvcc) {
-  const auto use_mvcc = GetParam();
+  const auto use_mvcc = std::get<0>(GetParam());
+  const auto use_parameterized_lqp = std::get<1>(GetParam());
+
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>(use_parameterized_lqp);
 
   auto unoptimized_lqp = get_unoptimized_logical_plan(_parameter_query_a, use_mvcc);
 

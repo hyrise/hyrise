@@ -12,7 +12,12 @@ ParameterizedPlanCacheHandler::ParameterizedPlanCacheHandler(const std::shared_p
                                                              const UseMvcc use_mvcc)
     : _lqp_cache(lqp_cache), _cache_duration(cache_duration), _use_mvcc(use_mvcc) {
   const auto start_cache_init = std::chrono::high_resolution_clock::now();
-  std::tie(_cache_key, _extracted_values) = _split_lqp_values(unoptimized_lqp);
+  if (_lqp_cache->use_parameterized_cache == ParameterizedLQPCache::Yes) {
+    std::tie(_cache_key, _extracted_values) = _split_lqp_values(unoptimized_lqp);
+  } else {
+    _cache_key = unoptimized_lqp->deep_copy();
+  }
+
   const auto end_cache_init = std::chrono::high_resolution_clock::now();
   _cache_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_cache_init - start_cache_init);
 }
@@ -30,7 +35,11 @@ std::optional<std::shared_ptr<AbstractLQPNode>> ParameterizedPlanCacheHandler::t
       // and concurrent translations might conflict
       const auto end_try_get = std::chrono::high_resolution_clock::now();
       _cache_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_try_get - start_try_get);
-      return cached_plan->instantiate(_extracted_values)->deep_copy();
+      if (_lqp_cache->use_parameterized_cache == ParameterizedLQPCache::Yes) {
+        return cached_plan->instantiate(_extracted_values)->deep_copy();
+      } else {
+        return cached_plan->instantiate({})->deep_copy();
+      }
     }
   }
 
@@ -42,20 +51,25 @@ std::optional<std::shared_ptr<AbstractLQPNode>> ParameterizedPlanCacheHandler::t
 
 void ParameterizedPlanCacheHandler::set(std::shared_ptr<AbstractLQPNode>& optimized_lqp) {
   const auto start_set = std::chrono::high_resolution_clock::now();
-  const auto cache_value = std::get<0>(_split_lqp_values(optimized_lqp));
 
-  // Convert value expression IDs into ParameterIDs in the right order
-  std::vector<ParameterID> parameter_ids(_extracted_values.size());
-  auto parameter_ids_it = parameter_ids.begin();
-  for (const auto& extracted_value : _extracted_values) {
-    const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
-    *parameter_ids_it = static_cast<ParameterID>(*extracted_value_expression->value_expression_id);
-    ++parameter_ids_it;
+  if (_lqp_cache->use_parameterized_cache == ParameterizedLQPCache::Yes) {
+    const auto cache_value = std::get<0>(_split_lqp_values(optimized_lqp));
+
+    // Convert value expression IDs into ParameterIDs in the right order
+    std::vector<ParameterID> parameter_ids(_extracted_values.size());
+    auto parameter_ids_it = parameter_ids.begin();
+    for (const auto& extracted_value : _extracted_values) {
+      const auto extracted_value_expression = std::dynamic_pointer_cast<ValueExpression>(extracted_value);
+      *parameter_ids_it = static_cast<ParameterID>(*extracted_value_expression->value_expression_id);
+      ++parameter_ids_it;
+    }
+
+    auto parameterized_plan = std::make_shared<ParameterizedPlan>(cache_value, parameter_ids);
+
+    _lqp_cache->set(_cache_key, parameterized_plan);
+  } else {
+    _lqp_cache->set(_cache_key, std::make_shared<ParameterizedPlan>(optimized_lqp, std::vector<ParameterID>{}));
   }
-
-  auto parameterized_plan = std::make_shared<ParameterizedPlan>(cache_value, parameter_ids);
-
-  _lqp_cache->set(_cache_key, parameterized_plan);
 
   const auto end_set = std::chrono::high_resolution_clock::now();
   _cache_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_set - start_set);
