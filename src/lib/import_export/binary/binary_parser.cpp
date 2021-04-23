@@ -36,8 +36,8 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 template <typename T>
 pmr_compact_vector<T> BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
   const auto bit_width = _read_value<uint8_t>(file);
-  const auto values = pmr_compact_vector<T>(bit_width, count);
-  file.read(reinterpret_cast<char*>(const_cast<uint64_t*>(values.get())), values.bytes());
+  auto values = pmr_compact_vector<T>(bit_width, count);
+  file.read(reinterpret_cast<char*>(values.get()), values.bytes());
   return values;
 }
 
