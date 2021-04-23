@@ -1,6 +1,7 @@
 #pragma once
 
 #include "compact_vector.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
