@@ -68,10 +68,9 @@ do
   echo "Building $commit..."
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
- 
+
   # Run the benchmarks
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
-  rm -rf *cached_tables
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
