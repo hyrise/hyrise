@@ -109,7 +109,7 @@ def main():
     arguments["--runs"] = "2"
     arguments["--warmup"] = "2"
     arguments["--encoding"] = "'LZ4'"
-    arguments["--compression"] = "'SIMD-BP128'"
+    arguments["--compression"] = "'Bitpacking'"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--chunk_size"] = "100000"

@@ -122,7 +122,7 @@ def main():
     arguments["--runs"] = "100"
     arguments["--warmup"] = "5"
     arguments["--encoding"] = "'LZ4'"
-    arguments["--compression"] = "'SIMD-BP128'"
+    arguments["--compression"] = "'Bitpacking'"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"
