@@ -15,7 +15,7 @@ def main():
     arguments["--runs"] = "100"
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
-    arguments["--compression"] = "'Bitpacking'"
+    arguments["--compression"] = "'BitPacking'"
     arguments["--indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
