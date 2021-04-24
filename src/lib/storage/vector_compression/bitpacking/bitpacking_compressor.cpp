@@ -20,13 +20,11 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
     required_bits = static_cast<uint32_t>(std::ceil(log2(*max_element_it + 1u)));
   }
 
-  auto data = pmr_compact_vector<uint32_t>(required_bits, alloc);
-
-  // resize to avoid allocating too much memory with auto-growing vector. Doesn't support reserve().
-  data.resize(vector.size());
+  auto data = pmr_compact_vector<uint32_t>(required_bits, vector.size(), alloc);
 
   // compactvector does not zero initialize it's memory, which leads to non-reproducible tests that
-  // use the binary writer. Hence, fill the internal memory with zeroes.
+  // use the binary writer (due to alignment, some memory at the end is not overwritten). 
+  // Hence, fill the internal memory with zeroes.
   std::fill_n(data.get(), data.bytes() / 8, 0);
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
