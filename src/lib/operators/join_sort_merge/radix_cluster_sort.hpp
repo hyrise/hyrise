@@ -137,7 +137,6 @@ class RadixClusterSort {
   // Concatenates multiple materialized segments to a single materialized segment.
   static MaterializedSegmentList<T> _concatenate_chunks(const MaterializedSegmentList<T>& input_chunks) {
     auto output_table = MaterializedSegmentList<T>(1);
-    output_table[0] = MaterializedSegment<T>();
 
     // Reserve the required space and move the data to the output
     auto& output_chunk = output_table[0];

@@ -508,7 +508,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     constexpr auto LINEAR_SEARCH_ITEMS = size_t{128};
     auto end = begin + LINEAR_SEARCH_ITEMS;
-    if (values.end() < end) {
+    if (start_index + LINEAR_SEARCH_ITEMS >= values.size()) {
       // Set end of linear search to end of input vector if we would overshoot otherwise.
       end = values.end();
     }
