@@ -87,7 +87,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
   // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
   // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
-
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired

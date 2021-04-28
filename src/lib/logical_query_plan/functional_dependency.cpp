@@ -1,6 +1,6 @@
 #include "functional_dependency.hpp"
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 namespace opossum {
 
