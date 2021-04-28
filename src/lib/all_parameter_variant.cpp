@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 
-#include "boost/lexical_cast.hpp"
+#include <boost/lexical_cast.hpp>
 
 #include "all_type_variant.hpp"
 

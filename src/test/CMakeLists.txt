@@ -98,6 +98,7 @@ set(
     lib/operators/maintenance/create_view_test.cpp
     lib/operators/maintenance/drop_table_test.cpp
     lib/operators/maintenance/drop_view_test.cpp
+    lib/operators/operator_clear_output_test.cpp
     lib/operators/operator_deep_copy_test.cpp
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
@@ -133,6 +134,7 @@ set(
     lib/optimizer/strategy/index_scan_rule_test.cpp
     lib/optimizer/strategy/join_ordering_rule_test.cpp
     lib/optimizer/strategy/join_predicate_ordering_rule_test.cpp
+    lib/optimizer/strategy/null_scan_removal_rule_test.cpp
     lib/optimizer/strategy/predicate_merge_rule_test.cpp
     lib/optimizer/strategy/predicate_placement_rule_test.cpp
     lib/optimizer/strategy/predicate_reordering_rule_test.cpp

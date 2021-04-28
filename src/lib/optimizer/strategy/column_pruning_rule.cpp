@@ -325,22 +325,22 @@ void prune_projection_node(
 
 }  // namespace
 
-void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
   // identified nodes and perform the pruning.
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  const auto output_expressions = lqp->output_expressions();
-  required_expressions_by_node[lqp].insert(output_expressions.cbegin(), output_expressions.cend());
+  const auto output_expressions = lqp_root->output_expressions();
+  required_expressions_by_node[lqp_root].insert(output_expressions.cbegin(), output_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
   // those. However, we track how many of a node's outputs we have already visited and recurse only once we have seen
   // all of them. That way, the performance should be similar to that of visit_lqp.
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> outputs_visited_by_node;
-  recursively_gather_required_expressions(lqp, required_expressions_by_node, outputs_visited_by_node);
+  recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
   for (const auto& [node, required_expressions] : required_expressions_by_node) {

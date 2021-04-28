@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+// Warning: In the past, magic_enum has led to problems with TSan. See #2154 for details.
 #include <magic_enum.hpp>
 
 #include "types.hpp"
@@ -19,7 +20,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 
-  bool executed{false};
   std::chrono::nanoseconds walltime{0};
 
   // Some operators do not return a table (e.g., Insert).
@@ -40,13 +40,8 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 template <typename Steps>
 struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
-    if (!executed) {
-      stream << "Not executed.";
-      return;
-    }
-
     if (!has_output) {
-      stream << "Executed, but no output.";
+      stream << "No output.";
       return;
     }
 
@@ -56,6 +51,16 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
 
     if constexpr (std::is_same_v<Steps, NoSteps>) {
       return;
+    }
+
+    // Check that the cumulative step runtimes are not larger than the operator's runtime.
+    if constexpr (HYRISE_DEBUG) {
+      auto cumulative_step_runtime = size_t{0};
+      for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
+        cumulative_step_runtime += step_runtimes[step_index].count();
+      }
+      Assert(static_cast<size_t>(walltime.count()) >= cumulative_step_runtime,
+             "Cumulative step runtimes larger than operator runtime.");
     }
 
     static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");

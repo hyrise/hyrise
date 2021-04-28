@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "boost/lexical_cast.hpp"
+#include <boost/lexical_cast.hpp>
 
 #include "storage/table.hpp"
 

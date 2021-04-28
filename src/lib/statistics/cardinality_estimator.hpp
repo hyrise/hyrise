@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "boost/dynamic_bitset.hpp"
+#include <boost/dynamic_bitset.hpp>
 
 #include "abstract_cardinality_estimator.hpp"
 #include "operators/operator_scan_predicate.hpp"

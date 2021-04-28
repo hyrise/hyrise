@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
-#include "constant_mappings.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -29,9 +27,10 @@ const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_opera
 
 const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const { return arguments[1]; }
 
-std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const {
-  return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand()->deep_copy(),
-                                                     right_operand()->deep_copy());
+std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand()->deep_copy(copied_ops),
+                                                     right_operand()->deep_copy(copied_ops));
 }
 
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {

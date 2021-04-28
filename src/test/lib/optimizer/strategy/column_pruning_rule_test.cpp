@@ -1,6 +1,7 @@
 #include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/export_node.hpp"

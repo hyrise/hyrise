@@ -110,9 +110,9 @@ TEST_F(OptimizerTest, VerifiesResults) {
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
-      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(root->left_input());
+      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) return;
       projection_node->node_expressions[0] = out_of_plan_expression;
     }
@@ -137,9 +137,12 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
-      nodes.emplace(root);
-      _apply_to_inputs(root);
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+      visit_lqp(lqp_root, [&](const auto& node) {
+        nodes.emplace(node);
+        return LQPVisitation::VisitInputs;
+      });
     }
 
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
@@ -176,7 +179,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    */
 
   // clang-format off
-  /** Initialise an LQP that contains the same sub query expression twice */
+  /** Initialise an LQP that contains the same subquery expression twice */
   auto lqp = std::static_pointer_cast<AbstractLQPNode>(
   PredicateNode::make(greater_than_(add_(b, subquery_a), 2),
     ProjectionNode::make(expression_vector(add_(b, subquery_a)),
@@ -216,9 +219,12 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    public:
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
-
     size_t& counter;
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+      ++counter;
+    }
   };
 
   auto rule = std::make_unique<MockRule>(counter);
