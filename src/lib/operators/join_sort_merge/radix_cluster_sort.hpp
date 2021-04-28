@@ -103,13 +103,8 @@ class RadixClusterSort {
   // The TableInformation structure is used to gather statistics regarding the value distribution of a table and its
   // chunks in order to be able to appropriately reserve space for the clustering output.
   struct TableInformation {
-    TableInformation(size_t chunk_count, size_t cluster_count) {
-      cluster_histogram.resize(cluster_count);
-      chunk_information.reserve(chunk_count);
-      for (auto i = size_t{0}; i < chunk_count; ++i) {
-        chunk_information.push_back(ChunkInformation(cluster_count));
-      }
-    }
+    TableInformation(size_t chunk_count, size_t cluster_count)
+        : cluster_histogram(cluster_count, 0), chunk_information(chunk_count, ChunkInformation(cluster_count)) {}
     // Used to count the number of entries for each cluster from the whole table
     std::vector<size_t> cluster_histogram;
     std::vector<ChunkInformation> chunk_information;
