@@ -231,6 +231,7 @@ set(
     lib/utils/string_utils_test.cpp
     utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/functional_dependency_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
 )
