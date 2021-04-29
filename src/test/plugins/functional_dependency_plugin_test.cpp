@@ -33,7 +33,7 @@ protected:
 TEST_F(FunctionalDependencyPluginTest, LoadUnloadPlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   pm.load_plugin(build_dylib_path("libhyriseFunctionalDependencyPlugin"));
-  pm.unload_plugin("libhyriseFunctionalDependencyPlugin");
+  pm.unload_plugin("hyriseFunctionalDependencyPlugin");
 }
 
 TEST_F(FunctionalDependencyPluginTest, CheckDependency) {
