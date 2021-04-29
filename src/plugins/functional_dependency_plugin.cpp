@@ -1,3 +1,5 @@
+#include "functional_dependency_plugin.hpp"
+
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -10,7 +12,7 @@ void FunctionalDependencyPlugin::start() {
 void FunctionalDependencyPlugin::stop() {
 }
 
-static bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
+bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
     return false;
 }
 

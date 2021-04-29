@@ -2,7 +2,7 @@
 
 #include <vector>
 
-
+#include "gtest/gtest_prod.h"
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
@@ -24,6 +24,7 @@ class FunctionalDependencyPlugin : public AbstractPlugin {
 
   StorageManager& storage_manager;
 
+ private:
   static bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent);
 };
 

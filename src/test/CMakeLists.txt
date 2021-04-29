@@ -259,6 +259,7 @@ set(
     gmock
     sqlite3
     hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
+    hyriseFunctionalDependencyPlugin # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE

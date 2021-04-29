@@ -6,6 +6,7 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+#include "gtest/gtest_prod.h"
 
 #include "../../plugins/functional_dependency_plugin.hpp"
 
@@ -23,6 +24,10 @@ class FunctionalDependencyPluginTest : public BaseTest {
 protected:
   const std::string _table_name{"functionalDependencyTestTable"};
   static constexpr auto _chunk_size = size_t{4};
+
+  static bool _check_dependency(const std::string& table_name, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
+    return FunctionalDependencyPlugin::_check_dependency(Hyrise::get().storage_manager.get_table(table_name), determinant, dependent);
+  }
 };
 
 TEST_F(FunctionalDependencyPluginTest, LoadUnloadPlugin) {
@@ -32,10 +37,10 @@ TEST_F(FunctionalDependencyPluginTest, LoadUnloadPlugin) {
 }
 
 TEST_F(FunctionalDependencyPluginTest, CheckDependency) {
-  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
-  const auto determinant = std::vector<ColumnID>{0};
-  const auto dependent = std::vector<ColumnID>{1};
-  EXPECT_TRUE(FunctionalDependencyPlugin::_check_dependency(table, determinant, dependent));
+  auto determinant = std::vector<ColumnID>{0};
+  auto dependent = std::vector<ColumnID>{1};
+  auto dependency_exists = _check_dependency(_table_name, determinant, dependent);
+  EXPECT_TRUE(dependency_exists);
 }
 
 }  // namespace opossum
