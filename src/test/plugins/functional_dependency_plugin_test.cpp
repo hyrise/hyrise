@@ -37,10 +37,11 @@ TEST_F(FunctionalDependencyPluginTest, LoadUnloadPlugin) {
 }
 
 TEST_F(FunctionalDependencyPluginTest, CheckDependency) {
-  auto determinant = std::vector<ColumnID>{0};
-  auto dependent = std::vector<ColumnID>{1};
-  auto dependency_exists = _check_dependency(_table_name, determinant, dependent);
-  EXPECT_TRUE(dependency_exists);
+  EXPECT_TRUE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0}}, std::vector<ColumnID>{1}));
+  EXPECT_TRUE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0},ColumnID{2}}, std::vector<ColumnID>{ColumnID{3}}));
+  EXPECT_TRUE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0},ColumnID{2}}, std::vector<ColumnID>{ColumnID{1},ColumnID{3}}));
+  EXPECT_FALSE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0}}, std::vector<ColumnID>{ColumnID{2}}));
+  EXPECT_FALSE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0},ColumnID{1}}, std::vector<ColumnID>{ColumnID{2}}));
 }
 
 }  // namespace opossum
