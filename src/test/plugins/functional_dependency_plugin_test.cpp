@@ -15,7 +15,7 @@ namespace opossum {
 class FunctionalDependencyPluginTest : public BaseTest {
 
   void SetUp() override {
-    const auto& table = load_table("resources/test_data/tbl/int3.tbl", _chunk_size);
+    const auto& table = load_table("resources/test_data/tbl/functional_dependency_input.tbl", _chunk_size);
     Hyrise::get().storage_manager.add_table(_table_name, table);
   }
 
@@ -23,7 +23,7 @@ class FunctionalDependencyPluginTest : public BaseTest {
 
 protected:
   const std::string _table_name{"functionalDependencyTestTable"};
-  static constexpr auto _chunk_size = size_t{4};
+  static constexpr auto _chunk_size = size_t{3};
 
   static bool _check_dependency(const std::string& table_name, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
     return FunctionalDependencyPlugin::_check_dependency(Hyrise::get().storage_manager.get_table(table_name), determinant, dependent);

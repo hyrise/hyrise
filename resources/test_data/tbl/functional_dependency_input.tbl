@@ -1,0 +1,7 @@
+Student_id|semester|lecture|TA
+int|int|string|string
+1234|6|Numerical Methods|John
+1221|4|Numerical Methods|Smith
+1234|6|Visual Computing|Bob
+1201|2|Numerical Methods|Peter
+1201|2|Physics II|Simon
