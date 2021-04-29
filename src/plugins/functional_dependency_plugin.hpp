@@ -12,7 +12,7 @@ namespace opossum {
 
 class FunctionalDependencyPlugin : public AbstractPlugin {
   friend class FunctionalDependencyPluginTest;
-  
+
  public:
   FunctionalDependencyPlugin() : storage_manager(Hyrise::get().storage_manager) {}
 
@@ -24,8 +24,7 @@ class FunctionalDependencyPlugin : public AbstractPlugin {
 
   StorageManager& storage_manager;
 
- private:
-  bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent);
+  static bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent);
 };
 
 }  // namespace opossum

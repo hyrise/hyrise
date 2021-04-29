@@ -10,7 +10,7 @@ void FunctionalDependencyPlugin::start() {
 void FunctionalDependencyPlugin::stop() {
 }
 
-bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
+static bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent) {
     return false;
 }
 
