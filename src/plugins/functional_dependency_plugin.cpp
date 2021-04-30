@@ -33,21 +33,27 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
     }
   };
 
-  auto row_cout = table->row_count();
+  const auto row_count = table->row_count();
   std::unordered_map<std::vector<AllTypeVariant>, std::vector<AllTypeVariant>, Hasher> dependency;
-  for (size_t row_id = 0; row_id < row_cout; row_id++) {
+  for (size_t row_id = 0; row_id < row_count; row_id++) {
     std::vector<AllTypeVariant> row_determinant;
-    for (auto column_id : determinant) {
+    for (const auto column_id : determinant) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        row_determinant.push_back((table->get_value<ColumnDataType>(column_id, row_id)).value());
+        auto value = table->get_value<ColumnDataType>(column_id, row_id);
+        if (value) {
+          row_determinant.push_back((value).value());
+        }
       });
     }
     std::vector<AllTypeVariant> row_dependent;
-    for (auto column_id : dependent) {
+    for (const auto column_id : dependent) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        row_dependent.push_back((table->get_value<ColumnDataType>(column_id, row_id)).value());
+        auto value = table->get_value<ColumnDataType>(column_id, row_id);
+        if (value) {
+          row_dependent.push_back((value).value());
+        }
       });
     }
     if (dependency.contains(row_determinant)) {
