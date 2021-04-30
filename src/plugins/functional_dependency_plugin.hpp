@@ -4,9 +4,9 @@
 
 #include "gtest/gtest_prod.h"
 #include "hyrise.hpp"
+#include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
-#include "types.hpp"
 
 namespace opossum {
 
@@ -25,7 +25,8 @@ class FunctionalDependencyPlugin : public AbstractPlugin {
   StorageManager& storage_manager;
 
  private:
-  static bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant, std::vector<ColumnID> dependent);
+  static bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant,
+                                std::vector<ColumnID> dependent);
 };
 
 }  // namespace opossum
