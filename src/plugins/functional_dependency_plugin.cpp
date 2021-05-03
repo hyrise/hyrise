@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <utility>
 
 #include <boost/functional/hash_fwd.hpp>
 
@@ -24,9 +25,12 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
   // 3. Check if value is the same as determinant. If not break.
 
   struct Hasher {
-    size_t operator()(const std::vector<AllTypeVariant> attributes) const {
+    size_t operator()(const std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> attributes) const {
       auto seed = size_t{0};
-      for (auto& attribut : attributes) {
+      for (auto& attribut : attributes.first) {
+        boost::hash_combine(seed, attribut);
+      }
+      for (auto& attribut : attributes.second) {
         boost::hash_combine(seed, attribut);
       }
       return seed;
@@ -34,25 +38,38 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
   };
 
   const auto row_count = table->row_count();
-  std::unordered_map<std::vector<AllTypeVariant>, std::vector<AllTypeVariant>, Hasher> dependency;
+
+  std::unordered_map<std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>, std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>, Hasher> dependency;
   for (size_t row_id = 0; row_id < row_count; row_id++) {
-    std::vector<AllTypeVariant> row_determinant;
+
+    // Inside the first object we need to save the values. If the value is null we save 0.
+    // Inside the second object we need to save if the value is null.
+    // That way every value combination of a row gets a unique Pair. This is important to be able to hash correctly.
+    std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> row_determinant {std::vector<AllTypeVariant>(), std::vector<size_t>()};
     for (const auto column_id : determinant) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         auto value = table->get_value<ColumnDataType>(column_id, row_id);
         if (value) {
-          row_determinant.push_back((value).value());
+          row_determinant.first.push_back((value).value());
+          row_determinant.second.push_back(0);
+        } else {
+          row_determinant.first.push_back(0);
+          row_determinant.second.push_back(1);   
         }
       });
     }
-    std::vector<AllTypeVariant> row_dependent;
+   std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>  row_dependent{std::vector<AllTypeVariant>(), std::vector<size_t>()};
     for (const auto column_id : dependent) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         auto value = table->get_value<ColumnDataType>(column_id, row_id);
         if (value) {
-          row_dependent.push_back((value).value());
+          row_dependent.first.push_back((value).value());
+          row_dependent.second.push_back(0);
+        } else {
+          row_dependent.first.push_back(0);
+          row_dependent.second.push_back(1);   
         }
       });
     }
