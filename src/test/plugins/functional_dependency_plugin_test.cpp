@@ -47,7 +47,7 @@ TEST_F(FunctionalDependencyPluginTest, CheckDependency) {
   EXPECT_FALSE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}},
                                  std::vector<ColumnID>{ColumnID{2}}));
   EXPECT_TRUE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{2}, ColumnID{4}, ColumnID{5}},
-                                 std::vector<ColumnID>{ColumnID{6}}));
+                                std::vector<ColumnID>{ColumnID{6}}));
 }
 
 }  // namespace opossum
