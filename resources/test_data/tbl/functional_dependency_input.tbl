@@ -1,10 +1,10 @@
-Student_id|semester|lecture|TA
-int|int_null|string|string_null
-1234|6|Numerical Methods|John
-1221|4|Numerical Methods|Smith
-1234|6|Visual Computing|Bob
-1201|2|Numerical Methods|Peter
-1201|2|Physics II|Simon
-1301|null|Physics I|Till
-1322|null|Physics I|null
-1322|null|Physics III|null
+Student_id|semester|lecture|TA|exam_point|score|grade
+int|int_null|string|string_null|int_null|int_null|int
+1234|6|Numerical Methods|John|null|10|2
+1221|4|Numerical Methods|Smith|10|null|2
+1234|6|Visual Computing|Bob|20|10|3
+1201|2|Numerical Methods|Peter|30|10|3
+1201|2|Physics II|Simon|20|30|4
+1301|null|Physics I|Till|10|10|1
+1322|null|Physics I|null|10|10|1
+1322|null|Physics III|null|null|40|3

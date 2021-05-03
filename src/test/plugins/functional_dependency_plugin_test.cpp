@@ -16,15 +16,12 @@ class FunctionalDependencyPluginTest : public BaseTest {
   void SetUp() override {
     const auto& table = load_table("resources/test_data/tbl/functional_dependency_input.tbl", _chunk_size);
     Hyrise::get().storage_manager.add_table(_table_name, table);
-    const auto& table_edge_case = load_table("resources/test_data/tbl/functional_dependency_input_null.tbl", _chunk_size);
-    Hyrise::get().storage_manager.add_table(_table_name_edge_case, table_edge_case);
   }
 
   void TearDown() override { Hyrise::reset(); }
 
  protected:
   const std::string _table_name{"functionalDependencyTestTable"};
-  const std::string _table_name_edge_case{"functionalDependencyEdgeCaseTestTable"};
   static constexpr auto _chunk_size = size_t{3};
 
   static bool _check_dependency(const std::string& table_name, std::vector<ColumnID> determinant,
@@ -49,8 +46,8 @@ TEST_F(FunctionalDependencyPluginTest, CheckDependency) {
   EXPECT_FALSE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0}}, std::vector<ColumnID>{ColumnID{2}}));
   EXPECT_FALSE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}},
                                  std::vector<ColumnID>{ColumnID{2}}));
-  EXPECT_TRUE(_check_dependency(_table_name_edge_case, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}},
-                                 std::vector<ColumnID>{ColumnID{3}}));
+  EXPECT_TRUE(_check_dependency(_table_name, std::vector<ColumnID>{ColumnID{2}, ColumnID{4}, ColumnID{5}},
+                                 std::vector<ColumnID>{ColumnID{6}}));
 }
 
 }  // namespace opossum
