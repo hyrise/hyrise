@@ -42,9 +42,13 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
   std::unordered_map<std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>, std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>, Hasher> dependency;
   for (size_t row_id = 0; row_id < row_count; row_id++) {
 
-    // Inside the first object we need to save the values. If the value is null we save 0.
-    // Inside the second object we need to save if the value is null.
-    // That way every value combination of a row gets a unique Pair. This is important to be able to hash correctly.
+    // Inside the first object, we need to save the values of the attributes. If the value is null we save 0. 
+    // Inside the second object, we need to keep track of which value is null. That way every value combination of a
+    // row gets a unique Pair. This is important to be able to hash correctly:
+    // {a | null | 0 } -> {Tom} has the pair <[a, 0, 0], [0, 1, 0]>
+    // {a | 0 | null } -> {Alex} has the pair <[a, 0, 0], [0, 0, 1]>
+    // We are keeping track of the null rows so that we do not generate the same hash for two different attribute
+    // values with the value 0 and the value null.
     std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> row_determinant {std::vector<AllTypeVariant>(), std::vector<size_t>()};
     for (const auto column_id : determinant) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
