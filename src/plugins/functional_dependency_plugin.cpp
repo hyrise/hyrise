@@ -1,5 +1,7 @@
 #include <unordered_map>
 #include <utility>
+#include <chrono>
+#include <iostream>
 
 #include <boost/functional/hash_fwd.hpp>
 
@@ -7,13 +9,50 @@
 #include "functional_dependency_plugin.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "types.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 std::string FunctionalDependencyPlugin::description() const { return "Check for functional dependencies"; }
 
-void FunctionalDependencyPlugin::start() {}
+void FunctionalDependencyPlugin::start() {
+  std::cout << "Loading table sf-1" << std::endl;
+  const auto& table = BinaryParser::parse("cmake-build-release/tpch_cached_tables/sf-1.000000/customer.bin");
+  std::cout << "Table loaded sf-1" << std::endl;
+  std::vector<ColumnID> determinant{};
+  determinant.push_back(table->column_id_by_name("c_custkey"));
+  std::vector<ColumnID> dependent{};
+  dependent.push_back(table->column_id_by_name("c_name"));
+  dependent.push_back(table->column_id_by_name("c_acctbal"));
+  dependent.push_back(table->column_id_by_name("c_phone"));
+  dependent.push_back(table->column_id_by_name("c_address"));
+  dependent.push_back(table->column_id_by_name("c_comment"));
+  auto start = std::chrono::high_resolution_clock::now();
+  auto dependency = _check_dependency(table, determinant, dependent);
+  auto end = std::chrono::high_resolution_clock::now();
+  auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Sf-1 dependency: " << dependency << std::endl;
+  std::cout << "Execution time sf-1: " << ms_int.count() << std::endl;
+  std::cout << "Loading table sf-10" << std::endl;
+  const auto& table_sf_10 = BinaryParser::parse("cmake-build-release/tpch_cached_tables/sf-10.000000/customer.bin");
+  std::cout << "Table loaded sf-10" << std::endl;
+  std::vector<ColumnID> determinant_sf_10{};
+  determinant_sf_10.push_back(table_sf_10->column_id_by_name("c_custkey"));
+  std::vector<ColumnID> dependent_sf_10{};
+  dependent_sf_10.push_back(table_sf_10->column_id_by_name("c_name"));
+  dependent_sf_10.push_back(table_sf_10->column_id_by_name("c_acctbal"));
+  dependent_sf_10.push_back(table_sf_10->column_id_by_name("c_phone"));
+  dependent_sf_10.push_back(table_sf_10->column_id_by_name("c_address"));
+  dependent_sf_10.push_back(table_sf_10->column_id_by_name("c_comment"));
+  start = std::chrono::high_resolution_clock::now();
+  dependency = _check_dependency(table_sf_10, determinant_sf_10, dependent_sf_10);
+  end = std::chrono::high_resolution_clock::now();
+  ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Sf-10 dependency: " << dependency << std::endl;
+  std::cout << "Execution time sf-10: " << ms_int.count() << std::endl;
+}
 
 void FunctionalDependencyPlugin::stop() {}
 
