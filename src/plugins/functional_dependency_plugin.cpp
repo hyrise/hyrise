@@ -2,6 +2,8 @@
 #include <utility>
 #include <chrono>
 #include <iostream>
+#include <bitset>
+#include <functional>
 
 #include <boost/functional/hash_fwd.hpp>
 
@@ -15,11 +17,13 @@
 
 namespace opossum {
 
+//constexpr size_t BITSETSIZE = 64;
+
 std::string FunctionalDependencyPlugin::description() const { return "Check for functional dependencies"; }
 
 void FunctionalDependencyPlugin::start() {
   std::cout << "Loading table sf-1" << std::endl;
-  const auto& table = BinaryParser::parse("cmake-build-release/tpch_cached_tables/sf-1.000000/customer.bin");
+  const auto& table = BinaryParser::parse("/home/Alexander.Dubrawski/WorkingSets/hyrise/cmake-build-release/tpch_cached_tables/sf-1.000000/customer.bin");
   std::cout << "Table loaded sf-1" << std::endl;
   std::vector<ColumnID> determinant{};
   determinant.push_back(table->column_id_by_name("c_custkey"));
@@ -36,7 +40,7 @@ void FunctionalDependencyPlugin::start() {
   std::cout << "Sf-1 dependency: " << dependency << std::endl;
   std::cout << "Execution time sf-1: " << ms_int.count() << std::endl;
   std::cout << "Loading table sf-10" << std::endl;
-  const auto& table_sf_10 = BinaryParser::parse("cmake-build-release/tpch_cached_tables/sf-10.000000/customer.bin");
+  const auto& table_sf_10 = BinaryParser::parse("/home/Alexander.Dubrawski/WorkingSets/hyrise/cmake-build-release/tpch_cached_tables/sf-10.000000/customer.bin");
   std::cout << "Table loaded sf-10" << std::endl;
   std::vector<ColumnID> determinant_sf_10{};
   determinant_sf_10.push_back(table_sf_10->column_id_by_name("c_custkey"));
@@ -64,7 +68,7 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
   // 3. Check if value is the same as determinant. If not break.
 
   struct Hasher {
-    size_t operator()(const std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> attributes) const {
+    size_t operator()(const std::pair<std::vector<unsigned long long>, std::vector<size_t>> attributes) const {
       auto seed = size_t{0};
       for (auto& attribut : attributes.first) {
         boost::hash_combine(seed, attribut);
@@ -78,8 +82,8 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
 
   const auto row_count = table->row_count();
 
-  std::unordered_map<std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>,
-                     std::pair<std::vector<AllTypeVariant>, std::vector<size_t>>, Hasher>
+  std::unordered_map<std::pair<std::vector<unsigned long long>, std::vector<size_t>>,
+                     std::pair<std::vector<unsigned long long>, std::vector<size_t>>, Hasher>
       dependency;
   for (size_t row_id = 0; row_id < row_count; row_id++) {
     // Inside the first object, we need to save the values of the attributes. If the value is null we save 0.
@@ -89,32 +93,43 @@ bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>&
     // {a | 0 | null } -> {Alex} has the pair <[a, 0, 0], [0, 0, 1]>
     // We are keeping track of the null rows so that we do not generate the same hash for two different attribute
     // values with the value 0 and the value null.
-    std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> row_determinant{std::vector<AllTypeVariant>(),
+    std::pair<std::vector<unsigned long long>, std::vector<size_t>> row_determinant{std::vector<unsigned long long>(),
                                                                                 std::vector<size_t>()};
+    auto hash_function = std::hash<pmr_string>{};
     for (const auto column_id : determinant) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         auto value = table->get_value<ColumnDataType>(column_id, row_id);
+        constexpr auto IS_STRING_COLUMN = (std::is_same<ColumnDataType, pmr_string>{});
         if (value) {
-          row_determinant.first.push_back((value).value());
+          if constexpr (!IS_STRING_COLUMN) {
+            row_determinant.first.push_back(static_cast<unsigned long long>((value).value()));
+          } else {
+            row_determinant.first.push_back(static_cast<unsigned long long>(hash_function((value).value())));
+          }
           row_determinant.second.push_back(0);
         } else {
-          row_determinant.first.push_back(0);
+          row_determinant.first.push_back(0.0);
           row_determinant.second.push_back(1);
         }
       });
     }
-    std::pair<std::vector<AllTypeVariant>, std::vector<size_t>> row_dependent{std::vector<AllTypeVariant>(),
+    std::pair<std::vector<unsigned long long>, std::vector<size_t>> row_dependent{std::vector<unsigned long long>(),
                                                                               std::vector<size_t>()};
     for (const auto column_id : dependent) {
       resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         auto value = table->get_value<ColumnDataType>(column_id, row_id);
+        constexpr auto IS_STRING_COLUMN = (std::is_same<ColumnDataType, pmr_string>{});
         if (value) {
-          row_dependent.first.push_back((value).value());
+          if constexpr (!IS_STRING_COLUMN) {
+            row_dependent.first.push_back(static_cast<unsigned long long>((value).value()));
+          } else {
+            row_dependent.first.push_back(static_cast<unsigned long long>(hash_function((value).value())));
+          }
           row_dependent.second.push_back(0);
         } else {
-          row_dependent.first.push_back(0);
+          row_dependent.first.push_back(0.0);
           row_dependent.second.push_back(1);
         }
       });
