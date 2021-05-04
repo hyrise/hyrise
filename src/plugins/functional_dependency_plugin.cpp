@@ -23,7 +23,7 @@ std::string FunctionalDependencyPlugin::description() const { return "Check for 
 
 void FunctionalDependencyPlugin::start() {
   std::cout << "Loading table sf-1" << std::endl;
-  const auto& table = BinaryParser::parse("/home/Alexander.Dubrawski/WorkingSets/hyrise/cmake-build-release/tpch_cached_tables/sf-1.000000/customer.bin");
+  const auto& table = BinaryParser::parse("/cmake-build-release/tpch_cached_tables/sf-1.000000/customer.bin");
   std::cout << "Table loaded sf-1" << std::endl;
   std::vector<ColumnID> determinant{};
   determinant.push_back(table->column_id_by_name("c_custkey"));
@@ -40,7 +40,7 @@ void FunctionalDependencyPlugin::start() {
   std::cout << "Sf-1 dependency: " << dependency << std::endl;
   std::cout << "Execution time sf-1: " << ms_int.count() << std::endl;
   std::cout << "Loading table sf-10" << std::endl;
-  const auto& table_sf_10 = BinaryParser::parse("/home/Alexander.Dubrawski/WorkingSets/hyrise/cmake-build-release/tpch_cached_tables/sf-10.000000/customer.bin");
+  const auto& table_sf_10 = BinaryParser::parse("/cmake-build-release/tpch_cached_tables/sf-10.000000/customer.bin");
   std::cout << "Table loaded sf-10" << std::endl;
   std::vector<ColumnID> determinant_sf_10{};
   determinant_sf_10.push_back(table_sf_10->column_id_by_name("c_custkey"));
@@ -59,6 +59,116 @@ void FunctionalDependencyPlugin::start() {
 }
 
 void FunctionalDependencyPlugin::stop() {}
+
+
+// bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table,
+//                                                    const std::vector<ColumnID> determinant,
+//                                                    const std::vector<ColumnID> dependent) {
+
+//   struct Hasher {
+//     size_t operator()(const std::pair<std::vector<unsigned long long>, std::vector<size_t>> attributes) const {
+//       auto seed = size_t{0};
+//       for (auto& attribut : attributes.first) {
+//         boost::hash_combine(seed, attribut);
+//       }
+//       for (auto& attribut : attributes.second) {
+//         boost::hash_combine(seed, attribut);
+//       }
+//       return seed;
+//     }
+//   };
+
+//   std::unordered_map<std::pair<std::vector<unsigned long long>, std::vector<size_t>>,
+//                      std::pair<std::vector<unsigned long long>, std::vector<size_t>>, Hasher>
+//       dependency;
+
+//   auto hash_function = std::hash<pmr_string>{};
+//   const auto row_count = table->row_count();
+//   std::vector<std::vector<unsigned long long>> normalized_values;
+//   std::vector<std::vector<unsigned long long>> null_values;
+//   normalized_values.reserve(determinant.size() + dependent.size());
+//   null_values.reserve(determinant.size() + dependent.size());
+
+
+
+//   for (const auto column_id : determinant) {
+//     std::vector<unsigned long long> column_normalized_values;
+//     std::vector<unsigned long long> column_null_values;
+//     column_normalized_values.reserve(row_count);
+//     column_null_values.reserve(row_count);
+//     resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
+//       using ColumnDataType = typename decltype(data_type_t)::type;
+//       constexpr auto IS_STRING_COLUMN = (std::is_same<ColumnDataType, pmr_string>{});
+//       for (size_t row_id = 0; row_id < row_count; row_id++) {
+//         auto value = table->get_value<ColumnDataType>(column_id, row_id);
+//         if (value) {
+//           if constexpr (!IS_STRING_COLUMN) {
+//             column_normalized_values.push_back(static_cast<unsigned long long>((value).value()));
+//           } else {
+//             column_normalized_values.push_back(static_cast<unsigned long long>(hash_function((value).value())));
+//           }
+//           column_null_values.push_back(0);
+//         } else {
+//           column_normalized_values.push_back(0.0);
+//           column_null_values.push_back(1);
+//         }
+//       }
+//      });
+//     normalized_values.push_back(column_normalized_values);
+//     null_values.push_back(column_null_values);
+//   }
+//   for (const auto column_id : dependent) {
+//     std::vector<unsigned long long> column_normalized_values;
+//     std::vector<unsigned long long> column_null_values;
+//     column_normalized_values.reserve(row_count);
+//     column_null_values.reserve(row_count);
+//     resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
+//       using ColumnDataType = typename decltype(data_type_t)::type;
+//       constexpr auto IS_STRING_COLUMN = (std::is_same<ColumnDataType, pmr_string>{});
+//       for (size_t row_id = 0; row_id < row_count; row_id++) {
+//         auto value = table->get_value<ColumnDataType>(column_id, row_id);
+//         if (value) {
+//           if constexpr (!IS_STRING_COLUMN) {
+//             column_normalized_values.push_back(static_cast<unsigned long long>((value).value()));
+//           } else {
+//             column_normalized_values.push_back(static_cast<unsigned long long>(hash_function((value).value())));
+//           }
+//           column_null_values.push_back(0);
+//         } else {
+//           column_normalized_values.push_back(0.0);
+//           column_null_values.push_back(1);
+//         }
+//       }
+//      });
+//     normalized_values.push_back(column_normalized_values);
+//     null_values.push_back(column_null_values);
+//   }
+
+
+//   for (size_t row_id = 0; row_id < row_count; row_id++) {  
+//     std::pair<std::vector<unsigned long long>, std::vector<size_t>> row_determinant{std::vector<unsigned long long>(),
+//                                                                               std::vector<size_t>()};
+//     std::pair<std::vector<unsigned long long>, std::vector<size_t>> row_dependent{std::vector<unsigned long long>(),
+//                                                                               std::vector<size_t>()};
+//     for (size_t i = 0; i < determinant.size(); i++) {
+//       row_determinant.first.push_back(normalized_values[i][row_id]);
+//       row_determinant.second.push_back(null_values[i][row_id]);
+//     }
+//     for (size_t i = determinant.size(); i < (determinant.size() + dependent.size()) ; i++) {
+//       row_dependent.first.push_back(normalized_values[i][row_id]);
+//       row_dependent.second.push_back(null_values[i][row_id]);
+//     }
+//     if (dependency.contains(row_determinant)) {
+//       if (dependency[row_determinant] != row_dependent) {
+//         return false;
+//       }
+//     } else {
+//       dependency[row_determinant] = row_dependent;
+//     }
+//   }
+//   return true;
+// }
+
 
 bool FunctionalDependencyPlugin::_check_dependency(const std::shared_ptr<Table>& table,
                                                    const std::vector<ColumnID> determinant,
