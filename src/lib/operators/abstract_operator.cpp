@@ -62,14 +62,11 @@ void AbstractOperator::execute() {
     performance_data->output_row_count = _output->row_count();
     performance_data->output_chunk_count = _output->chunk_count();
     performance_data->output_column_count = _output->column_count();
-<<<<<<< HEAD
-=======
     for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
       const auto& chunk = _output->get_chunk(chunk_id);
       if (!chunk) continue;
       performance_data->chunks_sorted_by.push_back(chunk->individually_sorted_by());
     }
->>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
   }
   performance_data->walltime = performance_timer.lap();
   performance_data->executed = true;

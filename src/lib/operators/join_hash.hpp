@@ -21,14 +21,11 @@ class JoinHash : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);
   static bool satisfies_join_preference(const JoinType join_type);
-<<<<<<< HEAD
-=======
 
   // The jobs that perform the actual materialization, radix partitioning, building, and probing are added to the
   // scheduler in case the number of elements to process is above JOB_SPAWN_THRESHOLD. If not, the job is executed
   // directly. This threshold needs to be re-evaluated over time to find the value which gives the best performance.
   static constexpr auto JOB_SPAWN_THRESHOLD = 500;
->>>>>>> 3c66801359ee15a3fe8d5e5740796c1b08432927
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,

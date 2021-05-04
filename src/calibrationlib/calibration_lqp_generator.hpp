@@ -24,10 +24,8 @@ class CalibrationLQPGenerator {
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const;
-  void _generate_semi_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
-                            const std::shared_ptr<const CalibrationTableWrapper>& right);
-  void _generate_semi_join_unordered_probe(const std::shared_ptr<const CalibrationTableWrapper>& left,
-                                           const std::shared_ptr<const CalibrationTableWrapper>& right);
+  void _generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
+                       const std::shared_ptr<const CalibrationTableWrapper>& right);
 
   template <typename ColumnDataType>
   std::shared_ptr<PredicateNode> _get_predicate_node_based_on(const std::shared_ptr<LQPColumnExpression>& column,

@@ -14,19 +14,17 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
 
 int main(int argc, char** argv) {
   // Data generation settings
-  //const std::vector<BenchmarkType> BENCHMARK_TYPES = {BenchmarkType::TPC_H, BenchmarkType::TPC_DS, BenchmarkType::TPC_C,
-  //                                                    BenchmarkType::JCC_H, BenchmarkType::JOB};
   const std::map<std::string, BenchmarkType> BENCHMARK_TYPES{
       {"tpch", BenchmarkType::TPC_H}, {"tpcds", BenchmarkType::TPC_DS}, {"tpcc", BenchmarkType::TPC_C},
       {"jcch", BenchmarkType::JCC_H}, {"job", BenchmarkType::JOB},      {"calibration", BenchmarkType::Calibration}};
 
   // create benchmark config
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("What-If Clustering Statistics Generator");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("Calibration Data Generator");
 
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
-    ("benchmark", "Benchmark to run. Choose one of tpch, tpcds, tpcc, jcch, job", cxxopts::value<std::string>());
+    ("b,benchmark", "Benchmark to run. Choose one of tpch, tpcds, tpcc, jcch, job", cxxopts::value<std::string>());
 
   // clang-format on
 
@@ -42,8 +40,10 @@ int main(int argc, char** argv) {
   const auto scale_factor = cli_parse_result["scale"].as<float>();
   constexpr bool SKEW_JCCH = false;
 
-  // Export directory
-  std::string DATA_PATH = "./data/" + benchmark_name;
+  // Export directory with scale factor, remove decimals if possible
+  const auto sf_string = ceilf(scale_factor) == scale_factor ? std::to_string(static_cast<int>(scale_factor))
+                                                             : std::to_string(scale_factor);
+  const std::string DATA_PATH = "./data/" + benchmark_name + "_sf-" + sf_string;
   std::filesystem::create_directories(DATA_PATH);
 
   auto start = std::chrono::system_clock::now();
@@ -89,14 +89,20 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
   auto table_exporter = TableFeatureExporter(data_path);
   for (const auto& table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
-    //lqp_generator.generate(OperatorType::TableScan, table);
+    lqp_generator.generate(OperatorType::TableScan, table);
   }
+  const auto num_scans = lqp_generator.lqps().size();
   lqp_generator.generate_joins(tables, scale_factor);
+  const auto num_joins = lqp_generator.lqps().size() - num_scans;
   //lqp_generator.generate_aggregates(tables);
   const auto lqps = lqp_generator.lqps();
   const auto lqp_count = lqps.size();
+  const auto num_aggregates = lqp_count - num_scans - num_joins;
 
-  std::cout << " - Running " << lqps.size() << " LQPs" << std::endl << "   ";
+  std::cout << " - Generated " << lqp_count << " LQPS (" << num_scans << " scans, " << num_joins << " joins, "
+            << num_aggregates << " aggregates)" << std::endl;
+
+  std::cout << " - Running LQPs" << std::endl << "   ";
   size_t latest_percentage = 0;
   size_t current_lqp = 1;
   const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);

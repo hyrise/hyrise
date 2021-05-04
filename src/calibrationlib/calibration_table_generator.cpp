@@ -57,16 +57,16 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
       const auto table = table_generator->generate_table(local_column_specs, row_count, chunk_size, UseMvcc::Yes);
       const auto calibration_table_wrapper =
           std::make_shared<const CalibrationTableWrapper>(table, table_name, _column_data_distributions);
-      // table_wrappers.emplace_back(calibration_table_wrapper);
+      table_wrappers.emplace_back(calibration_table_wrapper);
 
       table_wrappers.emplace_back(_generate_sorted_table(calibration_table_wrapper));
     }
   }
 
-  const auto& aggregate_table_wrappers = _generate_aggregate_tables();
-  for (const auto& aggregate_table_wrapper : aggregate_table_wrappers) {
-    table_wrappers.push_back(aggregate_table_wrapper);
-  }
+  //const auto& aggregate_table_wrappers = _generate_aggregate_tables();
+  //for (const auto& aggregate_table_wrapper : aggregate_table_wrappers) {
+  //  table_wrappers.push_back(aggregate_table_wrapper);
+  //}
 
   const auto& join_table_wrappers = _generate_semi_join_tables();
   for (const auto& join_table_wrapper : join_table_wrappers) {
@@ -154,14 +154,14 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
 
 std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_generate_semi_join_table(
     const size_t row_count) const {
-  std::set<DataType> data_types = {DataType::Int, DataType::Float};
+  std::set<DataType> my_data_types = {DataType::Int, DataType::Float};
   auto data_distribution = ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(row_count));
   auto column_count = 0;
   std::vector<ColumnSpecification> column_specs;
   std::vector<ColumnDataDistribution> column_data_distributions;
   const std::string table_name = "semi_join_" + std::to_string(row_count);
 
-  for (const auto data_type : data_types) {
+  for (const auto data_type : my_data_types) {
     std::stringstream column_name_stringstream;
     column_name_stringstream << data_type << "_" << EncodingType::Dictionary << "_" << column_count;
     auto column_name = table_name + "_" + column_name_stringstream.str();
