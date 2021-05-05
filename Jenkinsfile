@@ -67,7 +67,7 @@ try {
           sh "PATH=/usr/local/bin/:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin pip3 install pexpect"
           
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-          sh "mkdir clang-debug && cd clang-debug && cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/11.1.0/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang++ .."
           sh "cd clang-debug && make -j8"
           sh "file ./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseTest"
