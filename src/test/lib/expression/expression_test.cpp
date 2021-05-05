@@ -272,8 +272,8 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(value_(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null_()->as_column_name(), "NULL");
   EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
-  EXPECT_EQ(placeholder_(ParameterID{0})->as_column_name(), "Placeholder[id=0]");
-  EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(placeholder_(ParameterID{0})->as_column_name(), "Placeholder[ParameterID=0]");
+  EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a; ParameterID=0]");
   EXPECT_EQ(in_(5, list_(1, 2, 3))->as_column_name(), "(5) IN (1, 2, 3)");
   EXPECT_EQ(not_in_(5, list_(1, 2, 3))->as_column_name(), "(5) NOT IN (1, 2, 3)");
 }

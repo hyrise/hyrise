@@ -202,6 +202,53 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
   }
 }
 
+TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
+  const auto table_a = load_table("resources/test_data/tbl/int_int2.tbl", 2);
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  table_wrapper_a->never_clear_output();
+  table_wrapper_a->execute();
+
+  const auto table_b = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 2);  // larger than int_int.tbl
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
+  table_wrapper_b->never_clear_output();
+  table_wrapper_b->execute();
+
+  // Check that std's hash for integer values is still the identity funtion. This assumption might break in the future.
+  // In this case, some of the following tests might break as well.
+  ASSERT_EQ(std::hash<uint32_t>{}(17), 17);
+
+  // Inner join case: We check that the number of stored positions (required for all join types except semi/anti).
+  // Depending on the Bloom filter implementation (which is currently depending on the implementation of std::hash),
+  // we might store values and positions in the hash map that do not have a matching partner.
+  const auto inner_join = std::make_shared<JoinHash>(
+      table_wrapper_a, table_wrapper_b, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  inner_join->execute();
+
+  const auto& inner_perf = dynamic_cast<JoinHash::PerformanceData&>(*inner_join->performance_data);
+  EXPECT_EQ(inner_perf.build_side_materialized_value_count, 4ul);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.probe_side_materialized_value_count, 4ul);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2ul);     // values 2,6
+  EXPECT_EQ(inner_perf.hash_tables_position_count, 3ul);           // positions 1,2,3
+  EXPECT_TRUE(inner_perf.left_input_is_build_side);
+
+  // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
+  // Further, we force the larger input to be the build side. As we first materialize the smaller side (i.e., the probe
+  // side in this case) and create the initial bloom filter with that, there will be no reduction due to bloom
+  // filtering on the probe side.
+  const auto semi_join = std::make_shared<JoinHash>(
+      table_wrapper_a, table_wrapper_b, JoinMode::Semi,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  semi_join->execute();
+
+  const auto& semi_perf = dynamic_cast<JoinHash::PerformanceData&>(*semi_join->performance_data);
+  EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4ul);
+  EXPECT_EQ(semi_perf.probe_side_materialized_value_count, table_a->row_count());
+  EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2ul);
+  EXPECT_FALSE(semi_perf.hash_tables_position_count);
+  EXPECT_FALSE(semi_perf.left_input_is_build_side);
+}
+
 // Check that steps of IndexJoin (indexed chunks/unindexed chunks) are executed as expected.
 TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
