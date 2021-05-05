@@ -43,8 +43,9 @@ class JoinSortMerge : public AbstractJoinOperator {
   };
 
   // Tasks are added to the scheduler in case the number of rows to process is above JOB_SPAWN_THRESHOLD. If not,
-  // the task is executed directly.
-  // Todo(MB): This threshold needs to be re-evaluated over time to find the value which gives the best performance.
+  // the task is executed directly. This threshold has been determined by executing a multi-threaded and shuffled TPC-H
+  // run (28 cores and 50 clients). With larger system changes (e.g., scheduling), the threshold needs to be
+  // re-evaluated again.
   static constexpr auto JOB_SPAWN_THRESHOLD = 500;
 
  protected:
