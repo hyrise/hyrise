@@ -58,6 +58,8 @@ try {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
           sh "sysctl sysctl.proc_translated"
+          
+          sh "./install_dependencies.sh"
 
           checkout scm          
           
