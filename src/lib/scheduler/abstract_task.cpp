@@ -106,16 +106,16 @@ void AbstractTask::execute() {
 
   _on_execute();
 
+  {
+    auto success_done = _try_transition_to(TaskState::Done);
+    Assert(success_done, "Expected successful transition to TaskState::Done.");
+  }
+
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();
   }
 
   if (_done_callback) _done_callback();
-
-  {
-    auto success_done = _try_transition_to(TaskState::Done);
-    Assert(success_done, "Expected successful transition to TaskState::Done.");
-  }
 
   {
     std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
