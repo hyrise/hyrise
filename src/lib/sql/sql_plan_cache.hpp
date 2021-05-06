@@ -19,8 +19,8 @@ using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOper
 class SQLLogicalPlanCache : public GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<ParameterizedPlan>,
                                              LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual> {
  public:
-  explicit SQLLogicalPlanCache(ParameterizedLQPCache use_parameterized_cache_init = ParameterizedLQPCache::Yes)
-      : use_parameterized_cache(use_parameterized_cache_init){}
+  explicit SQLLogicalPlanCache(ParameterizedLQPCache use_parameterized_cache_init = ParameterizedLQPCache::No)
+      : use_parameterized_cache(use_parameterized_cache_init) {}
 
   ParameterizedLQPCache use_parameterized_cache;
 };

@@ -132,10 +132,19 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, metrics};
+  const auto parameterized_lqp_cache = parse_result["parameterized_lqp_cache"].as<bool>();
+  if (parameterized_lqp_cache) {
+    std::cout << "- Using parameterized LQP cache" << std::endl;
+  }
+
+  return BenchmarkConfig{benchmark_mode,   chunk_size,
+                         *encoding_config, indexes,
+                         max_runs,         timeout_duration,
+                         warmup_duration,  output_file_path,
+                         enable_scheduler, cores,
+                         clients,          enable_visualization,
+                         verify,           cache_binary_tables,
+                         metrics,          parameterized_lqp_cache};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
