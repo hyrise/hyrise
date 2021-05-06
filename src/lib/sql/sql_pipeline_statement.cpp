@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <utility>
+#include <memory>
 
 #include <boost/algorithm/string.hpp>
 
@@ -293,17 +294,19 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
-  // Get output from the last task if the task was an actual operator and not a transaction statement
+  // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
     if constexpr (HYRISE_DEBUG) {
-      // TODO(Julian) Why are we looking for that one operator that is ExecutedAndAvailable?
-      auto executed_and_available_count =
-          std::count_if(tasks.cbegin(), tasks.cend(), [](const std::shared_ptr<AbstractTask>& task) {
-            return static_cast<const OperatorTask&>(*task).get_operator()->state() ==
-                   OperatorState::ExecutedAndAvailable;
-          });
-      Assert(executed_and_available_count == 1,
-             "Expected to find only one operator with OperatorState::ExecutedAndAvailable.");
+      // After execution, the root operator should be only operator in OperatorState::ExecutedAndAvailable. All
+      // other operators should be in OperatorState::ExecutedAndCleared.
+      Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
+             "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
+      for (const auto& task : tasks) {
+        const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
+        if (operator_task == _root_operator_task) continue;
+        Assert(operator_task->get_operator()->state() == OperatorState::ExecutedAndCleared,
+               "Expected non-root operator to be in OperatorState::ExecutedAndCleared.");
+      }
     }
     _result_table = _root_operator_task->get_operator()->get_output();
     _root_operator_task->get_operator()->clear_output();

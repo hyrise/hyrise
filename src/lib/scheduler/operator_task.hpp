@@ -20,8 +20,9 @@ class OperatorTask : public AbstractTask {
                bool stealable = true);
 
   /**
-   * Create tasks recursively from result operator and set task dependencies automatically.
-   * TODO(Julian) Doc returned pair
+   * Creates tasks recursively from the given operator @param op and sets task dependencies automatically.
+   * @returns a pair, consisting of a vector of unordered tasks and a pointer to the root operator task that would
+   *          otherwise be hidden inside the vector.
    */
   static std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>> make_tasks_from_operator(
       const std::shared_ptr<AbstractOperator>& op);
