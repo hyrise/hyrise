@@ -85,27 +85,22 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(union_positions);
 
   ASSERT_EQ(tasks.size(), 5u);
-  // TODO(Julian) Fix this:
-  //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[0]).get_operator(), gt_a);
-  //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[1]).get_operator(), scan_a);
-  //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[2]).get_operator(), scan_b);
-  //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[3]).get_operator(), scan_c);
-  //  EXPECT_EQ(static_cast<const OperatorTask&>(*tasks[4]).get_operator(), union_positions);
-  //
-  //  std::vector<std::shared_ptr<AbstractTask>> expected_successors_0({tasks[1]});
-  //  EXPECT_EQ(tasks[0]->successors(), expected_successors_0);
-  //
-  //  std::vector<std::shared_ptr<AbstractTask>> expected_successors_1({tasks[2], tasks[3]});
-  //  EXPECT_EQ(tasks[1]->successors(), expected_successors_1);
-  //
-  //  std::vector<std::shared_ptr<AbstractTask>> expected_successors_2({tasks[4]});
-  //  EXPECT_EQ(tasks[2]->successors(), expected_successors_2);
-  //
-  //  std::vector<std::shared_ptr<AbstractTask>> expected_successors_3({tasks[4]});
-  //  EXPECT_EQ(tasks[3]->successors(), expected_successors_3);
-  //
-  //  std::vector<std::shared_ptr<AbstractTask>> expected_successors_4{};
-  //  EXPECT_EQ(tasks[4]->successors(), expected_successors_4);
+  auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(scan_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(scan_b->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(scan_c->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(union_positions->get_or_create_operator_task()));
+
+  using TaskVector = std::vector<std::shared_ptr<AbstractTask>>;
+  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), TaskVector{scan_a->get_or_create_operator_task()});
+  auto scan_a_successors = TaskVector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()};
+  EXPECT_EQ(scan_a->get_or_create_operator_task()->successors(), scan_a_successors);
+  EXPECT_EQ(scan_b->get_or_create_operator_task()->successors(),
+            TaskVector{union_positions->get_or_create_operator_task()});
+  EXPECT_EQ(scan_c->get_or_create_operator_task()->successors(),
+            TaskVector{union_positions->get_or_create_operator_task()});
+  EXPECT_EQ(union_positions->get_or_create_operator_task()->successors(), TaskVector{});
 
   for (auto& task : tasks) {
     task->schedule();
