@@ -210,6 +210,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto max_sort_items_count = 256'000 / sizeof(T);
     const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
     const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
+
+    // Return the next larger power of two for the larger of the two cluster counts.
     return static_cast<size_t>(
         std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
   }

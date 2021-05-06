@@ -226,11 +226,7 @@ class RadixClusterSort {
     return output_table;
   }
 
-  // Performs least significant bit radix clustering which is used in the equi join case. Note: if we used the most
-  // significant bits, we could also use this for non-equi joins. Then, however we would have to deal with skewed
-  // clusters. Other ideas:
-  //    - manually select the clustering bits based on statistics.
-  //    - consolidate clusters in order to reduce skew.
+  // Performs least significant bit radix clustering which is used in the equi join case.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
     return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
