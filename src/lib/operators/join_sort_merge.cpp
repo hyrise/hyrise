@@ -590,7 +590,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Determines the largest value in a sorted materialized table.
   const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
-                "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
+                "The table needs to be sorted for _table_max_value() which is only the case for non-equi joins");
     DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
     for (auto partition_iter = sorted_table.rbegin(); partition_iter != sorted_table.rend(); ++partition_iter) {
@@ -629,7 +629,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   std::optional<TablePosition> _first_value_that_satisfies_reverse(const MaterializedSegmentList<T>& sorted_table,
                                                                    const Function& condition) {
     const auto sorted_table_size = sorted_table.size();
-    for (auto partition_id = sorted_table_size - 1; partition_id >= 0; --partition_id) {
+    for (auto partition_id = static_cast<int64_t>(sorted_table_size - 1); partition_id >= 0; --partition_id) {
       const auto& partition = sorted_table[partition_id];
       if (!partition.empty() && condition(partition[0].value)) {
         const auto partition_size = partition.size();
