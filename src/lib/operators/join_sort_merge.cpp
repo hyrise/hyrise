@@ -23,7 +23,7 @@
 
 namespace opossum {
 
-//  TODO(anyone): Todos and nice-to-haves for the sort-merge join
+// TODO(anyone) >> todos and nice-to-haves for the sort-merge join:
 //    - outer not-equal join (outer !=)
 //    - Bloom filters
 
