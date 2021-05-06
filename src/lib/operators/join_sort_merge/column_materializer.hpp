@@ -89,7 +89,14 @@ class ColumnMaterializer {
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(SAMPLES_PER_CHUNK * chunk_count);
+
+    auto null_row_count = size_t{0};
+    for (const auto& null_rows : null_rows_per_chunk) {
+      null_row_count += null_rows.size();
+    }
     auto null_rows = RowIDPosList{};
+    null_rows.reserve(null_row_count);
+
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& subsample = subsamples[chunk_id];
       gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());

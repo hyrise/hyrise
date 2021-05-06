@@ -148,13 +148,13 @@ class RadixClusterSort {
     return output_table;
   }
 
-  // Clusters a materialized table using a clustering function that determines for each value the appropriate cluster
-  // id. This is how the clustering works:
-  //    -> Count for each chunk how many of its values belong in each of the clusters using histograms.
-  //    -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where it
-  //       will be inserting values in each cluster.
+  // Clusters a materialized table using a given clustering function that determines the appropriate cluster id for
+  // each value.
+  //    -> For each chunk, count how many of its values belong in each of the clusters using histograms.
+  //    -> Aggregate the per-chunk histograms to a histogram for the whole table.
   //    -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
-  //    -> At last, each value of each chunk is moved to the appropriate cluster.
+  //    -> At last, each value of each chunk is moved to the appropriate cluster. The created histogram denotes where
+  //       the concurrent tasks can write the data to without the need for synchronization.
   MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks,
                                       const std::function<size_t(const T&)>& clusterer) {
     auto output_table = MaterializedSegmentList<T>(_cluster_count);
