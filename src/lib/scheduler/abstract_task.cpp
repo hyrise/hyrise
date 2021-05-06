@@ -166,18 +166,28 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    * This function must be locked to prevent race conditions. A different thread might be able to change _state
    * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
-  std::lock_guard<std::mutex> lock(_transition_to_mutex);
+//  std::lock_guard<std::mutex> lock(_transition_to_mutex);
+  _transition_to_mutex.lock();
   switch (new_state) {
     case TaskState::Scheduled:
-      if (_state >= TaskState::Scheduled) return false;
+      if (_state >= TaskState::Scheduled) {
+        _transition_to_mutex.unlock();
+        return false;
+      }
       Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
       break;
     case TaskState::Enqueued:
-      if (_state >= TaskState::Enqueued) return false;
+      if (_state >= TaskState::Enqueued) {
+        _transition_to_mutex.unlock();
+        return false;
+      }
       Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
       break;
     case TaskState::AssignedToWorker:
-      if (_state >= TaskState::AssignedToWorker) return false;
+      if (_state >= TaskState::AssignedToWorker) {
+        _transition_to_mutex.unlock();
+        return false;
+      }
       Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
              "Illegal state transition to TaskState::AssignedToWorker");
       break;
@@ -193,6 +203,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   }
 
   _state.exchange(new_state);
+  _transition_to_mutex.unlock();
   return true;
 }
 
