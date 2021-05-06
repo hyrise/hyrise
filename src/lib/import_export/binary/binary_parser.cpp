@@ -34,9 +34,9 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 }
 
 template <typename T>
-pmr_compact_vector<T> BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
+pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
   const auto bit_width = _read_value<uint8_t>(file);
-  auto values = pmr_compact_vector<T>(bit_width, count);
+  auto values = pmr_compact_vector(bit_width, count);
   file.read(reinterpret_cast<char*>(values.get()), values.bytes());
   return values;
 }
@@ -286,9 +286,9 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
-    std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
-  const auto type = static_cast<CompressedVectorType>(vector_compression_id);
-  switch (type) {
+    std::ifstream& file, const ChunkOffset row_count, const VectorCompressionID vector_compression_id) {
+  const auto compressed_vector_type = static_cast<CompressedVectorType>(vector_compression_id);
+  switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
       return std::make_shared<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger1Byte:
@@ -303,9 +303,9 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
 }
 
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
-    std::ifstream& file, ChunkOffset row_count, VectorCompressionID vector_compression_id) {
-  const auto type = static_cast<CompressedVectorType>(vector_compression_id);
-  switch (type) {
+    std::ifstream& file, const ChunkOffset row_count, const VectorCompressionID vector_compression_id) {
+  const auto compressed_vector_type = static_cast<CompressedVectorType>(vector_compression_id);
+  switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
       return std::make_unique<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger1Byte:

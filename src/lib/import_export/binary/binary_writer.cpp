@@ -87,8 +87,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
   ofstream.write(reinterpret_cast<const char*>(&value), sizeof(T));
 }
 
-template <typename T>
-void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector<T>& values) {
+void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
   export_value(ofstream, static_cast<uint8_t>(values.bits()));
   ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
 }

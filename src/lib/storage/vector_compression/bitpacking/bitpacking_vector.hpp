@@ -11,18 +11,17 @@ namespace opossum {
 /**
  * @brief Bit-packed vector with fixed bit length
  *
- * Bit-aligned Null Suppression.
+ * Bit-packed Null Suppression.
  * All values of the sequences are compressed with the same bit length, which is determined by the bits required to 
- * represent the maximum value of the sequence. The compression ratio is worse than that of SimdBp128 
- * because the the bit-width is fixed for the whole sequence and not determined per value. The decoding runtime is 
- * vastly better than SimdBp128 and competitive to FixedWidthIntegerVector.
+ * represent the maximum value of the sequence. The decoding runtime is only marginally slower than 
+ * FixedWidthIntegerVector but the compression rate of BitPacking is significantly better.
  * 
  */
 class BitPackingVector : public CompressedVector<BitPackingVector> {
  public:
-  explicit BitPackingVector(pmr_compact_vector<uint32_t> data);
+  explicit BitPackingVector(pmr_compact_vector data);
 
-  const pmr_compact_vector<uint32_t>& data() const;
+  const pmr_compact_vector& data() const;
 
   size_t on_size() const;
   size_t on_data_size() const;
@@ -36,7 +35,7 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
-  const pmr_compact_vector<uint32_t> _data;
+  const pmr_compact_vector _data;
 };
 
 }  // namespace opossum

@@ -20,7 +20,7 @@ namespace opossum {
  * @brief Encodes a segment using dictionary encoding and compresses its attribute vector using vector compression.
  *
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
- * using Fixed-width integer encoding.
+ * using fixed-width integer encoding.
  */
 template <auto Encoding>
 class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {

@@ -11,7 +11,7 @@ namespace opossum {
 
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
-  explicit BitPackingIterator(const pmr_compact_vector<uint32_t>& data, const size_t absolute_index = 0u)
+  explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0u)
       : _data{data}, _absolute_index{absolute_index} {}
 
   BitPackingIterator(const BitPackingIterator& other) = default;
@@ -50,8 +50,8 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   uint32_t dereference() const { return _data[_absolute_index]; }
 
  private:
-  const pmr_compact_vector<uint32_t>& _data;
-  size_t _absolute_index;
+  const pmr_compact_vector& _data;
+  size_t _absolute_index = 0u;
 };
 
 }  // namespace opossum

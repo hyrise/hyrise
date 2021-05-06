@@ -51,7 +51,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     _indexed_segments.emplace_back(dict_segment);
   }
 
-  // retrieve amount of memory consumed by each concatenated key
+  // retrieve memory consumption by each concatenated key
   auto bytes_per_key =
       std::accumulate(_indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0u},
                       [](auto key_length, const auto& segment) {

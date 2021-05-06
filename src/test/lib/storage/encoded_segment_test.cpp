@@ -466,10 +466,7 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedWidthInteger});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 
-  // LZ4
-  encoded_segment = this->_encode_segment(
-      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedWidthInteger});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+  // LZ4 (only testing bitpacking compression as fixed-width integer is not supported by LZ4)
   encoded_segment = this->_encode_segment(value_segment, DataType::Int,
                                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::BitPacking});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
