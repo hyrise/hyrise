@@ -106,8 +106,8 @@ class BinaryWriter {
    * Dictionary Values°          | T (int, float, double, long)        | Dictionary size * sizeof(T)
    * Dictionary String Length^   | size_t                              | Dictionary size * 2
    * Dictionary Values^          | std::string                         | Sum of all string lengths
-   * vector compress. bit width¹ | uint8_t                             | 1
-   * Attribute vector values¹    | uint8_t                             | rows * (vector compr. bit width) / 8
+   * Vector compress. bit width¹ | uint8_t                             | 1
+   * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
@@ -133,8 +133,8 @@ class BinaryWriter {
    * Size of dictionary vector   | ValueID                             | 4
    * FixedString length          | uint32_t                            | 8
    * Dictionary Values           | char array                          | Dictionary size * FixedString length
-   * vector compress. bit width¹ | uint8_t                             | 1
-   * Attribute vector values¹    | uint8_t                             | rows * (vector compr. bit width) / 8
+   * Vector compress. bit width¹ | uint8_t                             | 1
+   * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
@@ -176,8 +176,8 @@ class BinaryWriter {
    * Block minima                | T                                   | Number of blocks * sizeof(T)
    * Stores NULL values          | bool (stored as BoolAsByteType)     | 1
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
-   * vector compress. bit width² | uint8_t                             | 1
-   * Offset values²              | uint8_t                             | rows * (vector compr. bit width) / 8
+   * Vector compress. bit width² | uint8_t                             | 1
+   * Offset values²              | uint8_t                             | Rows * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
    * Offset values³              | uint(8|16|32)_t                     | Rows * width of offset vector
    *
@@ -208,9 +208,9 @@ class BinaryWriter {
    * NULL values¹                | vector<bool> (BoolAsByteType)       | Size * 1
    * Dictionary size             | uint32_t                            | 4
    * Dictionary                  | vector<char>                        | Dictionary size * 1
-   * string offset size          | uint32_t                            | 4
-   * vector compress. bit width²³| uint8_t                             | 1
-   * String offset values²³      | uint8_t                             | rows * (vector compr. bit width) / 8
+   * String offset size          | uint32_t                            | 4
+   * Vector compress. bit width²³| uint8_t                             | 1
+   * String offset values²³      | uint8_t                             | Rows * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
    * String offset values²⁴      | uint(8|16|32)_t                     | Rows * width of offset vector
    *
