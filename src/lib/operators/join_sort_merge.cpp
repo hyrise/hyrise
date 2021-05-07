@@ -635,7 +635,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       const auto& partition = sorted_table[partition_id];
       if (!partition.empty() && condition(partition[0].value)) {
         const auto partition_size = partition.size();
-        for (auto index = partition_size - 1; index < partition_size; --index) {
+        for (auto index = static_cast<int64_t>(partition_size - 1); index >= 0; --index) {
           if (condition(partition[index].value)) {
             return TablePosition(partition_id, index + 1);
           }
