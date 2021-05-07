@@ -25,7 +25,8 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
   // compactvector does not zero initialize its memory, which leads to non-reproducible tests that
   // use the binary writer (due to alignment, some memory at the end is not overwritten).
   // Hence, fill the internal memory with zeroes.
-  std::fill_n(data.get(), data.bytes() / 8, 0);
+  // data.bytes() gives the number of allocated bytes for the internal memory.
+  std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0);
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
