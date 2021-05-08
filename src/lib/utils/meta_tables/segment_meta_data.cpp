@@ -1,5 +1,7 @@
 #include "segment_meta_data.hpp"
 
+#include <magic_enum.hpp>
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
@@ -12,8 +14,7 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // Only store selected segment data to keep the size of these maps small.
-//                         table                   chunk_id column_id encoding_str                          
-static std::map<std::tuple<std::shared_ptr<Table>, ChunkID, ColumnID, AllTypeVariant>, int64_t> sizes_cache{};
+static std::map<std::tuple<MemoryUsageCalculationMode, std::shared_ptr<Table>, ChunkID, ColumnID, AllTypeVariant, AllTypeVariant>, int64_t> sizes_cache{};
 static std::map<std::tuple<std::shared_ptr<Table>, ChunkID, ColumnID>, int64_t> distinct_values_count_cache{};
 
 int64_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment) {
@@ -49,20 +50,22 @@ int64_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment
 int64_t segment_size(
               const std::shared_ptr<Table>& table,
   const std::shared_ptr<AbstractSegment>& segment, const MemoryUsageCalculationMode mode,  const ChunkID chunk_id, const ColumnID column_id,
-                        const pmr_string& data_type, const AllTypeVariant encoding_str) {
+                        const pmr_string& data_type, const AllTypeVariant encoding_str, const AllTypeVariant vector_compression) {
   if (data_type != "string") {
     return segment->memory_usage(mode);
   }
 
-  if (sizes_cache.contains({table, chunk_id, column_id, encoding_str})) {
-    // std::cout << "got " << sizes_cache[{table, chunk_id, column_id, encoding_str}] << " from cache for " << table << "." << table->column_name(column_id) << std::endl;
-    Assert((static_cast<int64_t>(segment->memory_usage(mode)) == sizes_cache[{table, chunk_id, column_id, encoding_str}]), "Size mismatch.");
-    return sizes_cache[{table, chunk_id, column_id, encoding_str}];
+  const auto key = std::tuple<MemoryUsageCalculationMode, std::shared_ptr<Table>,
+                              ChunkID, ColumnID, AllTypeVariant, AllTypeVariant>{mode, table, chunk_id, column_id,
+                                                                                 encoding_str, vector_compression};
+
+  if (sizes_cache.contains(key)) {
+    DebugAssert((static_cast<int64_t>(segment->memory_usage(mode)) == sizes_cache[key]), "Size mismatch.");
+    return sizes_cache[key];
   }
-  
+
   const auto size = segment->memory_usage(mode);
-  // std::cout << "added " << size << " to cache for " << table << "." << table->column_name(column_id) << std::endl;
-  sizes_cache.emplace(std::tuple<std::shared_ptr<Table>, ChunkID, ColumnID, AllTypeVariant>{table, chunk_id, column_id, encoding_str}, size);
+  sizes_cache.emplace(key, size);
   return size;
 }
 
@@ -70,15 +73,15 @@ int64_t segment_distinct_values_count(
               const std::shared_ptr<Table>& table,
   const std::shared_ptr<AbstractSegment>& segment, const MemoryUsageCalculationMode mode,  const ChunkID chunk_id, const ColumnID column_id) {
 
-  if (distinct_values_count_cache.contains({table, chunk_id, column_id})) {
-    // std::cout << "got " << distinct_values_count_cache[{table, chunk_id, column_id}] << " from cache for " << table << "." << table->column_name(column_id) << std::endl;
-    Assert((get_distinct_value_count(segment) == distinct_values_count_cache[{table, chunk_id, column_id}]), "Distinct values count mismatch.");
-    return distinct_values_count_cache[{table, chunk_id, column_id}];
+  const auto key = std::tuple<std::shared_ptr<Table>, ChunkID, ColumnID>{table, chunk_id, column_id};
+
+  if (distinct_values_count_cache.contains(key)) {
+    DebugAssert((get_distinct_value_count(segment) == distinct_values_count_cache[key]), "Distinct values count mismatch.");
+    return distinct_values_count_cache[key];
   }
   
   const auto distinct_values_count = get_distinct_value_count(segment);
-  // std::cout << "added " << distinct_values_count << " to cache for " << table << "." << table->column_name(column_id) << std::endl;
-  distinct_values_count_cache.emplace(std::tuple<std::shared_ptr<Table>, ChunkID, ColumnID>{table, chunk_id, column_id}, distinct_values_count);
+  distinct_values_count_cache.emplace(key, distinct_values_count);
   return distinct_values_count;
 }
 
@@ -109,7 +112,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
           }
         }
 
-        const auto estimated_size = segment_size(table, segment, mode, chunk_id, column_id, data_type, encoding);
+        const auto estimated_size = segment_size(table, segment, mode, chunk_id, column_id, data_type, encoding, vector_compression);
         const auto& access_counter = segment->access_counter;
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_values_count = segment_distinct_values_count(table, segment, mode, chunk_id, column_id);
