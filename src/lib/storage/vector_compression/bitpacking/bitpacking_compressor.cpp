@@ -26,7 +26,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
   // use the binary writer (due to alignment, some memory at the end is not overwritten).
   // Hence, fill the internal memory with zeroes.
   // data.bytes() gives the number of allocated bytes for the internal memory.
-  std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0);
+  // std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0);
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
