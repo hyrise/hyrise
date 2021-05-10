@@ -64,7 +64,7 @@ try {
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4 --depth=1"
           
-          sh "pip install -r \$(grep -v '^ *#\\|^numpy' requirements.txt | grep .)"
+          sh "pip install \$(grep -v '^ *#\\|^numpy' requirements.txt | grep .)"
           
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
           sh "mkdir clang-debug && cd clang-debug && cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang++ .."
