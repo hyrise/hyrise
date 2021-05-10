@@ -229,17 +229,17 @@ class RadixClusterSort {
   // Performs least significant bit radix clustering which is used in the equi join case.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(input_chunks, [radix_bitmask](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   // Picks split values from the given sample values. Each split value denotes the inclusive upper bound of its
   // corresponding cluster (i.e., split #0 is the upper bound of cluster #0). As the last cluster does not require an
   // upper bound, the returned vector size is usually the cluster count minus one. However, it can be even shorter
-  // (e.g., attributes where #distinct values < #cluster count). Procedure: passed values are sorted and samples are
-  // picked from the whole sample value range in fixed widths. Repeated values are not removed before picking to handle
-  // skewed inputs. However, the final split values are unique. As a consequence, the split value vector might contain
-  // less values than `_cluster_count - 1`.
-  const std::vector<T> _pick_split_values(std::vector<T>& sample_values) const {
+  // (e.g., attributes where #distinct values < #cluster count; in this case, empty clusters will be created).
+  // Procedure: passed values are sorted and samples are picked from the whole sample value range in fixed jump sizes.
+  // Repeated values are not removed before picking to handle skewed inputs. However, the final split values are
+  // unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
+  const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
@@ -265,8 +265,8 @@ class RadixClusterSort {
   // as a pair.
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
       const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
-      std::vector<T>& sample_values) {
-    const std::vector<T> split_values = _pick_split_values(sample_values);
+      std::vector<T>&& sample_values) {
+    const std::vector<T> split_values = _pick_split_values(std::move(sample_values));
 
     // Implements range clustering
     auto clusterer = [&split_values](const T& value) {
@@ -339,7 +339,7 @@ class RadixClusterSort {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {
-      auto result = _range_cluster(materialized_left_segments, materialized_right_segments, samples_left);
+      auto result = _range_cluster(materialized_left_segments, materialized_right_segments, std::move(samples_left));
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
