@@ -245,7 +245,7 @@ class RadixClusterSort {
     if (sample_values.size() <= _cluster_count - 1) {
       const auto last = std::unique(sample_values.begin(), sample_values.end());
       sample_values.erase(last, sample_values.end());
-      return sample_values;
+      return std::move(sample_values);
     }
 
     auto split_values = std::vector<T>{};
