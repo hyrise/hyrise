@@ -61,12 +61,28 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  * All operators have up to two input tables and one output table.
  *
  * LIFECYCLE
- *  1. The operator is constructed. Because input operators are not guaranteed to have already executed, operators
- *     must not call get_output in their execute method.
- *  2. The execute method is called from the outside (usually by the scheduler). This is where the heavy lifting is
- *     done. By now, the input operators have already executed.
- *  3. The consumers, usually other operators, call get_output. This should be very cheap.
- *  4. The operator clears its results once the last consumer deregisters.
+ *
+ *       +---------+
+ *       | Created |
+ *       +---------+
+ *            |
+ *            | Call execute()
+ *            v
+ *       +---------+               +----------------------+                         +--------------------+
+ *       | Running | ------------> | ExecutedAndAvailable | ----------------------> | ExecutedAndCleared |
+ *       +---------+               +----------------------+          Call           +--------------------+
+ *                                                               clear_output()
+ *                                                      (e.g., when consumer_count == 0)
+ *
+ *  1. The operator is constructed in OperatorState::Created.
+ *     Because input operators are not guaranteed to have already executed, operators must not call get_output in
+ *     their execute method.
+ *  2. The execute method is called from the outside (usually by the scheduler). The operator changes to
+ *     OperatorState::Running and the heavy lifting is done. By now, the input operators have already executed.
+ *  3. The operator reaches OperatorState::ExecutedAndAvailable. The consumers, usually other operators, call
+ *     get_output, which is very cheap.
+ *  4. The operator clears its results and switches to OperatorState::ExecutedAndCleared. Usually, this happens once
+ *     the last consumer deregisters.
  *
  * CONSUMER TRACKING
  *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
