@@ -15,7 +15,23 @@ namespace opossum {
 class Worker;
 
 /**
- * TODO(Julian) Adjust Doc
+ * @brief Overview of the different task states
+ *
+ *       +---------+                +-----------+                +----------+
+ *       | Created | -------------> | Scheduled | -------------> | Enqueued |
+ *       +---------+                +-----------+                +----------+
+ *            |                           |                            |
+ *            |                           |                            |
+ *            v                           v                            |
+ *       +---------+             +------------------+                  |
+ *       | Started | <---------- | AssignedToWorker | <----------------+
+ *       +---------+             +------------------+
+ *            |
+ *            |
+ *            v
+ *       +---------+
+ *       |  Done   |
+ *       +---------+
  *
  * All states must be in a progressive order.
  *
