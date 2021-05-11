@@ -95,6 +95,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // joins and would not recognize such a rewritten predicate.
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
+  // Re-run to optimize LIKE's which have been in OR's ....
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());

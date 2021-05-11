@@ -117,8 +117,10 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     }
 
     if (pattern_is_contains_multiple) {
+      // std::cout << "MultipleContainsPattern " << pattern << std::endl;
       return MultipleContainsPattern{strings};
     } else {
+      // std::cout << "std::regex with " << pattern << std::endl;
       return std::regex(sql_like_to_regex(pattern));
     }
   }
