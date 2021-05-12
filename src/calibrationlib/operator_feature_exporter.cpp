@@ -272,6 +272,7 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   pmr_string right_column_type{};
   pmr_string left_column_sorted{};
   pmr_string right_column_sorted{};
+  pmr_string data_type{};
   int64_t left_distinct_values = -1;
   int64_t right_distinct_values = -1;
 
@@ -288,11 +289,12 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
   if (operator_predicate.is_flipped()) {
     predicate_condition = flip_predicate_condition(predicate_condition);
   }
-  const auto predicate_condition_string = pmr_string{predicate_condition_to_string.left.at(predicate_condition)};
+  // const auto predicate_condition_string = pmr_string{predicate_condition_to_string.left.at(predicate_condition)};
 
   const auto first_predicate_expression = predicate_expression->arguments[0];
   if (first_predicate_expression->type == ExpressionType::LQPColumn) {
     const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(first_predicate_expression);
+    data_type = pmr_string{magic_enum::enum_name(left_column_expression->data_type())};
     const auto& left_table_column_information =
         _table_column_information(node, left_column_expression, InputSide::Left);
     left_table_name = left_table_column_information.table_name;
@@ -395,7 +397,8 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
                                                 static_cast<int64_t>(pruned_chunks_left_input),
                                                 static_cast<int64_t>(pruned_chunks_right_input),
                                                 row_count_left,
-                                                row_count_right};
+                                                row_count_right,
+                                                data_type};
 
   // Check if the join predicate has been switched (hence, it differs between LQP and PQP) which is done when
   // table A and B are joined but the join predicate is "flipped" (e.g., b.x = a.x). The effect of flipping is that

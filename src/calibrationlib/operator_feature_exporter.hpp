@@ -154,7 +154,8 @@ class OperatorFeatureExporter {
                                                      {"LEFT_TABLE_PRUNED_CHUNKS", DataType::Long, false},
                                                      {"RIGHT_TABLE_PRUNED_CHUNKS", DataType::Long, false},
                                                      {"LEFT_TABLE_ROW_COUNT", DataType::Long, false},
-                                                     {"RIGHT_TABLE_ROW_COUNT", DataType::Long, false}},
+                                                     {"RIGHT_TABLE_ROW_COUNT", DataType::Long, false},
+                                                     {"DATA_TYPE", DataType::String, false}},
                               TableType::Data);
   const std::shared_ptr<Table> _join_stages_table =
       std::make_shared<Table>(TableColumnDefinitions{{"JOIN_ID", DataType::Int, false},
