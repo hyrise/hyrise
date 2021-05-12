@@ -4,15 +4,17 @@
 #include "benchmark_runner.hpp"
 #include "operator_feature_exporter.hpp"
 #include "table_feature_exporter.hpp"
+#include "tpch/tpch_constants.hpp"
 
 namespace opossum {
 enum BenchmarkType { TPC_H, TPC_C, TPC_DS, JOB, JCC_H, Calibration };
 
 class CalibrationBenchmarkRunner {
  public:
-  explicit CalibrationBenchmarkRunner(const std::string& path_to_dir, bool skew_jcch = false);
+  explicit CalibrationBenchmarkRunner(const std::string& path_to_dir, ClusteringConfiguration clustering_config,
+                                      bool skew_jcch = false);
   CalibrationBenchmarkRunner(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config,
-                             bool skew_jcch = false);
+                             ClusteringConfiguration clustering_config, bool skew_jcch = false);
 
   void run_benchmark(const BenchmarkType type, const float scale_factor, const int number_of_executions);
 
@@ -29,6 +31,7 @@ class CalibrationBenchmarkRunner {
 
   std::shared_ptr<BenchmarkConfig> _config;
   const std::string _path_to_dir;
+  const ClusteringConfiguration _clustering_config;
   const bool _skew_jcch;
 };
 }  // namespace opossum

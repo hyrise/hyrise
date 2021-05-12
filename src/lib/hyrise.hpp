@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mutex>
 #include <boost/container/pmr/memory_resource.hpp>
+#include <mutex>
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"

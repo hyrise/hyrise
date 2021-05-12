@@ -25,7 +25,8 @@ class ClusteringSorter : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_input_right,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_commit_records(const CommitID commit_id) override;
   void _on_rollback_records() override;

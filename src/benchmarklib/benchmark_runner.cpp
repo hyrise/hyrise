@@ -301,10 +301,6 @@ void BenchmarkRunner::_benchmark_ordered() {
       _export_pqps();
     }
 
-    if (_operator_exporter) {
-      _export_pqps();
-    }
-
     // Taking the snapshot at this point means that both warmup runs and runs that finish after the deadline are taken
     // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
     // unclear advantage of excluding those runs, we only take one snapshot here.

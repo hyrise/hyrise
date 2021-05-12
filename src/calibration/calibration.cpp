@@ -24,8 +24,11 @@ int main(int argc, char** argv) {
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
-    ("b,benchmark", "Benchmark to run. Choose one of tpch, tpcds, tpcc, jcch, job", cxxopts::value<std::string>());
-
+    ("b,benchmark", "Benchmark to run. Choose one of tpch, tpcds, tpcc, jcch, job", cxxopts::value<std::string>())
+    ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
+                   "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
+                   "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None"));
   // clang-format on
 
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -43,15 +46,31 @@ int main(int argc, char** argv) {
   // Export directory with scale factor, remove decimals if possible
   const auto sf_string = ceilf(scale_factor) == scale_factor ? std::to_string(static_cast<int>(scale_factor))
                                                              : std::to_string(scale_factor);
-  const std::string DATA_PATH = "./data/" + benchmark_name + "_sf-" + sf_string;
-  std::filesystem::create_directories(DATA_PATH);
 
+  auto clustering_configuration = ClusteringConfiguration::None;
+  if (cli_parse_result.count("clustering")) {
+    auto clustering_configuration_parameter = cli_parse_result["clustering"].as<std::string>();
+    if (clustering_configuration_parameter == "Pruning") {
+      clustering_configuration = ClusteringConfiguration::Pruning;
+    } else if (clustering_configuration_parameter != "None") {
+      Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'");
+    }
+
+    std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration"
+              << std::endl;
+  }
+  const std::string clustering_string =
+      benchmark_type == BenchmarkType::Calibration || clustering_configuration == ClusteringConfiguration::None
+          ? ""
+          : "_clustering-" + std::string(magic_enum::enum_name(clustering_configuration));
+  const std::string DATA_PATH = "./data/" + benchmark_name + "_sf-" + sf_string + clustering_string;
+  std::filesystem::create_directories(DATA_PATH);
   auto start = std::chrono::system_clock::now();
 
   std::cout << "Generating data" << std::endl;
   if (benchmark_type != BenchmarkType::Calibration) {
     // Execute benchmark
-    auto benchmark_runner = CalibrationBenchmarkRunner(DATA_PATH, config, SKEW_JCCH);
+    auto benchmark_runner = CalibrationBenchmarkRunner(DATA_PATH, config, clustering_configuration, SKEW_JCCH);
     std::cout << "Run " << magic_enum::enum_name(benchmark_type) << std::endl;
     benchmark_runner.run_benchmark(benchmark_type, scale_factor, NUMBER_BENCHMARK_EXECUTIONS);
   } else {
@@ -121,11 +140,6 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
     // Export PQP directly after execution
     feature_exporter.export_to_csv(pqp);
 
-    // clear outputs to free up space
-    visit_pqp(pqp, [&](const auto& op) {
-      op->clear_output();
-      return PQPVisitation::VisitInputs;
-    });
     const auto percentage = (static_cast<float>(current_lqp) / static_cast<float>(lqp_count)) * 100;
     if (percentage >= latest_percentage + 2) {
       latest_percentage += 2;

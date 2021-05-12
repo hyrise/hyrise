@@ -20,14 +20,16 @@
 
 namespace opossum {
 
-CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir, bool skew_jcch)
-    : _path_to_dir(path_to_dir), _skew_jcch(skew_jcch) {
+CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir,
+                                                       ClusteringConfiguration clustering_config, bool skew_jcch)
+    : _path_to_dir(path_to_dir), _clustering_config(clustering_config), _skew_jcch(skew_jcch) {
   _config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
 }
 
 CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir,
-                                                       std::shared_ptr<BenchmarkConfig> config, bool skew_jcch)
-    : _path_to_dir(path_to_dir), _skew_jcch(skew_jcch) {
+                                                       std::shared_ptr<BenchmarkConfig> config,
+                                                       ClusteringConfiguration clustering_config, bool skew_jcch)
+    : _path_to_dir(path_to_dir), _clustering_config(clustering_config), _skew_jcch(skew_jcch) {
   _config = config;
 }
 
@@ -78,9 +80,9 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tpch(
     const float scale_factor, const std::shared_ptr<OperatorFeatureExporter>& feature_exporter) const {
-  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, scale_factor);
+  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, scale_factor, _clustering_config);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, _config),
+      *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, _clustering_config, _config),
       BenchmarkRunner::create_context(*_config), feature_exporter);
 
   return benchmark_runner;
@@ -158,9 +160,10 @@ std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_jcch(
   // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
   auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
 
-  auto table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, _config);
+  auto table_generator =
+      std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor, _clustering_config, _config);
   auto item_runner = std::make_unique<JCCHBenchmarkItemRunner>(_skew_jcch, jcch_dbgen_path, jcch_data_path, _config,
-                                                               false, scale_factor);
+                                                               false, scale_factor, _clustering_config);
   auto benchmark_runner =
       std::make_shared<BenchmarkRunner>(*_config, std::move(item_runner), std::move(table_generator),
                                         BenchmarkRunner::create_context(*_config), feature_exporter);

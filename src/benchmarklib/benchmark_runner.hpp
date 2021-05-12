@@ -53,7 +53,6 @@ class BenchmarkRunner : public Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
-
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
   // This is idempotent, i.e., you can call it multiple times and the resulting file will be overwritten. Be aware
   // writing the file may affect the performance of concurrently running queries.

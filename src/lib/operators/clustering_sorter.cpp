@@ -266,7 +266,8 @@ void ClusteringSorter::_on_rollback_records() {
 
 std::shared_ptr<AbstractOperator> ClusteringSorter::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   //return std::make_shared<Clustering>(copied_input_left);
   return nullptr;
 }
