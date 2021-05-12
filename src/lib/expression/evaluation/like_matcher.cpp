@@ -70,66 +70,7 @@ std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_s
 }
 
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const pmr_string& pattern) {
-  const auto tokens = pattern_string_to_tokens(pattern);
-
-  if (tokens.size() == 2 && std::holds_alternative<pmr_string>(tokens[0]) &&
-      tokens[1] == PatternToken{Wildcard::AnyChars}) {
-    // Pattern has the form 'hello%'
-    return StartsWithPattern{std::get<pmr_string>(tokens[0])};
-
-  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
-             std::holds_alternative<pmr_string>(tokens[1])) {
-    // Pattern has the form '%hello'
-    return EndsWithPattern{std::get<pmr_string>(tokens[1])};
-
-  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
-             std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
-    // Pattern has the form '%hello%'
-    return ContainsPattern{std::get<pmr_string>(tokens[1])};
-
-  } else {
-    /**
-     * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to
-     * using a regex matcher.
-     *
-     * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.
-     */
-
-    // Pick ContainsMultiple or Regex
-    auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern
-    auto strings = std::vector<pmr_string>{};  // arguments used for ContainsMultiple, if it gets used
-    auto expect_any_chars = true;              // If true, expect '%', if false, expect a string
-
-    // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set
-    // pattern_is_contains_multiple to false once they don't
-    for (const auto& token : tokens) {
-      if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
-        pattern_is_contains_multiple = false;
-        break;
-      }
-      if (!expect_any_chars && !std::holds_alternative<pmr_string>(token)) {
-        pattern_is_contains_multiple = false;
-        break;
-      }
-      if (!expect_any_chars) {
-        strings.emplace_back(std::get<pmr_string>(token));
-      }
-
-      expect_any_chars = !expect_any_chars;
-    }
-
-    if (pattern_is_contains_multiple) {
-      // std::cout << "MultipleContainsPattern " << pattern << std::endl;
-      return MultipleContainsPattern{strings};
-    } else {
-      // std::cout << "std::regex with " << pattern << std::endl;
-      // return std::regex(sql_like_to_regex(pattern));
-      // std::cout << "Creating RE2 pattern of " << sql_like_to_regex(pattern) << std::endl;
-
-      return RE2Pattern{std::make_shared<re2::RE2>(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
-      // return RE2Pattern{re2::RE2(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
-    }
-  }
+  return RE2Pattern{std::make_shared<re2::RE2>(sql_like_to_regex(pattern))};
 }
 
 std::string LikeMatcher::sql_like_to_regex(pmr_string sql_like) {
