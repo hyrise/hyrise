@@ -26,8 +26,10 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
    * The compact::vector does not zero initialize its memory, which leads to non-reproducible tests that
    * use the binary writer. The compact::vector allocates memory aligned to its word size and due to this,
    * some memory at the end is not always overwritten. Hence, fill the internal memory with zeroes.
-   * Therefore, data.bytes() gives the number of allocated bytes for the internal memory (word-aligned).
-   * (see bitpacking_vector_type.hpp)
+   * Unfortunately, compact::vector does not give us a better interface. Therefore, we proceed to work with
+   * a raw pointer to the compact::vector's internal memory and fill it with zeroes. For this, data.bytes() 
+   * gives the number of allocated bytes for the internal memory 
+   * (word-aligned, see bitpacking_vector_type.hpp). 
    *
    */
   std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0ULL);
