@@ -30,8 +30,10 @@ DataType CaseExpression::data_type() const {
   return expression_common_type(then()->data_type(), otherwise()->data_type());
 }
 
-std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
-  return std::make_shared<CaseExpression>(when()->deep_copy(), then()->deep_copy(), otherwise()->deep_copy());
+std::shared_ptr<AbstractExpression> CaseExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<CaseExpression>(when()->deep_copy(copied_ops), then()->deep_copy(copied_ops),
+                                          otherwise()->deep_copy(copied_ops));
 }
 
 bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const {

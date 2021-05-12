@@ -21,20 +21,24 @@ extern "C" {
 namespace opossum {
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
-                                                 bool use_prepared_statements, float scale_factor)
+                                                 bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration)
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
-      _scale_factor(scale_factor) {
+      _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration) {
   _items.resize(22);
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
+                                                 ClusteringConfiguration clustering_configuration,
                                                  const std::vector<BenchmarkItemID>& items)
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor),
+      _clustering_configuration(clustering_configuration),
       _items(items) {
   Assert(std::all_of(_items.begin(), _items.end(),
                      [&](const auto benchmark_item_id) {
@@ -68,12 +72,12 @@ std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
-  // Make sure that sort order, indexes, and constraints have made it all the way up to here
+  // Make sure that clustering, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
-
-  // When experimenting with different clusterings, there might not always be sorting information for orders
-  // Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
+  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
+    Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
+  }
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");

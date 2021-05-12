@@ -53,7 +53,11 @@ class BenchmarkRunner : public Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
-  const BenchmarkConfig _config;
+
+  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
+  // This is idempotent, i.e., you can call it multiple times and the resulting file will be overwritten. Be aware
+  // writing the file may affect the performance of concurrently running queries.
+  void write_report_to_file() const;
 
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
@@ -69,9 +73,6 @@ class BenchmarkRunner : public Noncopyable {
   // disabled, the item is executed immediately.
   void _schedule_item_run(const BenchmarkItemID item_id);
 
-  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
-  void _create_report(std::ostream& stream) const;
-
   void _export_pqps() const;
 
   // Converts the result of a SQL query into a JSON object
@@ -81,7 +82,7 @@ class BenchmarkRunner : public Noncopyable {
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
-  //const BenchmarkConfig _config;
+  const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;
@@ -98,7 +99,6 @@ class BenchmarkRunner : public Noncopyable {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   std::chrono::system_clock::time_point _benchmark_start;
-  Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished items so far

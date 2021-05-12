@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <magic_enum.hpp>
-
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -78,7 +76,8 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side);
 }

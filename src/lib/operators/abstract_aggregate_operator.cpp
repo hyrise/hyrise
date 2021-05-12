@@ -32,7 +32,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
 
   std::stringstream desc;
-  desc << name() << separator << "GroupBy ColumnIDs: ";
+  desc << AbstractOperator::description(description_mode) << separator << "GroupBy ColumnIDs: ";
   for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
     desc << _groupby_column_ids[groupby_column_idx];
 

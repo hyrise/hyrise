@@ -41,7 +41,8 @@ std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<Transa
 
 std::shared_ptr<AbstractOperator> ChangeMetaTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<ChangeMetaTable>(_meta_table_name, _change_type, copied_left_input, copied_right_input);
 }
 

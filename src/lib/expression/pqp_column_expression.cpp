@@ -1,6 +1,6 @@
 #include "pqp_column_expression.hpp"
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "storage/table.hpp"
 
@@ -25,7 +25,8 @@ PQPColumnExpression::PQPColumnExpression(const ColumnID init_column_id, const Da
       _nullable(nullable),
       _column_name(column_name) {}
 
-std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> PQPColumnExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
 }
 

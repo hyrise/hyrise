@@ -30,6 +30,7 @@ set(
     tpcc/procedures/tpcc_stock_level.cpp
     tpcc/procedures/tpcc_stock_level.hpp
 
+    tpch/tpch_constants.hpp
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
     tpch/tpch_benchmark_item_runner.cpp

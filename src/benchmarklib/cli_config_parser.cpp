@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
+#include <magic_enum.hpp>
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"

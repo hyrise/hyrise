@@ -17,6 +17,7 @@
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
@@ -41,7 +42,9 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
                 << " encoding:" << std::endl;
-      TPCHTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
+      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None,
+                         std::make_shared<BenchmarkConfig>(benchmark_config))
+          .generate_and_store();
     }
 
     _table_wrapper_map = create_table_wrappers(sm);

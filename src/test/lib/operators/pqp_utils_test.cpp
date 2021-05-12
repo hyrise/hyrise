@@ -56,7 +56,6 @@ TEST_F(PQPUtilsTest, VisitPQPNonConstOperators) {
   auto actual_nodes = std::vector<std::shared_ptr<AbstractOperator>>{};
   visit_pqp(expected_nodes[0], [&](const auto& node) {
     actual_nodes.emplace_back(node);
-    node->clear_output();
     return PQPVisitation::VisitInputs;
   });
 

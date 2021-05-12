@@ -97,10 +97,10 @@ class LQPTranslatorTest : public BaseTest {
     int_float5_d = int_float5_node->get_column("d");
   }
 
-  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
-  std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b,
-      int_float5_a, int_float5_d;
+  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_int_string, table_alias_name;
+  std::shared_ptr<StoredTableNode> int_float_node, int_float2_node, int_float5_node, int_string_node;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d,
+      int_string_a, int_string_b;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
@@ -398,7 +398,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
 }
 
 // Tests accessing the original LQP node after translation.
-TEST_F(LQPTranslatorTest, LqpNodeAccess) {
+TEST_F(LQPTranslatorTest, LQPNodeAccess) {
   auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
   auto validate_node = ValidateNode::make(predicate_node);
   auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a), validate_node, int_float2_node);
@@ -438,7 +438,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 
 // Check if the LQP that is referenced in the PQP is really cleaned up. This test is intended to check that no cyclic
 // references are accidentally introduced a later point in time.
-TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
+TEST_F(LQPTranslatorTest, PQPReferencedLQPNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
     auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline();
@@ -796,6 +796,105 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   EXPECT_EQ(pqp->left_input()->left_input()->left_input(), pqp->right_input()->left_input()->left_input());
 }
 
+TEST_F(LQPTranslatorTest, DiamondShapeIncludeUncorrelatedSubqueries) {
+  // Tests that PQP parts that are shared between an uncorrelated subquery and the outer plan are deduplicated.
+
+  // Prepare uncorrelated subquery that uses int_float_a from root LQP
+  // clang-format off
+  auto subquery_lqp =
+  ProjectionNode::make(expression_vector(int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+      int_float_node,
+      int_float2_node));
+  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp);
+
+  auto root_lqp =
+  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
+    int_float_node);
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
+
+  // Get operators of root PQP
+  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
+  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
+  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+
+  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+
+  // Get operators of subquery PQP
+  const auto greater_than_predicate =
+      std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
+  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
+  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
+  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+
+  const auto pqp_subquery_expression =
+      std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
+  ASSERT_FALSE(pqp_subquery_expression->is_correlated());
+  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+
+  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
+  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+
+  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
+  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
+  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
+
+  // Compare addresses to check if the uncorrelated PQP subquery reuses the GetTable instance from its owning PQP.
+  EXPECT_EQ(subquery_join->left_input(), get_table_int_float);
+}
+
+TEST_F(LQPTranslatorTest, DiamondShapeExcludeCorrelatedSubqueries) {
+  // Tests that PQP parts that are shared between a correlated subquery and the outer plan are NOT deduplicated.
+
+  // Prepare correlated subquery
+  // clang-format off
+  const auto correlated_parameter_a = correlated_parameter_(ParameterID{0}, int_float_a);
+  auto subquery_lqp =
+  ProjectionNode::make(expression_vector(sub_(int_float_b, correlated_parameter_a)),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+      int_float_node,
+      int_float2_node));
+  auto lqp_subquery_expression = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, int_float_a));
+
+  auto root_lqp =
+  PredicateNode::make(greater_than_(int_float_a, lqp_subquery_expression),
+    int_float_node);
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(root_lqp);
+
+  // Get operators of root PQP
+  ASSERT_EQ(pqp->type(), OperatorType::TableScan);
+  const auto table_scan = std::static_pointer_cast<const TableScan>(pqp);
+  ASSERT_EQ(table_scan->left_input()->type(), OperatorType::GetTable);
+
+  const auto get_table_int_float = std::static_pointer_cast<const GetTable>(pqp->left_input());
+
+  // Get operators of subquery PQP
+  const auto greater_than_predicate =
+      std::dynamic_pointer_cast<const BinaryPredicateExpression>(table_scan->predicate());
+  ASSERT_TRUE(greater_than_predicate && greater_than_predicate->predicate_condition == PredicateCondition::GreaterThan);
+  ASSERT_EQ(greater_than_predicate->left_operand()->type, ExpressionType::PQPColumn);
+  ASSERT_EQ(greater_than_predicate->right_operand()->type, ExpressionType::PQPSubquery);
+
+  const auto pqp_subquery_expression =
+      std::static_pointer_cast<const PQPSubqueryExpression>(greater_than_predicate->right_operand());
+  ASSERT_TRUE(pqp_subquery_expression->is_correlated());
+  ASSERT_EQ(pqp_subquery_expression->pqp->type(), OperatorType::Projection);
+
+  const auto subquery_projection = std::static_pointer_cast<const Projection>(pqp_subquery_expression->pqp);
+  ASSERT_EQ(subquery_projection->left_input()->type(), OperatorType::JoinHash);
+
+  const auto subquery_join = std::static_pointer_cast<const JoinHash>(subquery_projection->left_input());
+  ASSERT_EQ(subquery_join->left_input()->type(), OperatorType::GetTable);
+  ASSERT_EQ(subquery_join->right_input()->type(), OperatorType::GetTable);
+
+  // Compare addresses to check if the correlated PQP subquery uses a different GetTable instance than its owning PQP.
+  EXPECT_NE(subquery_join->left_input(), get_table_int_float);
+}
+
 TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
   /**
    * Test that LQP:
@@ -911,7 +1010,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
 }
 
 TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
-  // Test that sub query expressions whose result is available in an output column of the input operator are not
+  // Test that subquery expressions whose result is available in an output column of the input operator are not
   // evaluated redundantly
 
   // clang-format off
