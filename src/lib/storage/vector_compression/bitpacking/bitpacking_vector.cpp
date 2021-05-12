@@ -26,7 +26,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allo
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
   // zero initialize the compactvectors memory, see bitpacking_compressor.cpp
-  std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(*data_copy.get()), 0);
+  std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(*data_copy.get()), 0ULL);
   std::copy(_data.cbegin(), _data.cend(), data_copy.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data_copy));

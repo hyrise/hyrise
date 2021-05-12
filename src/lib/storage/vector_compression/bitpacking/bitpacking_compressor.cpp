@@ -30,7 +30,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
    * (see bitpacking_vector_type.hpp)
    *
    */
-  std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0);
+  std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0ULL);
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
