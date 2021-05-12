@@ -89,7 +89,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   void _mark_as_failed();
 
  private:
-  ReadWriteOperatorState _rw_state{ReadWriteOperatorState::Pending};
+  ReadWriteOperatorState _rw_state;
 };
 
 }  // namespace opossum

@@ -19,7 +19,7 @@ void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, N
   if (task->is_ready()) {
     task->execute();
   } else {
-    // If the task is not ready yet, its predecessors must executed.
+    // If a task is not yet ready, its predecessors must be executed first.
     for (const auto& predecessor_task : task->predecessors()) {
       predecessor_task.lock()->schedule();
     }
