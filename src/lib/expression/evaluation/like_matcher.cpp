@@ -5,11 +5,13 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
+
+
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-LikeMatcher::LikeMatcher(const pmr_string& pattern) { _pattern_variant = pattern_string_to_pattern_variant(pattern); }
+LikeMatcher::LikeMatcher(const pmr_string& pattern) : _pattern_variant{pattern_string_to_pattern_variant(pattern)} {}
 
 size_t LikeMatcher::get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset) {
   return pattern.find_first_of("_%", offset);
@@ -121,7 +123,11 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
       return MultipleContainsPattern{strings};
     } else {
       // std::cout << "std::regex with " << pattern << std::endl;
-      return std::regex(sql_like_to_regex(pattern));
+      // return std::regex(sql_like_to_regex(pattern));
+      // std::cout << "Creating RE2 pattern of " << sql_like_to_regex(pattern) << std::endl;
+
+      return RE2Pattern{std::make_shared<re2::RE2>(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
+      // return RE2Pattern{re2::RE2(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
     }
   }
 }

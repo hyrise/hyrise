@@ -59,6 +59,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
+  // Re-run to optimize LIKE's which have been in OR's ....
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
@@ -94,9 +97,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
   // joins and would not recognize such a rewritten predicate.
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
-
-  // Re-run to optimize LIKE's which have been in OR's ....
-  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 

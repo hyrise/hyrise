@@ -8,8 +8,26 @@
 #include <variant>
 #include <vector>
 
+#include "re2/re2.h"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -77,13 +95,18 @@ class LikeMatcher {
   struct MultipleContainsPattern final {
     std::vector<pmr_string> strings;
   };
+  struct RE2Pattern final {
+    // RE2 has a deleted copy constructor. The shared_ptr allows copying the AllPatternVariant in the LikMatcher
+    // constructor.
+    std::shared_ptr<re2::RE2> pattern;
+  };
 
   /**
    * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
    * general pattern.
    */
   using AllPatternVariant =
-      std::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      std::variant<std::regex, RE2Pattern, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern);
 
@@ -139,9 +162,14 @@ class LikeMatcher {
 
     } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
-
       functor([&](const auto& string) -> bool {
         return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
+      });
+
+    } else if (std::holds_alternative<RE2Pattern>(_pattern_variant)) {
+      const auto& pattern = *std::get<RE2Pattern>(_pattern_variant).pattern;
+      functor([&](const auto& string) -> bool {
+        return re2::RE2::FullMatch(re2::StringPiece{string}, pattern) ^ invert_results;
       });
 
     } else {

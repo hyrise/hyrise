@@ -79,6 +79,7 @@ add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
+add_subdirectory(re2)
 add_subdirectory(robin-map)
 
 ## Build lz4

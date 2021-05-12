@@ -726,6 +726,7 @@ if(NOT APPLE)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl re2)
 target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
