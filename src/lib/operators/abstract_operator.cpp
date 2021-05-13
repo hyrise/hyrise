@@ -214,7 +214,11 @@ std::shared_ptr<const Table> AbstractOperator::right_input_table() const { retur
 
 size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
-void AbstractOperator::register_consumer() { ++_consumer_count; }
+void AbstractOperator::register_consumer() {
+  Assert(_state <= OperatorState::ExecutedAndAvailable,
+         "Cannot register as a consumer since operator results have already been cleared.");
+  ++_consumer_count;
+}
 
 void AbstractOperator::deregister_consumer() {
   DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
