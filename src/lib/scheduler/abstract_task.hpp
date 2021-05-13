@@ -17,28 +17,42 @@ class Worker;
 /**
  * @brief Overview of the different task states
  *
- *       +---------+                +-----------+                +----------+
- *       | Created | -------------> | Scheduled | -------------> | Enqueued |
- *       +---------+                +-----------+                +----------+
- *            |                           |                            |
- *            |                           |                            |
- *            v                           v                            |
- *       +---------+             +------------------+                  |
- *       | Started | <---------- | AssignedToWorker | <----------------+
- *       +---------+             +------------------+
- *            |
- *            |
- *            v
- *       +---------+
- *       |  Done   |
- *       +---------+
+ *    +-----------+
+ *    |  Created  |
+ *    +-----------+
+ *          | schedule()
+ *          v
+ *    +-----------+    try_mark_as_enqueued()    +----------+
+ *    | Scheduled | ---------------------------> | Enqueued |
+ *    +-----------+                              +----------+
+ *          |  |                                       |
+ *          |  +---------------------------------------+
+ *          |                                          | try_mark_as_assigned_to_worker()
+ *          |                                          v
+ *          |- Direct path is taken by the    +------------------+
+ *          |  ImmediateExecutionScheduler    | AssignedToWorker |
+ *          |                                 +------------------+
+ *          |                                          |
+ *          +------------------------------------------+
+ *          | execute()
+ *          v
+ *    +-----------+
+ *    |  Started  |
+ *    +-----------+
+ *          | when execute() finishes
+ *          v
+ *    +-----------+
+ *    |   Done    |
+ *    +-----------+
+ *
+ * A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
+ * to a TaskQueue.
+ * After a worker has chosen to execute this task (and it thus can no longer be executed by anyone else), the task's
+ * state switches to AssignedToWorker.
+ * The state machine ensures that each task is scheduled / enqueued / assigned once only, respectively.
+ *
  *
  * All states must be in a progressive order.
- *
- * For making sure a task gets only scheduled and enqueued once, respectively
- * A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
- * to a TaskQueue. Once a worker has chosen to execute this task (and it is thus can no longer be executed by anyone
- * else), _is_assigned_to_worker is set to true.
  */
 enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
 
