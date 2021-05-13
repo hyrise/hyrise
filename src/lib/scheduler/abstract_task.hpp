@@ -48,27 +48,25 @@ class Worker;
  *  1. All tasks are initialized in TaskState::Created.
  *  2. A task changes to TaskState::Scheduled once task->schedule() has been called.
  *  3. Subsequent state transitions depend on the type of scheduler:
- *
- *   a) The NodeQueueScheduler has the concept of workers: For a given set of scheduled tasks, it pushes only those
- *      tasks to a worker queue that are ready for execution. When pushed to a worker queue, tasks get marked as
- *      enqueued and switch to TaskState::Enqueued. Once a worker pulls a task from a queue, it should no longer be
- *      executed by anyone else. Consequently, the worker changes the task's state to TaskState::AssignedToWorker.
- *      There may also be tasks that never see a worker queue before execution: A TableScan task, for example, issues
- *      several child tasks. Some of them will be executed directly by the worker that executes the TableScan. Thus,
- *      tasks can directly switch from TaskState::Scheduled to TaskState::AssignedToWorker.
- *
- *   b) The ImmediateExecutionScheduler does not have the concept of workers. It executes tasks immediately after
- *      task->schedule() has been called. Consequently, tasks never enter TaskState::Enqueued and
+ *   a) The NodeQueueScheduler has the concept of workers:
+ *      - For a given set of scheduled tasks, it pushes only those tasks to a worker queue that are ready for
+ *        execution. When pushed to a worker queue, tasks get marked as enqueued and switch to TaskState::Enqueued.
+ *      - Once a worker pulls a task from a queue, it should no longer be executed by anyone else. Consequently, the
+ *        worker changes the task's state to TaskState::AssignedToWorker.
+ *      - There may also be tasks that never see a worker queue before execution: A TableScan task, for example, issues
+ *        several child tasks. Some of them will be executed directly by the worker that executes the TableScan. Thus,
+ *        tasks can directly switch from TaskState::Scheduled to TaskState::AssignedToWorker.
+ *   b) The ImmediateExecutionScheduler does not have a concept of workers and work queues. Instead, it executes tasks
+ *      immediately after task->schedule() has been called. Consequently, tasks never enter TaskState::Enqueued and
  *      TaskState::AssignedToWorker.
+ *  4. A task switches to TaskState::Started when execute() is called.
+ *  5. After finishing its work, execute() transitions the task to TaskState::Done.
  *
- *  4. A task switches to TaskState::Started if its execute() function has been called.
- *  5. After finishing all work, execute() transitions the task to TaskState::Done.
- *
- * Note that the state machine's _try_transition_to function ensures that tasks can be scheduled/enqueued/assigned
- * once only, respectively.
+ * Note that the state machine's _try_transition_to function ensures that tasks can be marked as scheduled / enqueued /
+ * assigned once only, respectively.
  */
 
-// The state enum values are declared in a progressive order to allow for comparisons involving the => operator.
+// The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
 enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
 
 /**

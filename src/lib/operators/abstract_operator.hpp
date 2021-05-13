@@ -53,7 +53,7 @@ enum class OperatorType {
   Mock  // for Tests that need to Mock operators
 };
 
-// All states must be in a progressive order.
+// The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
 enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
@@ -66,23 +66,22 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *       | Created |
  *       +---------+
  *            |
- *            | Call execute()
+ *            | execute()
  *            v
  *       +---------+               +----------------------+                         +--------------------+
  *       | Running | ------------> | ExecutedAndAvailable | ----------------------> | ExecutedAndCleared |
- *       +---------+               +----------------------+          Call           +--------------------+
- *                                                               clear_output()
- *                                                      (e.g., when consumer_count == 0)
+ *       +---------+   execute()   +----------------------+     clear_output()      +--------------------+
+ *                     finishes                          (e.g., if consumer_count == 0)
  *
  *  1. The operator is constructed in OperatorState::Created.
- *     Because input operators are not guaranteed to have already executed, operators must not call get_output in
- *     their execute method.
- *  2. The execute method is called from the outside (usually by the scheduler). The operator changes to
- *     OperatorState::Running and the heavy lifting is done. By now, the input operators have already executed.
- *  3. The operator reaches OperatorState::ExecutedAndAvailable. The consumers, usually other operators, call
- *     get_output, which is very cheap.
- *  4. The operator clears its results and switches to OperatorState::ExecutedAndCleared. Usually, this happens once
- *     the last consumer deregisters.
+ *     Input operators are not guaranteed to have executed.
+ *  2. The execute method is called from the outside (usually by the scheduler). The operator transitions to
+ *     OperatorState::Running and the heavy lifting is done.
+ *     By now, all input operators should have been executed.
+ *  3. The operator finishes its execution and thus switches to OperatorState::ExecutedAndAvailable.
+ *     Consumers, usually other operators, can call get_output(), a cheap operation, to receive the results.
+ *  4. The operator clears its results and transitions to OperatorState::ExecutedAndCleared when clear_output() is
+ *     called. Usually, this happens once the last consumer deregisters.
  *
  * CONSUMER TRACKING
  *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
@@ -205,7 +204,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   OperatorState state() const;
 
   /**
-   * If not already existing this function creates an OperatorTask that owns this operator.
+   * Creates an OperatorTask that owns this operator, if not already existing.
    * @returns a shared pointer to the OperatorTask.
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
@@ -262,7 +261,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(OperatorState new_state);
 
+  /**
+   * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries
+   * and their outer queries, OperatorTasks should be shared, too, to reduce scheduling overhead and to prevent
+   * additional logic for result sharing.
+   * To allow OperatorTask::make_tasks_from_operator to reuse an existing OperatorTask, operators create
+   * OperatorTasks from themselves and store weak pointers. The pointers must be weak because OperatorTasks also
+   * point to operators, which would otherwise create cyclic dependencies.
+   */
   std::weak_ptr<OperatorTask> _operator_task;
+  // To prevent race conditions in get_or_create_operator_task.
   std::mutex _operator_task_mutex;
 };
 
