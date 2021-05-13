@@ -15,7 +15,7 @@ namespace opossum {
 class Worker;
 
 /**
- * @brief Overview of the different task states
+ * @brief Overview of the different task states and involved transitions:
  *
  *    +-----------+
  *    |  Created  |
@@ -29,8 +29,8 @@ class Worker;
  *          |  +---------------------------------------+
  *          |                                          | try_mark_as_assigned_to_worker()
  *          |                                          v
- *          |- Direct path is taken by the    +------------------+
- *          |  ImmediateExecutionScheduler    | AssignedToWorker |
+ *          | Direct path taken by the        +------------------+
+ *          | ImmediateExecutionScheduler     | AssignedToWorker |
  *          |                                 +------------------+
  *          |                                          |
  *          +------------------------------------------+
@@ -39,21 +39,36 @@ class Worker;
  *    +-----------+
  *    |  Started  |
  *    +-----------+
- *          | when execute() finishes
+ *          | execute() finishes
  *          v
  *    +-----------+
  *    |   Done    |
  *    +-----------+
  *
- * A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
- * to a TaskQueue.
- * After a worker has chosen to execute this task (and it thus can no longer be executed by anyone else), the task's
- * state switches to AssignedToWorker.
- * The state machine ensures that each task is scheduled / enqueued / assigned once only, respectively.
+ *  1. All tasks are initialized in TaskState::Created.
+ *  2. A task changes to TaskState::Scheduled once task->schedule() has been called.
+ *  3. Subsequent state transitions depend on the type of scheduler:
  *
+ *   a) The NodeQueueScheduler has the concept of workers: For a given set of scheduled tasks, it pushes only those
+ *      tasks to a worker queue that are ready for execution. When pushed to a worker queue, tasks get marked as
+ *      enqueued and switch to TaskState::Enqueued. Once a worker pulls a task from a queue, it should no longer be
+ *      executed by anyone else. Consequently, the worker changes the task's state to TaskState::AssignedToWorker.
+ *      There may also be tasks that never see a worker queue before execution: A TableScan task, for example, issues
+ *      several child tasks. Some of them will be executed directly by the worker that executes the TableScan. Thus,
+ *      tasks can directly switch from TaskState::Scheduled to TaskState::AssignedToWorker.
  *
- * All states must be in a progressive order.
+ *   b) The ImmediateExecutionScheduler does not have the concept of workers. It executes tasks immediately after
+ *      task->schedule() has been called. Consequently, tasks never enter TaskState::Enqueued and
+ *      TaskState::AssignedToWorker.
+ *
+ *  4. A task switches to TaskState::Started if its execute() function has been called.
+ *  5. After finishing all work, execute() transitions the task to TaskState::Done.
+ *
+ * Note that the state machine's _try_transition_to function ensures that tasks can be scheduled/enqueued/assigned
+ * once only, respectively.
  */
+
+// The state enum values are declared in a progressive order to allow for comparisons involving the => operator.
 enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
 
 /**
@@ -164,11 +179,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   virtual void _on_execute() = 0;
 
   /**
-   * TODO(Julian) Doc
-   * @param new_state
-   * Fail if the transition is illegal or unexpected.
-   * @return false when conflicts arrive. E.g., when another thread already changed the task's state to
-   *     TaskState::Scheduled.
+   * Transitions the task's state to @param new_state.
+   * @returns true on success and
+   *          false if another caller/thread/worker was faster in progressing this task's state.
+   *
+   * Note that the function fails for illegal state transitions, such as TaskState::Done -> TaskState::Started.
    */
   [[nodiscard]] bool _try_transition_to(TaskState new_state);
 
