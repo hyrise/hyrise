@@ -253,6 +253,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
  private:
   // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic_int32_t _consumer_count = 0;
+  std::mutex _deregister_consumer_mutex;
+
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
 
