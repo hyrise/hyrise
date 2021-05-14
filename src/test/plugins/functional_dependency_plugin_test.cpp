@@ -31,58 +31,12 @@ class FunctionalDependencyPluginTest : public BaseTest {
     return FunctionalDependencyPlugin::_check_dependency(Hyrise::get().storage_manager.get_table(table_name),
                                                          determinant, dependent);
   }
-  static void _process_column_data_string(const std::string& table_name, ColumnID column_id, std::vector<long> &process_column ){
-    FunctionalDependencyPlugin::_process_column_data_string(Hyrise::get().storage_manager.get_table(table_name), column_id, process_column);
-  }
-  static void _process_column_data_numeric(const std::string& table_name, ColumnID column_id, std::vector<long> &process_column ){
-    FunctionalDependencyPlugin::_process_column_data_numeric(Hyrise::get().storage_manager.get_table(table_name), column_id, process_column);
-  }
-  static void _process_column_data_numeric_null(const std::string& table_name, ColumnID column_id, std::vector<long> &process_column, std::vector<long> &null_column ){
-    FunctionalDependencyPlugin::_process_column_data_numeric_null(Hyrise::get().storage_manager.get_table(table_name), column_id, process_column, null_column);
-  }
 };
 
 TEST_F(FunctionalDependencyPluginTest, LoadUnloadPlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   pm.load_plugin(build_dylib_path("libhyriseFunctionalDependencyPlugin"));
   pm.unload_plugin("hyriseFunctionalDependencyPlugin");
-}
-
-TEST_F(FunctionalDependencyPluginTest, ProcessColumnData) {
-  std::vector<long> column_normalized_values;
-  std::vector<long> expected_values{1234, 1221, 1234, 1201, 1201, 1301, 1322, 1322};
-  column_normalized_values.reserve(_row_count);
-  _process_column_data_numeric(_table_name, ColumnID{0}, column_normalized_values);
-
-  for (size_t value_id = 0; value_id < column_normalized_values.size(); value_id++) {
-    EXPECT_EQ(column_normalized_values[value_id], expected_values[value_id]);
-  }
-
-  column_normalized_values = std::vector<long> {};
-  std::vector<long> column_null_values(_row_count, 0);
-  std::vector<long> expected_null_values{1, 0, 0, 0, 0, 0, 0, 1};
-  expected_values = std::vector<long> {0, 10, 20, 30, 20, 10, 10, 0};
-  column_normalized_values.reserve(_row_count);
-
-  _process_column_data_numeric_null(_table_name, ColumnID{4}, column_normalized_values, column_null_values);
-
-  for (size_t value_id = 0; value_id < column_normalized_values.size(); value_id++) {
-    EXPECT_EQ(column_normalized_values[value_id], expected_values[value_id]);
-  }
-  for (size_t value_id = 0; value_id < column_null_values.size(); value_id++) {
-    EXPECT_EQ(column_null_values[value_id], expected_null_values[value_id]);
-  }
-
-  column_normalized_values = std::vector<long> {};
-  expected_values = std::vector<long> {1, 2, 3, 4, 5, 6, 0, 0};
-  column_normalized_values.reserve(_row_count);
-
-  _process_column_data_string(_table_name, ColumnID{3}, column_normalized_values);
-
-  for (size_t value_id = 0; value_id < column_normalized_values.size(); value_id++) {
-    EXPECT_EQ(column_normalized_values[value_id], expected_values[value_id]);
-  }
-
 }
 
 TEST_F(FunctionalDependencyPluginTest, CheckDependency) {

@@ -27,10 +27,6 @@ class FunctionalDependencyPlugin : public AbstractPlugin {
  private:
   static bool _check_dependency(const std::shared_ptr<Table>& table, std::vector<ColumnID> determinant,
                                 std::vector<ColumnID> dependent);
-  static void _process_column_data_string(const std::shared_ptr<Table>& table, ColumnID column_id, std::vector<long> &process_column );
-  static void _process_column_data_numeric(const std::shared_ptr<Table>& table, ColumnID column_id, std::vector<long> &process_column );
-  static void _process_column_data_numeric_null(const std::shared_ptr<Table>& table, ColumnID column_id, std::vector<long> &process_column, std::vector<long> &null_column);
-  // void _process_column_date(const std::shared_ptr<Table>& table, ColumnID column_id, std::vector<int> &process_column);
 };
 
 }  // namespace opossum
