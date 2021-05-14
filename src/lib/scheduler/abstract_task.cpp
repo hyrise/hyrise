@@ -40,10 +40,19 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
+  // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
+  // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
+  // The following guard prevents adding duplicate successors/predecessors:
   if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) return;
 
   _successors.emplace_back(successor);
   successor->_predecessors.emplace_back(shared_from_this());
+
+  // A task, which is already done, will not call _on_predecessor_done at the successor. Consequently, the successor's
+  // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
+  // _pending_predecessor count in the first place when this task is already done.
+  // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
+  // is called before _pending_predecessors++ has executed..
   std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
   if (!is_done()) successor->_pending_predecessors++;
 }
