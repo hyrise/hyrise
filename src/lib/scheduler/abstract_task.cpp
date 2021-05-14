@@ -50,9 +50,9 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
 
   // A task, which is already done, will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
-  // _pending_predecessor count in the first place when this task is already done.
+  // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
-  // is called before _pending_predecessors++ has executed..
+  // is called before _pending_predecessors++ has executed.
   std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
   if (!is_done()) successor->_pending_predecessors++;
 }
@@ -74,14 +74,12 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id) {
-  /**
-   * We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
-   * spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
-   * executed by an unrelated thread. Thus, we add a memory barrier.
-   *
-   * For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-   * _done_condition_variable.
-   */
+  // We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
+  // spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
+  // executed by an unrelated thread. Thus, we add a memory barrier.
+  //
+  // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
+  // _done_condition_variable.
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the task as scheduled or returns if another thread has already scheduled it.

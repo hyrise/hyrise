@@ -297,7 +297,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
     if constexpr (HYRISE_DEBUG) {
-      // After execution, the root operator should be only operator in OperatorState::ExecutedAndAvailable. All
+      // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
       // other operators should be in OperatorState::ExecutedAndCleared.
       Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
              "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
