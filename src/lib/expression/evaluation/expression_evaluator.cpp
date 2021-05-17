@@ -1414,8 +1414,6 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {
   Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  std::cout << "Materialized ... " << std::endl;
-
   if (_segment_materializations[column_id]) return;
 
   const auto& segment = *_chunk->get_segment(column_id);
