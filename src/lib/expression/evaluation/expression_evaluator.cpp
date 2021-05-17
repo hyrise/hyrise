@@ -6,8 +6,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/variant/apply_visitor.hpp>
 
-#include "re2/re2.h"
-
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
@@ -461,56 +459,19 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             result_nulls.resize(left_view.size());
           }
 
-          if constexpr (std::is_same_v<LeftDataType, pmr_string>) {
-            Timer timer;
-            std::stringstream regex_ss;
-            regex_ss << "";
-            auto is_first_value = false;
-            for (const auto& right_value : right_values) {
-              if (!is_first_value) {
-                regex_ss << "|";  
-              }
-              regex_ss << right_value;
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(left_view.size());
+               ++chunk_offset) {
+            if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
+              result_nulls[chunk_offset] = true;
+              continue;
             }
-            regex_ss << "";
-            const auto regex = re2::RE2{regex_ss.str()};
-            
-            // std::cout << "built (" << timer.lap_formatted() << ")" << std::endl;
-            
-            
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(left_view.size());
-                 ++chunk_offset) {
-              // std::cout << ".";
-              if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
-                result_nulls[chunk_offset] = true;
-                continue;
-              }
-
-              if (re2::RE2::FullMatch(left_view.value(chunk_offset).c_str(), regex)) {
-                result_values[chunk_offset] = !in_expression.is_negated();
-              }
+            // We could sort right_values and perform a binary search. However, a linear search is better suited for
+            // small vectors. For bigger IN lists, the InExpressionRewriteRule will switch to a hash join, anyway.
+            if (auto it = std::find(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+                it != right_values.cend() && *it == left_view.value(chunk_offset)) {
+              result_values[chunk_offset] = !in_expression.is_negated();
             }
-            // std::cout << std::endl;
-            std::cout << "regex .. " << right_values.size() << " elements (" << timer.lap_formatted() << ")" << std::endl;
-          } 
-          // else {
-            Timer timer2;
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(left_view.size());
-                 ++chunk_offset) {
-              if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
-                result_nulls[chunk_offset] = true;
-                continue;
-              }
-
-              // We could sort right_values and perform a binary search. However, a linear search is better suited for
-              // small vectors. For bigger IN lists, the InExpressionRewriteRule will switch to a hash join, anyway.
-              if (auto it = std::find(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
-                  it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-                result_values[chunk_offset] = !in_expression.is_negated();
-              }
-            }
-            std::cout << "regex_alt .. " << right_values.size() << " elements (" << timer2.lap_formatted() << ")" << std::endl;
-          // }
+          }
         } else {
           Fail("Should have ruled out NullValues on the left side of IN by now");
         }
@@ -1413,8 +1374,6 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
 
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {
   Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
-
-  std::cout << "Materialized ... " << std::endl;
 
   if (_segment_materializations[column_id]) return;
 
