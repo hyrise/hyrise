@@ -54,7 +54,7 @@ try {
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   node('mac-arm') {
-    stage("clangDebugMacArm") {
+    stage("clangReleaseMacArm") {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         try {
           sh "sysctl sysctl.proc_translated"
@@ -67,19 +67,20 @@ try {
           sh "pip install \$(grep -v '^ *#\\|^numpy\\|^scipy' requirements.txt | grep .)"
           
           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-          sh "mkdir clang-debug && cd clang-debug && cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang++ .."
-          sh "cd clang-debug && make -j8"
-          sh "file ./clang-debug/hyriseTest"
-          sh "./clang-debug/hyriseTest"
-          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+          // Attention: JK removed ${unity}. Why did we choose unity builds before?
+          sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0/bin/clang++ .."
+          sh "cd clang-release && make -j8"
+          sh "file ./clang-release/hyriseTest"
+          sh "./clang-release/hyriseTest"
+          sh "./clang-release/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
         } finally {
           sh "ls -A1 | xargs rm -rf"
         }
       } else {
-        Utils.markStageSkippedForConditional("clangDebugMacArm")
+        Utils.markStageSkippedForConditional("clangReleaseMacArm")
       }
     }
   }
