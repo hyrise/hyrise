@@ -88,20 +88,19 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     return ContainsPattern{std::get<pmr_string>(tokens[1])};
 
   } else {
-    /**
-     * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to
-     * using a regex matcher.
-     *
-     * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.
-     */
+    // Pattern is either MultipleContainsPattern, e.g., 'hello%world%' or '%hello%world%how%are%you%'. If not, we fall
+    // back to using a regex matcher.
+    // A MultipleContainsPattern can begin with '%', ends with '%', and contains only strings and '%'.
 
-    // Pick ContainsMultiple or Regex
-    auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern
-    auto strings = std::vector<pmr_string>{};  // arguments used for ContainsMultiple, if it gets used
-    auto expect_any_chars = true;              // If true, expect '%', if false, expect a string
+    auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern.
+    auto strings = std::vector<pmr_string>{};  // Arguments used for ContainsMultiple, if it gets used.
+    // starts_with_any_char is used to denote whether the patterns starts with `%` or not.
+    const auto starts_with_any_char = tokens.empty() ? false : (tokens[0] == PatternToken{Wildcard::AnyChars});
+    // If true, expect '%', if false, expect a string. Used to check that we alternate between string tokens and '%'.
+    auto expect_any_chars = starts_with_any_char;
 
     // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set
-    // pattern_is_contains_multiple to false once they don't
+    // pattern_is_contains_multiple to false once they don't.
     for (const auto& token : tokens) {
       if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
         pattern_is_contains_multiple = false;
@@ -119,13 +118,13 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     }
 
     if (pattern_is_contains_multiple) {
-      // std::cout << "MultipleContainsPattern " << pattern << std::endl;
-      return MultipleContainsPattern{strings};
+
+      std::cout << "Multi with ... " << pattern << " and start? " << starts_with_any_char << std::endl;
+      return MultipleContainsPattern{strings, starts_with_any_char};
     } else {
-      // std::cout << "std::regex with " << pattern << std::endl;
+      std::cout << "std::regex with " << pattern << std::endl;
       // return std::regex(sql_like_to_regex(pattern));
       // std::cout << "Creating RE2 pattern of " << sql_like_to_regex(pattern) << std::endl;
-
       return RE2Pattern{std::make_shared<re2::RE2>(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
       // return RE2Pattern{re2::RE2(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant
     }

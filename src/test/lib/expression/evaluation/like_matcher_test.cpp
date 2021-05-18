@@ -39,9 +39,10 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
 TEST_F(LikeMatcherTest, Matching) {
   EXPECT_TRUE(match("Hello", "Hello"));
   EXPECT_TRUE(match("Hello", "Hello%"));
+  EXPECT_TRUE(match("Hello", "%Hello%"));
   EXPECT_TRUE(match("Hello", "%H%%"));
   EXPECT_TRUE(match("Hello", "%H%ello%"));
-  EXPECT_TRUE(match("Hello", "%H%ello%"));
+  EXPECT_TRUE(match("Hello", "H%ello%"));
   EXPECT_TRUE(match("Hello World", "%_%"));
   EXPECT_TRUE(match("Hello World", "%_World"));
   EXPECT_TRUE(match("Hello World!! (Nice day)", "H%(%day)"));

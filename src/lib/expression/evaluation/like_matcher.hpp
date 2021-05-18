@@ -94,6 +94,7 @@ class LikeMatcher {
   // '%hello%world%nice%weather%'
   struct MultipleContainsPattern final {
     std::vector<pmr_string> strings;
+    bool starts_with_any_char{false};
   };
   struct RE2Pattern final {
     // RE2 has a deleted copy constructor. The shared_ptr allows copying the AllPatternVariant in the LikMatcher
@@ -143,7 +144,9 @@ class LikeMatcher {
       });
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
-      const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
+      const auto& multiple_contains_pattern = std::get<MultipleContainsPattern>(_pattern_variant);
+      const auto& contains_strs = multiple_contains_pattern.strings;
+      const auto starts_with_any_char = multiple_contains_pattern.starts_with_any_char;
       std::vector<Searcher> searchers;
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
@@ -154,7 +157,12 @@ class LikeMatcher {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
-          if (current_position == string.end()) return invert_results;
+          if (current_position == string.end()) return invert_results;  // current search term not found
+          if (searcher_idx == 0 && !starts_with_any_char && current_position != string.begin()) {
+            // We are checking the first search term, the pattern does not start with a wild card, and the match does
+            // not start at the first first position: no match.
+            return invert_results;
+          }
           current_position += contains_strs[searcher_idx].size();
         }
         return !invert_results;

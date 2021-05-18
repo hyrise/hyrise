@@ -11,6 +11,7 @@
 #include "expression/in_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
@@ -177,7 +178,7 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   });
 }
 
-void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<AbstractLQPNode>& node,
+void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node,
                                                            std::shared_ptr<AbstractExpression>& input_expression) {
   // Continue only if the expression is a LIKE/NOT LIKE expression
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
@@ -222,8 +223,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   // Handle case where '%' wildcard is not the last char of the pattern. In this case, add new reduction node.
   if (multi_char_wildcard_pos + 1 < pattern.size()) {
     auto between_node = PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
-    between_node->set_left_input(node->left_input());
-    node->set_left_input(between_node);
+    lqp_insert_node(node, LQPInputSide::Left, between_node);
+    // between_node->set_left_input(node->left_input());
+    // node->set_left_input(between_node);
     std::cout << "Changed ..." << std::endl;
     return;
   }
