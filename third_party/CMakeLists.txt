@@ -82,6 +82,8 @@ add_subdirectory(nlohmann_json)
 add_subdirectory(re2)
 add_subdirectory(robin-map)
 
+set_property(TARGET re2 PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
 
@@ -380,3 +382,4 @@ externalproject_add_step(
   DEPENDS "${JCCH_DBGEN_FILES}"
   COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
 )
+
