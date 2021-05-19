@@ -145,6 +145,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
+  table_generator->set_add_constraints_callback(add_key_constraints);
   auto benchmark_item_runner =
       std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
