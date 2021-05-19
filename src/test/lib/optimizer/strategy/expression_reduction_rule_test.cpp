@@ -110,7 +110,7 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikeWildcard) {
   auto get_rewritten_like_predicate = [&] (std::shared_ptr<AbstractExpression> expression,
                                            bool check_left_input_is_unchanged = true) {
     auto predicate_node = PredicateNode::make(expression, mock_node);
-    ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression);
+    ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression, true);
 
     if (check_left_input_is_unchanged) {
       EXPECT_EQ(predicate_node->left_input(), mock_node);

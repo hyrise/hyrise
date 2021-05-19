@@ -43,8 +43,8 @@ TEST_F(LikeMatcherTest, Matching) {
   EXPECT_TRUE(match("Hello", "%H%%"));
   EXPECT_TRUE(match("Hello", "H%ello%"));
   EXPECT_TRUE(match("Hello", "%H%ello%"));
-  EXPECT_TRUE(match("Hello", "Hell%ello%llo%ll%o%"));
-  EXPECT_TRUE(match("Hello", "%Hell%ello%llo%ll%o%"));
+  EXPECT_TRUE(match("Hello", "H%el%l%o%"));
+  EXPECT_TRUE(match("Hello", "%H%el%l%o%"));
   EXPECT_TRUE(match("Hello World", "%_%"));
   EXPECT_TRUE(match("Hello World", "%_World"));
   EXPECT_TRUE(match("Hello World!! (Nice day)", "H%(%day)"));

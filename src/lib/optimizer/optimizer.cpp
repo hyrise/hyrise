@@ -60,7 +60,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   // Re-run to optimize LIKE's which have been in OR's ....
-  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>(true));
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 

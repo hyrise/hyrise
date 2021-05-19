@@ -19,6 +19,8 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
+ExpressionReductionRule::ExpressionReductionRule(const bool rewrite_predicate_adding_like) : _rewrite_predicate_adding_like(rewrite_predicate_adding_like) {}
+
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
@@ -30,7 +32,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
 
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
-      rewrite_like_prefix_wildcard(sub_node, expression);
+      rewrite_like_prefix_wildcard(sub_node, expression, _rewrite_predicate_adding_like);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -179,7 +181,8 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
 }
 
 void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node,
-                                                           std::shared_ptr<AbstractExpression>& input_expression) {
+                                                           std::shared_ptr<AbstractExpression>& input_expression,
+                                                           const bool rewrite_predicate_adding_like) {
   // Continue only if the expression is a LIKE/NOT LIKE expression
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
   if (!binary_predicate) {
@@ -205,12 +208,12 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
     return;
   }
 
-  const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+  const auto first_any_chars_wildcard_pos = pattern.find_first_of('%');
   // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
   // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
   // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
   // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
-  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0) {
+  if (first_any_chars_wildcard_pos == std::string::npos || first_any_chars_wildcard_pos == 0) {
     return;
   }
   const auto bounds = LikeMatcher::bounds(pattern);
@@ -220,19 +223,30 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
 
   const auto [lower_bound, upper_bound] = *bounds;
 
-  // Handle case where '%' wildcard is not the last char of the pattern. In this case, add new reduction node.
-  if (multi_char_wildcard_pos + 1 < pattern.size()) {
-    auto between_node = PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
-    lqp_insert_node(node, LQPInputSide::Left, between_node);
-    return;
+  // Create a between predicate for LIKEs or a `< OR >=` predicates for NOT LIKEs.
+  auto predicate_expression =
+      std::shared_ptr<AbstractExpression>(between_upper_exclusive_(binary_predicate->left_operand(),
+                                                                   lower_bound, upper_bound));
+  if (binary_predicate->predicate_condition == PredicateCondition::NotLike) {
+    predicate_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
+                             greater_than_equals_(binary_predicate->left_operand(), upper_bound));
   }
 
-  if (binary_predicate->predicate_condition == PredicateCondition::Like) {
-    input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
-  } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
-    input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
-                           greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+  auto any_chars_wildcard_count = std::count(pattern.cbegin(), pattern.cend(), '%');
+
+  // TODO(Martin): we add a node in front of the LIKE node multiple times ... can we avoid that?
+  if (any_chars_wildcard_count == 1 && first_any_chars_wildcard_pos == pattern.size() - 1) {
+    // Cases as LIKE 'hell%' can be be simply rewritten by replacing the LIKE predicate expression.
+    input_expression = predicate_expression;
+  } else if (binary_predicate->predicate_condition == PredicateCondition::Like
+             && rewrite_predicate_adding_like) {
+    // Cases where the first '%' wildcard is not the last char of the pattern (e.g., LIKE 'hel%lo%'). In this case, add new
+    // reduction node and keep the LIKE predicate expression as is. Adding between nodes is not implemented for NOT LIKE.
+    auto between_node = PredicateNode::make(predicate_expression);
+    lqp_insert_node(node, LQPInputSide::Left, between_node);
   }
+
+  std::cout << *node << std::endl;
 }
 
 void ExpressionReductionRule::remove_duplicate_aggregate(

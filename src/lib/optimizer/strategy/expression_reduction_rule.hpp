@@ -34,6 +34,8 @@ class AbstractLQPNode;
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
+  explicit ExpressionReductionRule(const bool rewrite_predicate_adding_like = false);
+
   /**
    * Use the law of boolean distributivity to reduce an expression
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
@@ -50,7 +52,7 @@ class ExpressionReductionRule : public AbstractRule {
    * Rewrite `a LIKE 'abc%'` to `a BetweenUpperExclusive 'abc' AND 'abd'`
    * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abcd'`
    */
-  static void rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<AbstractExpression>& input_expression);
+  static void rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<AbstractExpression>& input_expression, const bool rewrite_predicate_adding_like);
 
   /**
    * Rewrite `SELECT SUM(a), COUNT(a), AVG(a)` to `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`
@@ -61,6 +63,7 @@ class ExpressionReductionRule : public AbstractRule {
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  bool _rewrite_predicate_adding_like = false;
 };
 
 }  // namespace opossum
