@@ -119,10 +119,10 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
 
     if (pattern_is_contains_multiple) {
 
-      std::cout << "Multi with ... " << pattern << " and start? " << starts_with_any_char << std::endl;
+      // std::cout << "Multi with ... " << pattern << " and start? " << starts_with_any_char << std::endl;
       return MultipleContainsPattern{strings, starts_with_any_char};
     } else {
-      std::cout << "std::regex with " << pattern << std::endl;
+      // std::cout << "std::regex with " << pattern << std::endl;
       // return std::regex(sql_like_to_regex(pattern));
       // std::cout << "Creating RE2 pattern of " << sql_like_to_regex(pattern) << std::endl;
       return RE2Pattern{std::make_shared<re2::RE2>(sql_like_to_regex(pattern))};  // IDEALLY: we would pass re2::RE2(sql_like_to_regex(pattern)) here. But problems with variant

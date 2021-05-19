@@ -149,14 +149,22 @@ class LikeMatcher {
       const auto starts_with_any_char = multiple_contains_pattern.starts_with_any_char;
       std::vector<Searcher> searchers;
       searchers.reserve(contains_strs.size());
+      auto string_length_remaining = size_t{0};
       for (const auto& contains_str : contains_strs) {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        string_length_remaining += contains_str.size();
       }
 
       functor([&](const auto& string) -> bool {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
-          current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
+          const auto current_search_string_length = contains_strs[searcher_idx].size();
+          string_length_remaining -= current_search_string_length;
+          auto search_end = std::max(string.begin(), std::min(string.end(), string.end() - string_length_remaining));
+          if (searcher_idx == 0 && !starts_with_any_char) {
+            search_end = string.begin() + current_search_string_length;
+          }
+          current_position = std::search(current_position, search_end, searchers[searcher_idx]);
           if (current_position == string.end()) return invert_results;  // current search term not found
           if (searcher_idx == 0 && !starts_with_any_char && current_position != string.begin()) {
             // We are checking the first search term, the pattern does not start with a wild card, and the match does

@@ -106,54 +106,60 @@ TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
   EXPECT_EQ(*expression_c, *in_(a, list_(5)));
 }
 
-TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
+TEST_F(ExpressionReductionRuleTest, RewriteLikeWildcard) {
+  auto get_rewritten_like_predicate = [&] (std::shared_ptr<AbstractExpression> expression,
+                                           bool check_left_input_is_unchanged = true) {
+    auto predicate_node = PredicateNode::make(expression, mock_node);
+    ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression);
+
+    if (check_left_input_is_unchanged) {
+      EXPECT_EQ(predicate_node->left_input(), mock_node);
+    }
+
+    return std::tuple<const std::shared_ptr<AbstractLQPNode>,
+                      const std::shared_ptr<AbstractExpression>>{predicate_node, expression};
+  };
+
   // Test LIKE patterns where a rewrite to simple comparison is possible
-  auto expression_a = std::shared_ptr<AbstractExpression>(like_(s, "RED%"));
-  auto predicate_node = PredicateNode::make(expression_a, mock_node);
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression_a);
+  const auto [predicate_node_a, expression_a] = get_rewritten_like_predicate(like_(s, "RED%"));
   EXPECT_EQ(*expression_a, *between_upper_exclusive_(s, "RED", "REE"));
-  EXPECT_EQ(predicate_node->left_input(), mock_node);
 
-  // auto expression_b = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_b);
-  // EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
+  const auto [predicate_node_b, expression_b] = get_rewritten_like_predicate(like_(concat_(s, s), "RED%"));
+  EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
 
-  // // Test LIKE patterns where a rewrite to BETWEEN UPPER EXCLUSIVE is NOT possible
-  // auto expression_c = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_c);
-  // EXPECT_EQ(*expression_c, *like_(s, "RED%E%"));
+  // Test LIKE patterns where a NOT LIKE is rewritten to `< OR >=`
+  const auto [predicate_node_c, expression_c] = get_rewritten_like_predicate(not_like_(s, "RED%"));
+  EXPECT_EQ(*expression_c, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
 
-  // auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_d);
-  // EXPECT_EQ(*expression_d, *like_(s, "%"));
+  // Test LIKE patterns where a rewrite to BETWEEN UPPER EXCLUSIVE is NOT possible
+  const auto [predicate_node_d, expression_d] = get_rewritten_like_predicate(like_(s, "%RED_E%"));
+  EXPECT_EQ(*expression_d, *like_(s, "%RED_E%"));
 
-  // auto expression_e = std::shared_ptr<AbstractExpression>(like_(s, "%RED"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_e);
-  // EXPECT_EQ(*expression_e, *like_(s, "%RED"));
+  const auto [predicate_node_e, expression_e] = get_rewritten_like_predicate(like_(s, "%"));
+  EXPECT_EQ(*expression_e, *like_(s, "%"));
 
-  // auto expression_f = std::shared_ptr<AbstractExpression>(like_(s, "R_D%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_f);
-  // EXPECT_EQ(*expression_f, *like_(s, "R_D%"));
+  const auto [predicate_node_f, expression_f] = get_rewritten_like_predicate(like_(s, "%RED"));
+  EXPECT_EQ(*expression_f, *like_(s, "%RED"));
 
-  // auto expression_g = std::shared_ptr<AbstractExpression>(like_(s, "RE\x7F%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_g);
-  // EXPECT_EQ(*expression_g, *like_(s, "RE\x7F%"));
+  const auto [predicate_node_g, expression_g] = get_rewritten_like_predicate(like_(s, "R_D%"));
+  EXPECT_EQ(*expression_g, *like_(s, "R_D%"));
 
-  // // Test that non-LIKE expressions remain unaltered
-  // auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
-  // EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
+  const auto [predicate_node_h, expression_h] = get_rewritten_like_predicate(like_(s, "RE\x7F%"));
+  EXPECT_EQ(*expression_h, *like_(s, "RE\x7F%"));
 
-  // auto expression_i = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
-  // ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_i);
-  // EXPECT_EQ(*expression_i, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
+  const auto [predicate_node_i, expression_i] = get_rewritten_like_predicate(like_(s, "%RED%"));
+  EXPECT_EQ(*expression_i, *like_(s, "%RED%"));
 
-  auto expression_j = std::shared_ptr<AbstractExpression>(like_(s, "RED%BLUE%"));
-  auto predicate_node = PredicateNode::make(expression_j, mock_node);
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression_j);
-  EXPECT_EQ(*expression_j, *like_(s, "RED%BLUE%"));
-  EXPECT_EQ(*expression_j, *between_upper_exclusive_(s, "RED", "REE"));
-  EXPECT_EQ(predicate_node->left_input(), mock_node);
+  // Test that non-LIKE expressions remain unaltered
+  const auto [predicate_node_j, expression_j] = get_rewritten_like_predicate(greater_than_(s, "RED%"));
+  EXPECT_EQ(*expression_j, *greater_than_(s, "RED%"));
+
+  // Test LIKE patterns where a the LIKE predicate is kept, but a prior between-predicate is inserted
+  const auto [predicate_node_k, expression_k] = get_rewritten_like_predicate(like_(s, "RED%BLUE%"), false);
+  EXPECT_EQ(*expression_k, *like_(s, "RED%BLUE%"));
+  const auto& inserted_predicate_node = dynamic_cast<PredicateNode&>(*predicate_node_k->left_input());
+  EXPECT_EQ(*inserted_predicate_node.predicate(), *between_upper_exclusive_(s, "RED", "REE"));
+  EXPECT_EQ(predicate_node_k->left_input()->left_input(), mock_node);
 }
 
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {

@@ -224,9 +224,6 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
   if (multi_char_wildcard_pos + 1 < pattern.size()) {
     auto between_node = PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
     lqp_insert_node(node, LQPInputSide::Left, between_node);
-    // between_node->set_left_input(node->left_input());
-    // node->set_left_input(between_node);
-    std::cout << "Changed ..." << std::endl;
     return;
   }
 
