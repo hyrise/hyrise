@@ -35,7 +35,9 @@ def is_setup():
 assert len(sys.argv) == 2
 table_dir = sys.argv[1]
 
-LOCATION = "https://archive.org/download/imdb_20200624/imdb.zip"
+# This file contains the IMDB dataset and is based on the specifications of the
+# original JOB repository: https://github.com/gregrahn/join-order-benchmark
+LOCATION = "http://www.dropbox.com/s/fgju7cifpehqlww/imdb.zip?dl=1"
 FILE_NAME = "imdb.zip"
 TABLE_NAMES = [
     "aka_name",
@@ -71,6 +73,7 @@ if is_setup():
 hash_md5 = hashlib.md5()
 
 url = urllib.request.urlopen(LOCATION)
+
 meta = url.info()
 file_size = int(meta["Content-Length"])
 
@@ -104,7 +107,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "1b5cf1e8ca7f7cb35235a3c23f89d8e9":
+if hash_dl != "d36c7f62d71a3efff155e12779c6ee74":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
