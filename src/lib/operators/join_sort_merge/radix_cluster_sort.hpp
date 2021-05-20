@@ -236,9 +236,10 @@ class RadixClusterSort {
   // corresponding cluster (i.e., split #0 is the upper bound of cluster #0). As the last cluster does not require an
   // upper bound, the returned vector size is usually the cluster count minus one. However, it can be even shorter
   // (e.g., attributes where #distinct values < #cluster count; in this case, empty clusters will be created).
-  // Procedure: passed values are sorted and samples are picked from the whole sample value range in fixed jump sizes.
-  // Repeated values are not removed before picking to handle skewed inputs. However, the final split values are
-  // unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
+  // Procedure: passed values are sorted and samples are picked from the whole sample value range in constant
+  // distances. Repeated values are not removed. Thereby, they have a higher chance of being picked which should
+  // cover skewed inputs. However, the final split values
+  // are unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
   const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 

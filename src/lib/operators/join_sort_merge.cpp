@@ -468,8 +468,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
   // value. Even though the input vector is sorted, we first start by linearly scanning for the end of the run. The
   // reason is that we know with a high probability that the item we are looking for is at the beginning of the input
-  // vector. If we do not find the run's end within the linearly scanned part, we use a binary search.
-  // An unsuccessful linear search should come with neglectable costs as we will iterate over the values anyways.
+  // vector (the run value is the first in the sequence and the sequence is sorted). If we do not find the run's end
+  // within the linearly scanned part, we use a binary search. An unsuccessful linear search should come with
+  // neglectable costs as we will iterate over the values anyways.
   size_t _run_length(size_t start_index, const MaterializedSegment<T>& values) {
     if (start_index >= values.size()) {
       return 0;

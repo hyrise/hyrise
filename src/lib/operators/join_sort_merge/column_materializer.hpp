@@ -106,7 +106,7 @@ class ColumnMaterializer {
     }
     gathered_samples.shrink_to_fit();
 
-    return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
+    return {output, null_rows, gathered_samples};
   }
 
  private:
