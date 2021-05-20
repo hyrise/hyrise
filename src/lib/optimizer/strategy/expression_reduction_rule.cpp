@@ -245,8 +245,6 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
     auto between_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(node, LQPInputSide::Left, between_node);
   }
-
-  std::cout << *node << std::endl;
 }
 
 void ExpressionReductionRule::remove_duplicate_aggregate(

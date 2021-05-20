@@ -97,9 +97,8 @@ class LikeMatcher {
     bool starts_with_any_char{false};
   };
   struct RE2Pattern final {
-    // RE2 has a deleted copy constructor. The shared_ptr allows copying the AllPatternVariant in the LikMatcher
-    // constructor.
-    std::shared_ptr<re2::RE2> pattern;
+    // RE2 allows to copy or move. The unique_ptr enables moving the variant in the constructor the LikeMatcher.
+    std::unique_ptr<re2::RE2> pattern;
   };
 
   /**
@@ -160,18 +159,17 @@ class LikeMatcher {
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           const auto current_search_string_length = contains_strs[searcher_idx].size();
           string_length_remaining -= current_search_string_length;
-          auto search_end = std::max(string.begin(), std::min(string.end(), string.end() - string_length_remaining));
-          if (searcher_idx == 0 && !starts_with_any_char) {
-            search_end = string.begin() + current_search_string_length;
+          // End iterator to search up to. If `hello%hello` of `hello%hello%hello` is still remaining, we do not need
+          // to search up the end, but can stop earlier. Further ensure, that we don't search_set to be value smaller
+          // than current_position.
+          auto search_end = std::max(current_position, std::min(string.end(), string.end() - string_length_remaining));
+          if (!starts_with_any_char && searcher_idx == 0) {
+            // For patterns like 'hello%world', we set the search to check only the first 5 characters.
+            search_end = current_position + current_search_string_length;
           }
           current_position = std::search(current_position, search_end, searchers[searcher_idx]);
           if (current_position == string.end()) return invert_results;  // current search term not found
-          if (searcher_idx == 0 && !starts_with_any_char && current_position != string.begin()) {
-            // We are checking the first search term, the pattern does not start with a wild card, and the match does
-            // not start at the first first position: no match.
-            return invert_results;
-          }
-          current_position += contains_strs[searcher_idx].size();
+          current_position += current_search_string_length;
         }
         return !invert_results;
       });
