@@ -145,17 +145,16 @@ When trying to optimize the time spent building the project, it is often helpful
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Maintainers
-
 - Jan Kossmann
-- Markus Dreseler
 - Martin Boissier
 - Stefan Halfpap
 
-
 Contact: firstname.lastname@hpi.de
 
-## Contributors
+## Maintainer emeritus
+- Markus Dreseler
 
+## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
 -   Timo      Djürken
