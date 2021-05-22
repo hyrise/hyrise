@@ -644,6 +644,7 @@ set(
 
 set(
     LIBRARIES
+    compact_vector
     lz4
     sqlparser
     uninitialized_vector

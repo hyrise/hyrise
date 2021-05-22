@@ -180,6 +180,17 @@ target_include_directories(
 
 target_compile_options(zstd PRIVATE -fPIC)
 
+add_library(compact_vector INTERFACE)
+target_include_directories(compact_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include)
+target_sources(compact_vector
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/compact_iterator.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/compact_vector.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/const_iterator_traits.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/parallel_iterator_traits.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/prefetch_iterator_traits.hpp
+)
+target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro)
+
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)

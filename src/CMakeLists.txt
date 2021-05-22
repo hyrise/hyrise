@@ -80,7 +80,6 @@ include_directories(
     ${TBB_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
-    ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include/
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
     ${PROJECT_SOURCE_DIR}/third_party/json
