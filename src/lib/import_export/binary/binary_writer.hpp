@@ -212,7 +212,6 @@ class BinaryWriter {
    * Vector compress. bit width²³| uint8_t                             | 1
    * String offset values²³      | uint8_t                             | Rows * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
-   * String offset values²⁴      | uint(8|16|32)_t                     | Rows * width of offset vector
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
@@ -220,7 +219,6 @@ class BinaryWriter {
    * ¹: This field is only written if NULL values' size is not 0
    * ²: These fields are only written if string offset size is not 0
    * ³: This field is only written if the vector compression is BitPacking
-   * ⁴: This field is only written if the vector compression is FixedWidthInteger
    */
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
