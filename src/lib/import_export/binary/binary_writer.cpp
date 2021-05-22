@@ -332,7 +332,8 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
 }
 
 template <typename T>
-CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment) {
+CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
+    const AbstractEncodedSegment& abstract_encoded_segment) {
   uint8_t compressed_vector_type_id = 0u;
   resolve_encoded_segment_type<T>(abstract_encoded_segment, [&compressed_vector_type_id](auto& typed_segment) {
     const auto compressed_vector_type = typed_segment.compressed_vector_type();
