@@ -132,7 +132,7 @@ using TaskID = uint32_t;
 using CommitID = uint32_t;
 using TransactionID = uint32_t;
 
-using VectorCompressionID = uint8_t;
+using CompressedVectorTypeID = uint8_t;
 
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
