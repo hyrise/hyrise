@@ -11,7 +11,7 @@ inline bool is_fixed_width_integer(CompressedVectorType type) {
     case CompressedVectorType::FixedWidthInteger2Byte:
     case CompressedVectorType::FixedWidthInteger1Byte:
       return true;
-    default:
+    case CompressedVectorType::BitPacking:
       return false;
   }
 }
@@ -26,7 +26,7 @@ inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type)
       return 2u;
     case CompressedVectorType::FixedWidthInteger1Byte:
       return 1u;
-    default:
+    case CompressedVectorType::BitPacking:
       return 0u;
   }
 }
