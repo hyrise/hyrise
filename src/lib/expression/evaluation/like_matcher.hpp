@@ -2,7 +2,6 @@
 
 #include <experimental/functional>
 #include <optional>
-#include <regex>
 #include <string>
 #include <utility>
 #include <variant>
@@ -12,22 +11,6 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -46,9 +29,7 @@ class LikeMatcher {
 #endif
 
  public:
-  /**
-   * Turn SQL LIKE-pattern into a C++ regex.
-   */
+  // Turn SQL LIKE-pattern into a regex pattern string.
   static std::string sql_like_to_regex(pmr_string sql_like);
 
   static size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset = 0);
@@ -101,12 +82,10 @@ class LikeMatcher {
     std::unique_ptr<re2::RE2> pattern;
   };
 
-  /**
-   * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
-   * general pattern.
-   */
+  // Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to regex evalation for
+  // remaining pattern.
   using AllPatternVariant =
-      std::variant<std::regex, RE2Pattern, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      std::variant<RE2Pattern, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern);
 
@@ -172,12 +151,6 @@ class LikeMatcher {
           current_position += current_search_string_length;
         }
         return !invert_results;
-      });
-
-    } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
-      const auto& regex = std::get<std::regex>(_pattern_variant);
-      functor([&](const auto& string) -> bool {
-        return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
       });
 
     } else if (std::holds_alternative<RE2Pattern>(_pattern_variant)) {
