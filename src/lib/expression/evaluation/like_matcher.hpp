@@ -78,14 +78,14 @@ class LikeMatcher {
     bool starts_with_any_char{false};
   };
   struct RE2Pattern final {
-    // RE2 allows to copy or move. The unique_ptr enables moving the variant in the constructor the LikeMatcher.
+    // RE2 cannot be copied or moved. The unique_ptr enables moving the variant in the constructor the LikeMatcher.
     std::unique_ptr<re2::RE2> pattern;
   };
 
   // Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to regex evalation for
   // remaining pattern.
   using AllPatternVariant =
-      std::variant<RE2Pattern, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      std::variant<StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern, RE2Pattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern);
 
