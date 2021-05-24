@@ -377,7 +377,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
-        try_join_to_semi_rewrite(node, required_expressions_by_node);
+        // try_join_to_semi_rewrite(node, required_expressions_by_node);
       } break;
 
       case LQPNodeType::Projection: {
