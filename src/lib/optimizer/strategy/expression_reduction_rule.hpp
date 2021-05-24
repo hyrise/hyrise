@@ -52,7 +52,9 @@ class ExpressionReductionRule : public AbstractRule {
    * Rewrite `a LIKE 'abc%'` to `a BetweenUpperExclusive 'abc' AND 'abd'`
    * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abcd'`
    */
-  static void rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<AbstractExpression>& input_expression, const bool rewrite_predicate_adding_like);
+  static void rewrite_like_prefix_wildcard(const std::shared_ptr<AbstractLQPNode>& node,
+                                           std::shared_ptr<AbstractExpression>& input_expression,
+                                           const bool rewrite_predicate_adding_like);
 
   /**
    * Rewrite `SELECT SUM(a), COUNT(a), AVG(a)` to `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`

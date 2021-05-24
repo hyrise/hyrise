@@ -19,7 +19,8 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-ExpressionReductionRule::ExpressionReductionRule(const bool rewrite_predicate_adding_like) : _rewrite_predicate_adding_like(rewrite_predicate_adding_like) {}
+ExpressionReductionRule::ExpressionReductionRule(const bool rewrite_predicate_adding_like)
+    : _rewrite_predicate_adding_like(rewrite_predicate_adding_like) {}
 
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
@@ -220,12 +221,11 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
   const auto [lower_bound, upper_bound] = *bounds;
 
   // Create a between predicate for LIKEs or a `< OR >=` predicates for NOT LIKEs.
-  auto predicate_expression =
-      std::shared_ptr<AbstractExpression>(between_upper_exclusive_(binary_predicate->left_operand(),
-                                                                   lower_bound, upper_bound));
+  auto predicate_expression = std::shared_ptr<AbstractExpression>(
+      between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
   if (binary_predicate->predicate_condition == PredicateCondition::NotLike) {
     predicate_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
-                             greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+                               greater_than_equals_(binary_predicate->left_operand(), upper_bound));
   }
 
   auto any_chars_wildcard_count = std::count(pattern.cbegin(), pattern.cend(), '%');
@@ -233,10 +233,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
   if (any_chars_wildcard_count == 1 && first_any_chars_wildcard_pos == pattern.size() - 1) {
     // Cases as LIKE 'hell%' can be be simply rewritten by replacing the LIKE predicate expression.
     input_expression = predicate_expression;
-  } else if (binary_predicate->predicate_condition == PredicateCondition::Like
-             && rewrite_predicate_adding_like) {
-    // Cases where the first '%' wildcard is not the last char of the pattern (e.g., LIKE 'hel%lo%'). In this case, add new
-    // between predicate and keep the LIKE predicate expression as is. Not implemented for NOT LIKE.
+  } else if (binary_predicate->predicate_condition == PredicateCondition::Like && rewrite_predicate_adding_like) {
+    // Cases where the first '%' wildcard is not the last char of the pattern (e.g., LIKE 'hel%lo%'). In this case, add
+    // new between predicate and keep the LIKE predicate expression as is. Not implemented for NOT LIKE.
     auto between_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(node, LQPInputSide::Left, between_node);
   }

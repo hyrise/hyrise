@@ -107,8 +107,8 @@ TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
 }
 
 TEST_F(ExpressionReductionRuleTest, RewriteLikeWildcard) {
-  auto get_rewritten_like_predicate = [&] (std::shared_ptr<AbstractExpression> expression,
-                                           bool check_left_input_is_unchanged = true) {
+  auto get_rewritten_like_predicate = [&](std::shared_ptr<AbstractExpression> expression,
+                                          bool check_left_input_is_unchanged = true) {
     auto predicate_node = PredicateNode::make(expression, mock_node);
     ExpressionReductionRule::rewrite_like_prefix_wildcard(predicate_node, expression, true);
 
@@ -116,8 +116,8 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikeWildcard) {
       EXPECT_EQ(predicate_node->left_input(), mock_node);
     }
 
-    return std::tuple<const std::shared_ptr<AbstractLQPNode>,
-                      const std::shared_ptr<AbstractExpression>>{predicate_node, expression};
+    return std::tuple<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<AbstractExpression>>{predicate_node,
+                                                                                                         expression};
   };
 
   // Test LIKE patterns where a rewrite to simple comparison is possible
