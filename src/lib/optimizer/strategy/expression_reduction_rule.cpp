@@ -209,10 +209,6 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
   }
 
   const auto first_any_chars_wildcard_pos = pattern.find_first_of('%');
-  // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
-  // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
-  // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
-  // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
   if (first_any_chars_wildcard_pos == std::string::npos || first_any_chars_wildcard_pos == 0) {
     return;
   }
@@ -234,14 +230,13 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(const std::shared_ptr
 
   auto any_chars_wildcard_count = std::count(pattern.cbegin(), pattern.cend(), '%');
 
-  // TODO(Martin): we add a node in front of the LIKE node multiple times ... can we avoid that?
   if (any_chars_wildcard_count == 1 && first_any_chars_wildcard_pos == pattern.size() - 1) {
     // Cases as LIKE 'hell%' can be be simply rewritten by replacing the LIKE predicate expression.
     input_expression = predicate_expression;
   } else if (binary_predicate->predicate_condition == PredicateCondition::Like
              && rewrite_predicate_adding_like) {
     // Cases where the first '%' wildcard is not the last char of the pattern (e.g., LIKE 'hel%lo%'). In this case, add new
-    // reduction node and keep the LIKE predicate expression as is. Adding between nodes is not implemented for NOT LIKE.
+    // between predicate and keep the LIKE predicate expression as is. Not implemented for NOT LIKE.
     auto between_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(node, LQPInputSide::Left, between_node);
   }

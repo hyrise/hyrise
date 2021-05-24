@@ -37,6 +37,8 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
+  // Run ExpressionReductionRule, but do not yet add new between nodes (only replace existing like predicates with
+  // between if applicable).
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -59,7 +61,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  // Re-run to optimize LIKE's which have been in OR's ....
+  // Re-run ExpressionReductionRule to optimize LIKE's that have been part of a disjunction expression evaluation
+  // (e.g., `col_a LIKE 'a%' OR col_a LIKE 'b%'; cf. JOB's query 19b; split up by PredicateSplitUpRule). This time,
+  // also add between predicates.
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>(true));
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());

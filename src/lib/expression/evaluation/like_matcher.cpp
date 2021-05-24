@@ -5,8 +5,6 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
-
-
 #include "utils/assert.hpp"
 
 namespace opossum {
