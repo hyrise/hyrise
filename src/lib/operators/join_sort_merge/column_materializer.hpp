@@ -106,7 +106,7 @@ class ColumnMaterializer {
     }
     gathered_samples.shrink_to_fit();
 
-    return std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>>{output, null_rows, gathered_samples};
+    return {output, null_rows, gathered_samples};
   }
 
  private:
