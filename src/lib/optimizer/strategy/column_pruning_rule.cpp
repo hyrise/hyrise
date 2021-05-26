@@ -237,9 +237,6 @@ void try_join_to_semi_rewrite(
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
   // uniqueness is not guaranteed, we cannot perform the rewrite as non-unique joins could possibly emit a matching
   // line more than once.
-
-  return;
-
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   if (join_node->join_mode != JoinMode::Inner) return;
 
