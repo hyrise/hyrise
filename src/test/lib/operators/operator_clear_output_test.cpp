@@ -45,6 +45,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   // Prerequisite
   ASSERT_EQ(_gt->consumer_count(), 0);
   ASSERT_EQ(_gt->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(_gt->get_output(), nullptr);
 
   // Add consumers
   auto validate1 = std::make_shared<Validate>(_gt);
@@ -55,14 +56,20 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   validate2->set_transaction_context(_ta_context);
   EXPECT_EQ(_gt->consumer_count(), 2);
 
-  // Remove consumers
+  // Remove consumer 1
   validate1->execute();
+  ASSERT_EQ(validate1->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(validate1->get_output(), nullptr);
+
   EXPECT_EQ(_gt->consumer_count(), 1);
   EXPECT_NE(_gt->get_output(), nullptr);
 
+  // Remove consumer 2
   validate2->execute();
-  EXPECT_EQ(_gt->consumer_count(), 0);
+  ASSERT_EQ(validate2->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(validate2->get_output(), nullptr);
 
+  EXPECT_EQ(_gt->consumer_count(), 0);
   // Output should have been cleared by now.
   EXPECT_EQ(_gt->state(), OperatorState::ExecutedAndCleared);
 }

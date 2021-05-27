@@ -63,19 +63,27 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
 
 void OperatorTask::skip_operator_task() {
+  // Newly created tasks always have TaskState::Created. However, AbstractOperator::get_or_create_operator_task needs
+  // to create an OperatorTask in TaskState::Done, if the operator has already executed. This function provides a quick
+  // path to TaskState::Done using dummy transactions.
+  // While performing dummy transactions, a task should not be used elsewhere, e.g., in the scheduler, to prevent
+  // race conditions, conflicts etc. Thus, the following Assert checks the use_count of the task's shared pointer.
+  // Only the owning instance should hold a shared pointer to the task. But, since this function needs to create
+  // another shared pointer to query the use_count, the Assert checks for `use_count() == 2` as follows:
   Assert(shared_from_this().use_count() == 2, "Expected this OperatorTask to have a single owner.");
   Assert(_op->executed(), "An OperatorTask can only be skipped if its operator has already been executed.");
+
   /**
    * Use dummy transitions to switch to TaskState::Done because the AbstractTask cannot switch to TaskState::Done
    * directly.
    */
-  auto success_scheduled = this->_try_transition_to(TaskState::Scheduled);
+  auto success_scheduled = _try_transition_to(TaskState::Scheduled);
   Assert(success_scheduled, "Expected successful transition to TaskState::Scheduled.");
 
-  auto success_started = this->_try_transition_to(TaskState::Started);
+  auto success_started = _try_transition_to(TaskState::Started);
   Assert(success_started, "Expected successful transition to TaskState::Started.");
 
-  auto success_done = this->_try_transition_to(TaskState::Done);
+  auto success_done = _try_transition_to(TaskState::Done);
   Assert(success_done, "Expected successful transition to TaskState::Done.");
 }
 

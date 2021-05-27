@@ -68,6 +68,8 @@ class Worker;
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
 enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
+static_assert(static_cast<std::underlying_type_t<TaskState>>(TaskState::Created) == 0,
+              "TaskState::Created is not equal to 0. TaskState enum values are expected to be ordered.");
 
 /**
  * Base class for anything that can be scheduled by the Scheduler and gets executed by a Worker.
@@ -180,8 +182,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Transitions the task's state to @param new_state.
    * @returns true on success and
    *          false if another caller/thread/worker was faster in progressing this task's state.
-   *
-   * Note that the function fails for illegal state transitions, such as TaskState::Done -> TaskState::Started.
    */
   [[nodiscard]] bool _try_transition_to(TaskState new_state);
 

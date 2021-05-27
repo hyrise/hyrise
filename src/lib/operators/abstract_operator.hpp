@@ -75,11 +75,13 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *
  *  1. The operator is constructed in OperatorState::Created.
  *     Input operators are not guaranteed to have executed.
- *  2. The execute method is called from the outside (usually by the scheduler). The operator transitions to
- *     OperatorState::Running and the heavy lifting is done.
- *     By now, all input operators should have been executed.
- *  3. The operator finishes its execution and thus switches to OperatorState::ExecutedAndAvailable.
- *     Consumers, usually other operators, can call get_output(), a cheap operation, to receive the results.
+ *  2. The execute method is called from the outside (usually by the scheduler). By now, all input operators should
+ *     have been executed. The operator transitions to OperatorState::Running and the heavy lifting is done.
+ *  3. The operator finishes its execution and thus switches to OperatorState::ExecutedAndAvailable. "Available"
+ *     refers to the operator's result table, which is now available to consumers, usually other operators.
+ *     To receive the result table, consumers call get_output(), a cheap operation. Note, however, that some
+ *     operators, such as Delete, never produce results. Although reaching OperatorState::ExecutedAndAvailable, these
+ *     operators will legally return a null pointer once get_output() is called.
  *  4. The operator clears its results and transitions to OperatorState::ExecutedAndCleared when clear_output() is
  *     called. Usually, this happens once the last consumer deregisters.
  *

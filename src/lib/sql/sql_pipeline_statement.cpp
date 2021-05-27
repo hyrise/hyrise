@@ -213,9 +213,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
-    auto [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(get_physical_plan());
-    _tasks = tasks;
-    _root_operator_task = root_operator_task;
+    std::tie(_tasks, _root_operator_task) = OperatorTask::make_tasks_from_operator(get_physical_plan());
   }
   return _tasks;
 }
@@ -296,11 +294,11 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
+    // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
+    // other operators should be in OperatorState::ExecutedAndCleared.
+    Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
+           "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
     if constexpr (HYRISE_DEBUG) {
-      // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
-      // other operators should be in OperatorState::ExecutedAndCleared.
-      Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
-             "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
       for (const auto& task : tasks) {
         const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
         if (operator_task == _root_operator_task) continue;

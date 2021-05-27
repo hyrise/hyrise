@@ -32,8 +32,8 @@ class OperatorTask : public AbstractTask {
   std::string description() const override;
 
   /**
-   * Transitions this OperatorTask to TaskState::Done if its operator has already been executed. Otherwise, this
-   * function fails.
+   * Transitions this OperatorTask to TaskState::Done.
+   * @pre Operator must have already been executed.
    */
   void skip_operator_task();
 

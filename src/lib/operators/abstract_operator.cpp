@@ -172,10 +172,9 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (!_never_clear_output) {
-    _transition_to(OperatorState::ExecutedAndCleared);
-    _output = nullptr;
-  }
+  if (_never_clear_output) return;
+  _transition_to(OperatorState::ExecutedAndCleared);
+  _output = nullptr;
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
@@ -289,8 +288,10 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether _operator_task points to NULL, which means it was never initialized before.
-    using wt = std::weak_ptr<OperatorTask>;
-    auto is_uninitialized = !_operator_task.owner_before(wt{}) && !wt{}.owner_before(_operator_task);
+    // Taken from: https://stackoverflow.com/a/45507610/5558040
+    using weak_null_pointer = std::weak_ptr<OperatorTask>;
+    auto is_uninitialized =
+        !_operator_task.owner_before(weak_null_pointer{}) && !weak_null_pointer{}.owner_before(_operator_task);
     Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
   }
 

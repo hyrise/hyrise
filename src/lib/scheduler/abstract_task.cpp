@@ -27,11 +27,7 @@ bool AbstractTask::is_done() const { return _state == TaskState::Done; }
 
 bool AbstractTask::is_stealable() const { return _stealable; }
 
-bool AbstractTask::is_scheduled() const {
-  static_assert(static_cast<std::uint8_t>(TaskState::Created) == 0,
-                "TaskState::Created is not equal to 0. TaskState enum values are expected to be ordered.");
-  return _state > TaskState::Created;
-}
+bool AbstractTask::is_scheduled() const { return _state >= TaskState::Scheduled; }
 
 std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
@@ -48,7 +44,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   _successors.emplace_back(successor);
   successor->_predecessors.emplace_back(shared_from_this());
 
-  // A task, which is already done, will not call _on_predecessor_done at the successor. Consequently, the successor's
+  // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
@@ -68,7 +64,7 @@ bool AbstractTask::try_mark_as_enqueued() { return _try_transition_to(TaskState:
 bool AbstractTask::try_mark_as_assigned_to_worker() { return _try_transition_to(TaskState::AssignedToWorker); }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
-  DebugAssert((!is_scheduled()), "Possible race: Don't set callback after the Task was scheduled");
+  DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
 
   _done_callback = done_callback;
 }
