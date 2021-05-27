@@ -237,7 +237,7 @@ void try_join_to_semi_rewrite(
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
   // uniqueness is not guaranteed, we cannot perform the rewrite as non-unique joins could possibly emit a matching
   // line more than once.
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+  /*auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   if (join_node->join_mode != JoinMode::Inner) return;
 
   // Check whether the left/right inputs are actually needed by following operators
@@ -252,7 +252,7 @@ void try_join_to_semi_rewrite(
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
 
   // Early out, if we need output expressions from both input tables.
-  if (left_input_is_used && right_input_is_used) return;
+  if (left_input_is_used && right_input_is_used) return;*/
 
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
@@ -263,7 +263,7 @@ void try_join_to_semi_rewrite(
    *     a) Found match -> Rewrite to semi join
    *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
    */
-  const auto& join_predicates = join_node->join_predicates();
+  /*const auto& join_predicates = join_node->join_predicates();
   auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
   auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
   for (const auto& join_predicate : join_predicates) {
@@ -294,7 +294,7 @@ void try_join_to_semi_rewrite(
   if (!right_input_is_used &&
       join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
-  }
+  }*/
 }
 
 void prune_projection_node(
