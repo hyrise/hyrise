@@ -43,8 +43,9 @@ class OperatorClearOutputTest : public BaseTest {
 
 TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   // Prerequisite
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
+  ASSERT_EQ(_gt->consumer_count(), 0);
+  ASSERT_EQ(_gt->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(_gt->get_output(), nullptr);
 
   // Add consumers
   auto validate1 = std::make_shared<Validate>(_gt);
@@ -55,16 +56,22 @@ TEST_F(OperatorClearOutputTest, ConsumerTracking) {
   validate2->set_transaction_context(_ta_context);
   EXPECT_EQ(_gt->consumer_count(), 2);
 
-  // Remove consumers
+  // Remove consumer 1
   validate1->execute();
+  ASSERT_EQ(validate1->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(validate1->get_output(), nullptr);
+
   EXPECT_EQ(_gt->consumer_count(), 1);
   EXPECT_NE(_gt->get_output(), nullptr);
 
+  // Remove consumer 2
   validate2->execute();
-  EXPECT_EQ(_gt->consumer_count(), 0);
+  ASSERT_EQ(validate2->state(), OperatorState::ExecutedAndAvailable);
+  ASSERT_NE(validate2->get_output(), nullptr);
 
+  EXPECT_EQ(_gt->consumer_count(), 0);
   // Output should have been cleared by now.
-  EXPECT_EQ(_gt->get_output(), nullptr);
+  EXPECT_EQ(_gt->state(), OperatorState::ExecutedAndCleared);
 }
 
 TEST_F(OperatorClearOutputTest, NeverClearOutput) {
@@ -72,8 +79,8 @@ TEST_F(OperatorClearOutputTest, NeverClearOutput) {
   _gt->never_clear_output();
 
   // Prerequisite
-  EXPECT_EQ(_gt->consumer_count(), 0);
-  EXPECT_NE(_gt->get_output(), nullptr);
+  ASSERT_EQ(_gt->consumer_count(), 0);
+  ASSERT_EQ(_gt->state(), OperatorState::ExecutedAndAvailable);
 
   // Prepare
   auto validate = std::make_shared<Validate>(_gt);
@@ -131,12 +138,12 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   EXPECT_EQ(projection_literals->consumer_count(), 1);
   semi_join->execute();
   EXPECT_EQ(projection_literals->consumer_count(), 0);
-  EXPECT_EQ(projection_literals->get_output(), nullptr);
+  EXPECT_EQ(projection_literals->state(), OperatorState::ExecutedAndCleared);
   EXPECT_EQ(dummy_table_wrapper->consumer_count(), 0);
-  EXPECT_EQ(dummy_table_wrapper->get_output(), nullptr);
+  EXPECT_EQ(dummy_table_wrapper->state(), OperatorState::ExecutedAndCleared);
   projection->execute();
   EXPECT_EQ(semi_join->consumer_count(), 0);
-  EXPECT_EQ(semi_join->get_output(), nullptr);
+  EXPECT_EQ(semi_join->state(), OperatorState::ExecutedAndCleared);
 }
 
 TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubqueryNested) {
@@ -185,12 +192,12 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubqueryNes
   EXPECT_EQ(projection_literals->consumer_count(), 1);
   semi_join->execute();
   EXPECT_EQ(projection_literals->consumer_count(), 0);
-  EXPECT_EQ(projection_literals->get_output(), nullptr);
+  EXPECT_EQ(projection_literals->state(), OperatorState::ExecutedAndCleared);
   EXPECT_EQ(dummy_table_wrapper->consumer_count(), 0);
-  EXPECT_EQ(dummy_table_wrapper->get_output(), nullptr);
+  EXPECT_EQ(dummy_table_wrapper->state(), OperatorState::ExecutedAndCleared);
   projection->execute();
   EXPECT_EQ(semi_join->consumer_count(), 0);
-  EXPECT_EQ(semi_join->get_output(), nullptr);
+  EXPECT_EQ(semi_join->state(), OperatorState::ExecutedAndCleared);
 }
 
 TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) {
@@ -231,12 +238,12 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) 
   EXPECT_EQ(validate->consumer_count(), 1);
   aggregate_hash_count_star->execute();
   EXPECT_EQ(validate->consumer_count(), 0);
-  EXPECT_EQ(validate->get_output(), nullptr);
+  EXPECT_EQ(validate->state(), OperatorState::ExecutedAndCleared);
   projection->execute();
   EXPECT_EQ(aggregate_hash_count_star->consumer_count(), 0);
   EXPECT_EQ(aggregate_hash_max_a->consumer_count(), 0);
-  EXPECT_EQ(aggregate_hash_count_star->get_output(), nullptr);
-  EXPECT_EQ(aggregate_hash_max_a->get_output(), nullptr);
+  EXPECT_EQ(aggregate_hash_count_star->state(), OperatorState::ExecutedAndCleared);
+  EXPECT_EQ(aggregate_hash_max_a->state(), OperatorState::ExecutedAndCleared);
 }
 
 TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNested) {
@@ -278,12 +285,12 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
   EXPECT_EQ(validate->consumer_count(), 1);
   aggregate_hash_count_star->execute();
   EXPECT_EQ(validate->consumer_count(), 0);
-  EXPECT_EQ(validate->get_output(), nullptr);
+  EXPECT_EQ(validate->state(), OperatorState::ExecutedAndCleared);
   projection->execute();
   EXPECT_EQ(aggregate_hash_count_star->consumer_count(), 0);
   EXPECT_EQ(aggregate_hash_max_a->consumer_count(), 0);
-  EXPECT_EQ(aggregate_hash_count_star->get_output(), nullptr);
-  EXPECT_EQ(aggregate_hash_max_a->get_output(), nullptr);
+  EXPECT_EQ(aggregate_hash_count_star->state(), OperatorState::ExecutedAndCleared);
+  EXPECT_EQ(aggregate_hash_max_a->state(), OperatorState::ExecutedAndCleared);
 }
 
 }  // namespace opossum

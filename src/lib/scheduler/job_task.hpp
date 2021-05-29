@@ -13,7 +13,7 @@ namespace opossum {
  * Usage example:
  *
  *
- * std::atomic_uint c{0}
+ * std::atomic_uint32_t c{0}
  *
  * auto job0 = std::make_shared<JobTask>([c]() { c++; });
  * job0->schedule();

@@ -192,7 +192,7 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::atomic<size_t> _expected_result_size{};
+  std::atomic_size_t _expected_result_size{};
   bool _use_immediate_key_shortcut{};
 
   std::chrono::nanoseconds groupby_columns_writing_duration{};
