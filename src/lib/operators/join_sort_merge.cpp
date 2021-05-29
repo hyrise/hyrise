@@ -71,7 +71,6 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   }
 }
 
-
 // The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 // join_sort_merge.hpp. This is how the join works:
 // -> The input tables are materialized and clustered into a specified number of clusters.
@@ -727,7 +726,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     if (linear_search_result == values.end()) {
-
       // We did not find a larger value in the linearly scanned part and it spanned until the end of the input vector.
       // That means all values up to the end are part of the run.
       return std::distance(begin, end);
@@ -738,7 +736,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         end, values.end(), *end, [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
     return std::distance(begin, binary_search_result);
   }
-
 
   // Compares two values and creates a comparison result.
   CompareResult _compare(const T& left, const T& right) {
@@ -1012,7 +1009,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
   }
-
 
   // Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
   // This method adds those rows from the left table to the output that do not find a join partner.

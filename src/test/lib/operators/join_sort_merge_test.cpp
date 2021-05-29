@@ -16,7 +16,6 @@ class OperatorsJoinSortMergeTest : public BaseTest {
   }
 
   std::shared_ptr<AbstractOperator> dummy_input;
-
 };
 
 TEST_F(OperatorsJoinSortMergeTest, DescriptionAndName) {

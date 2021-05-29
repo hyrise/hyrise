@@ -51,7 +51,6 @@ class ColumnMaterializer {
   explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
  public:
-
   // For sufficiently large chunks (number of rows > JOB_SPAWN_THRESHOLD), the materialization is parallelized. Returns
   // the materialized segments and a list of null row ids if _materialize_null is true.
   std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
