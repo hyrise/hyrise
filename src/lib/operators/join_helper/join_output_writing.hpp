@@ -1,7 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 #include <boost/functional/hash_fwd.hpp>
+#include <unordered_map>
 
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -265,7 +265,7 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
       case OutputColumnOrder::LeftOnly:
         write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment, left_side_pos_list);
-        break;      
+        break;
     }
 
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));

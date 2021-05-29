@@ -1,7 +1,6 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
@@ -344,18 +343,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                      const size_t cluster_id) {
     switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
-        // (Please read first the comment for the _join_cluster function) In the equal case, we only want to emit rows
-        // with values where we know that there is no match on in the right table. That is the case if the comparison
-        // result is less. If we have the comparison result less between the runs, it means that the runs the step
-        // before been equal, less or greater. In all cases we now that there can not be a equal value on the right
-        // table if we have the comparison result less:
-        // (1) -> [5] | [5] <- |  (1) -> [4] | [7] <- | (1) -> [6] | [3] <-
-        //        [6] | [7]    |         [6] |        |            | [7]
-        // ------------------- | -------------------- | --------------------
-        // (2)    [5] | [5]    |  (2)   [4] | [7] <-  | (2) -> [6] | [3]
-        //     -> [6] | [7] <- |     -> [6] |         |            | [7] <-
-        // (We can not have a match for 6.)
-        //  We know that if we find not equal math for a row the join condition with the multiple predicates will be
+        // (Please read first the comment for the _join_cluster function) If the predicate condition is equal, we only
+        // want to emit rows with values where we know that there is no match in the right table. That is the case if
+        // the comparison result is less. If the comparison is less it means that there can not be a match. The 
+        // reason is the following: 
+        // | (1) -> [5] | [5] <- |
+        // |        [6] | [7]    |
+        // | ------------------- |
+        // | (2)    [5] | [5]    |
+        // |    -> [6] | [7] <-  |
+        // If the comparison result was equal in the step before it means that the right and the left pointer were
+        // moved. Since the runs are sorted we can be sure that there is no equal value on the right side for the
+        // left value.
+        // | (1) -> [4] | [7] <- |
+        // |        [6] |        |
+        // | ------------------- |
+        // | (2)   [4] | [7] <-  |
+        // |    -> [6] |         |
+        // If the comparison value in the last run was less, that means that only the left pointer was moved. If the
+        // left value is still smaller we can be sure that there can not be an equal value on the right side.
+        // | (1) -> [6] | [3] <- |
+        // |            | [7]    |
+        // | ------------------- |
+        // | (2) -> [6] | [3]    |
+        // |            | [7] <- |
+        // If the comparison result was greater, it means that only the right pointer was moved. If the result is less
+        // that means that there can not be an equal value, since then the right pointer would be pointing to it.
+        // We know that if we find no equal math for a row the join condition with the multiple predicates will be
         // in any case false:  False AND ... . So we do not need to check in this case if the multiple predicates are
         // satisfied or not.
         if (compare_result == CompareResult::Less) {
