@@ -25,10 +25,9 @@
 
 namespace opossum {
 
-/**
-* TODO(anyone): Outer not-equal join (outer !=)
-* TODO(anyone): Choose an appropriate number of clusters.
-**/
+// TODO(anyone) >> todos and nice-to-haves for the sort-merge join:
+//    - outer not-equal join (outer !=)
+//    - Bloom filters
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   if (config.left_data_type != config.right_data_type) {
@@ -72,15 +71,14 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   }
 }
 
-/**
-* The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
-* join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and clustered into a specified number of clusters.
-*    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
-* -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
-*    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
-* -> Using the join result, the output table is built using pos lists referencing the original tables.
-**/
+
+// The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
+// join_sort_merge.hpp. This is how the join works:
+// -> The input tables are materialized and clustered into a specified number of clusters.
+//    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
+// -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
+//    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
+// -> Using the join result, the output table is built using pos lists referencing the original tables.
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const OperatorJoinPredicate& primary_predicate,
@@ -134,9 +132,6 @@ const std::string& JoinSortMerge::name() const {
   return name;
 }
 
-/**
-** Start of implementation.
-**/
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
@@ -181,7 +176,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
 
-  // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
+  // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
@@ -206,9 +201,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   std::vector<RowHashSet> _left_row_ids_emitted_per_chunk;
   std::vector<RowHashSet> _right_row_ids_emitted_per_chunk;
 
-  /**
-   * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
-  **/
+  // The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
@@ -223,10 +216,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   TablePosition _end_of_left_table;
   TablePosition _end_of_right_table;
 
-  /**
-    * The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
-    * a start position to an end position.
-  **/
+  // The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
+  // a start position to an end position.
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
     TableRange(size_t cluster, size_t start_index, size_t end_index)
@@ -259,22 +250,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto max_sort_items_count = 256'000 / sizeof(T);
     const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
     const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
+
+    // Return the next larger power of two for the larger of the two cluster counts.
     return static_cast<size_t>(
         std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
   }
 
-  /**
-  * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
-  **/
+  // Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   static TablePosition _end_of_table(const MaterializedSegmentList<T>& table) {
     DebugAssert(!table.empty(), "table has no chunks");
     auto last_cluster = table.size() - 1;
     return TablePosition(last_cluster, table[last_cluster].size());
   }
 
-  /**
-  * Represents the result of a value comparison.
-  **/
+  // Represents the result of a value comparison.
   enum class CompareResult { Less, Greater, Equal };
 
   // In the case of the anti-join, we need to check that there is no combination where all predicates are satisfied. In
@@ -462,10 +451,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Performs the join for two runs of a specified cluster.
-  * A run is a series of rows in a cluster with the same value.
-  **/
+  // Performs the join for two runs of a specified cluster.
+  // A run is a series of rows in a cluster with the same value.
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result,
                   std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator, const size_t cluster_id) {
     switch (_primary_predicate_condition) {
@@ -531,9 +518,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Emits a combination of a left row id and a right row id to the join output.
-  **/
+  // Emits a combination of a left row id and a right row id to the join output.
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
     _output_pos_lists_right[output_cluster].push_back(right_row_id);
@@ -544,10 +529,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
   }
 
-  /**
-    * Emits all the combinations of row ids from the left table range and the right table range to the join output
-    * where also the secondary predicates are satisfied.
-    **/
+  // Emits all the combinations of row ids from the left table range and the right table range to the join output
+  // where also the secondary predicates are satisfied.
   void _emit_qualified_combinations(size_t output_cluster, TableRange left_range, TableRange right_range,
                                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     if (multi_predicate_join_evaluator) {
@@ -574,11 +557,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-   * Only for multi predicated inner joins.
-   * Emits all the combinations of row ids from the left table range and the right table range to the join output
-   * where the secondary predicates are satisfied.
-   **/
+  // Only for multi predicated inner joins.
+  // Emits all the combinations of row ids from the left table range and the right table range to the join output
+  // where the secondary predicates are satisfied.
   void _emit_combinations_multi_predicated_inner(size_t output_cluster, TableRange left_range, TableRange right_range,
                                                  MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
@@ -590,12 +571,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     });
   }
 
-  /**
-  * Only for multi predicated left outer joins.
-  * Emits all the combinations of row ids from the left table range and the right table range to the join output
-  * where the secondary predicates are satisfied.
-  * For a left row id without a match, the combination [left row id|NULL row id] is emitted.
-  **/
+  // Only for multi predicated left outer joins.
+  // Emits all the combinations of row ids from the left table range and the right table range to the join output
+  // where the secondary predicates are satisfied.
+  // For a left row id without a match, the combination [left row id|NULL row id] is emitted.
   void _emit_combinations_multi_predicated_left_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
@@ -625,12 +604,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-    * Only for multi predicated right outer joins.
-    * Emits all the combinations of row ids from the left table range and the right table range to the join output
-    * where the secondary predicates are satisfied.
-    * For a right row id without a match, the combination [NULL row id|right row id] is emitted.
-    **/
+  // Only for multi predicated right outer joins.
+  // Emits all the combinations of row ids from the left table range and the right table range to the join output
+  // where the secondary predicates are satisfied.
+  // For a right row id without a match, the combination [NULL row id|right row id] is emitted.
   void _emit_combinations_multi_predicated_right_outer(size_t output_cluster, TableRange left_range,
                                                        TableRange right_range,
                                                        MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
@@ -660,13 +637,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-    * Only for multi predicated full outer joins.
-    * Emits all the combinations of row ids from the left table range and the right table range to the join output
-    * where the secondary predicates are satisfied.
-    * For a left row id without a match, the combination [right row id|NULL row id] is emitted.
-    * For a right row id without a match, the combination [NULL row id|right row id] is emitted.
-    **/
+  // Only for multi-predicate full outer joins.
+  // Emits all the combinations of row ids from the left table range and the right table range to the join output
+  // where the secondary predicates are satisfied.
+  // For a left row id without a match, the combination [right row id|NULL row id] is emitted.
+  // For a right row id without a match, the combination [NULL row id|right row id] is emitted.
   void _emit_combinations_multi_predicated_full_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
@@ -705,19 +680,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Emits all combinations of row ids from the left table range and a NULL value on the right side
-  * (regarding the primary predicate) to the join output.
-  **/
+  // Emits all combinations of row ids from the left table range and a NULL value on the right side
+  // (regarding the primary predicate) to the join output.
   void _emit_right_primary_null_combinations(size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(
         _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
   }
 
-  /**
-  * Emits all combinations of row ids from the right table range and a NULL value on the left side
-  * (regarding the primary predicate) to the join output.
-  **/
+  // Emits all combinations of row ids from the right table range and a NULL value on the left side
+  // (regarding the primary predicate) to the join output.
   void _emit_left_primary_null_combinations(size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
@@ -731,7 +702,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
   // value. Even though the input vector is sorted, we first start by linearly scanning for the end of the run. The
   // reason is that we know with a high probability that the item we are looking for is at the beginning of the input
-  // vector. If we do not find the run's end within the linearly scanned part, we use a binary search.
+  // vector (the run value is the first in the sequence and the sequence is sorted). If we do not find the run's end
+  // within the linearly scanned part, we use a binary search. An unsuccessful linear search should come with
+  // neglectable costs as we will iterate over the values anyways.
   size_t _run_length(size_t start_index, const MaterializedSegment<T>& values) {
     if (start_index >= values.size()) {
       return 0;
@@ -742,7 +715,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     constexpr auto LINEAR_SEARCH_ITEMS = size_t{128};
     auto end = begin + LINEAR_SEARCH_ITEMS;
-    if (values.end() < end) {
+    if (start_index + LINEAR_SEARCH_ITEMS >= values.size()) {
       // Set end of linear search to end of input vector if we would overshoot otherwise.
       end = values.end();
     }
@@ -754,8 +727,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     if (linear_search_result == values.end()) {
-      // We found the value neither in the linearly scanned part nor in the input vector. That means that all values
-      // are part of the run.
+
+      // We did not find a larger value in the linearly scanned part and it spanned until the end of the input vector.
+      // That means all values up to the end are part of the run.
       return std::distance(begin, end);
     }
 
@@ -765,10 +739,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     return std::distance(begin, binary_search_result);
   }
 
-  /**
-  * Compares two values and creates a comparison result.
-  **/
-  CompareResult _compare(const T left, const T right) {
+
+  // Compares two values and creates a comparison result.
+  CompareResult _compare(const T& left, const T& right) {
     if (left < right) {
       return CompareResult::Less;
     } else if (left == right) {
@@ -899,9 +872,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Determines the smallest value in a sorted materialized table.
-  **/
+  // Determines the smallest value in a sorted materialized table.
   const T& _table_min_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
                 "Complete table order is required for _table_min_value() which is only available in the non-equi case");
@@ -916,33 +887,25 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     Fail("Every partition is empty");
   }
 
-  /**
-  * Determines the largest value in a sorted materialized table.
-  **/
-
+  // Determines the largest value in a sorted materialized table.
   const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
-    DebugAssert(!(_primary_predicate_condition == PredicateCondition::Equals),
-                "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(
         !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
           _primary_predicate_condition == PredicateCondition::NotEquals),
         "The table needs to be sorted for _table_max_value() which is only the case in the anti/semi equi case");
     DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
-    const auto sorted_table_size = sorted_table.size();
-    for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
-      if (!sorted_table[partition_id].empty()) {
-        return sorted_table[partition_id].back().value;
+    for (auto partition_iter = sorted_table.rbegin(); partition_iter != sorted_table.rend(); ++partition_iter) {
+      if (!partition_iter->empty()) {
+        return partition_iter->back().value;
       }
     }
 
     Fail("Every partition is empty");
   }
 
-  /**
-  * Looks for the first value in a sorted materialized table that fulfills the specified condition.
-  * Returns the TablePosition of this element and whether a satisfying element has been found.
-  **/
+  // Looks for the first value in a sorted materialized table that fulfills the specified condition.
+  // Returns the TablePosition of this element and whether a satisfying element has been found.
   template <typename Function>
   std::optional<TablePosition> _first_value_that_satisfies(const MaterializedSegmentList<T>& sorted_table,
                                                            const Function& condition) {
@@ -962,19 +925,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     return {};
   }
 
-  /**
-  * Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
-  * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
-  **/
+  // Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
+  // the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   template <typename Function>
   std::optional<TablePosition> _first_value_that_satisfies_reverse(const MaterializedSegmentList<T>& sorted_table,
                                                                    const Function& condition) {
     const auto sorted_table_size = sorted_table.size();
-    for (auto partition_id = sorted_table_size - 1; partition_id < sorted_table_size; --partition_id) {
+    for (auto partition_id = static_cast<int64_t>(sorted_table_size - 1); partition_id >= 0; --partition_id) {
       const auto& partition = sorted_table[partition_id];
       if (!partition.empty() && condition(partition[0].value)) {
         const auto partition_size = partition.size();
-        for (auto index = partition_size - 1; index < partition_size; --index) {
+        for (auto index = static_cast<int64_t>(partition_size - 1); index >= 0; --index) {
           if (condition(partition[index].value)) {
             return TablePosition(partition_id, index + 1);
           }
@@ -985,11 +946,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     return {};
   }
 
-  /**
-  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-  * This method adds those rows from the right table to the output that do not find a join partner.
-  * The outer join for the equality operator is handled in _join_runs instead.
-  **/
+  // Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+  // This method adds those rows from the right table to the output that do not find a join partner.
+  // The outer join for the equality operator is handled in _join_runs instead.
   void _right_outer_non_equi_join() {
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
@@ -1054,11 +1013,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-    * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-    * This method adds those rows from the left table to the output that do not find a join partner.
-    * The outer join for the equality operator is handled in _join_runs instead.
-    **/
+
+  // Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+  // This method adds those rows from the left table to the output that do not find a join partner.
+  // The outer join for the equality operator is handled in _join_runs instead.
   void _left_outer_non_equi_join() {
     auto end_of_left_table = _end_of_table(_sorted_left_table);
 
@@ -1123,9 +1081,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  /**
-  * Performs the join on all clusters in parallel.
-  **/
+  // Performs the join on all clusters in parallel.
   void _perform_join() {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
@@ -1158,6 +1114,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
+
       const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
@@ -1232,9 +1189,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
  public:
-  /**
-  * Executes the SortMergeJoin operator.
-  **/
   std::shared_ptr<const Table> _on_execute() override {
     if (_mode == JoinMode::Semi) {
       if (_primary_predicate_condition == PredicateCondition::NotEquals &&

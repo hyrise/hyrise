@@ -34,9 +34,9 @@ using MaterializedSegment = std::vector<MaterializedValue<T>>;
 template <typename T>
 using MaterializedSegmentList = std::vector<MaterializedSegment<T>>;
 
-// This data structure is passed as a reference to the jobs which materialize the chunks. Each job then adds
-// `samples_to_collect` samples to its passed SampleRequest. All SampleRequests are later merged to gather a global
-// sample list with which the split values for the radix partitioning are determined.
+// SubSamples are passed into the materialization phase. They are used to pass the number of requested samples and
+// are filled by the materialization tasks. All SubSamples are later merged to gather a global sample list with which
+// the split values for the radix partitioning are determined.
 template <typename T>
 struct Subsample {
   explicit Subsample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples(sample_count) {}
@@ -44,20 +44,19 @@ struct Subsample {
   std::vector<T> samples;
 };
 
-// Materializes a column and sorts it if requested. Result is a triple of materialized values, positions of NULL
-// values, and a list of samples.
+// Materializes a column and sorts it if requested.
 template <typename T>
 class ColumnMaterializer {
  public:
   explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
  public:
-  // Materializes and sorts (if requested) all the chunks of an input table. For sufficiently large chunks, the
-  // materialization is parallelized. Returns the materialized segments and a list of null row ids if _materialize_null
-  // is true.
+
+  // For sufficiently large chunks (number of rows > JOB_SPAWN_THRESHOLD), the materialization is parallelized. Returns
+  // the materialized segments and a list of null row ids if _materialize_null is true.
   std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
       const std::shared_ptr<const Table>& input, const ColumnID column_id) {
-    constexpr ChunkOffset SAMPLES_PER_CHUNK = 10;  // rather arbitrarily chosen number
+    constexpr auto SAMPLES_PER_CHUNK = ChunkOffset{10};
     const auto chunk_count = input->chunk_count();
 
     auto output = MaterializedSegmentList<T>(chunk_count);
@@ -70,8 +69,10 @@ class ColumnMaterializer {
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk = input->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+      const auto chunk_size = chunk->size();
 
-      const auto samples_to_write = std::min(SAMPLES_PER_CHUNK, chunk->size());
+      const auto samples_to_write = std::min(SAMPLES_PER_CHUNK, chunk_size);
+
       subsamples.push_back(Subsample<T>(samples_to_write));
 
       auto materialize_job = [&, chunk_id] {
@@ -79,7 +80,7 @@ class ColumnMaterializer {
         output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples[chunk_id]);
       };
 
-      if (chunk->size() > 500) {
+      if (chunk_size > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
         jobs.push_back(std::make_shared<JobTask>(materialize_job));
       } else {
         materialize_job();
@@ -90,7 +91,14 @@ class ColumnMaterializer {
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(SAMPLES_PER_CHUNK * chunk_count);
+
+    auto null_row_count = size_t{0};
+    for (const auto& null_rows : null_rows_per_chunk) {
+      null_row_count += null_rows.size();
+    }
     auto null_rows = RowIDPosList{};
+    null_rows.reserve(null_row_count);
+
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& subsample = subsamples[chunk_id];
       gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());
@@ -98,6 +106,7 @@ class ColumnMaterializer {
       const auto& chunk_null_rows = null_rows_per_chunk[chunk_id];
       null_rows.insert(null_rows.end(), chunk_null_rows.begin(), chunk_null_rows.end());
     }
+    gathered_samples.shrink_to_fit();
 
     return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
   }
@@ -107,10 +116,10 @@ class ColumnMaterializer {
   // collection to limit non-local writes.
   void _gather_samples_from_segment(const MaterializedSegment<T>& segment, Subsample<T>& subsample) const {
     const auto samples_to_collect = subsample.samples_to_collect;
-    auto collected_samples = std::vector<T>{};
-    collected_samples.reserve(samples_to_collect);
 
     if (segment.size() > 0 && samples_to_collect > 0) {
+      auto collected_samples = std::vector<T>{};
+      collected_samples.reserve(samples_to_collect);
       const auto step_width = segment.size() / std::max(1u, samples_to_collect);
 
       for (auto sample_count = size_t{0}; sample_count < samples_to_collect; ++sample_count) {

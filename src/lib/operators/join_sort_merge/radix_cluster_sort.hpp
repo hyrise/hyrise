@@ -29,8 +29,8 @@ struct RadixClusterOutput {
 // Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis of the least
 // significant bits of the values because the values there are much more evenly distributed than for the most
 // significant bits. As a result, equal values always get moved to the same cluster and the clusters are sorted in
-// themselves but not in between the clusters. This is okay for the equi join, because we are only interested in
-// equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist beyond
+// themselves but not in between the clusters. This approach works for equi-joins, because we are only interested in
+// equality. In the case of a non-equi-joins however, complete sortedness is required, because join matches exist beyond
 // cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
 // General clustering process:
 //  -> Input chunks are materialized and sorted. Every value is stored together with its row id.
@@ -103,13 +103,8 @@ class RadixClusterSort {
   // The TableInformation structure is used to gather statistics regarding the value distribution of a table and its
   // chunks in order to be able to appropriately reserve space for the clustering output.
   struct TableInformation {
-    TableInformation(size_t chunk_count, size_t cluster_count) {
-      cluster_histogram.resize(cluster_count);
-      chunk_information.reserve(chunk_count);
-      for (auto i = size_t{0}; i < chunk_count; ++i) {
-        chunk_information.push_back(ChunkInformation(cluster_count));
-      }
-    }
+    TableInformation(size_t chunk_count, size_t cluster_count)
+        : cluster_histogram(cluster_count, 0), chunk_information(chunk_count, ChunkInformation(cluster_count)) {}
     // Used to count the number of entries for each cluster from the whole table
     std::vector<size_t> cluster_histogram;
     std::vector<ChunkInformation> chunk_information;
@@ -142,7 +137,6 @@ class RadixClusterSort {
   // Concatenates multiple materialized segments to a single materialized segment.
   static MaterializedSegmentList<T> _concatenate_chunks(const MaterializedSegmentList<T>& input_chunks) {
     auto output_table = MaterializedSegmentList<T>(1);
-    output_table[0] = MaterializedSegment<T>();
 
     // Reserve the required space and move the data to the output
     auto& output_chunk = output_table[0];
@@ -154,13 +148,13 @@ class RadixClusterSort {
     return output_table;
   }
 
-  // Performs the clustering on a materialized table using a clustering function that determines for each value the
-  // appropriate cluster id. This is how the clustering works:
-  //    -> Count for each chunk how many of its values belong in each of the clusters using histograms.
-  //    -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where it
-  //       will be inserting values in each cluster.
+  // Clusters a materialized table using a given clustering function that determines the appropriate cluster id for
+  // each value.
+  //    -> For each chunk, count how many of its values belong in each of the clusters using histograms.
+  //    -> Aggregate the per-chunk histograms to a histogram for the whole table.
   //    -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
-  //    -> At last, each value of each chunk is moved to the appropriate cluster./
+  //    -> At last, each value of each chunk is moved to the appropriate cluster. The created histogram denotes where
+  //       the concurrent tasks can write the data to without the need for synchronization.
   MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks,
                                       const std::function<size_t(const T&)>& clusterer) {
     auto output_table = MaterializedSegmentList<T>(_cluster_count);
@@ -232,30 +226,27 @@ class RadixClusterSort {
     return output_table;
   }
 
-  // Performs least significant bit radix clustering which is used in the equi join case. Note: if we used the most
-  // significant bits, we could also use this for non-equi joins. Then, however we would have to deal with skewed
-  // clusters. Other ideas:
-  //    - manually select the clustering bits based on statistics.
-  //    - consolidate clusters in order to reduce skew.
+  // Performs least significant bit radix clustering which is used in the equi join case.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(input_chunks, [radix_bitmask](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   // Picks split values from the given sample values. Each split value denotes the inclusive upper bound of its
   // corresponding cluster (i.e., split #0 is the upper bound of cluster #0). As the last cluster does not require an
   // upper bound, the returned vector size is usually the cluster count minus one. However, it can be even shorter
-  // (e.g., attributes where #distinct values < #cluster count). Procedure: passed values are sorted and samples are
-  // picked from the whole sample value range in fixed widths. Repeated values are not removed before picking to handle
-  // skewed inputs. However, the final split values are unique. As a consequence, the split value vector might contain
-  // less values than `_cluster_count - 1`.
-  const std::vector<T> _pick_split_values(std::vector<T>& sample_values) const {
+  // (e.g., attributes where #distinct values < #cluster count; in this case, empty clusters will be created).
+  // Procedure: passed values are sorted and samples are picked from the whole sample value range in constant
+  // distances. Repeated values are not removed. Thereby, they have a higher chance of being picked which should
+  // cover skewed inputs. However, the final split values
+  // are unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
+  const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
       const auto last = std::unique(sample_values.begin(), sample_values.end());
       sample_values.erase(last, sample_values.end());
-      return sample_values;
+      return std::move(sample_values);
     }
 
     auto split_values = std::vector<T>{};
@@ -272,12 +263,11 @@ class RadixClusterSort {
 
   // Performs the range cluster sort for the non-equi case (>, >=, <, <=, !=) which requires the complete table to be
   // sorted and not only the clusters in themselves. Returns the clustered data from the left table and the right table
-  // sin a pair.
+  // as a pair.
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
       const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
-      std::vector<T>& sample_values) {
-    const std::vector<T> split_values = _pick_split_values(sample_values);
-
+      std::vector<T>&& sample_values) {
+    const std::vector<T> split_values = _pick_split_values(std::move(sample_values));
     // Implements range clustering
     auto clusterer = [&split_values](const T& value) {
       // Find the first split value that is greater or equal to the entry.
@@ -349,7 +339,7 @@ class RadixClusterSort {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {
-      auto result = _range_cluster(materialized_left_segments, materialized_right_segments, samples_left);
+      auto result = _range_cluster(materialized_left_segments, materialized_right_segments, std::move(samples_left));
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
