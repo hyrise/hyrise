@@ -25,8 +25,11 @@ BitPackingIterator BitPackingVector::on_end() const { return BitPackingIterator(
 std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
+
   // zero initialize the compact_vector's memory, see bitpacking_compressor.cpp
-  std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(*data_copy.get()), 0ULL);
+  DebugAssert(sizeof(*data_copy.get()) == sizeof(uint64_t), "Expecting to zero the memory with uint64_t");
+  std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(uint64_t), uint64_t{0});
+
   std::copy(_data.cbegin(), _data.cend(), data_copy.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data_copy));

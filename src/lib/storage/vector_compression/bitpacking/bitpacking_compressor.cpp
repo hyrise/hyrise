@@ -33,7 +33,8 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
    * memory (word-aligned, see bitpacking_vector_type.hpp).
    *
    */
-  std::fill_n(data.get(), data.bytes() / sizeof(*data.get()), 0ULL);
+  DebugAssert(sizeof(*data.get()) == sizeof(uint64_t), "Expecting to zero the memory with uint64_t");
+  std::fill_n(data.get(), data.bytes() / sizeof(uint64_t), uint64_t{0});
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
