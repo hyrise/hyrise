@@ -114,8 +114,8 @@ TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
   EXPECT_EQ(JoinHash::calculate_radix_bits(0, 1, JoinMode::Inner), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits(0, 0, JoinMode::Inner), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits(1, 1, JoinMode::Inner), 0ul);
-  EXPECT_TRUE(JoinHash::calculate_radix_bits(std::numeric_limits<size_t>::max(),
-                                                      std::numeric_limits<size_t>::max(), JoinMode::Inner) > 0ul);
+  EXPECT_GT(JoinHash::calculate_radix_bits(std::numeric_limits<size_t>::max(),
+                                                      std::numeric_limits<size_t>::max(), JoinMode::Inner), 0ul);
 }
 
 }  // namespace opossum
