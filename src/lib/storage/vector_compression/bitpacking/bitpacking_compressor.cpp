@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
 
 #include "bitpacking_vector_type.hpp"
 
@@ -28,13 +29,16 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
    * of the vector thus leads to "random" bytes written to disk). The compact_vector allocates memory
    * aligned to its word size and due to this, some memory at the end is not always overwritten.
    * Hence, fill the internal memory with zeroes. Unfortunately, compact_vector does not give us a better
-   * interface. Therefore, we proceed to work with a raw pointer to the compact_vector's internal memory
+   * interface.
+   * Therefore, we proceed to work with a raw pointer to the compact_vector's internal memory
    * and fill it with zeroes. For this, data.bytes() gives the number of allocated bytes for the internal
    * memory (word-aligned, see bitpacking_vector_type.hpp).
+   * When the word size gets changed by us in the template (for example to uint32_t), this still works.
    *
    */
-  DebugAssert(sizeof(*data.get()) == sizeof(uint64_t), "Expecting to zero the memory with uint64_t");
-  std::fill_n(data.get(), data.bytes() / sizeof(uint64_t), uint64_t{0});
+
+  using Internal_type = std::remove_reference_t<decltype(*data.get())>;
+  std::fill_n(data.get(), data.bytes() / sizeof(Internal_type), Internal_type{0});
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
