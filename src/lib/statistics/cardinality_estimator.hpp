@@ -83,9 +83,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is
    * impossible, so this function is restricted to computing an upper bound of the resulting histogram.
    */
-  // template <typename T>
-  // static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
-  //     const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
     const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
@@ -156,9 +153,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
                                                               const TableStatistics& right_input_table_statistics);
-  // template <typename T>
-  // static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
-  //     const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
 
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
