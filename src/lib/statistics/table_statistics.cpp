@@ -20,7 +20,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
    */
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
-  auto next_column_id = std::atomic<size_t>{0u};
+  auto next_column_id = std::atomic_size_t{0u};
   auto threads = std::vector<std::thread>{};
 
   /**

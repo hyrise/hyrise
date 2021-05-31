@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-#include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -44,7 +44,7 @@ AbstractOperator::~AbstractOperator() {
     bool aborted = transaction_context ? transaction_context->aborted() : false;
     bool left_has_executed = _left_input ? _left_input->executed() : false;
     bool right_has_executed = _right_input ? _right_input->executed() : false;
-    Assert(_executed || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
+    Assert(executed() || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
 }
@@ -52,8 +52,7 @@ AbstractOperator::~AbstractOperator() {
 OperatorType AbstractOperator::type() const { return _type; }
 
 bool AbstractOperator::executed() const {
-  DebugAssert(_executed || !_output, "Did not expect to see an output for an unexecuted operator.");
-  return _executed;
+  return _state == OperatorState::ExecutedAndAvailable || _state == OperatorState::ExecutedAndCleared;
 }
 
 void AbstractOperator::execute() {
@@ -65,11 +64,8 @@ void AbstractOperator::execute() {
    *    b) because there are no more consumers that need the operator's result.
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
-  if (_executed) return;
-  Assert(!_output, "Unexpected re-execution of an operator.");
-
-  auto execution_already_started = _execution_started.exchange(true);
-  Assert(!execution_already_started, "Operator is already being executed.");
+  if (executed()) return;
+  _transition_to(OperatorState::Running);
 
   if constexpr (HYRISE_DEBUG) {
     Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
@@ -106,7 +102,8 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  _executed = true;
+
+  _transition_to(OperatorState::ExecutedAndAvailable);
 
   // Tell input operators that we no longer need their output.
   if (_left_input) mutable_left_input()->deregister_consumer();
@@ -168,14 +165,16 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  Assert(_executed, "Trying to get_output of operator that was not executed yet.");
+  Assert(_state == OperatorState::ExecutedAndAvailable,
+         "Trying to get_output of operator which is not in OperatorState::ExecutedAndAvailable.");
   return _output;
 }
 
 void AbstractOperator::clear_output() {
-  Assert(_executed, "Unexpected call of clear_output() since operator did not execute yet.");
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (!_never_clear_output) _output = nullptr;
+  if (_never_clear_output) return;
+  _transition_to(OperatorState::ExecutedAndCleared);
+  _output = nullptr;
 }
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
@@ -214,10 +213,23 @@ std::shared_ptr<const Table> AbstractOperator::right_input_table() const { retur
 
 size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
 
-void AbstractOperator::register_consumer() { ++_consumer_count; }
+void AbstractOperator::register_consumer() {
+  Assert(_state <= OperatorState::ExecutedAndAvailable,
+         "Cannot register as a consumer since operator results have already been cleared.");
+  ++_consumer_count;
+}
 
 void AbstractOperator::deregister_consumer() {
   DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
+  // The following section is locked to prevent clear_output() from being called twice. Otherwise, a race condition
+  // as follows might occur:
+  //  1) T1 decreases _consumer_count, making it equal to one. After this operation, T1 gets suspended.
+  //  2) T2 decreases _consumer_count as well, making it equal to zero. It enters the if statement and calls
+  //     clear_output() for the first time.
+  //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
+  //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
+  std::lock_guard<std::mutex> lock(_deregister_consumer_mutex);
+
   _consumer_count--;
   if (_consumer_count == 0) clear_output();
 }
@@ -233,6 +245,8 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 }
 
 void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  Assert(_state == OperatorState::Created,
+         "Setting the TransactionContext is allowed for OperatorState::Created only.");
   _transaction_context = transaction_context;
   _on_set_transaction_context(transaction_context);
 }
@@ -258,11 +272,38 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  DebugAssert(!_executed, "Setting parameters on operators that have already executed is illegal.");
+  Assert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
   if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
   if (right_input()) mutable_right_input()->set_parameters(parameters);
+}
+
+OperatorState AbstractOperator::state() const { return _state; }
+
+std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
+  std::lock_guard<std::mutex> lock(_operator_task_mutex);
+  // Return the OperatorTask that owns this operator if it already exists.
+  if (!_operator_task.expired()) return _operator_task.lock();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether _operator_task points to NULL, which means it was never initialized before.
+    // Taken from: https://stackoverflow.com/a/45507610/5558040
+    using weak_null_pointer = std::weak_ptr<OperatorTask>;
+    auto is_uninitialized =
+        !_operator_task.owner_before(weak_null_pointer{}) && !weak_null_pointer{}.owner_before(_operator_task);
+    Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
+  }
+
+  auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
+  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  if (executed()) {
+    // Skip task to reduce scheduling overhead.
+    operator_task->skip_operator_task();
+    DebugAssert(operator_task->is_done(), "Expected OperatorTask to be marked as done.");
+  }
+
+  return operator_task;
 }
 
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
@@ -295,6 +336,27 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                                                        node_print_fn, stream);
 
   return stream;
+}
+
+void AbstractOperator::_transition_to(OperatorState new_state) {
+  OperatorState previous_state = _state.exchange(new_state);
+
+  // Check the validity of the state transition
+  switch (new_state) {
+    case OperatorState::Running:
+      Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");
+      break;
+    case OperatorState::ExecutedAndAvailable:
+      Assert(previous_state == OperatorState::Running,
+             "Illegal state transition to OperatorState::ExecutedAndAvailable");
+      break;
+    case OperatorState::ExecutedAndCleared:
+      Assert(previous_state == OperatorState::ExecutedAndAvailable,
+             "Illegal state transition to OperatorState::ExecutedAndCleared");
+      break;
+    default:
+      Fail("Unexpected target state in AbstractOperator.");
+  }
 }
 
 }  // namespace opossum

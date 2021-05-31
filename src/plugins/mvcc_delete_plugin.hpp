@@ -63,7 +63,7 @@ class MvccDeletePlugin : public AbstractPlugin {
 
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;
 
-  std::mutex _mutex_physical_delete_queue;
+  std::mutex _physical_delete_queue_mutex;
   std::queue<TableAndChunkID> _physical_delete_queue;
 };
 
