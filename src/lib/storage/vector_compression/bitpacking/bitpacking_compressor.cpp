@@ -37,8 +37,8 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const
    *
    */
 
-  using Internal_type = std::remove_reference_t<decltype(*data.get())>;
-  std::fill_n(data.get(), data.bytes() / sizeof(Internal_type), Internal_type{0});
+  using InternalType = std::remove_reference_t<decltype(*data.get())>;
+  std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
 
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
