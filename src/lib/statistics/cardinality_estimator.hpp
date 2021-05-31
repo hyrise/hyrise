@@ -85,7 +85,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    */
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
-    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
     /**
      * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
      * pairs.

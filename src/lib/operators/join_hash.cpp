@@ -189,8 +189,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits = calculate_radix_bits(build_input_table->row_count(),
-                                                                  probe_input_table->row_count(), _mode);
+          _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count(), _mode);
         }
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
