@@ -41,24 +41,7 @@ You can contact the author at :
 /* Intrinsics
 * Sadly has to be included in the global namespace or literally everything breaks
 */
-#include <immintrin.h>
-
-namespace opossum {
-
-// xxh3 hash for builtin number types (int, double)
-template <typename T>
-typename std::enable_if<std::is_arithmetic<T>::value, hash_t<64>>::type xxh3(T key) {
-  return xxh::xxhash<64>(&key, sizeof(T));
-}
-
-// xxh3 hash for std::string
-template <typename T>
-typename std::enable_if<std::is_same<T, std::string>::value, hash_t<64>>::type xxh3(T key) {
-  return xxh::xxhash<64>(key.c_str(), key.size());
-}
-
-} // namespace opossum
-
+// #include <immintrin.h>
 
 namespace xxh
 {
@@ -2096,3 +2079,20 @@ namespace xxh
   using canonical64_t = canonical_t<64>;
   using canonical128_t = canonical_t<128>;
 } // namespace xxh
+
+namespace opossum {
+  using namespace xxh;
+
+// xxh3 hash for builtin number types (int, double)
+template <typename T>
+typename std::enable_if<std::is_arithmetic<T>::value, uint32_t>::type xxh3(T key) {
+  return static_cast<uint32_t>(xxh::xxhash<32>(&key, sizeof(T)));
+}
+
+// xxh3 hash for std::string
+template <typename T>
+typename std::enable_if<std::is_same<T, pmr_string>::value, uint32_t>::type xxh3(T key) {
+  return static_cast<uint32_t>(xxh::xxhash<32>(key.c_str(), key.size()));
+}
+
+} // namespace opossum
