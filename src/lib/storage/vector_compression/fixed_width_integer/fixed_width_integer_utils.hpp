@@ -14,6 +14,7 @@ inline bool is_fixed_width_integer(CompressedVectorType type) {
     case CompressedVectorType::BitPacking:
       return false;
   }
+
   Fail("GCC thinks this is reachable");
 }
 
@@ -30,6 +31,7 @@ inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type)
     case CompressedVectorType::BitPacking:
       return 0u;
   }
+
   Fail("GCC thinks this is reachable");
 }
 
