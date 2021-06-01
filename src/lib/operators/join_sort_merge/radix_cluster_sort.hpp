@@ -268,6 +268,7 @@ class RadixClusterSort {
       const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
       std::vector<T>&& sample_values) {
     const std::vector<T> split_values = _pick_split_values(std::move(sample_values));
+    
     // Implements range clustering
     auto clusterer = [&split_values](const T& value) {
       // Find the first split value that is greater or equal to the entry.
