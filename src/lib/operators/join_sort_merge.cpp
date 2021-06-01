@@ -345,8 +345,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::Equals:
         // (Please read first the comment for the _join_cluster function) If the predicate condition is equal, we only
         // want to emit rows with values where we know that there is no match in the right table. That is the case if
-        // the comparison result is less. If the comparison is less it means that there can not be a match. The 
-        // reason is the following: 
+        // the comparison result is less. If the comparison is less it means that there can not be a match. The
+        // reason is the following:
         // | (1) -> [5] | [5] <- |
         // |        [6] | [7]    |
         // | ------------------- |
