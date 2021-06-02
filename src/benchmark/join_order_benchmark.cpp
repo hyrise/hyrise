@@ -21,55 +21,78 @@
 using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
-void add_key_constraints() {
-  const auto& aka_name_table = Hyrise::get().storage_manager.get_table("aka_name");
+void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  /** All tables
+   * "aka_name"
+   * "aka_title"
+   * "cast_info"
+   * "char_name"
+   * "comp_cast_type"
+   * "company_name"
+   * "company_type"
+   * "complete_cast"
+   * "info_type"
+   * "keyword"
+   * "kind_type"
+   * "link_type"
+   * "movie_companies"
+   * "movie_info"
+   * "movie_info_idx"
+   * "movie_keyword"
+   * "movie_link"
+   * "person_info"
+   * "role_type"
+   * "title"
+   */
+
+  const auto& aka_name_table = table_info_by_name.at("aka_name").table;
   aka_name_table->add_soft_key_constraint({{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   aka_title_table->add_soft_key_constraint(
       {{aka_title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   cast_info_table->add_soft_key_constraint(
       {{cast_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& char_name_table = Hyrise::get().storage_manager.get_table("char_name");
+  const auto& char_name_table = table_info_by_name.at("char_name").table;
   char_name_table->add_soft_key_constraint(
       {{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& comp_cast_type_table = Hyrise::get().storage_manager.get_table("comp_cast_type");
+  const auto& comp_cast_type_table = table_info_by_name.at("comp_cast_type").table;
   comp_cast_type_table->add_soft_key_constraint(
       {{comp_cast_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& company_name_table = Hyrise::get().storage_manager.get_table("company_name");
+  const auto& company_name_table = table_info_by_name.at("company_name").table;
   company_name_table->add_soft_key_constraint(
       {{company_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& company_type_table = Hyrise::get().storage_manager.get_table("company_type");
+  const auto& company_type_table = table_info_by_name.at("company_type").table;
   company_type_table->add_soft_key_constraint(
       {{company_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   complete_cast_table->add_soft_key_constraint(
       {{complete_cast_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& info_type_table = Hyrise::get().storage_manager.get_table("info_type");
+  const auto& info_type_table = table_info_by_name.at("info_type").table;
   info_type_table->add_soft_key_constraint(
       {{info_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& keyword_table = Hyrise::get().storage_manager.get_table("keyword");
+  const auto& keyword_table = table_info_by_name.at("keyword").table;
   keyword_table->add_soft_key_constraint({{keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& kind_type_table = Hyrise::get().storage_manager.get_table("kind_type");
+  const auto& kind_type_table = table_info_by_name.at("kind_type").table;
   kind_type_table->add_soft_key_constraint(
       {{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& link_type_table = Hyrise::get().storage_manager.get_table("link_type");
+  const auto& link_type_table = table_info_by_name.at("link_type").table;
   link_type_table->add_soft_key_constraint(
       {{link_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_companies_table->add_soft_key_constraint(
       {{movie_companies_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& movie_info_idx_table = Hyrise::get().storage_manager.get_table("movie_info_idx");
+  const auto& movie_info_idx_table = table_info_by_name.at("movie_info_idx").table;
   movie_info_idx_table->add_soft_key_constraint(
       {{movie_info_idx_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_keyword_table->add_soft_key_constraint(
       {{movie_keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_link_table->add_soft_key_constraint(
       {{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& name_table = Hyrise::get().storage_manager.get_table("name");
+  const auto& name_table = table_info_by_name.at("name").table;
   name_table->add_soft_key_constraint({{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   person_info_table->add_soft_key_constraint(
       {{person_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& role_type_table = Hyrise::get().storage_manager.get_table("role_type");
+  const auto& role_type_table = table_info_by_name.at("role_type").table;
   role_type_table->add_soft_key_constraint(
       {{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  const auto& title_table = Hyrise::get().storage_manager.get_table("title");
+  const auto& title_table = table_info_by_name.at("title").table;
   title_table->add_soft_key_constraint({{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 }
 
