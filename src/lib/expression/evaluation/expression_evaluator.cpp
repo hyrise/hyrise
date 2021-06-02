@@ -1613,4 +1613,14 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   return results;
 }
 
+// We explicitly instantiate these template functions because (at least) clang-12 does not instantiate them for us.
+template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
+    const AbstractExpression& expression);
+
 }  // namespace opossum
