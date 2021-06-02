@@ -285,17 +285,18 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
   // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
-  if (!left_input_is_used &&
-      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
-    join_node->join_mode = JoinMode::Semi;
-    const auto temp = join_node->left_input();
-    join_node->set_left_input(join_node->right_input());
-    join_node->set_right_input(temp);
-  }
-  if (!right_input_is_used &&
-      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
-    join_node->join_mode = JoinMode::Semi;
-  }
+  // TODO(Julian) measure JOB without Semi-Join-filtering
+//  if (!left_input_is_used &&
+//      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
+//    join_node->join_mode = JoinMode::Semi;
+//    const auto temp = join_node->left_input();
+//    join_node->set_left_input(join_node->right_input());
+//    join_node->set_right_input(temp);
+//  }
+//  if (!right_input_is_used &&
+//      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
+//    join_node->join_mode = JoinMode::Semi;
+//  }
 }
 
 void prune_projection_node(
