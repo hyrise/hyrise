@@ -237,20 +237,20 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
-        case CompressedVectorType::FixedSize4ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger4Byte: {
           segment_type += ":4B";
           break;
         }
-        case CompressedVectorType::FixedSize2ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger2Byte: {
           segment_type += ":2B";
           break;
         }
-        case CompressedVectorType::FixedSize1ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger1Byte: {
           segment_type += ":1B";
           break;
         }
-        case CompressedVectorType::SimdBp128: {
-          segment_type += ":BP";
+        case CompressedVectorType::BitPacking: {
+          segment_type += ":BitP";
           break;
         }
       }

@@ -59,13 +59,13 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
 
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {
   switch (compressed_vector_type) {
-    case CompressedVectorType::FixedSize4ByteAligned:
-    case CompressedVectorType::FixedSize2ByteAligned:
-    case CompressedVectorType::FixedSize1ByteAligned:
-      return VectorCompressionType::FixedSizeByteAligned;
+    case CompressedVectorType::FixedWidthInteger4Byte:
+    case CompressedVectorType::FixedWidthInteger2Byte:
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      return VectorCompressionType::FixedWidthInteger;
       break;
-    case CompressedVectorType::SimdBp128:
-      return VectorCompressionType::SimdBp128;
+    case CompressedVectorType::BitPacking:
+      return VectorCompressionType::BitPacking;
   }
   Fail("Invalid enum value");
 }
