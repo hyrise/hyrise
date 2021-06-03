@@ -29,7 +29,7 @@ class JCCHTableGenerator : virtual public AbstractTableGenerator,
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
-  using TPCHTableGenerator::_add_constraints;
+  void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
   using TPCHTableGenerator::_indexes_by_table;
   using TPCHTableGenerator::_sort_order_by_table;
 
