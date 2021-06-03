@@ -82,8 +82,6 @@ add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
 add_subdirectory(xxHash/cmake_unofficial xxHash EXCLUDE_FROM_ALL)
 
-target_link_libraries(xxHash PRIVATE xxHash::xxhash)
-
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
 
