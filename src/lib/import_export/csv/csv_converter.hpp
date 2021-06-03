@@ -50,17 +50,19 @@ class CsvConverter : public BaseCsvConverter {
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
-
     if (_is_nullable && value.length() == 0) {
       _null_values[position] = true;
       return;
     }
 
     if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
-      Assert(_config.null_handling != NullHandling::RejectNullStrings, "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
+      Assert(_config.null_handling != NullHandling::RejectNullStrings,
+             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
              "value, or set 'null_handling' to the appropriate strategy in parse config.");
       if (_config.null_handling == NullHandling::NullStringAsNull) {
-        Assert(_is_nullable, "Unquoted null found in CSV file, while the associated column is not nullable. Quote it for string literal \"null\".");
+        Assert(_is_nullable,
+               "Unquoted null found in CSV file, while the associated column is not nullable. Quote it for string "
+               "literal \"null\".");
       }
       if (_is_nullable && _config.null_handling == NullHandling::NullStringAsNull) {
         _null_values[position] = true;
