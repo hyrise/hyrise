@@ -636,6 +636,7 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
+    utils/xxh.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
@@ -653,6 +654,7 @@ set(
     lz4
     sqlparser
     uninitialized_vector
+    xxHash
     zstd
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
