@@ -53,3 +53,6 @@
 [submodule "third_party/jcch-dbgen"]
 	path = third_party/jcch-dbgen
 	url = https://github.com/mrks/dbgen.JCC-H.git
+[submodule "third_party/xxHash"]
+	path = third_party/xxHash
+	url = https://github.com/Cyan4973/xxHash

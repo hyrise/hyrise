@@ -80,10 +80,9 @@ add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(xxHash/cmake_unofficial xxHash EXCLUDE_FROM_ALL)
 
-
-set_property(TARGET xxHash PROPERTY POSITION_INDEPENDENT_CODE ON)
-
+target_link_libraries(xxHash PRIVATE xxHash::xxhash)
 
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
