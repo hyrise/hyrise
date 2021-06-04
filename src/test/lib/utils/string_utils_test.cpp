@@ -15,6 +15,31 @@ TEST_F(StringUtilsTest, trim_and_split) {
   EXPECT_EQ(arguments[1], "opossonauten_table");
 }
 
+TEST_F(StringUtilsTest, split_string_by_delimiter) {
+  {
+    const auto substrings = split_string_by_delimiter("", '|');
+    EXPECT_EQ(substrings.size(), 0);
+  }
+  {
+    const auto substrings = split_string_by_delimiter("a", '|');
+    ASSERT_EQ(substrings.size(), 1);
+    EXPECT_EQ(substrings.at(0), "a");
+  }
+  {
+    const auto substrings = split_string_by_delimiter("a|b", '|');
+    ASSERT_EQ(substrings.size(), 2);
+    EXPECT_EQ(substrings.at(0), "a");
+    EXPECT_EQ(substrings.at(1), "b");
+  }
+  {
+    const auto substrings = split_string_by_delimiter("int|float|float", '|');
+    ASSERT_EQ(substrings.size(), 3);
+    EXPECT_EQ(substrings.at(0), "int");
+    EXPECT_EQ(substrings.at(1), "float");
+    EXPECT_EQ(substrings.at(2), "float");
+  }
+}
+
 TEST_F(StringUtilsTest, trim_and_split_whitespace_padding) {
   const std::string test_command = "   print opossonauten_table  ";
 
