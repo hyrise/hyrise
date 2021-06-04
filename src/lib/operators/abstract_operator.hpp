@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -52,17 +53,37 @@ enum class OperatorType {
   Mock  // for Tests that need to Mock operators
 };
 
+// The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
+enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
+
 /**
  * AbstractOperator is the abstract super class for all operators.
  * All operators have up to two input tables and one output table.
  *
  * LIFECYCLE
- *  1. The operator is constructed. Because input operators are not guaranteed to have already executed, operators
- *     must not call get_output in their execute method.
- *  2. The execute method is called from the outside (usually by the scheduler). This is where the heavy lifting is
- *     done. By now, the input operators have already executed.
- *  3. The consumers, usually other operators, call get_output. This should be very cheap.
- *  4. The operator clears its results once the last consumer deregisters.
+ *
+ *       +---------+
+ *       | Created |
+ *       +---------+
+ *            |
+ *            | execute()
+ *            v
+ *       +---------+               +----------------------+                         +--------------------+
+ *       | Running | ------------> | ExecutedAndAvailable | ----------------------> | ExecutedAndCleared |
+ *       +---------+   execute()   +----------------------+     clear_output()      +--------------------+
+ *                     finishes                          (e.g., if consumer_count == 0)
+ *
+ *  1. The operator is constructed in OperatorState::Created.
+ *     Input operators are not guaranteed to have executed.
+ *  2. The execute method is called from the outside (usually by the scheduler). By now, all input operators should
+ *     have been executed. The operator transitions to OperatorState::Running and the heavy lifting is done.
+ *  3. The operator finishes its execution and thus switches to OperatorState::ExecutedAndAvailable. "Available"
+ *     refers to the operator's result table, which is now available to consumers, usually other operators.
+ *     To receive the result table, consumers call get_output(), a cheap operation. Note, however, that some
+ *     operators, such as Delete, never produce results. Although reaching OperatorState::ExecutedAndAvailable, these
+ *     operators will legally return a null pointer once get_output() is called.
+ *  4. The operator clears its results and transitions to OperatorState::ExecutedAndCleared when clear_output() is
+ *     called. Usually, this happens once the last consumer deregisters.
  *
  * CONSUMER TRACKING
  *  Operators track the number of consuming operators to automate the clearing of operator results. Therefore,
@@ -182,6 +203,14 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
+  OperatorState state() const;
+
+  /**
+   * Creates an OperatorTask that owns this operator, if not already existing.
+   * @returns a shared pointer to the OperatorTask.
+   */
+  std::shared_ptr<OperatorTask> get_or_create_operator_task();
+
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
@@ -216,20 +245,35 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const AbstractOperator> _left_input;
   std::shared_ptr<const AbstractOperator> _right_input;
 
-  bool _executed = false;
-  std::atomic<bool> _execution_started = false;
-
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
+ private:
   // We track the number of consuming operators to automate the clearing of operator results.
-  std::atomic<int> _consumer_count = 0;
+  std::atomic_int32_t _consumer_count = 0;
+  std::mutex _deregister_consumer_mutex;
 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output = false;
+
+  // State management
+  std::atomic<OperatorState> _state{OperatorState::Created};
+  void _transition_to(OperatorState new_state);
+
+  /**
+   * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries
+   * and their outer queries, OperatorTasks should be shared, too, to reduce scheduling overhead and to prevent
+   * additional logic for result sharing.
+   * To allow OperatorTask::make_tasks_from_operator to reuse an existing OperatorTask, operators create
+   * OperatorTasks from themselves and store weak pointers. The pointers must be weak because OperatorTasks also
+   * point to operators, which would otherwise create cyclic dependencies.
+   */
+  std::weak_ptr<OperatorTask> _operator_task;
+  // To prevent race conditions in get_or_create_operator_task.
+  std::mutex _operator_task_mutex;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

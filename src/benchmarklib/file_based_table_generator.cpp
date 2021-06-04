@@ -103,4 +103,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
   return table_info_by_name;
 }
+
+void FileBasedTableGenerator::set_add_constraints_callback(
+    const std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)>& add_constraints_callback) {
+  _add_constraints_callback = add_constraints_callback;
+}
+
+void FileBasedTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  if (_add_constraints_callback) _add_constraints_callback(table_info_by_name);
+}
+
 }  // namespace opossum
