@@ -6,7 +6,7 @@
 #include <queue>
 #include <thread>
 
-#include "gtest/gtest_prod.h"
+#include <gtest/gtest_prod.h>
 #include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "utils/abstract_plugin.hpp"

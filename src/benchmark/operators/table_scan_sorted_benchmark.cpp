@@ -2,8 +2,8 @@
 #include <numeric>
 #include <random>
 
+#include <benchmark/benchmark.h>
 #include "../micro_benchmark_basic_fixture.hpp"
-#include "benchmark/benchmark.h"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_utils.hpp"

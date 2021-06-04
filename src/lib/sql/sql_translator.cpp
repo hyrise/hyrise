@@ -62,7 +62,7 @@
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

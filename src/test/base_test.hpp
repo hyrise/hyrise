@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
+#include "base_test.hpp"
 #include "storage/table_key_constraint.hpp"
 
 namespace opossum {

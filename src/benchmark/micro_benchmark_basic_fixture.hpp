@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 #include "micro_benchmark_utils.hpp"
 #include "types.hpp"
 

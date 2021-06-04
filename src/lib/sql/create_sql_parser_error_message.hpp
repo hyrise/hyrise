@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 
 namespace opossum {
 

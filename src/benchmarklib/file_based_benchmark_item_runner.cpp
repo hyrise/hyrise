@@ -5,7 +5,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
 #include "utils/list_directory.hpp"

@@ -13,7 +13,7 @@
 
 #include "base_test.hpp"
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"

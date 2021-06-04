@@ -2,11 +2,11 @@
 #include <iostream>
 #include <string>
 
+#include <SQLParserResult.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <magic_enum.hpp>
 
-#include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"

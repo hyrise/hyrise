@@ -1,4 +1,4 @@
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 #include "hyrise.hpp"
 #include "tpch/tpch_constants.hpp"

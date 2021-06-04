@@ -8,7 +8,7 @@
 #include "import_export/file_type.hpp"
 #include "types.hpp"
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 
 namespace opossum {
 

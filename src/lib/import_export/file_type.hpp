@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 
 namespace opossum {
 

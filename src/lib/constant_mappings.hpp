@@ -5,8 +5,8 @@
 
 #include <boost/bimap.hpp>
 
-#include "sql/Expr.h"
-#include "sql/SelectStatement.h"
+#include <sql/Expr.h>
+#include <sql/SelectStatement.h>
 
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"

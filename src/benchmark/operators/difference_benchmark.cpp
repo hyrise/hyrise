@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "operators/difference.hpp"

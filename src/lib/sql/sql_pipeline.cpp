@@ -5,7 +5,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "SQLParser.h"
+#include <SQLParser.h>
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
 #include "sql_plan_cache.hpp"

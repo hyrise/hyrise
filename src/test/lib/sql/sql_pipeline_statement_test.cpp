@@ -4,8 +4,8 @@
 
 #include "base_test.hpp"
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
+#include <SQLParser.h>
+#include <SQLParserResult.h>
 
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"

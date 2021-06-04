@@ -3,7 +3,7 @@
 #include <random>
 #include <utility>
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"

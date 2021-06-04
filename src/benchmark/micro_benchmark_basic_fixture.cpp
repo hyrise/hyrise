@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
 #include "synthetic_table_generator.hpp"
