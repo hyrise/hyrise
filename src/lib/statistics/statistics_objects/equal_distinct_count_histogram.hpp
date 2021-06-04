@@ -5,12 +5,26 @@
 #include <utility>
 #include <vector>
 
+
+#include <tsl/robin_map.h>  // NOLINT
+
 #include "abstract_histogram.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class Table;
+
+
+// TODO: Is moving this here fine?
+// Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
+// defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
+// so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
+// where hashing is somewhat expensive.
+template <typename T>
+using ValueDistributionMap =
+    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
+                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 /**
  * Distinct-balanced histogram.
@@ -35,6 +49,15 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table, const ColumnID column_id,
                                                                      const BinID max_bin_count,
                                                                      const HistogramDomain<T>& domain = {});
+  /**
+   * TODO: Implement a method like this
+   * Create an EqualDistinctCountHistogram for a segment of a Table
+   * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
+   */
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(const Table& table, const ColumnID column_id, const ChunkID chunk_id,
+                                                                     const BinID max_bin_count,
+                                                                     const HistogramDomain<T>& domain = {});
+
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -57,6 +80,12 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  protected:
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
+
+  /**
+   * TODO: Implement a method like this
+   * Create an actual histogram from a value distribution map.
+   */
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> _from_value_distribution(const std::vector<std::pair<T, HistogramCountType>>& value_distribution_map, const BinID max_bin_count);
 
  private:
   /**

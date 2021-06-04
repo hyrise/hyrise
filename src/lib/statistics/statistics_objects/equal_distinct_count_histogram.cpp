@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
-
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
@@ -17,14 +15,7 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-// Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
-// defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
-// so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
-// where hashing is somewhat expensive.
-template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
@@ -68,6 +59,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   return value_distribution;
 }
+
 }  // namespace
 
 namespace opossum {
@@ -103,6 +95,31 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
   const auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
+  return _from_value_distribution(value_distribution, max_bin_count);
+}
+
+template <typename T>
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_segment(
+    const Table& table, const ColumnID column_id, const ChunkID chunk_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
+  Assert(max_bin_count > 0, "max_bin_count must be greater than zero");
+
+  ValueDistributionMap<T> value_distribution_map;
+  const auto chunk = table.get_chunk(chunk_id);
+  if (!chunk) return nullptr;
+  add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
+
+  auto value_distribution =
+      std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
+  std::sort(value_distribution.begin(), value_distribution.end(),
+            [&](const auto& l, const auto& r) { return l.first < r.first; });
+
+  return _from_value_distribution(value_distribution, max_bin_count);
+}
+
+
+template <typename T>
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::_from_value_distribution(
+    const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count) {
   if (value_distribution.empty()) {
     return nullptr;
   }

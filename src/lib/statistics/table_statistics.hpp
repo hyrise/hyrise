@@ -29,12 +29,19 @@ class TableStatistics {
   TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
                   const Cardinality init_row_count);
 
+  TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+                  std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics, 
+                  const Cardinality init_row_count);
+
   /**
    * @return column_statistics[column_id]->data_type
    */
   DataType column_data_type(const ColumnID column_id) const;
 
   const std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics;
+
+  // segment_statistics[column_id][chunk_id]
+  const std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics;
   Cardinality row_count;
 };
 

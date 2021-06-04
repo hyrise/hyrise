@@ -13,6 +13,7 @@ namespace opossum {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
+  std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics(table.column_count());
 
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -63,6 +64,32 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           }
 
           column_statistics[my_column_id] = output_column_statistics;
+
+          // For now, also create the per segment statistics here. A bit redundant...
+          // Per Segment statistics will be twice as detailed.
+          const auto chunk_count = table.chunk_count();
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto output_chunk_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+            const auto histogram =
+              EqualDistinctCountHistogram<ColumnDataType>::from_segment(table, my_column_id, chunk_id, histogram_bin_count*2);
+            if (histogram) {
+              output_chunk_column_statistics->set_statistics_object(histogram);
+
+              // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
+              // property
+              const auto null_value_ratio =
+                  table.row_count() == 0
+                      ? 0.0f
+                      : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
+              output_chunk_column_statistics->set_statistics_object(
+                  std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+            } else {
+              // Failure to generate a histogram currently only stems from all-null segments.
+              // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+              output_chunk_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+            }
+            segment_statistics[my_column_id].push_back(output_chunk_column_statistics);
+          }
         });
       }
     });
@@ -72,12 +99,19 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     thread.join();
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
+  return std::make_shared<TableStatistics>(std::move(column_statistics), std::move(segment_statistics), table.row_count());
 }
+
 
 TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
                                  const Cardinality init_row_count)
     : column_statistics(std::move(init_column_statistics)), row_count(init_row_count) {}
+
+
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+                                std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics, 
+                                 const Cardinality init_row_count)
+    : column_statistics(std::move(init_column_statistics)), segment_statistics(init_segment_statistics), row_count(init_row_count) {}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");
