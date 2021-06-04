@@ -329,8 +329,8 @@ try {
   // }
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
-  node('mac-arm') {
-    parallel clangDebugMacX86: {
+  parallel clangDebugMacX86: {
+    node('mac') {
       stage("clang-debug-mac-x86") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
@@ -353,7 +353,9 @@ try {
           Utils.markStageSkippedForConditional("clang-debug-mac-x86")
         }
       }
-    }, clangReleaseMacArm: {
+    }
+  }, clangReleaseMacArm: {
+    node('mac-arm') {
       stage("clang-release-mac-arm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
