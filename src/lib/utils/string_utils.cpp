@@ -18,15 +18,15 @@ std::vector<std::string> trim_and_split(const std::string& input) {
 }
 
 std::vector<std::string> split_string_by_delimiter(const std::string& str, char delimiter) {
-  std::vector<std::string> internal;
+  std::vector<std::string> substrings;
   std::stringstream ss(str);
-  std::string tok;
+  std::string token;
 
-  while (std::getline(ss, tok, delimiter)) {
-    internal.push_back(tok);
+  while (std::getline(ss, token, delimiter)) {
+    substrings.emplace_back(std::move(token));
   }
 
-  return internal;
+  return substrings;
 }
 
 std::string plugin_name_from_path(const std::filesystem::path& path) {
