@@ -12,6 +12,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/fsst_segment.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/table.hpp"
@@ -87,6 +88,9 @@ class BinaryParser {
                                                                                         ChunkOffset row_count);
   template <typename T>
   static std::shared_ptr<LZ4Segment<T>> _import_lz4_segment(std::ifstream& file, ChunkOffset row_count);
+
+  template <typename T>
+  static std::shared_ptr<FSSTSegment<T>> _import_fsst_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given compressed_vector_type_id.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(

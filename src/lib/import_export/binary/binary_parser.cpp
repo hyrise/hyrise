@@ -168,6 +168,8 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FSST:
+      return _import_fsst_segment<ColumnDataType>(file, row_count);
   }
 
   Fail("Invalid EncodingType");
@@ -238,6 +240,11 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   auto offset_values = _import_offset_value_vector(file, row_count, compressed_vector_type_id);
 
   return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
+}
+
+template <typename T>
+std::shared_ptr<FSSTSegment<T>> BinaryParser::_import_fsst_segment(std::ifstream& file, ChunkOffset row_count) {
+  return nullptr;
 }
 
 template <typename T>

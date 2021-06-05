@@ -3,6 +3,7 @@
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
 #include "storage/lz4_segment/lz4_segment_iterable.hpp"
+#include "storage/fsst_segment/fsst_segment_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -63,6 +64,7 @@ auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment
 template <typename T, typename Enabled, bool EraseSegmentType>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
+
   PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
 #else
@@ -80,5 +82,13 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
   return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
 }
+
+template <typename T, bool EraseSegmentType>
+auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
+  // FSSTSegment always gets erased as we dont know what to do about it
+  // TODO(anyone): check if whe need to check for the EraseSegmentType flag
+  return AnySegmentIterable<T>(FSSTSegmentIterable<T>(segment));
+}
+
 
 }  // namespace opossum
