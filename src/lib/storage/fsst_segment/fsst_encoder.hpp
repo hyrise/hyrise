@@ -1,0 +1,6 @@
+
+
+#ifndef HYRISE_FSST_ENCODER_H
+#define HYRISE_FSST_ENCODER_H
+
+#endif  //HYRISE_FSST_ENCODER_H
