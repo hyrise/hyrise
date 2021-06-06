@@ -70,8 +70,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           const auto chunk_count = table.chunk_count();
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto output_chunk_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-            const auto histogram =
-              EqualDistinctCountHistogram<ColumnDataType>::from_segment(table, my_column_id, chunk_id, histogram_bin_count*2);
+            const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(
+                table, my_column_id, chunk_id, histogram_bin_count * 2);
             if (histogram) {
               output_chunk_column_statistics->set_statistics_object(histogram);
 
@@ -99,19 +99,21 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     thread.join();
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), std::move(segment_statistics), table.row_count());
+  return std::make_shared<TableStatistics>(std::move(column_statistics), std::move(segment_statistics),
+                                           table.row_count());
 }
-
 
 TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
                                  const Cardinality init_row_count)
     : column_statistics(std::move(init_column_statistics)), row_count(init_row_count) {}
 
-
-TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
-                                std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics, 
-                                 const Cardinality init_row_count)
-    : column_statistics(std::move(init_column_statistics)), segment_statistics(init_segment_statistics), row_count(init_row_count) {}
+TableStatistics::TableStatistics(
+    std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+    std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics,
+    const Cardinality init_row_count)
+    : column_statistics(std::move(init_column_statistics)),
+      segment_statistics(init_segment_statistics),
+      row_count(init_row_count) {}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");

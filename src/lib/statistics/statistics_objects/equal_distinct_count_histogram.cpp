@@ -15,8 +15,6 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-
-
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
@@ -100,7 +98,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_segment(
-    const Table& table, const ColumnID column_id, const ChunkID chunk_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
+    const Table& table, const ColumnID column_id, const ChunkID chunk_id, const BinID max_bin_count,
+    const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero");
 
   ValueDistributionMap<T> value_distribution_map;
@@ -115,7 +114,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
   return _from_value_distribution(value_distribution, max_bin_count);
 }
-
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::_from_value_distribution(

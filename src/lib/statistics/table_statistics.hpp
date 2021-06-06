@@ -30,7 +30,7 @@ class TableStatistics {
                   const Cardinality init_row_count);
 
   TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
-                  std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics, 
+                  std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics,
                   const Cardinality init_row_count);
 
   /**
