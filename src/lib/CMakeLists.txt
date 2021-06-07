@@ -654,7 +654,6 @@ set(
     lz4
     sqlparser
     uninitialized_vector
-    xxHash
     zstd
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
