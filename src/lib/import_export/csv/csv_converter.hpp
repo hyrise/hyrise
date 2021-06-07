@@ -63,8 +63,6 @@ class CsvConverter : public BaseCsvConverter {
         Assert(_is_nullable,
                "Unquoted null found in CSV file, while the associated column is not nullable. Quote it for string "
                "literal \"null\".");
-      }
-      if (_is_nullable && _config.null_handling == NullHandling::NullStringAsNull) {
         _null_values[position] = true;
         return;
       }
