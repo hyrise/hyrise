@@ -75,6 +75,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # Add Libraries with their own build setup
+add_subdirectory(fsst)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
