@@ -43,17 +43,20 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     case JoinMode::Cross:
       return false;
     case JoinMode::Semi:
-      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if ((config.predicate_condition == PredicateCondition::Equals) ||
+          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsTrue:
-      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if ((config.predicate_condition == PredicateCondition::Equals) ||
+          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsFalse:
-      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if ((config.predicate_condition == PredicateCondition::Equals) ||
+          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
@@ -273,7 +276,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
       if (match && _mode == JoinMode::Semi) {
         _emit_left_only(output_cluster, left_row_id);
-      } 
+      }
       if (!match && _mode == JoinMode::AntiNullAsFalse) {
         _emit_left_only(output_cluster, left_row_id);
       }
