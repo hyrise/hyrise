@@ -33,32 +33,27 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     return false;
   }
 
+  // The sort-merge join supports inner joins for all predicate conditions and multiple predicates. Cross joins are not
+  // supported. Semi and anti joins are supported for multiple predicates if the predicate condition is equal. If
+  // the predicate condition is not equals, only single predicates are supported. All other joins are supported if the
+  // predicate condition is not equals.
   switch (config.join_mode) {
     case JoinMode::Inner:
       return true;
     case JoinMode::Cross:
       return false;
     case JoinMode::Semi:
-      if (config.predicate_condition == PredicateCondition::Equals) {
-        return true;
-      }
-      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsTrue:
-      if (config.predicate_condition == PredicateCondition::Equals) {
-        return true;
-      }
-      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsFalse:
-      if (config.predicate_condition == PredicateCondition::Equals) {
-        return true;
-      }
-      if (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates) {
+      if ((config.predicate_condition == PredicateCondition::Equals) || (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
         return true;
       }
       return false;
@@ -100,8 +95,6 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinSortMerge doesn't support these parameters");
-
-  Assert(_mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
 
   std::shared_ptr<const Table> left_input_table_ptr = _left_input->get_output();
   std::shared_ptr<const Table> right_input_table_ptr = _right_input->get_output();
@@ -280,10 +273,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
       if (match && _mode == JoinMode::Semi) {
         _emit_left_only(output_cluster, left_row_id);
-      } else {
-        if (!match && _mode == JoinMode::AntiNullAsFalse) {
-          _emit_left_only(output_cluster, left_row_id);
-        }
+      } 
+      if (!match && _mode == JoinMode::AntiNullAsFalse) {
+        _emit_left_only(output_cluster, left_row_id);
       }
     });
   }
@@ -309,8 +301,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
             return;
           }
         });
-      }
-      if (!match) {
+        if (match) return;
         _emit_left_only(output_cluster, left_row_id);
       }
     });
@@ -537,7 +528,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _output_pos_lists_right[output_cluster].push_back(right_row_id);
   }
 
-  // Is only used for anti and semi Joins.
+  // Is only used for anti and semi joins.
   void _emit_left_only(size_t output_cluster, RowID left_row_id) {
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
   }
@@ -900,10 +891,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Determines the largest value in a sorted materialized table.
   const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
-    DebugAssert(
-        !((_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) &&
-          _primary_predicate_condition == PredicateCondition::NotEquals),
-        "The table needs to be sorted for _table_max_value() which is only the case in the anti/semi equi case");
+    DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
+                "The table needs to be sorted for _table_max_value() which is only the case for non-equi joins");
     DebugAssert(!sorted_table.empty(), "Sorted table is empty");
 
     for (auto partition_iter = sorted_table.rbegin(); partition_iter != sorted_table.rend(); ++partition_iter) {
@@ -1098,14 +1087,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
 
-    auto right_min_value = T{};
-    auto right_max_value = T{};
-
-    if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
-      right_min_value = _table_min_value(_sorted_right_table);
-      right_max_value = _table_max_value(_sorted_right_table);
-    }
-
     // Parallel join for each cluster
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
@@ -1125,7 +1106,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
 
-      const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
+      const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -1137,7 +1118,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           // We need to check if there are at lest two values. As a result all left rows will always find at least one
           // match. Is that the case we want to emit all rows from the left table with the exception where the value
           // is NULL. If there is only one value, we need to run the join algorithm and check for equality.
-          if (right_min_value != right_max_value) {
+          if (_right_input_table->row_count() > 1) {
             size_t start_index = 0;
             size_t end_index = _sorted_left_table[cluster_id].size();
             for (size_t index = start_index; index < end_index; ++index) {
@@ -1177,16 +1158,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   bool _check_if_table_contains_null(const Table& table) {
-    const auto table_column_definition =
+    const auto& table_column_definition =
         table.column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
-    if (table_column_definition.nullable == false) return false;
+    if (!table_column_definition.nullable) return false;
 
     const auto chunk_count = table.chunk_count();
     auto has_null = false;
 
-    for (ChunkID cluster_id{0}; cluster_id < chunk_count; ++cluster_id) {
-      const auto chunk = table.get_chunk(cluster_id);
-      const auto segment = chunk->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+    for (auto cluster_id = ChunkID{0}; cluster_id < chunk_count; ++cluster_id) {
+      const auto& chunk = table.get_chunk(cluster_id);
+      const auto& segment = chunk->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
       segment_iterate<T>(*segment, [&](const auto& position) {
         if (position.is_null()) {
           has_null = true;
@@ -1233,7 +1214,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       sort = !(_primary_predicate_condition == PredicateCondition::Equals);
     }
 
-    auto include_null_left =
+    const auto include_null_left =
         (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse ||
          (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()));
     auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter ||
@@ -1303,8 +1284,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (!_secondary_join_predicates.empty()) {
         auto null_output_left = RowIDPosList();
         const auto null_rows_left_size = _null_rows_left.size();
-        std::vector<bool> left_null_rows_matches(null_rows_left_size, false);
         null_output_left.reserve(null_rows_left_size);
+        std::vector<bool> left_null_rows_matches(null_rows_left_size, false);
 
         auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
         const auto right_table_row_count = _right_input_table->row_count();
@@ -1325,7 +1306,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
             const auto last = std::min(null_rows_left_size, row_id + bunch_size);
             const auto end_of_right_table = _end_of_table(_sorted_right_table);
             auto right_range = TablePosition(0, 0).to(end_of_right_table);
-            for (size_t left_null_row = row_id; left_null_row < last; left_null_row++) {
+            for (auto left_null_row = row_id; left_null_row < last; left_null_row++) {
               auto match = false;
               const auto& row_id_left = _null_rows_left[left_null_row];
               for (const auto& row_id_right : _null_rows_right) {
@@ -1354,7 +1335,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           }
         }
 
-        for (size_t row = 0; row < left_null_rows_matches.size(); row++) {
+        const auto left_null_rows_match_count = left_null_rows_matches.size();
+        for (size_t row = 0; row < left_null_rows_match_count; ++row) {
           if (!left_null_rows_matches[row]) {
             null_output_left.push_back(_null_rows_left[row]);
           }
