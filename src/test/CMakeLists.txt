@@ -179,6 +179,7 @@ set(
     lib/storage/fixed_string_dictionary_segment/fixed_string_test.cpp
     lib/storage/fixed_string_dictionary_segment/fixed_string_vector_test.cpp
     lib/storage/fixed_string_dictionary_segment_test.cpp
+    lib/storage/fsst_segment_test.cpp
     lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index_test.cpp
     lib/storage/index/b_tree/b_tree_index_test.cpp
     lib/storage/index/group_key/composite_group_key_index_test.cpp
