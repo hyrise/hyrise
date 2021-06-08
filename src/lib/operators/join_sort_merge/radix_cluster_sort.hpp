@@ -48,7 +48,7 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const ColumnIDPair& column_ids, bool sort, const bool materialize_null_left,
+                   const ColumnIDPair& column_ids, bool sort_clusters, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count,
                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _performance{performance_data},
@@ -56,7 +56,7 @@ class RadixClusterSort {
         _right_input_table{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
-        _sort_result_clusters{sort},
+        _sort_resulting_clusters{sort_clusters},
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
@@ -115,7 +115,7 @@ class RadixClusterSort {
   std::shared_ptr<const Table> _right_input_table;
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
-  bool _sort_result_clusters;
+  bool _sort_resulting_clusters;
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   // It is asserted to be a power of two in the constructor.
@@ -317,13 +317,13 @@ class RadixClusterSort {
 
     Timer timer;
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(_sort_result_clusters, _materialize_null_left);
+    ColumnMaterializer<T> left_column_materializer(_sort_resulting_clusters, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    ColumnMaterializer<T> right_column_materializer(_sort_result_clusters, _materialize_null_right);
+    ColumnMaterializer<T> right_column_materializer(_sort_resulting_clusters, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);
@@ -336,7 +336,7 @@ class RadixClusterSort {
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
       output.clusters_right = _concatenate_chunks(materialized_right_segments);
-    } else if (!_sort_result_clusters) {
+    } else if (!_sort_resulting_clusters) {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {

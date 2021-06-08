@@ -274,10 +274,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           return;
         }
       });
-      if (match && _mode == JoinMode::Semi) {
-        _emit_left_only(output_cluster, left_row_id);
-      }
-      if (!match && _mode == JoinMode::AntiNullAsFalse) {
+      if ((match &&  _mode == JoinMode::Semi) || (!match && _mode == JoinMode::AntiNullAsFalse)) {
         _emit_left_only(output_cluster, left_row_id);
       }
     });
@@ -653,7 +650,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
-      std::set<RowID> matched_right_row_ids;
+      RowHashSet matched_right_row_ids;
 
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
@@ -1208,13 +1205,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    auto sort = true;
+    auto sort_clusters = true;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
       // Since the not equal anti join does not support multiple predicates we are only interested in equal values. For
       // that, we do not need to sort the tables.
-      sort = !(_primary_predicate_condition == PredicateCondition::NotEquals);
+      sort_clusters = !(_primary_predicate_condition == PredicateCondition::NotEquals);
     } else {
-      sort = !(_primary_predicate_condition == PredicateCondition::Equals);
+      sort_clusters = !(_primary_predicate_condition == PredicateCondition::Equals);
     }
 
     const auto include_null_left =
@@ -1224,7 +1221,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-                            _sort_merge_join._primary_predicate.column_ids, sort, include_null_left, include_null_right,
+                            _sort_merge_join._primary_predicate.column_ids, sort_clusters, include_null_left, include_null_right,
                             _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
