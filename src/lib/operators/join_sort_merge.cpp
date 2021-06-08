@@ -1087,6 +1087,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
 
+    auto right_min_value = T{};
+    auto right_max_value = T{};
+
+    if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
+      right_min_value = _table_min_value(_sorted_right_table);
+      right_max_value = _table_max_value(_sorted_right_table);
+    }
     // Parallel join for each cluster
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
@@ -1106,7 +1113,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
 
-      const auto join_cluster_task = [this, cluster_id] {
+      const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -1118,7 +1125,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           // We need to check if there are at lest two values. As a result all left rows will always find at least one
           // match. Is that the case we want to emit all rows from the left table with the exception where the value
           // is NULL. If there is only one value, we need to run the join algorithm and check for equality.
-          if (_right_input_table->row_count() > 1) {
+          if (right_min_value != right_max_value) {
             size_t start_index = 0;
             size_t end_index = _sorted_left_table[cluster_id].size();
             for (size_t index = start_index; index < end_index; ++index) {
