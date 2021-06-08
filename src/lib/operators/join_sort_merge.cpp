@@ -1209,9 +1209,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
       // Since the not equal anti join does not support multiple predicates we are only interested in equal values. For
       // that, we do not need to sort the tables.
-      sort_clusters = !(_primary_predicate_condition == PredicateCondition::NotEquals);
+      sort_clusters = _primary_predicate_condition != PredicateCondition::NotEquals;
     } else {
-      sort_clusters = !(_primary_predicate_condition == PredicateCondition::Equals);
+      sort_clusters = _primary_predicate_condition != PredicateCondition::Equals;
     }
 
     const auto include_null_left =
