@@ -280,11 +280,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     });
   }
 
-  void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range,
+  void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range, bool check_right_run,
                                               MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       auto match = false;
-      // We need to make sure that there is not one combination between the left rows from the run and the null rows
+      // We need to make sure that there is no match between the rows of the left run and the NULL rows
       // from the right where all predicates are satisfied.
       for (const auto& right_row_id : _null_rows_right) {
         if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
@@ -292,34 +292,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           break;
         }
       }
-      // If there is no match with the null rows from the right we need to check that there is no a match with the rows
+      // If there is no match with the null rows from the right, we need to check that there is no a match with the rows
       // from the right side with an equal value to the ones from the left.
       if (!match) {
-        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-            match = true;
-            return;
-          }
-        });
-        if (match) return;
-        _emit_left_only(output_cluster, left_row_id);
-      }
-    });
-  }
-
-  void _emit_multipredicate_anti_null_as_true_left_range_only(
-      size_t output_cluster, TableRange left_range, MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      auto match = false;
-      // We need to make sure that there is not one combination between the left rows from the run and the null rows
-      // from the right where all predicates are satisfied.
-      for (const auto& right_row_id : _null_rows_right) {
-        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-          match = true;
-          break;
+        if (check_right_run) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+            if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+              match = true;
+              return;
+            }
+          });
         }
-      }
-      if (!match) {
+        if (match) return;
         _emit_left_only(output_cluster, left_row_id);
       }
     });
@@ -385,7 +369,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
       case PredicateCondition::LessThanEquals:
-        break;
+        throw std::logic_error("Unsupported PredicateCondition");
       default:
         throw std::logic_error("Unknown PredicateCondition");
     }
@@ -400,10 +384,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_run);
         }
         if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
-          _emit_multipredicate_anti_null_as_true_left_range_only(cluster_id, left_run, *multi_predicate_join_evaluator);
+          // We do not need to consider the right run since there is no equal match and so the multi predicate
+          // condition is always false.
+          auto check_right_run = false;
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, check_right_run, *multi_predicate_join_evaluator);
         }
         if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
-          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, *multi_predicate_join_evaluator);
+          // We need to consider the right run as well. We want to make sure there is no match where the multi
+          // predicate condition is True. Since the first equal predicate is True we need to check if all other
+          // predicates are true or not.
+          auto check_right_run = true;
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, check_right_run, *multi_predicate_join_evaluator);
         }
         break;
       case PredicateCondition::NotEquals:
@@ -415,7 +406,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
       case PredicateCondition::LessThanEquals:
-        break;
+        throw std::logic_error("Unsupported PredicateCondition");
       default:
         throw std::logic_error("Unknown PredicateCondition");
     }
@@ -449,7 +440,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
       case PredicateCondition::LessThanEquals:
-        break;
+        throw std::logic_error("Unsupported PredicateCondition");
       default:
         throw std::logic_error("Unknown PredicateCondition");
     }
@@ -850,7 +841,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       } else if (_mode == JoinMode::AntiNullAsTrue) {
         if (_primary_predicate_condition == PredicateCondition::Equals) {
           if (multi_predicate_join_evaluator) {
-            _emit_multipredicate_anti_null_as_true_left_range_only(cluster_id, left_rest,
+            _emit_multipredicate_anti_null_as_true(cluster_id, left_rest, right_rest, false,
                                                                    *multi_predicate_join_evaluator);
           } else {
             _emit_left_range_only(cluster_id, left_rest);
