@@ -87,7 +87,7 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
 
   } else {
     // Pattern is either MultipleContainsPattern, e.g., 'hello%world%' or '%hello%world%how%are%you%'. If not, we fall
-    // back to using a regex matcher.
+    // back to using a regex matcher (mostly patterns with single char wildcards).
     // A MultipleContainsPattern can begin with '%', ends with '%', and contains only strings and '%'.
 
     auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern.
@@ -116,10 +116,8 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     }
 
     if (pattern_is_contains_multiple) {
-      std::cout << "Using mulit" << std::endl;
       return MultipleContainsPattern{strings, starts_with_any_char};
     } else {
-      std::cout << "Using RE2" << std::endl;
       return RE2Pattern{std::make_unique<re2::RE2>(sql_like_to_regex(pattern))};
     }
   }

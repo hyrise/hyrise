@@ -62,7 +62,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   // Re-run ExpressionReductionRule to optimize LIKE's that have been part of a disjunction expression evaluation
-  // (e.g., `col_a LIKE 'a%' OR col_a LIKE 'b%'; cf. JOB's query 19b; split up by PredicateSplitUpRule). This time,
+  // (e.g., `col_a LIKE 'a%' OR col_a LIKE 'b%'; cf. JOB's query 29b; split up by PredicateSplitUpRule). This time,
   // also add between predicates.
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>(true));
 

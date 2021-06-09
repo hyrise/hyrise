@@ -85,7 +85,7 @@ class LikeMatcher {
     std::unique_ptr<re2::RE2> pattern;
   };
 
-  // Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to regex evalation for
+  // Contains one of the specialized patterns from above (StartsWithPattern, ...) or falls back to regex evaluation for
   // remaining pattern.
   using AllPatternVariant =
       std::variant<StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern, RE2Pattern>;
