@@ -74,6 +74,9 @@ class LikeMatcher {
   };
   // '%hello%world%nice%weather%'
   struct MultipleContainsPattern final {
+    MultipleContainsPattern(std::vector<pmr_string> stringssss, bool starts_with_any_char2) : strings(stringssss), starts_with_any_char(starts_with_any_char2) {
+      // TODO(Martin): instantiate searchers here
+    }
     std::vector<pmr_string> strings;
     bool starts_with_any_char{false};
   };
@@ -125,6 +128,8 @@ class LikeMatcher {
       const auto& multiple_contains_pattern = std::get<MultipleContainsPattern>(_pattern_variant);
       const auto& contains_strs = multiple_contains_pattern.strings;
       const auto starts_with_any_char = multiple_contains_pattern.starts_with_any_char;
+
+      // TODO(Martin): move to constructor
       std::vector<Searcher> searchers;
       searchers.reserve(contains_strs.size());
       auto string_length_remaining = size_t{0};
@@ -146,8 +151,9 @@ class LikeMatcher {
             // For patterns like 'hello%world', we set the search to check only the first 5 characters.
             search_end = current_position + current_search_string_length;
           }
+          
           current_position = std::search(current_position, search_end, searchers[searcher_idx]);
-          if (current_position == string.end()) return invert_results;  // current search term not found
+          if (current_position == search_end) { return invert_results; }  // current search term not found
           current_position += current_search_string_length;
         }
         return !invert_results;

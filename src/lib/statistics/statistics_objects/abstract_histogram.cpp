@@ -13,7 +13,6 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 #include "lossy_cast.hpp"
