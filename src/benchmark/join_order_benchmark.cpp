@@ -21,6 +21,109 @@
 using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
+void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  /**
+   * All JOB tables have surrogate keys, including:
+   * "aka_name"
+   * "aka_title"
+   * "cast_info"
+   * "char_name"
+   * "comp_cast_type"
+   * "company_name"
+   * "company_type"
+   * "complete_cast"
+   * "info_type"
+   * "keyword"
+   * "kind_type"
+   * "link_type"
+   * "movie_companies"
+   * "movie_info"
+   * "movie_info_idx"
+   * "movie_keyword"
+   * "movie_link"
+   * "person_info"
+   * "role_type"
+   * "title"
+   */
+
+  const auto& aka_name_table = table_info_by_name.at("aka_name").table;
+  aka_name_table->add_soft_key_constraint({{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& aka_title_table = table_info_by_name.at("aka_title").table;
+  aka_title_table->add_soft_key_constraint(
+      {{aka_title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& cast_info_table = table_info_by_name.at("cast_info").table;
+  cast_info_table->add_soft_key_constraint(
+      {{cast_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& char_name_table = table_info_by_name.at("char_name").table;
+  char_name_table->add_soft_key_constraint(
+      {{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& comp_cast_type_table = table_info_by_name.at("comp_cast_type").table;
+  comp_cast_type_table->add_soft_key_constraint(
+      {{comp_cast_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& company_name_table = table_info_by_name.at("company_name").table;
+  company_name_table->add_soft_key_constraint(
+      {{company_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& company_type_table = table_info_by_name.at("company_type").table;
+  company_type_table->add_soft_key_constraint(
+      {{company_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& complete_cast_table = table_info_by_name.at("complete_cast").table;
+  complete_cast_table->add_soft_key_constraint(
+      {{complete_cast_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& info_type_table = table_info_by_name.at("info_type").table;
+  info_type_table->add_soft_key_constraint(
+      {{info_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& keyword_table = table_info_by_name.at("keyword").table;
+  keyword_table->add_soft_key_constraint({{keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& kind_type_table = table_info_by_name.at("kind_type").table;
+  kind_type_table->add_soft_key_constraint(
+      {{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& link_type_table = table_info_by_name.at("link_type").table;
+  link_type_table->add_soft_key_constraint(
+      {{link_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& movie_companies_table = table_info_by_name.at("movie_companies").table;
+  movie_companies_table->add_soft_key_constraint(
+      {{movie_companies_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& movie_info_table = table_info_by_name.at("movie_info").table;
+  movie_info_table->add_soft_key_constraint(
+      {{movie_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& movie_info_idx_table = table_info_by_name.at("movie_info_idx").table;
+  movie_info_idx_table->add_soft_key_constraint(
+      {{movie_info_idx_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& movie_keyword_table = table_info_by_name.at("movie_keyword").table;
+  movie_keyword_table->add_soft_key_constraint(
+      {{movie_keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& movie_link_table = table_info_by_name.at("movie_link").table;
+  movie_link_table->add_soft_key_constraint(
+      {{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& person_info_table = table_info_by_name.at("person_info").table;
+  person_info_table->add_soft_key_constraint(
+      {{person_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& role_type_table = table_info_by_name.at("role_type").table;
+  role_type_table->add_soft_key_constraint(
+      {{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& title_table = table_info_by_name.at("title").table;
+  title_table->add_soft_key_constraint({{title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+}
+
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
 
@@ -93,6 +196,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
+  table_generator->set_add_constraints_callback(add_key_constraints);
   auto benchmark_item_runner =
       std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
