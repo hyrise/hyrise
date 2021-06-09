@@ -96,7 +96,7 @@ class TransactionManager : public Noncopyable {
 
   std::shared_ptr<CommitContext> _last_commit_context;
 
-  mutable std::mutex _mutex_active_snapshot_commit_ids;
+  mutable std::mutex _active_snapshot_commit_ids_mutex;
   std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum

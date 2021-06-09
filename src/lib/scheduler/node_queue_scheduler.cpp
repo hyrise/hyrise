@@ -91,7 +91,7 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
-   * Add task to the queue of the preferred node.
+   * Add task to the queue of the preferred node if it is ready for execution.
    */
   DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
   DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");

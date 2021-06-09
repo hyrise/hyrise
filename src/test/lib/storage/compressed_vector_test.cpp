@@ -13,20 +13,6 @@
 
 namespace opossum {
 
-namespace {
-
-// Used for debugging purposes
-[[maybe_unused]] void print_encoded_vector(const SimdBp128Vector& vector) {
-  for (auto _128_bit : vector.data()) {
-    for (auto _32_bit : _128_bit.data) {
-      std::cout << std::bitset<32>{_32_bit} << "|";
-    }
-    std::cout << std::endl;
-  }
-}
-
-}  // namespace
-
 class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
   void SetUp() override {}
@@ -91,8 +77,7 @@ auto compressed_vector_test_formatter = [](const ::testing::TestParamInfo<Vector
 };
 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
-                         ::testing::Values(VectorCompressionType::SimdBp128,
-                                           VectorCompressionType::FixedSizeByteAligned),
+                         ::testing::Values(VectorCompressionType::FixedWidthInteger, VectorCompressionType::BitPacking),
                          compressed_vector_test_formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {

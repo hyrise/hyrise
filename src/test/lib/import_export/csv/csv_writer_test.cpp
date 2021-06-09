@@ -96,7 +96,7 @@ TEST_F(CsvWriterTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(CsvWriterTest, DictionarySegmentFixedSizeByteAligned) {
+TEST_F(CsvWriterTest, DictionarySegmentFixedWidthInteger) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
@@ -112,7 +112,7 @@ TEST_F(CsvWriterTest, DictionarySegmentFixedSizeByteAligned) {
                            "1,\"Hallo3\",3.55\n"));
 }
 
-TEST_F(CsvWriterTest, FixedStringDictionarySegmentFixedSizeByteAligned) {
+TEST_F(CsvWriterTest, FixedStringDictionarySegmentFixedWidthInteger) {
   const auto filename_string_table = test_data_path + "string.tbl";
   const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
 
