@@ -350,6 +350,7 @@ try {
       }
     }
   }, clangReleaseMacArm: {
+    // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
       stage("clang-release-mac-arm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
