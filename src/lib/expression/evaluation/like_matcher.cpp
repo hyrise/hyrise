@@ -116,7 +116,7 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     }
 
     if (pattern_is_contains_multiple) {
-      return MultipleContainsPattern{strings, starts_with_any_char};
+      return MultipleContainsPattern{std::move(strings), starts_with_any_char};
     } else {
       return RE2Pattern{std::make_unique<re2::RE2>(sql_like_to_regex(pattern))};
     }

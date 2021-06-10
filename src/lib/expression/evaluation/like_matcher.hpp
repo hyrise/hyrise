@@ -74,11 +74,18 @@ class LikeMatcher {
   };
   // '%hello%world%nice%weather%'
   struct MultipleContainsPattern final {
-    MultipleContainsPattern(std::vector<pmr_string> stringssss, bool starts_with_any_char2)
-        : strings(stringssss), starts_with_any_char(starts_with_any_char2) {
-      // TODO(Martin): instantiate searchers here
+    MultipleContainsPattern(std::vector<pmr_string>&& init_strings, bool init_starts_with_any_char)
+        : strings(std::move(init_strings)), starts_with_any_char(init_starts_with_any_char) {
+      searchers.reserve(strings.size());
+      for (const auto& contains_str : strings) {
+        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        cumulative_strings_length += contains_str.size();
+      }
     }
+
+    std::vector<Searcher> searchers;
     std::vector<pmr_string> strings;
+    size_t cumulative_strings_length{0};
     bool starts_with_any_char{false};
   };
   struct RE2Pattern final {
@@ -127,28 +134,19 @@ class LikeMatcher {
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
       const auto& multiple_contains_pattern = std::get<MultipleContainsPattern>(_pattern_variant);
-      const auto& contains_strs = multiple_contains_pattern.strings;
-      const auto starts_with_any_char = multiple_contains_pattern.starts_with_any_char;
-
-      // TODO(Martin): move to constructor
-      std::vector<Searcher> searchers;
-      searchers.reserve(contains_strs.size());
-      auto string_length_remaining = size_t{0};
-      for (const auto& contains_str : contains_strs) {
-        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
-        string_length_remaining += contains_str.size();
-      }
+      const auto& searchers = multiple_contains_pattern.searchers;
+      auto string_length_remaining = multiple_contains_pattern.cumulative_strings_length;
 
       functor([&](const auto& string) -> bool {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
-          const auto current_search_string_length = contains_strs[searcher_idx].size();
+          const auto current_search_string_length = multiple_contains_pattern.strings[searcher_idx].size();
           string_length_remaining -= current_search_string_length;
           // End iterator to search up to. If `hello%hello` of `hello%hello%hello` is still remaining, we do not need
           // to search up the end, but can stop earlier. Further ensure, that we don't search_set to be value smaller
           // than current_position.
           auto search_end = std::max(current_position, std::min(string.end(), string.end() - string_length_remaining));
-          if (!starts_with_any_char && searcher_idx == 0) {
+          if (!multiple_contains_pattern.starts_with_any_char && searcher_idx == 0) {
             // For patterns like 'hello%world', we set the search to check only the first 5 characters.
             search_end = current_position + current_search_string_length;
           }
