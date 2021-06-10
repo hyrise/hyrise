@@ -380,7 +380,8 @@ try {
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
             // executes x86 binaries on arm.
-            sh "file hyriseConsole | grep arm64"
+            sh "file ./clang-release/hyriseTest | grep arm64"
+            sh "file ./clang-release/hyriseTest | grep arm65"
 
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
