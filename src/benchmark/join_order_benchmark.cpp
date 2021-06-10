@@ -92,8 +92,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
       {{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& name_table = table_info_by_name.at("name").table;
-  name_table->add_soft_key_constraint(
-      {{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  name_table->add_soft_key_constraint({{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& person_info_table = table_info_by_name.at("person_info").table;
   person_info_table->add_soft_key_constraint(
