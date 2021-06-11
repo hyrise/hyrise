@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
 
 #include "all_type_variant.hpp"
 #include "expression/logical_expression.hpp"
@@ -72,9 +72,15 @@ class ExpressionEvaluator final {
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
 
-  // Utility to populate a cache of UncorrelatedSubqueryResults
+  /**
+   * @returns a cache of UncorrelatedSubqueryResults with the results from @param expressions.
+   *
+   * WARNING:
+   *  - This utility function only executes the given PQPs and gathers their results.
+   *  - The caller has to register and deregister for consumption at the PQPs. For reference, see abstract_operator.hpp
+   */
   static std::shared_ptr<UncorrelatedSubqueryResults> populate_uncorrelated_subquery_results_cache(
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+      const std::vector<std::shared_ptr<PQPSubqueryExpression>>& expressions);
 
  private:
   template <typename Result>

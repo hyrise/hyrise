@@ -696,15 +696,15 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << get_table_path(configuration.right_input) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
-    if (join_op->get_output()) {
-      Print::print(join_op->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (actual_table) {
+      Print::print(actual_table, PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
-    if (join_verification->get_output()) {
-      Print::print(join_verification->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (expected_table) {
+      Print::print(expected_table, PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;
@@ -722,6 +722,9 @@ TEST_P(JoinTestRunner, TestJoin) {
       expected_output_table_iter =
           expected_output_tables.emplace(cached_output_configuration, expected_output_table).first;
     }
+    expected_table = expected_output_table_iter->second;
+
+    // Execute the actual join
     join_op->execute();
   } catch (...) {
     // If an error occurred in the join operator under test, we still want to see the test configuration
@@ -730,7 +733,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 
   actual_table = join_op->get_output();
-  expected_table = expected_output_table_iter->second;
 
   table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                                FloatComparisonMode::AbsoluteDifference, IgnoreNullable::No);

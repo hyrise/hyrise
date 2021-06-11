@@ -14,7 +14,8 @@ You can still find the (archived) previous version of Hyrise on [Github](https:/
 
 When referencing this version of Hyrise, please use the following bibtex entry:
 <details><summary>(click to expand)</summary>
-```
+  
+```bibtex
 @inproceedings{DBLP:conf/edbt/DreselerK0KUP19,
   author    = {Markus Dreseler and
                Jan Kossmann and
@@ -121,7 +122,7 @@ To configure a build directory for a release build make sure it is empty and cal
 ### Test
 Calling `make hyriseTest` from the build directory builds all available tests.
 The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
-Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
+Subsets of all available tests can be selected via `--gtest_filter=`.
 
 ### Coverage
 `./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
@@ -144,17 +145,16 @@ When trying to optimize the time spent building the project, it is often helpful
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Maintainers
-
 - Jan Kossmann
-- Markus Dreseler
 - Martin Boissier
 - Stefan Halfpap
 
-
 Contact: firstname.lastname@hpi.de
 
-## Contributors
+## Maintainer emeritus
+- Markus Dreseler
 
+## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
 -   Timo      Djürken
@@ -172,6 +172,7 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Carl      Gödecken
 -   Adrian    Holfter
+-   Ben       Hurdelhey
 -   Sven      Ihde
 -   Ivan      Illic
 -   Jonathan  Janetzki

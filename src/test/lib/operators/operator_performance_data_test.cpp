@@ -24,6 +24,7 @@ class OperatorPerformanceDataTest : public BaseTest {
   static void SetUpTestCase() {
     _table = load_table("resources/test_data/tbl/int_int.tbl", 2);
     _table_wrapper = std::make_shared<TableWrapper>(_table);
+    _table_wrapper->never_clear_output();
     _table_wrapper->execute();
   }
 
@@ -44,8 +45,8 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
       std::make_shared<TableScan>(table_wrapper, greater_than_(get_column_expression(table_wrapper, ColumnID{0}), 1));
   table_scan->execute();
 
+  EXPECT_TRUE(table_scan->executed());
   auto& performance_data = table_scan->performance_data;
-  EXPECT_TRUE(performance_data->executed);
   EXPECT_TRUE(performance_data->has_output);
   EXPECT_GT(performance_data->walltime.count(), 0ul);
   EXPECT_EQ(performance_data->output_row_count, 2ul);
@@ -201,11 +202,59 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
   }
 }
 
+TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
+  const auto table_a = load_table("resources/test_data/tbl/int_int2.tbl", 2);
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  table_wrapper_a->never_clear_output();
+  table_wrapper_a->execute();
+
+  const auto table_b = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 2);  // larger than int_int.tbl
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
+  table_wrapper_b->never_clear_output();
+  table_wrapper_b->execute();
+
+  // Check that std's hash for integer values is still the identity funtion. This assumption might break in the future.
+  // In this case, some of the following tests might break as well.
+  ASSERT_EQ(std::hash<uint32_t>{}(17), 17);
+
+  // Inner join case: We check that the number of stored positions (required for all join types except semi/anti).
+  // Depending on the Bloom filter implementation (which is currently depending on the implementation of std::hash),
+  // we might store values and positions in the hash map that do not have a matching partner.
+  const auto inner_join = std::make_shared<JoinHash>(
+      table_wrapper_a, table_wrapper_b, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  inner_join->execute();
+
+  const auto& inner_perf = dynamic_cast<JoinHash::PerformanceData&>(*inner_join->performance_data);
+  EXPECT_EQ(inner_perf.build_side_materialized_value_count, 4ul);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.probe_side_materialized_value_count, 4ul);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2ul);     // values 2,6
+  EXPECT_EQ(inner_perf.hash_tables_position_count, 3ul);           // positions 1,2,3
+  EXPECT_TRUE(inner_perf.left_input_is_build_side);
+
+  // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
+  // Further, we force the larger input to be the build side. As we first materialize the smaller side (i.e., the probe
+  // side in this case) and create the initial bloom filter with that, there will be no reduction due to bloom
+  // filtering on the probe side.
+  const auto semi_join = std::make_shared<JoinHash>(
+      table_wrapper_a, table_wrapper_b, JoinMode::Semi,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  semi_join->execute();
+
+  const auto& semi_perf = dynamic_cast<JoinHash::PerformanceData&>(*semi_join->performance_data);
+  EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4ul);
+  EXPECT_EQ(semi_perf.probe_side_materialized_value_count, table_a->row_count());
+  EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2ul);
+  EXPECT_FALSE(semi_perf.hash_tables_position_count);
+  EXPECT_FALSE(semi_perf.left_input_is_build_side);
+}
+
 // Check that steps of IndexJoin (indexed chunks/unindexed chunks) are executed as expected.
 TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
   auto table = load_table("resources/test_data/tbl/int_int.tbl", 2);
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   {
@@ -300,15 +349,15 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   EXPECT_FALSE(delete_op->execute_failed());
 
   {
+    EXPECT_TRUE(delete_op->executed());
     const auto& performance_data = delete_op->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_FALSE(performance_data->has_output);
   }
 
   {
+    EXPECT_TRUE(table_scan_1->executed());
     const auto& performance_data = table_scan_1->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_TRUE(performance_data->has_output);
     EXPECT_EQ(performance_data->output_row_count, 1);
@@ -316,8 +365,8 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   }
 
   {
+    EXPECT_TRUE(table_scan_2->executed());
     const auto& performance_data = table_scan_2->performance_data;
-    EXPECT_TRUE(performance_data->executed);
     EXPECT_GT(performance_data->walltime.count(), 0);
     EXPECT_TRUE(performance_data->has_output);
     EXPECT_EQ(performance_data->output_row_count, 0);
@@ -332,7 +381,6 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   OperatorPerformanceData<JoinHash::OperatorSteps> performance_data;
   performance_data.set_step_runtime(JoinHash::OperatorSteps::BuildSideMaterializing, std::chrono::nanoseconds{17});
   performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
-  performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 1u;
   performance_data.output_chunk_count = 1u;
@@ -358,13 +406,7 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   {
     std::stringstream stream;
     stream << performance_data;
-    EXPECT_EQ(stream.str(), "Not executed.");
-  }
-  {
-    std::stringstream stream;
-    performance_data.executed = true;
-    stream << performance_data;
-    EXPECT_EQ(stream.str(), "Executed, but no output.");
+    EXPECT_EQ(stream.str(), "No output.");
   }
   {
     std::stringstream stream;

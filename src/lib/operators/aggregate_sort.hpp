@@ -12,7 +12,7 @@
 
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -88,7 +88,8 @@ class AggregateSort : public AbstractAggregateOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 

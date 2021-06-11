@@ -158,11 +158,12 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  gt_post_delete->never_clear_output();
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
   validate->set_transaction_context(tx_context_verification);
-
+  validate->never_clear_output();
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), gt_post_delete->get_output());
@@ -282,22 +283,20 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto gt = std::make_shared<GetTable>(_table_name);
+  auto validate = std::make_shared<Validate>(gt);
+  auto delete_op = std::make_shared<Delete>(validate);
+  auto delete_op2 = std::make_shared<Delete>(validate);
+  delete_op->set_transaction_context_recursively(t1_context);
+
   gt->execute();
-
-  auto validate1 = std::make_shared<Validate>(gt);
-  validate1->set_transaction_context(t1_context);
-  validate1->execute();
-
-  auto delete_op = std::make_shared<Delete>(validate1);
-  delete_op->set_transaction_context(t1_context);
+  validate->execute();
   delete_op->execute();
 
   t1_context->commit();
 
-  auto delete_op2 = std::make_shared<Delete>(validate1);
-  delete_op->set_transaction_context(t1_context);
+  delete_op2->set_transaction_context(t1_context);
 
-  EXPECT_THROW(delete_op->execute(), std::logic_error);
+  EXPECT_THROW(delete_op2->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
@@ -307,6 +306,7 @@ TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   get_table->execute();
 
   const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
+  table_scan->never_clear_output();
   table_scan->execute();
 
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

@@ -24,6 +24,7 @@ class OperatorsPrintTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table_name, _t);
 
     _gt = std::make_shared<GetTable>(_table_name);
+    _gt->never_clear_output();
     _gt->execute();
   }
 
@@ -86,6 +87,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   }
 
   auto gt = std::make_shared<GetTable>(_table_name);
+  gt->never_clear_output();
   gt->execute();
 
   auto pr = std::make_shared<Print>(gt, PrintFlags::None, output);

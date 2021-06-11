@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -29,7 +29,8 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(
   return arguments[parameter_idx];
 }
 
-std::shared_ptr<AbstractExpression> LQPSubqueryExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> LQPSubqueryExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto lqp_copy = lqp->deep_copy();
 
   return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));

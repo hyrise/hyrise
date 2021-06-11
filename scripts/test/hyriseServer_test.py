@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pexpect
+import re
 
 from hyriseBenchmarkCore import initialize
 
@@ -11,13 +12,15 @@ def main():
     arguments = {}
     arguments["--benchmark_data"] = "tpc-h:0.01"
 
-    benchmark = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01", timeout=10)
+    benchmark = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01 -p 0", timeout=10)
 
     benchmark.expect_exact("Loading/Generating tables", timeout=120)
     benchmark.expect_exact("Encoding 'lineitem'", timeout=120)
-    benchmark.expect_exact("Server started at 0.0.0.0 and port 5432", timeout=120)
+    search_regex = r"Server started at 0.0.0.0 and port (\d+)"
+    benchmark.expect(search_regex, timeout=120)
 
-    client = pexpect.spawn("psql -h localhost -p 5432", timeout=10)
+    server_port = int(re.search(search_regex, str(benchmark.after)).group(1))
+    client = pexpect.spawn(f"psql -h localhost -p {server_port}", timeout=20)
 
     client.sendline("select count(*) from region;")
     client.expect_exact("COUNT(*)")

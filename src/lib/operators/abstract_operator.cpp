@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-#include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -24,20 +24,59 @@ namespace opossum {
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
-    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {}
+    : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
+  // Tell input operators that we want to consume their output
+  if (_left_input) mutable_left_input()->register_consumer();
+  if (_right_input) mutable_right_input()->register_consumer();
+}
+
+AbstractOperator::~AbstractOperator() {
+  /**
+   * Assert that we used or executed the operator before its disposal.
+   *
+   * Hack condition to pass some tests:
+   *  We assert for _consumer_count == 0 because some tests create operators, but do not execute them. We do not want
+   *  to force tests to call execute() on operators when their only purpose is to test, for example, the output of
+   *  the description() function.
+   */
+  if constexpr (HYRISE_DEBUG) {
+    auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
+    bool aborted = transaction_context ? transaction_context->aborted() : false;
+    bool left_has_executed = _left_input ? _left_input->executed() : false;
+    bool right_has_executed = _right_input ? _right_input->executed() : false;
+    Assert(executed() || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
+           "Operator did not execute, but at least one input operator has.");
+  }
+}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
+bool AbstractOperator::executed() const {
+  return _state == OperatorState::ExecutedAndAvailable || _state == OperatorState::ExecutedAndCleared;
+}
+
 void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-  DebugAssert(!_left_input || _left_input->get_output(), "Left input has not yet been executed");
-  DebugAssert(!_right_input || _right_input->get_output(), "Right input has not yet been executed");
-  DebugAssert(!performance_data->executed, "Operator has already been executed");
+
+  /**
+   * If an operator has already executed, we return immediately. Either because
+   *    a) the output has already been set, or
+   *    b) because there are no more consumers that need the operator's result.
+   * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
+   */
+  if (executed()) return;
+  _transition_to(OperatorState::Running);
+
+  if constexpr (HYRISE_DEBUG) {
+    Assert(!_left_input || _left_input->executed(), "Left input has not yet been executed");
+    Assert(!_right_input || _right_input->executed(), "Right input has not yet been executed");
+    Assert(!_left_input || _left_input->get_output(), "Left input has no output data.");
+    Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
+  }
 
   Timer performance_timer;
 
   auto transaction_context = this->transaction_context();
-
   if (transaction_context) {
     /**
      * Do not execute Operators if transaction has been aborted.
@@ -63,7 +102,12 @@ void AbstractOperator::execute() {
     performance_data->output_chunk_count = _output->chunk_count();
   }
   performance_data->walltime = performance_timer.lap();
-  performance_data->executed = true;
+
+  _transition_to(OperatorState::ExecutedAndAvailable);
+
+  // Tell input operators that we no longer need their output.
+  if (_left_input) mutable_left_input()->deregister_consumer();
+  if (_right_input) mutable_right_input()->deregister_consumer();
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -120,20 +164,77 @@ void AbstractOperator::execute() {
   }
 }
 
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  Assert(_state == OperatorState::ExecutedAndAvailable,
+         "Trying to get_output of operator which is not in OperatorState::ExecutedAndAvailable.");
+  return _output;
+}
 
-void AbstractOperator::clear_output() { _output = nullptr; }
+void AbstractOperator::clear_output() {
+  Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
+  if (_never_clear_output) return;
+  _transition_to(OperatorState::ExecutedAndCleared);
+  _output = nullptr;
+}
 
 std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  return _deep_copy_impl(copied_ops);
+  return deep_copy(copied_ops);
+}
+
+std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  const auto copied_ops_iter = copied_ops.find(this);
+  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
+
+  const auto copied_left_input =
+      left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_right_input =
+      right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
+
+  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+
+  /**
+   * Set the transaction context so that we can execute the copied plan in the current transaction
+   * (see, e.g., ExpressionEvaluator::_evaluate_subquery_expression_for_row)
+   */
+  if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
+
+  copied_ops.emplace(this, copied_op);
+
+  return copied_op;
 }
 
 std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
 
 std::shared_ptr<const Table> AbstractOperator::right_input_table() const { return _right_input->get_output(); }
+
+size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
+
+void AbstractOperator::register_consumer() {
+  Assert(_state <= OperatorState::ExecutedAndAvailable,
+         "Cannot register as a consumer since operator results have already been cleared.");
+  ++_consumer_count;
+}
+
+void AbstractOperator::deregister_consumer() {
+  DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
+  // The following section is locked to prevent clear_output() from being called twice. Otherwise, a race condition
+  // as follows might occur:
+  //  1) T1 decreases _consumer_count, making it equal to one. After this operation, T1 gets suspended.
+  //  2) T2 decreases _consumer_count as well, making it equal to zero. It enters the if statement and calls
+  //     clear_output() for the first time.
+  //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
+  //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
+  std::lock_guard<std::mutex> lock(_deregister_consumer_mutex);
+
+  _consumer_count--;
+  if (_consumer_count == 0) clear_output();
+}
+
+void AbstractOperator::never_clear_output() { _never_clear_output = true; }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 
@@ -144,6 +245,8 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 }
 
 void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  Assert(_state == OperatorState::Created,
+         "Setting the TransactionContext is allowed for OperatorState::Created only.");
   _transaction_context = transaction_context;
   _on_set_transaction_context(transaction_context);
 }
@@ -169,32 +272,43 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { r
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  Assert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
+  if (parameters.empty()) return;
   _on_set_parameters(parameters);
   if (left_input()) mutable_left_input()->set_parameters(parameters);
   if (right_input()) mutable_right_input()->set_parameters(parameters);
 }
 
+OperatorState AbstractOperator::state() const { return _state; }
+
+std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
+  std::lock_guard<std::mutex> lock(_operator_task_mutex);
+  // Return the OperatorTask that owns this operator if it already exists.
+  if (!_operator_task.expired()) return _operator_task.lock();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether _operator_task points to NULL, which means it was never initialized before.
+    // Taken from: https://stackoverflow.com/a/45507610/5558040
+    using weak_null_pointer = std::weak_ptr<OperatorTask>;
+    auto is_uninitialized =
+        !_operator_task.owner_before(weak_null_pointer{}) && !weak_null_pointer{}.owner_before(_operator_task);
+    Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
+  }
+
+  auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
+  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  if (executed()) {
+    // Skip task to reduce scheduling overhead.
+    operator_task->skip_operator_task();
+    DebugAssert(operator_task->is_done(), "Expected OperatorTask to be marked as done.");
+  }
+
+  return operator_task;
+}
+
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
-
-std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  const auto copied_ops_iter = copied_ops.find(this);
-  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
-
-  const auto copied_left_input =
-      left_input() ? left_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
-  const auto copied_right_input =
-      right_input() ? right_input()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
-
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input);
-  if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
-
-  copied_ops.emplace(this, copied_op);
-
-  return copied_op;
-}
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
@@ -208,15 +322,13 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
     fn_stream << op->description();
 
     // If the operator was already executed, print some info about data and performance
-    const auto output = op->get_output();
-    if (output) {
+    if (op->executed() && op->get_output()) {
+      const auto output = op->get_output();
       fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
                 << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-      fn_stream << "/";
-      fn_stream << *abstract_operator.performance_data;
-      fn_stream << ")";
+      fn_stream << "/" << *abstract_operator.performance_data << ")";
     }
   };
 
@@ -224,6 +336,27 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
                                                        node_print_fn, stream);
 
   return stream;
+}
+
+void AbstractOperator::_transition_to(OperatorState new_state) {
+  OperatorState previous_state = _state.exchange(new_state);
+
+  // Check the validity of the state transition
+  switch (new_state) {
+    case OperatorState::Running:
+      Assert(previous_state == OperatorState::Created, "Illegal state transition to OperatorState::Running");
+      break;
+    case OperatorState::ExecutedAndAvailable:
+      Assert(previous_state == OperatorState::Running,
+             "Illegal state transition to OperatorState::ExecutedAndAvailable");
+      break;
+    case OperatorState::ExecutedAndCleared:
+      Assert(previous_state == OperatorState::ExecutedAndAvailable,
+             "Illegal state transition to OperatorState::ExecutedAndCleared");
+      break;
+    default:
+      Fail("Unexpected target state in AbstractOperator.");
+  }
 }
 
 }  // namespace opossum

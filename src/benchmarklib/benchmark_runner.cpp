@@ -133,14 +133,10 @@ void BenchmarkRunner::run() {
     }
   }
 
-  auto benchmark_end = std::chrono::system_clock::now();
-  _total_run_duration = benchmark_end - _benchmark_start;
-
   // Create report
   if (_config.output_file_path) {
     if (!_config.verify && !_config.enable_visualization) {
-      std::ofstream output_file(*_config.output_file_path);
-      _create_report(output_file);
+      write_report_to_file();
     } else {
       std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
       std::cout << "  These options make the results meaningless." << std::endl;
@@ -365,7 +361,9 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
-void BenchmarkRunner::_create_report(std::ostream& stream) const {
+void BenchmarkRunner::write_report_to_file() const {
+  const auto total_duration = std::chrono::system_clock::now() - _benchmark_start;
+
   nlohmann::json benchmarks;
 
   for (const auto& item_id : _benchmark_item_runner->items()) {
@@ -419,11 +417,12 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
     // comparable.
     const auto reported_item_duration =
-        _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
+        _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
     const auto reported_item_duration_ns =
         static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
     const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
-    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
+    const auto items_per_second =
+        duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
     // want to touch this and potentially break the comparability across commits. Note that items_per_second only
@@ -441,7 +440,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   nlohmann::json summary{
       {"table_size_in_bytes", table_size},
-      {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
+      {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(total_duration).count()}};
 
   const auto benchmark_start_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(_benchmark_start.time_since_epoch()).count();
@@ -454,6 +453,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                         {"summary", std::move(summary)},
                         {"table_generation", _table_generator->metrics}};
 
+  // Add information that was temporarily stored in the `benchmark_...` tables during the benchmark execution
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
@@ -462,7 +462,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
   }
 
-  stream << std::setw(2) << report << std::endl;
+  // Write the output file
+  std::ofstream{_config.output_file_path.value()} << std::setw(2) << report << std::endl;
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
@@ -479,9 +480,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // method and not a class, retrieving this default value properly would require some major refactoring of how
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
   const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
-
-  // TPC-C does not support binary caching
-  const auto* const default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
   // clang-format off
   cli_options.add_options()
@@ -501,7 +499,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value(default_dont_cache_binary_tables)) // NOLINT
+    ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
@@ -533,7 +531,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"indexes", config.indexes},
-      {"benchmark_mode", config.benchmark_mode == BenchmarkMode::Ordered ? "Ordered" : "Shuffled"},
+      {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},

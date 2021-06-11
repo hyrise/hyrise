@@ -57,6 +57,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto counter = 0u;
     for (auto& elem : values) {
       elem = _generated_value_pool[counter % _generated_value_pool.size()];
+      ++counter;
     }
 
     return std::make_shared<ValueSegment<int32_t>>(std::move(values));
@@ -436,33 +437,38 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
   // Use the row_count used for frame of reference segments.
   auto value_segment = _create_int_with_null_value_segment(_row_count(EncodingType::FrameOfReference));
 
+  // Dictionary
   auto encoded_segment =
       this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   EXPECT_EQ(get_segment_encoding_spec(encoded_segment),
-            (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}));
+            (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger}));
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  encoded_segment = this->_encode_segment(
+      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking});
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // RunLength
   encoded_segment = this->_encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // FrameOfReference
   encoded_segment =
       this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
+                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::BitPacking});
   EXPECT_EQ(get_segment_encoding_spec(encoded_segment),
-            (SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}));
+            (SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::BitPacking}));
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment =
-      this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = this->_encode_segment(
-      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
   encoded_segment = this->_encode_segment(
       value_segment, DataType::Int,
-      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
+      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedWidthInteger});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // LZ4 (only testing bitpacking compression as fixed-width integer is not supported by LZ4)
   encoded_segment = this->_encode_segment(value_segment, DataType::Int,
-                                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
+                                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::BitPacking});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 

@@ -24,8 +24,9 @@ def main():
     arguments["--time"] = "10"
     arguments["--runs"] = "-1"
     arguments["--mode"] = "'Shuffled'"
+    arguments["--clustering"] = "Pruning"
     arguments["--encoding"] = "'Dictionary'"
-    arguments["--compression"] = "'Fixed-size byte-aligned'"
+    arguments["--compression"] = "'Fixed-width integer'"
     arguments["--indexes"] = "true"
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
@@ -45,6 +46,7 @@ def main():
     benchmark.expect_exact("Benchmarking Queries: [ 1, 13, 19 ]")
     benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: yes")
+    benchmark.expect_exact("Sorting tables")
     benchmark.expect_exact("Creating index on customer [ c_custkey ]")
     benchmark.expect_exact("Preparing queries")
 
@@ -121,7 +123,7 @@ def main():
     arguments["--runs"] = "100"
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
-    arguments["--compression"] = "'SIMD-BP128'"
+    arguments["--compression"] = "'Bit-packing'"
     arguments["--indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"

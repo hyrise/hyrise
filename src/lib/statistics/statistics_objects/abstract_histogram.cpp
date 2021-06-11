@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/functional/hash.hpp"
-#include "boost/lexical_cast.hpp"
+#include <boost/container_hash/hash.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
@@ -733,6 +733,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
+  Assert(!std::isnan(selectivity), "Unexpected selectivity.");
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
   // Scale the number of values in the bin with the given selectivity.

@@ -44,7 +44,8 @@ const std::string& Print::name() const {
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
@@ -63,8 +64,9 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, const Print
 void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto [status, result_tables] = pipeline.get_result_tables();
-  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful");
-  Assert(result_tables.size() == 1, "Expected exactly one result table");
+  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful.");
+  Assert(result_tables.size() == 1, "Expected exactly one result table.");
+  Assert(result_tables.back(), "Unexpected null pointer.");
 
   auto table_wrapper = std::make_shared<TableWrapper>(result_tables[0]);
   table_wrapper->execute();
@@ -235,20 +237,20 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
-        case CompressedVectorType::FixedSize4ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger4Byte: {
           segment_type += ":4B";
           break;
         }
-        case CompressedVectorType::FixedSize2ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger2Byte: {
           segment_type += ":2B";
           break;
         }
-        case CompressedVectorType::FixedSize1ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger1Byte: {
           segment_type += ":1B";
           break;
         }
-        case CompressedVectorType::SimdBp128: {
-          segment_type += ":BP";
+        case CompressedVectorType::BitPacking: {
+          segment_type += ":BitP";
           break;
         }
       }
