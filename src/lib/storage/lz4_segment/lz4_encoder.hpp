@@ -13,8 +13,6 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
-#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -223,12 +221,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                       null_values.size());
     }
 
-    // Compress the offsets with SimdBp128 vector compression to reduce the memory footprint of the LZ4 segment.
-    // SimdBp128 is chosen over fixed size byte-aligned (FSBA) vector compression, since it compresses better and the
-    // performance advantage of FSBA is neglectable, because runtime is dominated by the LZ4 encoding/decoding anyways.
-    // Prohibiting FSBA here reduces the compile time.
-    Assert(vector_compression_type() == VectorCompressionType::SimdBp128, "Only SimdBp128 is supported for LZ4");
-    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::SimdBp128, allocator, {offsets.back()});
+    // Compress the offsets with BitPacking vector compression to reduce the memory footprint of the LZ4 segment.
+    // BitPacking is chosen over fixed-width integer (FixedWidthInteger) vector compression, since it compresses
+    // better and the performance advantage of FixedWidthInteger is neglectable, because runtime is dominated by the
+    // LZ4 encoding/decoding anyways. Prohibiting FixedWidthInteger here reduces the compile time.
+    Assert(vector_compression_type() == VectorCompressionType::BitPacking, "Only BitPacking is supported for LZ4");
+    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {offsets.back()});
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows

@@ -2,7 +2,10 @@
 
 #include <atomic>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+
 #include "abstract_benchmark_item_runner.hpp"
+#include "tpch_constants.hpp"
 
 namespace opossum {
 
@@ -13,11 +16,12 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // Constructor for a TPCHBenchmarkItemRunner containing all TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
-                          float scale_factor);
+                          float scale_factor, ClusteringConfiguration clustering_configuration);
 
   // Constructor for a TPCHBenchmarkItemRunner containing a subset of TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
-                          float scale_factor, const std::vector<BenchmarkItemID>& items);
+                          float scale_factor, ClusteringConfiguration clustering_configuration,
+                          const std::vector<BenchmarkItemID>& items);
 
   void on_tables_loaded() override;
 
@@ -29,6 +33,9 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   // Runs the PREPARE queries if _use_prepared_statements is set, otherwise does nothing
   void _prepare_queries() const;
+
+  // Adds (or subtracts) specified number of months and days
+  static std::string _calculate_date(boost::gregorian::date date, int months, int days = 0);
 
   // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
   std::string _build_query(const BenchmarkItemID item_id);
@@ -46,12 +53,14 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   const float _scale_factor;
 
+  const ClusteringConfiguration _clustering_configuration;
+
   // Used for naming the views generated in query 15
-  std::atomic<size_t> _q15_view_id = 0;
+  std::atomic_size_t _q15_view_id = 0;
 
   // We want deterministic seeds, but since the engine is thread-local, we need to make sure that each thread has its
   // own seed.
-  std::atomic<unsigned int> _random_seed{0};
+  std::atomic_uint32_t _random_seed{0};
 
   std::vector<BenchmarkItemID> _items;
 

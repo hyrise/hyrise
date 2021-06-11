@@ -68,8 +68,9 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
 
 namespace opossum {
 
-void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root_lqp) const {
-  visit_lqp(root_lqp, [&](const auto& node) {
+void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
     }
@@ -81,7 +82,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     // --- Preparation ---
     // Store a copy of the root's output expressions before applying the rule
-    const auto root_output_expressions = root_lqp->output_expressions();
+    const auto root_output_expressions = lqp_root->output_expressions();
     // Also store a copy of the aggregate's output expressions to verify the output column order later on.
     const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
 
@@ -122,9 +123,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // by adding a projection with the initial output expressions since we changed the column order by moving columns
     // from the group-by list to the aggregations.
     if (group_by_list_changed && initial_aggregate_output_expressions == root_output_expressions &&
-        root_lqp->type != LQPNodeType::Projection) {
+        lqp_root->type != LQPNodeType::Projection) {
       const auto projection_node = std::make_shared<ProjectionNode>(root_output_expressions);
-      lqp_insert_node(root_lqp, LQPInputSide::Left, projection_node);
+      lqp_insert_node(lqp_root, LQPInputSide::Left, projection_node);
     }
 
     return LQPVisitation::VisitInputs;

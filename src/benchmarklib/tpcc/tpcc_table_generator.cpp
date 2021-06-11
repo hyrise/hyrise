@@ -12,11 +12,10 @@
 #include <vector>
 
 #include "constants.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
-
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -507,7 +506,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate() {
-  Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
+  const auto cache_directory = std::string{"tpcc_cached_tables/sf-"} + std::to_string(_num_warehouses);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    return _load_binary_tables_from_path(cache_directory);
+  }
 
   std::vector<std::thread> threads;
   auto item_table = generate_item_table();
@@ -522,15 +524,69 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   auto order_table = generate_order_table(order_line_counts);
   auto order_line_table = generate_order_line_table(order_line_counts);
 
-  return std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
-                                                              {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
-                                                              {"STOCK", BenchmarkTableInfo{stock_table}},
-                                                              {"DISTRICT", BenchmarkTableInfo{district_table}},
-                                                              {"CUSTOMER", BenchmarkTableInfo{customer_table}},
-                                                              {"HISTORY", BenchmarkTableInfo{history_table}},
-                                                              {"ORDER", BenchmarkTableInfo{order_table}},
-                                                              {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
-                                                              {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
+  auto table_info_by_name =
+      std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
+                                                           {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
+                                                           {"STOCK", BenchmarkTableInfo{stock_table}},
+                                                           {"DISTRICT", BenchmarkTableInfo{district_table}},
+                                                           {"CUSTOMER", BenchmarkTableInfo{customer_table}},
+                                                           {"HISTORY", BenchmarkTableInfo{history_table}},
+                                                           {"ORDER", BenchmarkTableInfo{order_table}},
+                                                           {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
+                                                           {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
+  }
+
+  return table_info_by_name;
+}
+
+void TPCCTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  const auto& warehouse_table = table_info_by_name.at("WAREHOUSE").table;
+  warehouse_table->add_soft_key_constraint(
+      {{warehouse_table->column_id_by_name("W_ID")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& district_table = table_info_by_name.at("DISTRICT").table;
+  district_table->add_soft_key_constraint(
+      {{district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& customer_table = table_info_by_name.at("CUSTOMER").table;
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID"),
+        customer_table->column_id_by_name("C_ID")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& new_order_table = table_info_by_name.at("NEW_ORDER").table;
+  new_order_table->add_soft_key_constraint(
+      {{new_order_table->column_id_by_name("NO_W_ID"), new_order_table->column_id_by_name("NO_D_ID"),
+        new_order_table->column_id_by_name("NO_O_ID")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& order_table = table_info_by_name.at("ORDER").table;
+  order_table->add_soft_key_constraint(
+      {{order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
+        order_table->column_id_by_name("O_ID")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& order_line_table = table_info_by_name.at("ORDER_LINE").table;
+  order_line_table->add_soft_key_constraint(
+      {{order_line_table->column_id_by_name("OL_W_ID"), order_line_table->column_id_by_name("OL_D_ID"),
+        order_line_table->column_id_by_name("OL_O_ID"), order_line_table->column_id_by_name("OL_NUMBER")},
+       KeyConstraintType::PRIMARY_KEY});
+
+  const auto& item_table = table_info_by_name.at("ITEM").table;
+  item_table->add_soft_key_constraint({{item_table->column_id_by_name("I_ID")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& stock_table = table_info_by_name.at("STOCK").table;
+  stock_table->add_soft_key_constraint(
+      {{stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_I_ID")},
+       KeyConstraintType::PRIMARY_KEY});
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT

@@ -20,11 +20,12 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
    */
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
-  auto next_column_id = std::atomic<size_t>{0u};
+  auto next_column_id = std::atomic_size_t{0u};
   auto threads = std::vector<std::thread>{};
 
   /**
-   * Parallely create statistics objects for the Table's columns
+   * Parallely create statistics objects for the Table's columns. Do not use JobTask as we want this to be parallel
+   * even if Hyrise is running without a scheduler.
    */
   for (auto thread_id = 0u;
        thread_id < std::min(static_cast<uint>(table.column_count()), std::thread::hardware_concurrency() + 1);

@@ -62,7 +62,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
 std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _csv_meta);
 }
 

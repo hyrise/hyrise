@@ -24,7 +24,7 @@ namespace opossum {
  * Therefore, not every task that is on top of the TaskQueue is ready to be processed. Pulling this unready task and
  * pushing it back to the queue could result in high latency for this task and in the context of databases in a
  * high latency for queries. Not pulling this unready task and waiting until it is ready would block the queue.
- * To avoid these situations, a TaskQueue is implemented as vector and will be iterated until a ready task is found.
+ * To avoid these situations, a TaskQueue is implemented as a vector and will be iterated until a ready task is found.
  * This preserves the desired order and will not block the queue.
  * To determine if a task is ready, it checks its parent tasks if they are done. A task will be set done after it
  * was processed successfully.
@@ -61,8 +61,8 @@ namespace opossum {
  * pull a ready task. This occurs in two cases:
  *  1) all tasks in the queue are not ready
  *  2) the queue is empty
- * In both cases the current worker is checking another queue for a ready task. Checking another queue means accessing
- * another node (remote node). As of the physical distance of nodes, accessing a remote nodes is ~1.6 times slower than
+ * In both cases, the current worker is checking another queue for a ready task. Checking another queue means accessing
+ * another node (remote node). As of the physical distance of nodes, accessing a remote node is ~1.6 times slower than
  * accessing a local node. [1]
  * Therefore, the current worker fetches a task from a remote queue (without removing it). Then, the current worker
  * is sleeping some milliseconds to give any local worker of the remote node the chance to pull that task. If no local
@@ -105,6 +105,12 @@ class NodeQueueScheduler : public AbstractScheduler {
                 SchedulePriority priority = SchedulePriority::Default) override;
 
   void wait_for_all_tasks() override;
+
+  // Number of groups for _group_tasks
+  static constexpr auto NUM_GROUPS = 10;
+
+ protected:
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
 
  private:
   std::atomic<TaskID> _task_counter{TaskID{0}};

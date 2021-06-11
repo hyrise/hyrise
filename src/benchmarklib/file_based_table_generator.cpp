@@ -20,7 +20,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
+  Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
@@ -103,4 +103,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
   return table_info_by_name;
 }
+
+void FileBasedTableGenerator::set_add_constraints_callback(
+    const std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)>& add_constraints_callback) {
+  _add_constraints_callback = add_constraints_callback;
+}
+
+void FileBasedTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  if (_add_constraints_callback) _add_constraints_callback(table_info_by_name);
+}
+
 }  // namespace opossum

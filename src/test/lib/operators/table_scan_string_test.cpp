@@ -26,17 +26,20 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
   void SetUp() override {
     std::shared_ptr<Table> test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
     _tw = std::make_shared<TableWrapper>(test_table);
+    _tw->never_clear_output();
     _tw->execute();
 
     // load string table
     std::shared_ptr<Table> test_table_string = load_table("resources/test_data/tbl/int_string_like.tbl", 2);
     _tw_string = std::make_shared<TableWrapper>(test_table_string);
+    _tw_string->never_clear_output();
     _tw_string->execute();
 
     // load special chars table
     std::shared_ptr<Table> test_table_special_chars =
         load_table("resources/test_data/tbl/int_string_like_special_chars.tbl", 2);
     _tw_special_chars = std::make_shared<TableWrapper>(test_table_special_chars);
+    _tw_special_chars->never_clear_output();
     _tw_special_chars->execute();
 
     // load and compress string table
@@ -44,11 +47,13 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
       // Not all tests are parameterized - only those using compressed segments are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("resources/test_data/tbl/int_string_like.tbl", 5);
-      std::vector<ChunkEncodingSpec> spec = {{EncodingType::Unencoded, GetParam()},
-                                             {EncodingType::Unencoded, GetParam()}};
+      std::vector<ChunkEncodingSpec> spec = {
+          {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}},
+          {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}}};
       ChunkEncoder::encode_all_chunks(test_table_string_compressed, spec);
 
       _tw_string_compressed = std::make_shared<TableWrapper>(test_table_string_compressed);
+      _tw_string_compressed->never_clear_output();
       _tw_string_compressed->execute();
     }
   }

@@ -103,4 +103,6 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
+extern template class FrameOfReferenceSegment<int32_t>;
+
 }  // namespace opossum

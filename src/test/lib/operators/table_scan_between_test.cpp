@@ -81,10 +81,11 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
       ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {data_type, DataType::Int},
-                                 {encoding, EncodingType::Unencoded});
+                                 {SegmentEncodingSpec{encoding}, SegmentEncodingSpec{EncodingType::Unencoded}});
     }
 
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
+    _data_table_wrapper->never_clear_output();
     _data_table_wrapper->execute();
   }
 

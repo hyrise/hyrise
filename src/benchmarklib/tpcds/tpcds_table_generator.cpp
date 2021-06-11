@@ -37,9 +37,7 @@ extern "C" {
 }
 
 #include "benchmark_config.hpp"
-#include "import_export/binary/binary_parser.hpp"
 #include "table_builder.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -63,8 +61,8 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
-      Streams[i].nInitialSeed = n_seed + skip * i;
-      Streams[i].nSeed = n_seed + skip * i;
+      Streams[i].nInitialSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
+      Streams[i].nSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
       Streams[i].nUsed = 0;
     }
   }
@@ -166,9 +164,9 @@ std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
   return nullCheck(column_id) ? std::nullopt
-                              : address.street_name2 == nullptr
-                                    ? std::optional{pmr_string{address.street_name1}}
-                                    : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+         : address.street_name2 == nullptr
+             ? std::optional{pmr_string{address.street_name1}}
+             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
 // mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
@@ -269,25 +267,12 @@ TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generate() {
-  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
-
-  // try to load cached tables
   const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    for (const auto& table_file : list_directory(cache_directory)) {
-      const auto table_name = table_file.stem();
-      auto timer = Timer{};
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
-
-      table_info_by_name[table_name].table = BinaryParser::parse(table_file);
-      table_info_by_name[table_name].loaded_from_binary = true;
-
-      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
-    }
-
-    return table_info_by_name;
+    return _load_binary_tables_from_path(cache_directory);
   }
 
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
                                  "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
                                  "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {
@@ -1161,6 +1146,11 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  /**
+   * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
+   * (Section 2: Logical Database Design)
+   */
+
   // Fact Tables (7)
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
   store_sales_table->add_soft_key_constraint(
@@ -1232,9 +1222,9 @@ void TPCDSTableGenerator::_add_constraints(
       {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
-  customer_demographics_table->add_soft_key_constraint({{customer_demographics_table->column_id_by_name("cd_demo_sk")},
+  customer_demographics_table->add_soft_key_constraint(
+      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
 
-                                                        KeyConstraintType::PRIMARY_KEY});
   const auto& date_dim_table = table_info_by_name.at("date_dim").table;
   date_dim_table->add_soft_key_constraint(
       {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});

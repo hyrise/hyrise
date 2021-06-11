@@ -48,14 +48,10 @@ class MetaTableManagerTest : public BaseTest {
     return names;
   }
 
-  // We need this as the add method of MetaTableManager is protected.
-  // Won't compile if add is not called by test class, which is a friend of MetaTableManager.
-  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager._add(table); }
-
  protected:
   std::shared_ptr<const Table> mock_manipulation_values;
 
-  void SetUp() {
+  void SetUp() override {
     Hyrise::reset();
 
     const auto column_definitions = MetaMockTable().column_definitions();
@@ -66,7 +62,7 @@ class MetaTableManagerTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() { Hyrise::reset(); }
+  void TearDown() override { Hyrise::reset(); }
 };
 
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
@@ -95,7 +91,7 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   const auto mock_table = std::make_shared<MetaMockTable>();
   auto& mtm = Hyrise::get().meta_table_manager;
 
-  MetaTableManagerTest::add_meta_table(mock_table);
+  Hyrise::get().meta_table_manager.add_table(mock_table);
   mtm.insert_into(mock_table->name(), mock_manipulation_values);
   mtm.delete_from(mock_table->name(), mock_manipulation_values);
   mtm.update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
@@ -103,6 +99,15 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   EXPECT_EQ(mock_table->insert_calls(), 1);
   EXPECT_EQ(mock_table->remove_calls(), 1);
   EXPECT_EQ(mock_table->update_calls(), 1);
+}
+
+TEST_F(MetaTableManagerTest, RetrieveAddedTable) {
+  const auto mock_table = std::make_shared<MetaMockTable>();
+  Hyrise::get().meta_table_manager.add_table(mock_table);
+
+  // Check that added table can be retrieved
+  const auto mock_table2 = Hyrise::get().meta_table_manager.get_table("mock");
+  EXPECT_EQ(mock_table, std::static_pointer_cast<MetaMockTable>(mock_table2));
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {

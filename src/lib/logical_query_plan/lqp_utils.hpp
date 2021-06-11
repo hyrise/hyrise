@@ -5,23 +5,66 @@
 #include <queue>
 #include <set>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 
 class AbstractExpression;
+class AbstractLQPNode;
+class LQPSubqueryExpression;
+
 enum class LQPInputSide;
 
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
+
+/**
+ * Data structure that maps LQPs to (multiple) subquery expressions that reference them.
+ *
+ * Purpose:
+ *  Mainly used by optimizer rules to optimize subquery LQPs more efficiently. In concrete, it helps
+ *  to optimize subquery LQPs ONLY ONCE, although being referenced by a list of subquery expressions.
+ *
+ * Why weak pointers for subquery expressions?
+ *  Referenced LQPs and subquery expressions might be subject to change after creating this data structure. Depending
+ *  on the order of optimization steps, we could end up with a scenario as follows:
+ *
+ *      [ProjectionNodeRoot(..., SubqueryExpressionA)]
+ *                                        \
+ *                                         \ references
+ *                                          \
+ *                                        [ProjectionNodeA(..., SubqueryExpressionB)]
+ *                                                                       \
+ *                                                                        \ references
+ *                                                                         \
+ *                                                                        [ProjectionNodeB(...)]
+ *
+ *        (1) collect_lqp_subquery_expressions_by_lqp(ProjectionNodeRoot)
+ *                =>  returns { [ ProjectionNodeA, { SubqueryExpressionA } ],
+ *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
+ *
+ *        (2) OptimizerRuleXY is applied to ProjectionNodeA
+ *                => As a result, SubqueryExpressionB gets replaced / removed from ProjectionNodeA.
+ *
+ *        (3) OptimizerRuleXY is applied to ProjectionNodeB
+ *            -> Wasted optimization time because SubqueryExpressionB and ProjectionNodeB are no longer being used,
+ *               thanks to step (2).
+ *
+ *  With weak pointers, we are forced to skip step (3) because SubqueryExpressionB and its corresponding LQP have
+ *  already been deleted after step (2).
+ *
+ *  However, this optimization does not cover all cases as it is dependent on the execution order. For
+ *  example, when swapping steps (2) and (3), we cannot easily skip an optimization step.
+ */
+using SubqueryExpressionsByLQP =
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
+
+/**
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
+ */
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -68,7 +111,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
  * 
- * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Subsequent PredicateNodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
  * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
@@ -164,6 +207,16 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * Traverses @param lqp from the top to the bottom and returns all nodes of the given @param type.
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                     const LQPNodeType type);
+/**
+ * Traverses @param lqp from the top to the bottom and @returns all leaf nodes.
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.

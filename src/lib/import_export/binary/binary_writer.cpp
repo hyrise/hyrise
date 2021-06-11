@@ -8,9 +8,10 @@
 
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -84,6 +85,11 @@ void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& valu
 template <typename T>
 void export_value(std::ofstream& ofstream, const T& value) {
   ofstream.write(reinterpret_cast<const char*>(&value), sizeof(T));
+}
+
+void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
+  export_value(ofstream, static_cast<uint8_t>(values.bits()));
+  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
 }
 
 }  // namespace
@@ -197,9 +203,9 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
-  // Write attribute vector width
-  const auto attribute_vector_width = _compressed_vector_width<T>(dictionary_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write attribute vector compression id
+  const auto compressed_vector_type_id = _compressed_vector_type_id<T>(dictionary_segment);
+  export_value(ofstream, compressed_vector_type_id);
 
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
@@ -215,9 +221,9 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
                                   bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
-  // Write attribute vector width
-  const auto attribute_vector_width = _compressed_vector_width<T>(fixed_string_dictionary_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write attribute vector compression id
+  const auto compressed_vector_type_id = _compressed_vector_type_id<T>(fixed_string_dictionary_segment);
+  export_value(ofstream, compressed_vector_type_id);
 
   // Write the dictionary size, string length and dictionary
   const auto dictionary_size = fixed_string_dictionary_segment.fixed_string_dictionary()->size();
@@ -252,9 +258,9 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
                                   bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
-  // Write attribute vector width
-  const auto offset_value_vector_width = _compressed_vector_width<int32_t>(frame_of_reference_segment);
-  export_value(ofstream, static_cast<AttributeVectorWidth>(offset_value_vector_width));
+  // Write attribute vector compression id
+  const auto compressed_vector_type_id = _compressed_vector_type_id<int32_t>(frame_of_reference_segment);
+  export_value(ofstream, compressed_vector_type_id);
 
   // Write number of blocks and block minima
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.block_minima().size()));
@@ -314,15 +320,11 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
   // Write dictionary
   export_values(ofstream, lz4_segment.dictionary());
 
-  if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()) {
+  if (lz4_segment.string_offsets()) {
     // Write string_offset size
-    export_value(ofstream, static_cast<uint32_t>((*lz4_segment.string_offsets())->size()));
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.string_offsets()->size()));
     // Write string_offset data_size
-    export_value(ofstream,
-                 static_cast<uint32_t>(
-                     dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets().value()).data().size()));
-    // Write string offsets
-    _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
+    export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(*lz4_segment.string_offsets()).data());
   } else {
     // Write string_offset size = 0
     export_value(ofstream, uint32_t{0});
@@ -330,41 +332,40 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_
 }
 
 template <typename T>
-uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment) {
-  uint32_t vector_width = 0u;
-  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_width](auto& typed_segment) {
-    Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
-    switch (*typed_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-        vector_width = 4u;
-        break;
-      case CompressedVectorType::FixedSize2ByteAligned:
-        vector_width = 2u;
-        break;
-      case CompressedVectorType::FixedSize1ByteAligned:
-        vector_width = 1u;
+CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
+    const AbstractEncodedSegment& abstract_encoded_segment) {
+  uint8_t compressed_vector_type_id = 0u;
+  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&compressed_vector_type_id](auto& typed_segment) {
+    const auto compressed_vector_type = typed_segment.compressed_vector_type();
+    Assert(compressed_vector_type, "Expected Segment to use vector compression");
+    switch (*compressed_vector_type) {
+      case CompressedVectorType::FixedWidthInteger4Byte:
+      case CompressedVectorType::FixedWidthInteger2Byte:
+      case CompressedVectorType::FixedWidthInteger1Byte:
+      case CompressedVectorType::BitPacking:
+        compressed_vector_type_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
       default:
         Fail("Export of specified CompressedVectorType is not yet supported");
     }
   });
-  return vector_width;
+  return compressed_vector_type_id;
 }
 
 void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                              const BaseCompressedVector& compressed_vector) {
   switch (type) {
-    case CompressedVectorType::FixedSize4ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint32_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::FixedSize2ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint16_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::FixedSize1ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(compressed_vector).data());
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint8_t>&>(compressed_vector).data());
       return;
-    case CompressedVectorType::SimdBp128:
-      export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
+    case CompressedVectorType::BitPacking:
+      export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(compressed_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");

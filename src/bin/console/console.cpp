@@ -43,6 +43,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -503,7 +504,7 @@ int Console::_generate_tpch(const std::string& args) {
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
-  TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -587,7 +588,7 @@ int Console::_load_table(const std::string& args) {
         immutable_chunks.emplace_back(chunk_id);
       }
     }
-    ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
+    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{encoding_type->second});
   }
 
   return ReturnCode::Ok;

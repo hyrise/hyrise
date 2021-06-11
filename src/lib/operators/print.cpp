@@ -11,6 +11,7 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
@@ -33,8 +34,8 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, PrintFlags flags)
-    : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
+Print::Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out)
+    : AbstractReadOnlyOperator(OperatorType::Print, in), _flags(flags), _out(out) {}
 
 const std::string& Print::name() const {
   static const auto name = std::string{"Print"};
@@ -43,20 +44,34 @@ const std::string& Print::name() const {
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Print>(copied_left_input, _out);
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(const std::shared_ptr<const Table>& table, PrintFlags flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const Table>& table, const PrintFlags flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  Print(table_wrapper, out, flags).execute();
+  Print(table_wrapper, flags, out).execute();
 }
 
-void Print::print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags flags, std::ostream& out) {
-  Print(in, out, flags).execute();
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out) {
+  Print(in, flags, out).execute();
+}
+
+void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
+  auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  const auto [status, result_tables] = pipeline.get_result_tables();
+  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful.");
+  Assert(result_tables.size() == 1, "Expected exactly one result table.");
+  Assert(result_tables.back(), "Unexpected null pointer.");
+
+  auto table_wrapper = std::make_shared<TableWrapper>(result_tables[0]);
+  table_wrapper->execute();
+
+  Print(table_wrapper, flags, out).execute();
 }
 
 std::shared_ptr<const Table> Print::_on_execute() {
@@ -222,20 +237,20 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
-        case CompressedVectorType::FixedSize4ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger4Byte: {
           segment_type += ":4B";
           break;
         }
-        case CompressedVectorType::FixedSize2ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger2Byte: {
           segment_type += ":2B";
           break;
         }
-        case CompressedVectorType::FixedSize1ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger1Byte: {
           segment_type += ":1B";
           break;
         }
-        case CompressedVectorType::SimdBp128: {
-          segment_type += ":BP";
+        case CompressedVectorType::BitPacking: {
+          segment_type += ":BitP";
           break;
         }
       }

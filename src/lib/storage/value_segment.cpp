@@ -147,7 +147,7 @@ std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto null_value_vector_size = size_t{0};
   if (_null_values) {
     null_value_vector_size = _null_values->capacity() / CHAR_BIT;
@@ -155,7 +155,7 @@ size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculati
 
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
 
-  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(_values, mode);
   }
 

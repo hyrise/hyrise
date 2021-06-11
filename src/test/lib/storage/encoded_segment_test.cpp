@@ -6,6 +6,10 @@
 #include "lib/storage/encoding_test.hpp"
 
 #include "constant_mappings.hpp"
+#include "operators/get_table.hpp"
+#include "operators/print.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -53,6 +57,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto counter = 0u;
     for (auto& elem : values) {
       elem = _generated_value_pool[counter % _generated_value_pool.size()];
+      ++counter;
     }
 
     return std::make_shared<ValueSegment<int32_t>>(std::move(values));
@@ -351,64 +356,119 @@ TEST_P(EncodedSegmentTest, RandomSegmentAccessCountersWithPosList) {
   });
 }
 
-TEST_F(EncodedSegmentTest, DictionaryAccessCounters) {
-  const auto row_count = 666u;
-  auto value_segment = _create_int_value_segment(row_count);
-  const auto pos_filter = _create_random_access_position_filter(row_count);
-  auto dictionary_encoded_segment = dynamic_pointer_cast<DictionarySegment<int32_t>>(
-      this->_encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}));
-  EXPECT_EQ(get_segment_encoding_spec(dictionary_encoded_segment),
-            (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}));
+TEST_P(EncodedSegmentTest, ScansIncrementCounters) {
+  const auto input_table = load_table("resources/test_data/tbl/int_int_int.tbl");
 
-  EXPECT_EQ(0, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
-  auto iterable = create_iterable_from_segment(*dictionary_encoded_segment);
-  const auto dictionary = dictionary_encoded_segment->dictionary();
-  // The iterator requests a reference to the dictionary of the DictionarySegment.
-  // This increases the dictionary count by the size of the dictionary
-  auto expected_count = dictionary->size() * 2;
-  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
-  dictionary_encoded_segment->dictionary();
-  expected_count = dictionary->size() * 3;
-  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
-  dictionary_encoded_segment->lower_bound(42);
-  expected_count += static_cast<uint64_t>(std::ceil(std::log2(dictionary->size())));
-  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
-  dictionary_encoded_segment->upper_bound(42);
-  expected_count += static_cast<uint64_t>(std::ceil(std::log2(dictionary->size())));
-  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
+  auto expected_access_counters = std::vector<SegmentAccessCounter>(3);
+  const auto verify_access_counters = [&](const auto line) {
+    const auto chunk_id = ChunkID{0};
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+      SCOPED_TRACE(std::string{"Chunk "} + std::to_string(chunk_id) + ", column " + std::to_string(column_id) +
+                   " at line " + std::to_string(line));
+      EXPECT_EQ(chunk->get_segment(column_id)->access_counter, expected_access_counters.at(column_id));
+    }
+  };
+
+  // ValueSegment::append as called by load_table increases the access counters
+  expected_access_counters[0][SegmentAccessCounter::AccessType::Point] += 4;
+  expected_access_counters[1][SegmentAccessCounter::AccessType::Point] += 4;
+  expected_access_counters[2][SegmentAccessCounter::AccessType::Point] += 4;
+  verify_access_counters(__LINE__);
+
+  ChunkEncoder::encode_all_chunks(input_table, GetParam());
+
+  // The access counters were reset during encoding
+  expected_access_counters = std::vector<SegmentAccessCounter>(3);
+
+  // For all but dictionary encoding, generate_chunk_pruning_statistics iterated over the data to create the filters
+  const auto is_dictionary = GetParam().encoding_type == EncodingType::Dictionary ||
+                             GetParam().encoding_type == EncodingType::FixedStringDictionary;
+  if (!is_dictionary) {
+    expected_access_counters[0][SegmentAccessCounter::AccessType::Sequential] += 4;
+    expected_access_counters[1][SegmentAccessCounter::AccessType::Sequential] += 4;
+    expected_access_counters[2][SegmentAccessCounter::AccessType::Sequential] += 4;
+  }
+  verify_access_counters(__LINE__);
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+
+  // Perform a scan
+  auto scan_1 = create_table_scan(table_wrapper, ColumnID{2}, PredicateCondition::NotEquals, 10);
+  scan_1->execute();
+
+  // Expect the segment for column c to have been read sequentially
+  expected_access_counters[2][SegmentAccessCounter::AccessType::Sequential] += 4;
+  // For dictionary encoding, the dictionaries are accessed, too. The exact number of accesses depends on the
+  // number of unique values and the implementation of the binary search.
+  if (is_dictionary) {
+    expected_access_counters[2][SegmentAccessCounter::AccessType::Dictionary] += 4;
+  }
+  verify_access_counters(__LINE__);
+
+  // Perform a scan
+  auto scan_2 = create_table_scan(scan_1, ColumnID{0}, PredicateCondition::GreaterThan, 10);
+  scan_2->execute();
+
+  // Expect the segment for column a to have been read sequentially with a gap caused by the first scan
+  expected_access_counters[0][SegmentAccessCounter::AccessType::Monotonic] += 3;
+  if (is_dictionary) {
+    expected_access_counters[0][SegmentAccessCounter::AccessType::Dictionary] += 2;
+  }
+  verify_access_counters(__LINE__);
+
+  EXPECT_EQ(scan_2->get_output()->row_count(), 1);
+
+  // Perform a scan
+  auto scan_3 = create_table_scan(scan_2, ColumnID{0}, PredicateCondition::Equals, 11);
+  scan_3->execute();
+
+  expected_access_counters[0][SegmentAccessCounter::AccessType::Point] += 1;
+  if (is_dictionary) {
+    expected_access_counters[0][SegmentAccessCounter::AccessType::Dictionary] += 4;
+  }
+  verify_access_counters(__LINE__);
+
+  EXPECT_EQ(scan_3->get_output()->row_count(), 1);
 }
 
 TEST_F(EncodedSegmentTest, SegmentReencoding) {
   // Use the row_count used for frame of reference segments.
   auto value_segment = _create_int_with_null_value_segment(_row_count(EncodingType::FrameOfReference));
 
+  // Dictionary
   auto encoded_segment =
       this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+                            SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   EXPECT_EQ(get_segment_encoding_spec(encoded_segment),
-            (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}));
+            (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger}));
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  encoded_segment = this->_encode_segment(
+      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking});
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // RunLength
   encoded_segment = this->_encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // FrameOfReference
   encoded_segment =
       this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
+                            SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::BitPacking});
   EXPECT_EQ(get_segment_encoding_spec(encoded_segment),
-            (SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}));
+            (SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::BitPacking}));
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment =
-      this->_encode_segment(value_segment, DataType::Int,
-                            SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = this->_encode_segment(
-      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
   encoded_segment = this->_encode_segment(
       value_segment, DataType::Int,
-      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
+      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedWidthInteger});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  // LZ4 (only testing bitpacking compression as fixed-width integer is not supported by LZ4)
   encoded_segment = this->_encode_segment(value_segment, DataType::Int,
-                                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
+                                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::BitPacking});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 

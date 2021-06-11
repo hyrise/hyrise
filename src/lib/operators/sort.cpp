@@ -1,6 +1,7 @@
 #include "sort.hpp"
 
 #include "storage/segment_iterate.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 
@@ -220,7 +221,8 @@ namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
            const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
-    : AbstractReadOnlyOperator(OperatorType::Sort, in),
+    : AbstractReadOnlyOperator(OperatorType::Sort, in, nullptr,
+                               std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
       _force_materialization(force_materialization) {
@@ -236,7 +238,8 @@ const std::string& Sort::name() const {
 
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization);
 }
 
@@ -266,6 +269,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // ReferenceSegments.
   auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
 
+  auto total_materialization_time = std::chrono::nanoseconds{};
+  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
+  auto total_sort_time = std::chrono::nanoseconds{};
+
   for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
     const auto& sort_definition = _sort_definitions[sort_step];
     const auto data_type = input_table->column_data_type(sort_definition.column);
@@ -275,14 +282,24 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
+
+      total_materialization_time += sort_impl.materialization_time;
+      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
+      total_sort_time += sort_impl.sort_time;
     });
   }
+
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
+  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, total_temporary_result_writing_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
+  Timer timer;
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -326,6 +343,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     output_chunk->finalize();
     output_chunk->set_individually_sorted_by(final_sort_definition);
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
 }
 
@@ -333,6 +352,10 @@ template <typename SortColumnType>
 class Sort::SortImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
+
+  std::chrono::nanoseconds materialization_time{};
+  std::chrono::nanoseconds temporary_result_writing_time{};
+  std::chrono::nanoseconds sort_time{};
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const SortMode sort_mode = SortMode::Ascending)
@@ -346,8 +369,10 @@ class Sort::SortImpl {
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
   RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
+    Timer timer;
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
+    materialization_time = timer.lap();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
@@ -359,6 +384,7 @@ class Sort::SortImpl {
     } else {
       sort_with_comparator(std::greater<>{});
     }
+    sort_time = timer.lap();
 
     // 2b. Insert null rows in front of all non-NULL rows
     if (!_null_value_rows.empty()) {
@@ -375,6 +401,7 @@ class Sort::SortImpl {
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);
     }
+    temporary_result_writing_time = timer.lap();
     return pos_list;
   }
 

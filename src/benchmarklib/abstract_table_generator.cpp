@@ -3,6 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
@@ -10,6 +11,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
@@ -37,111 +39,6 @@ void AbstractTableGenerator::generate_and_store() {
   std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
 
   /**
-   * Sort tables if a sort order was defined by the benchmark
-   */
-  const auto& sort_order_by_table = _sort_order_by_table();
-  if (!sort_order_by_table.empty()) {
-    std::cout << "- Sorting tables" << std::endl;
-
-    for (const auto& [table_name, column_name] : sort_order_by_table) {
-      auto& table = table_info_by_name[table_name].table;
-      const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
-      const auto sort_column_id = table->column_id_by_name(column_name);
-      const auto chunk_count = table->chunk_count();
-
-      // Check if table is already sorted
-      auto is_sorted = true;
-      resolve_data_type(table->column_data_type(sort_column_id), [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-
-        auto last_value = std::optional<ColumnDataType>{};
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
-          segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
-            while (it != end) {
-              if (it->is_null()) {
-                if (last_value) {
-                  // NULLs should come before all values
-                  is_sorted = false;
-                  break;
-                }
-
-                ++it;
-                continue;
-              }
-
-              if (!last_value || it->value() >= *last_value) {
-                last_value = it->value();
-              } else {
-                is_sorted = false;
-                break;
-              }
-
-              ++it;
-            }
-          });
-        }
-      });
-
-      if (is_sorted) {
-        std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
-        const SortColumnDefinition sort_column{sort_column_id, sort_mode};
-
-        if (_all_chunks_sorted_by(table, sort_column)) continue;
-
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          const auto& chunk = table->get_chunk(chunk_id);
-          Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
-          chunk->set_individually_sorted_by(sort_column);
-        }
-
-        continue;
-      }
-
-      // We sort the tables after their creation so that we are independent of the order in which they are filled.
-      // For this, we use the sort operator. Because it returns a `const Table`, we need to recreate the table and
-      // migrate the sorted chunks to that table.
-
-      std::cout << "-  Sorting '" << table_name << "' by '" << column_name << "' " << std::flush;
-      Timer per_table_timer;
-
-      auto table_wrapper = std::make_shared<TableWrapper>(table);
-      table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(
-          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, sort_mode}},
-          _benchmark_config->chunk_size, Sort::ForceMaterialization::Yes);
-      sort->execute();
-      const auto immutable_sorted_table = sort->get_output();
-
-      Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count");
-
-      table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
-                                      table->target_chunk_size(), UseMvcc::Yes);
-      const auto column_count = immutable_sorted_table->column_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = immutable_sorted_table->get_chunk(chunk_id);
-        auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
-        Segments segments{};
-        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-          segments.emplace_back(chunk->get_segment(column_id));
-        }
-        table->append_chunk(segments, mvcc_data);
-        table->get_chunk(chunk_id)->finalize();
-        table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
-      }
-
-      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
-    }
-    metrics.sort_duration = timer.lap();
-    std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
-  }
-
-  /**
-   * Add constraints if defined by the benchmark
-   */
-  _add_constraints(table_info_by_name);
-
-  /**
    * Finalizing all chunks of all tables that are still mutable.
    */
   // TODO(any): Finalization might trigger encoding in the future.
@@ -154,20 +51,171 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
+   * Sort tables if a sort order was defined by the benchmark
+   */
+  {
+    const auto& sort_order_by_table = _sort_order_by_table();
+    if (sort_order_by_table.empty()) {
+      // If there is no clustering for the benchmark defined, there should not be a single sorted chunk. This check is
+      // necessary to avoid loading sorted binary data (created with a clustering configuration) in a run that is
+      // supposed to be unclustered.
+      for (auto& [table_name, table_info] : table_info_by_name) {
+        auto& table = table_info_by_name[table_name].table;
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto chunk = table->get_chunk(chunk_id);
+          Assert(chunk->individually_sorted_by().empty(),
+                 "Tables are sorted, but no clustering has been requested. "
+                 "This might be case when clustered data is loaded from "
+                 "mismatching binary exports.");
+        }
+      }
+    } else {
+      std::cout << "- Sorting tables" << std::endl;
+
+      // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even
+      // if Hyrise uses no scheduler.
+      auto threads = std::vector<std::thread>{};
+      for (const auto& sort_order_pair : sort_order_by_table) {
+        // Cannot use structured binding here as it cannot be captured in the lambda:
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#2313
+        const auto& table_name = sort_order_pair.first;
+        const auto& column_name = sort_order_pair.second;
+
+        threads.emplace_back([&] {
+          auto& table = table_info_by_name[table_name].table;
+          const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
+          const auto sort_column_id = table->column_id_by_name(column_name);
+          const auto chunk_count = table->chunk_count();
+
+          // Check if table is already sorted
+          auto is_sorted = true;
+          resolve_data_type(table->column_data_type(sort_column_id), [&](auto type) {
+            using ColumnDataType = typename decltype(type)::type;
+
+            auto last_value = std::optional<ColumnDataType>{};
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+              const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
+              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+                while (it != end) {
+                  if (it->is_null()) {
+                    if (last_value) {
+                      // NULLs should come before all values
+                      is_sorted = false;
+                      break;
+                    }
+
+                    ++it;
+                    continue;
+                  }
+
+                  if (!last_value || it->value() >= *last_value) {
+                    last_value = it->value();
+                  } else {
+                    is_sorted = false;
+                    break;
+                  }
+
+                  ++it;
+                }
+              });
+            }
+          });
+
+          if (is_sorted) {
+            auto output = std::stringstream{};
+            output << "-  Table '" << table_name << "' is already sorted by '" << column_name << "'\n";
+            std::cout << output.str() << std::flush;
+            const SortColumnDefinition sort_column{sort_column_id, sort_mode};
+
+            if (_all_chunks_sorted_by(table, sort_column)) return;
+
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+              const auto& chunk = table->get_chunk(chunk_id);
+              Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
+              chunk->set_individually_sorted_by(sort_column);
+            }
+
+            return;
+          }
+
+          // We sort the tables after their creation so that we are independent of the order in which they are filled.
+          // For this, we use the sort operator. Because it returns a `const Table`, we need to recreate the table and
+          // migrate the sorted chunks to that table.
+
+          Timer per_table_timer;
+
+          auto table_wrapper = std::make_shared<TableWrapper>(table);
+          table_wrapper->execute();
+          auto sort = std::make_shared<Sort>(
+              table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, sort_mode}},
+              _benchmark_config->chunk_size, Sort::ForceMaterialization::Yes);
+          sort->execute();
+          const auto immutable_sorted_table = sort->get_output();
+
+          Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count");
+
+          table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
+                                          table->target_chunk_size(), UseMvcc::Yes);
+          const auto column_count = immutable_sorted_table->column_count();
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto chunk = immutable_sorted_table->get_chunk(chunk_id);
+            auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+            Segments segments{};
+            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+              segments.emplace_back(chunk->get_segment(column_id));
+            }
+            table->append_chunk(segments, mvcc_data);
+            table->get_chunk(chunk_id)->finalize();
+            table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
+          }
+
+          auto output = std::stringstream{};
+          output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
+                 << ")\n";
+          std::cout << output.str() << std::flush;
+        });
+      }
+      for (auto& thread : threads) thread.join();
+
+      metrics.sort_duration = timer.lap();
+      std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
+    }
+  }
+
+  /**
+   * Add constraints if defined by the benchmark
+   */
+  _add_constraints(table_info_by_name);
+
+  /**
    * Encode the tables
    */
-  std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
-  for (auto& [table_name, table_info] : table_info_by_name) {
-    std::cout << "-  Encoding '" << table_name << "' - " << std::flush;
-    Timer per_table_timer;
-    table_info.re_encoded =
-        BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-    std::cout << (table_info.re_encoded ? "encoding applied" : "no encoding necessary");
-    std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
+  {
+    std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
+
+    auto threads = std::vector<std::thread>{};
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
+
+      threads.emplace_back([&] {
+        Timer per_table_timer;
+        table_info.re_encoded =
+            BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
+        auto output = std::stringstream{};
+        output << "-  Encoding '" + table_name << "' - "
+               << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
+               << per_table_timer.lap_formatted() << ")\n";
+        std::cout << output.str() << std::flush;
+      });
+    }
+
+    for (auto& thread : threads) thread.join();
+
+    metrics.encoding_duration = timer.lap();
+    std::cout << "- Encoding tables and generating pruning statistic done ("
+              << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
-  metrics.encoding_duration = timer.lap();
-  std::cout << "- Encoding tables and generating pruning statistic done (" << format_duration(metrics.encoding_duration)
-            << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
@@ -210,20 +258,30 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
-  auto& storage_manager = Hyrise::get().storage_manager;
-  for (auto& [table_name, table_info] : table_info_by_name) {
-    std::cout << "-  Adding '" << table_name << "' " << std::flush;
-    Timer per_table_timer;
-    if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
-    storage_manager.add_table(table_name, table_info.table);
-    std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+  {
+    std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
+    auto& storage_manager = Hyrise::get().storage_manager;
+    auto threads = std::vector<std::thread>{};
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
+
+      threads.emplace_back([&] {
+        Timer per_table_timer;
+        if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+        storage_manager.add_table(table_name, table_info.table);
+        const auto output =
+            std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
+        std::cout << output << std::flush;
+      });
+    }
+    for (auto& thread : threads) thread.join();
+
+    metrics.store_duration = timer.lap();
+
+    std::cout << "- Adding tables to StorageManager and generating table statistics done ("
+              << format_duration(metrics.store_duration) << ")" << std::endl;
   }
-
-  metrics.store_duration = timer.lap();
-
-  std::cout << "- Adding tables to StorageManager and generating table statistics done ("
-            << format_duration(metrics.store_duration) << ")" << std::endl;
 
   /**
    * Create indexes if requested by the user
@@ -296,6 +354,27 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
     if (!chunk_sorted) return false;
   }
   return true;
+}
+
+std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(
+    const std::string& cache_directory) {
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+  for (const auto& table_file : list_directory(cache_directory)) {
+    const auto table_name = table_file.stem();
+    std::cout << "-  Loading table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
+
+    Timer timer;
+    BenchmarkTableInfo table_info;
+    table_info.table = BinaryParser::parse(table_file);
+    table_info.loaded_from_binary = true;
+    table_info.binary_file_path = table_file;
+    table_info_by_name[table_name] = table_info;
+
+    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+  }
+
+  return table_info_by_name;
 }
 
 }  // namespace opossum

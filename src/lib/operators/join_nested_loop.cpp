@@ -89,7 +89,8 @@ const std::string& JoinNestedLoop::name() const {
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
@@ -317,7 +318,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {  // NOLINT
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
         // Erase the `predicate_condition` into a std::function<>
         auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
         with_comparator(params.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });

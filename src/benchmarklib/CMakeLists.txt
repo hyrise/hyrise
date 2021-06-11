@@ -30,12 +30,18 @@ set(
     tpcc/procedures/tpcc_stock_level.cpp
     tpcc/procedures/tpcc_stock_level.hpp
 
+    tpch/tpch_constants.hpp
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
     tpch/tpch_benchmark_item_runner.cpp
     tpch/tpch_benchmark_item_runner.hpp
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
+
+    jcch/jcch_benchmark_item_runner.cpp
+    jcch/jcch_benchmark_item_runner.hpp
+    jcch/jcch_table_generator.cpp
+    jcch/jcch_table_generator.hpp
 
     tpcds/tpcds_table_generator.cpp
     tpcds/tpcds_table_generator.hpp
@@ -75,10 +81,14 @@ set(
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
+add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 
 target_link_libraries(
     hyriseBenchmarkLib
+    PUBLIC
+
     hyrise
+    ${Boost_DATE_TIME_LIBRARY}
     tpch_dbgen
     tpcds_dbgen
 )

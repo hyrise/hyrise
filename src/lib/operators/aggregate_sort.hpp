@@ -12,7 +12,7 @@
 
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -26,8 +26,8 @@
 namespace opossum {
 
 /*
- * Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based approach.
- * The output is a table with value segments.
+ * Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based
+ * approach. The output is a table with value segments.
  *
  * As with most operators we do not guarantee a stable operation with regards to positions - i.e. your sorting order.
  * This might sound surprising, since this is the sort-based aggregate, so here the reasoning:
@@ -68,23 +68,28 @@ class AggregateSort : public AbstractAggregateOperator {
   const std::string& name() const override;
 
   /**
-   * Creates the aggregate column definitions and appends it to <code>_output_column_definitions</code>
+   * Creates the aggregate column definitions and appends it to `_output_column_definitions`
    * We need the input column data type because the aggregate type can depend on it.
    * For example, MAX on an int column yields ints, while MAX on a string column yield string values.
    *
    * @tparam ColumnType the data type of the input column
-   * @tparam function the aggregate function used, e.g. AggregateFunction::Sum
+   * @tparam aggregate_function the aggregate function used, e.g. AggregateFunction::Sum
    * @param column_index determines for which aggregate column definitions should be created
    */
-  template <typename ColumnType, AggregateFunction function>
+  template <typename ColumnType, AggregateFunction aggregate_function>
   void create_aggregate_column_definitions(ColumnID column_index);
 
  protected:
+  template <AggregateFunction aggregate_function, typename AggregateType>
+  using AggregateAccumulator = std::conditional_t<aggregate_function == AggregateFunction::StandardDeviationSample,
+                                                  StandardDeviationSampleData, AggregateType>;
+
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -93,24 +98,22 @@ class AggregateSort : public AbstractAggregateOperator {
   template <typename ColumnType, typename AggregateType>
   using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
-  template <typename ColumnType, typename AggregateType, AggregateFunction function>
+  template <typename ColumnType, typename AggregateType, AggregateFunction aggregate_function>
   void _aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                          const std::shared_ptr<const Table>& sorted_table);
 
   template <typename ColumnType>
   void _create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
-                                            AggregateFunction function);
+                                            AggregateFunction aggregate_function);
 
   /*
-   * Some of the parameters are marked as [[maybe_unused]].
-   * This is required because it depends on the <code>function</code> template parameter whether arguments are used or not.
+   * Some of the parameters are marked as [[maybe_unused]] as their use depends on the `aggregate_function` parameter.
    */
-  template <typename AggregateType, AggregateFunction function>
+  template <typename AggregateType, AggregateFunction aggregate_function>
   void _set_and_write_aggregate_value(pmr_vector<AggregateType>& aggregate_results,
                                       pmr_vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
                                       [[maybe_unused]] const uint64_t aggregate_index,
-                                      std::optional<AggregateType>& current_primary_aggregate,
-                                      std::vector<AggregateType>& current_secondary_aggregates,
+                                      AggregateAccumulator<aggregate_function, AggregateType>& accumulator,
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;

@@ -23,6 +23,8 @@ class Sort : public AbstractReadOnlyOperator {
  public:
   enum class ForceMaterialization : bool { Yes = true, No = false };
 
+  enum class OperatorSteps : uint8_t { MaterializeSortColumns, Sort, TemporaryResultWriting, WriteOutput };
+
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
        const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
        const ForceMaterialization force_materialization = ForceMaterialization::No);
@@ -35,7 +37,8 @@ class Sort : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   template <typename SortColumnType>

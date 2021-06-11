@@ -202,6 +202,7 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+    operators/join_helper/join_output_writing.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
     operators/join_hash/join_hash_steps.hpp
@@ -309,6 +310,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
     optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/null_scan_removal_rule.cpp
+    optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp
     optimizer/strategy/predicate_merge_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
@@ -324,6 +327,7 @@ set(
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
+    scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
@@ -528,23 +532,19 @@ set(
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
     storage/vector_compression/compressed_vector_type.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_decompressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
-    storage/vector_compression/simd_bp128/oversized_types.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.cpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_iterator.hpp
+    storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.cpp
+    storage/vector_compression/bitpacking/bitpacking_vector_type.hpp
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp
@@ -557,6 +557,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_bimap_core_override.hpp
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
@@ -643,6 +644,7 @@ set(
 
 set(
     LIBRARIES
+    compact_vector
     lz4
     sqlparser
     uninitialized_vector
@@ -653,6 +655,7 @@ set(
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
+    # Additional libraries added with target_link_libraries_system below
 )
 
 if (NOT APPLE)
@@ -713,11 +716,14 @@ if(NOT APPLE)
     target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
     target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
 
-    # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions
-    target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR}/third_party/jemalloc/include)
+    # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions.
+    # We need to use a path relative to CMAKE_CURRENT_BINARY_DIR instead of using CMAKE_BINARY_DIR because Hyrise might
+    # not be the top-level CMake project (e.g., if it is used as a submodule in a Hyrise plugin repository).
+    target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential

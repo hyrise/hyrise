@@ -163,6 +163,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithNulls) {
 
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
+  table_wrapper->never_clear_output();
   const auto table_scan =
       std::make_shared<TableScan>(table_wrapper, equals_(d, correlated_parameter_(ParameterID{0}, x)));
   const auto subquery = pqp_subquery_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
@@ -176,6 +177,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
 
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
+  table_wrapper_all->never_clear_output();
   const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
 
   const auto empty_table =

@@ -43,7 +43,7 @@ class BaseTestWithParam
    * safely without preventing the BaseTest-cleanup from happening.
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
-  ~BaseTestWithParam() { Hyrise::reset(); }
+  ~BaseTestWithParam() override { Hyrise::reset(); }
 };
 
 using BaseTest = BaseTestWithParam<void>;
@@ -94,12 +94,12 @@ bool compare_files(const std::string& original_file, const std::string& created_
 std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table);
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
-    {EncodingType::Unencoded},
-    {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FrameOfReference},
-    {EncodingType::LZ4},
-    {EncodingType::RunLength}};
+    SegmentEncodingSpec{EncodingType::Unencoded},
+    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger},
+    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking},
+    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedWidthInteger},
+    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::BitPacking},
+    SegmentEncodingSpec{EncodingType::FrameOfReference},
+    SegmentEncodingSpec{EncodingType::LZ4},
+    SegmentEncodingSpec{EncodingType::RunLength}};
 }  // namespace opossum

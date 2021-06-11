@@ -51,6 +51,11 @@ class BenchmarkRunner : public Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
+  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
+  // This is idempotent, i.e., you can call it multiple times and the resulting file will be overwritten. Be aware
+  // writing the file may affect the performance of concurrently running queries.
+  void write_report_to_file() const;
+
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
@@ -65,11 +70,12 @@ class BenchmarkRunner : public Noncopyable {
   // disabled, the item is executed immediately.
   void _schedule_item_run(const BenchmarkItemID item_id);
 
-  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
-  void _create_report(std::ostream& stream) const;
-
   // Converts the result of a SQL query into a JSON object
   static nlohmann::json _sql_to_json(const std::string& sql);
+
+  // Writes the current meta_segments table into the benchmark_segments_log tables. The `moment` parameter can be used
+  // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
+  void _snapshot_segment_access_counters(const std::string& moment = "");
 
   const BenchmarkConfig _config;
 
@@ -86,17 +92,18 @@ class BenchmarkRunner : public Noncopyable {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   std::chrono::system_clock::time_point _benchmark_start;
-  Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished items so far
-  std::atomic_uint _currently_running_clients{0};
+  std::atomic_uint32_t _currently_running_clients{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
   // were unsuccessful (e.g., because of transaction aborts).
-  std::atomic_uint _total_finished_runs{0};
+  std::atomic_uint32_t _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
+
+  int _snapshot_id{0};
 };
 
 }  // namespace opossum

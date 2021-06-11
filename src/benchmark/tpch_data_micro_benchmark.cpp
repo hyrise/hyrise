@@ -17,6 +17,7 @@
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
@@ -29,7 +30,7 @@ class TableWrapper;
 // Defining the base fixture class
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) {
+  void SetUp(::benchmark::State& state) override {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 0.01f;
     const auto default_encoding = EncodingType::Dictionary;
@@ -41,7 +42,9 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
                 << " encoding:" << std::endl;
-      TPCHTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
+      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None,
+                         std::make_shared<BenchmarkConfig>(benchmark_config))
+          .generate_and_store();
     }
 
     _table_wrapper_map = create_table_wrappers(sm);
@@ -87,7 +90,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State&) {}
+  void TearDown(::benchmark::State&) override {}
 
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
@@ -255,7 +258,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
 
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
+    const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
@@ -273,7 +276,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
 
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
+    const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }

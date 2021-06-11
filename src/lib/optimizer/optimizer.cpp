@@ -7,6 +7,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
@@ -16,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -25,72 +27,13 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
+namespace opossum {
+
 /**
- * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
- *
- * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
- * ProjectionNode computing a subquery and a subsequent PredicateNode filtering based on it.
- * We do not WANT to optimize the LQP twice (optimization takes time after all) and we CANNOT optimize it twice, since,
- * e.g., a non-deterministic rule, could produce two different LQPs while optimizing and then the SubqueryExpression
- * in the PredicateNode couldn't be resolved to a column anymore. There are more subtle ways LQPs might break in this
- * scenario, and frankly, this is one of the weak links in the expression system...
- *
- * ...long story short:
- * !!!
- * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
- * !!!
- *
- * -> collect_subquery_expressions_by_lqp() identifies unique LQPs and the (multiple) SubqueryExpressions referencing
- *                                          each of these unique LQPs.
- *
- * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assigns the optimized LQPs back
- *                                          to the SubqueryExpressions referencing them.
- *
  * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
  * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
  * optimization costs reasonable.
  */
-
-namespace {
-
-using namespace opossum;  // NOLINT
-
-// All SubqueryExpressions referencing the same LQP
-using SubqueryExpressionsByLQP =
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
-
-// See comment at the top of file for the purpose of this.
-void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
-                                         const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) return;
-  if (!visited_nodes.emplace(node).second) return;
-
-  for (const auto& expression : node->node_expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
-
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
-        }
-      }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-  }
-
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
-}
-
-}  // namespace
-
-namespace opossum {
-
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
@@ -116,6 +59,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
+  optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
+
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
@@ -136,9 +81,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
-  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
-  // executed after the ColumnPruningRule and ChunkPruningRule.
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
@@ -182,7 +127,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
-    _apply_rule(*rule, root_node);
+    rule->apply_to_plan(root_node);
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
@@ -206,9 +151,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
 
   // First, collect all LQPs (the main LQP and all subqueries)
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node, visited_nodes);
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node);
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }
@@ -305,26 +248,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
 
       return LQPVisitation::VisitInputs;
     });
-  }
-}
-
-void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  rule.apply_to(root_node);
-
-  /**
-   * Optimize Subqueries
-   */
-  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node, visited_nodes);
-
-  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-    const auto local_root_node = LogicalPlanRootNode::make(lqp);
-    _apply_rule(rule, local_root_node);
-    for (const auto& subquery_expression : subquery_expressions) {
-      subquery_expression->lqp = local_root_node->left_input();
-    }
-    local_root_node->set_left_input(nullptr);
   }
 }
 

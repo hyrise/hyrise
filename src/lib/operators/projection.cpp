@@ -1,6 +1,7 @@
 #include "projection.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <numeric>
@@ -12,8 +13,10 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
@@ -25,7 +28,27 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      expressions(init_expressions) {}
+      expressions(init_expressions) {
+  /**
+   * Register as a consumer for all uncorrelated subqueries.
+   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
+   * and managed by the ExpressionEvaluator.
+   */
+  for (const auto& expression : expressions) {
+    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+    for (const auto& subquery_expression : pqp_subquery_expressions) {
+      if (subquery_expression->is_correlated()) continue;
+
+      /**
+       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
+       * 1. register as a consumer and
+       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
+       */
+      subquery_expression->pqp->register_consumer();
+      _uncorrelated_subquery_expressions.push_back(subquery_expression);
+    }
+  }
+}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -34,8 +57,10 @@ const std::string& Projection::name() const {
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions));
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  // Passing copied_ops is essential to allow for global subplan deduplication, including subqueries.
+  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions, copied_ops));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -51,216 +76,237 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto& input_table = *left_input_table();
 
-  /**
-   * For PQPColumnExpressions, it is possible to forward the input column if the input TableType (References or Data)
-   * matches the output column type (ReferenceSegment or not).
-   */
-  const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+  // Determine the type of the output table: If no input columns are forwarded, i.e., all output columns are newly
+  // generated, the output type is always TableType::Data and all segments are ValueSegments. Otherwise, the output type
+  // depends on the input table's type. If the forwarded columns come from a data table, so are the newly generated
+  // columns. However, we cannot return a table that mixes data and reference segments, so if the forwarded columns are
+  // reference columns, the newly generated columns contain reference segments, too. These point to an internal dummy
+  // table, the projection_result_table. The life time of this table is managed by the shared_ptr in
+  // ReferenceSegment::_referenced_table. The ReferenceSegments created for this use an EntireChunkPosList, so
+  // segment_iterate on the ReferenceSegment decays to the underlying ValueSegment virtually without overhead.
+
+  //           +-----+     +------+  Case 1
+  //           |a |b |     |a |a+1|   * Input TableType::Data
+  //           |DS|DS| --> |DS|VS |   * A column (a) is forwarded
+  //           +-----+     +------+   Result: No type change needed, output TableType::Data
+  //
+  //           +-----+        +---+  Case 2
+  //           |a |b |        |a+1|   * Input TableType::References
+  //           |RS|RS| -->    |VS |   * No column is forwarded
+  //           +-----+        +---+   Result: Output TableType::Data
+  //
+  // +------+  +-----+     +------+  Case 3
+  // |orig_a|  |a |b |     |a |a+1|   * Input TableType::References
+  // |VS    |  |RS|RS| --> |RS|RS |   * A column (a) is forwarded
+  // +------+  +-----+     +------+   Result: Type change needed, output TableType::References, RS a is forwarded, a+1
+  //    ^        |          |   |             is a new RS pointing to a new dummy table.
+  //    +--------+----------+   v
+  //                          +---+  (VS: ValueSegment, DS: DictionarySegment, RS: ReferenceSegment)
+  //                          |a+1|
+  //                          |VS |
+  //                          +---+
+
+  const auto forwards_any_columns = std::any_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
+  const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
 
-  const auto output_table_type = only_projects_columns ? input_table.type() : TableType::Data;
-  const auto forward_columns = input_table.type() == output_table_type;
-
+  // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
   const auto uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
+  // Deregister, because we obtained the results and no longer need the subquery plans.
+  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
+    pqp_subquery_expression->pqp->deregister_consumer();
+  }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   if (!uncorrelated_subquery_results->empty()) {
     step_performance_data.set_step_runtime(OperatorSteps::UncorrelatedSubqueries, timer.lap());
   }
 
-  auto column_is_nullable = std::vector<bool>(expressions.size(), false);
-
-  /**
-   * Perform the projection
-   */
-  auto output_chunk_segments = std::vector<Segments>(input_table.chunk_count());
-
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
-  const auto chunk_count_input_table = input_table.chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
+  const auto chunk_count = input_table.chunk_count();
+
+  // Perform the actual projection on a per-chunk level. `output_segments_by_chunk` will contain both forwarded and
+  // newly generated columns. In the upcoming loop, we do not yet deal with the projection_result_table indirection
+  // described above.
+  auto output_segments_by_chunk = std::vector<Segments>(chunk_count);
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+
+  const auto expression_count = expressions.size();
+  const auto forwarded_pqp_columns = _determine_forwarded_columns(output_table_type);
+
+  // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
+  // vector stores atomic bool values. This allows parallel write operation per thread.
+  auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    auto output_segments = Segments{expressions.size()};
+    auto output_segments = Segments{expression_count};
+    auto all_segments_forwarded = true;
 
-    ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
-
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+      // In this loop, we perform all projections that only forward an input column sequential.
       const auto& expression = expressions[column_id];
-
-      // Forward input column if possible
-      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
-        const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
-        output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
-        column_is_nullable[column_id] =
-            column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
-        forwarding_cost += timer.lap();
-      } else if (expression->type == ExpressionType::PQPColumn && !forward_columns) {
-        // The current column will be returned without any logical modifications. As other columns do get modified (and
-        // returned as a ValueSegment), all segments (including this one) need to become ValueSegments. This segment is
-        // not yet a ValueSegment (otherwise forward_columns would be true); thus we need to materialize it.
-
-        // TODO(jk): Once we have a smart pos list that knows that a single chunk is referenced in its entirety, we can
-        //           simply forward that chunk here instead of materializing it.
-
-        const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
-        const auto segment = input_chunk->get_segment(pqp_column_expression->column_id);
-
-        resolve_data_type(expression->data_type(), [&](const auto data_type) {
-          using ColumnDataType = typename decltype(data_type)::type;
-
-          const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-          DebugAssert(reference_segment, "Expected ReferenceSegment");
-
-          // If the ReferenceSegment references a single (FixedString)DictionarySegment, do not materialize it as a
-          // ValueSegment, but re-use its dictionary and only copy the value ids.
-          auto referenced_dictionary_segment = std::shared_ptr<BaseDictionarySegment>{};
-
-          const auto& pos_list = reference_segment->pos_list();
-          if (pos_list->references_single_chunk()) {
-            const auto& referenced_table = reference_segment->referenced_table();
-            const auto& referenced_chunk = referenced_table->get_chunk(pos_list->common_chunk_id());
-            const auto& referenced_segment = referenced_chunk->get_segment(reference_segment->referenced_column_id());
-            referenced_dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(referenced_segment);
-          }
-
-          if (referenced_dictionary_segment) {
-            // Resolving the BaseDictionarySegment so that we can handle both regular and fixed-string dictionaries
-            resolve_encoded_segment_type<ColumnDataType>(
-                *referenced_dictionary_segment, [&](const auto& typed_segment) {
-                  using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
-
-                  // Write new a attribute vector containing only positions given from the input_pos_list.
-                  [[maybe_unused]] auto materialize_filtered_attribute_vector = [](const auto& dictionary_segment,
-                                                                                   const auto& input_pos_list) {
-                    auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
-                    auto iterable = create_iterable_from_attribute_vector(dictionary_segment);
-                    auto chunk_offset = ChunkOffset{0};
-                    iterable.with_iterators(input_pos_list, [&](auto it, auto end) {
-                      while (it != end) {
-                        filtered_attribute_vector[chunk_offset] = it->value();
-                        ++it;
-                        ++chunk_offset;
-                      }
-                    });
-                    // DictionarySegments take BaseCompressedVectors, not an std::vector<ValueId> for the attribute
-                    // vector. But the latter can be wrapped into a FixedSizeByteAligned<uint32_t> without copying.
-                    return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
-                  };
-
-                  if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>>) {  // NOLINT
-                    const auto compressed_attribute_vector =
-                        materialize_filtered_attribute_vector(typed_segment, pos_list);
-                    const auto& dictionary = typed_segment.dictionary();
-
-                    output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
-                        dictionary, std::move(compressed_attribute_vector));
-                  } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT - lint.sh wants {} on same line
-                                                      FixedStringDictionarySegment<ColumnDataType>>) {
-                    const auto compressed_attribute_vector =
-                        materialize_filtered_attribute_vector(typed_segment, pos_list);
-                    const auto& dictionary = typed_segment.fixed_string_dictionary();
-
-                    output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
-                        dictionary, std::move(compressed_attribute_vector));
-                  } else {
-                    Fail("Referenced segment was dynamically casted to BaseDictionarySegment, but resolve failed");
-                  }
-                  // clang-format on
-                });
-          } else {
-            // End of dictionary segment shortcut - handle all other referenced segments and ReferenceSegments that
-            // reference more than a single chunk by materializing them into a ValueSegment
-            bool has_null = false;
-            auto values = pmr_vector<ColumnDataType>(segment->size());
-            auto null_values = pmr_vector<bool>(
-                input_table.column_is_nullable(pqp_column_expression->column_id) ? segment->size() : 0);
-
-            auto chunk_offset = ChunkOffset{0};
-            segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-              if (position.is_null()) {
-                DebugAssert(!null_values.empty(), "Mismatching NULL information");
-                has_null = true;
-                null_values[chunk_offset] = true;
-              } else {
-                values[chunk_offset] = position.value();
-              }
-              ++chunk_offset;
-            });
-
-            auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
-            if (has_null) {
-              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
-            } else {
-              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-            }
-
-            output_segments[column_id] = std::move(value_segment);
-            column_is_nullable[column_id] = has_null;
-          }
-        });
-        forwarding_cost += timer.lap();
-      } else {
-        auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-        column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
-        output_segments[column_id] = std::move(output_segment);
-        expression_evaluator_cost += timer.lap();
+      if (!forwarded_pqp_columns.contains(expression)) {
+        all_segments_forwarded = false;
+        continue;
       }
-    }
 
-    output_chunk_segments[chunk_id] = std::move(output_segments);
+      DebugAssert(std::dynamic_pointer_cast<PQPColumnExpression>(expression),
+                  "Non-PQP column expressions should not reach this point.");
+
+      // Forward input segment if possible
+      const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(*expression);
+      output_segments[column_id] = input_chunk->get_segment(pqp_column_expression.column_id);
+      column_is_nullable[column_id] = input_table.column_is_nullable(pqp_column_expression.column_id);
+    }
+    forwarding_cost += timer.lap();
+
+    // `output_segments_by_chunk` now contains all forwarded segments.
+    output_segments_by_chunk[chunk_id] = std::move(output_segments);
+
+    // All columns are forwarded. We do not need to evaluate newly generated columns.
+    if (all_segments_forwarded) continue;
+
+    // Defines the job that performs the evaluation if the columns are newly generated.
+    auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
+                                          &output_segments_by_chunk, &column_is_nullable, &forwarded_pqp_columns]() {
+      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
+
+      for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+        const auto& expression = expressions[column_id];
+
+        if (!forwarded_pqp_columns.contains(expression)) {
+          // Newly generated column - the expression needs to be evaluated
+          auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
+          column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
+          // Storing the result in output_segments_by_chunk means that the vector for the separate chunks may contain
+          // both ReferenceSegments and ValueSegments. We deal with this later.
+          output_segments_by_chunk[chunk_id][column_id] = std::move(output_segment);
+        }
+      }
+    };
+    // Evaluate the expression immediately if it contains less than `JOB_SPAWN_THRESHOLD` rows, otherwise wrap
+    // it into a task. The upper bound of the chunk size, which defines if it will be executed in parallel or not,
+    // still needs to be re-evaluated over time to find the value which gives the best performance.
+    constexpr auto JOB_SPAWN_THRESHOLD = ChunkOffset{500};
+    if (input_chunk->size() >= JOB_SPAWN_THRESHOLD) {
+      auto job_task = std::make_shared<JobTask>(perform_projection_evaluation);
+      jobs.push_back(job_task);
+    } else {
+      perform_projection_evaluation();
+      expression_evaluator_cost += timer.lap();
+    }
   }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  expression_evaluator_cost += timer.lap();
 
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
 
-  /**
-   * Determine the TableColumnDefinitions and build the output table
-   */
-  TableColumnDefinitions column_definitions;
-  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
-    column_definitions.emplace_back(expressions[column_id]->as_column_name(), expressions[column_id]->data_type(),
-                                    column_is_nullable[column_id]);
-  }
+  // Determine the TableColumnDefinitions. We can only do this now because column_is_nullable has been filled in the
+  // loop above. If necessary, projection_result_column_definitions holds those newly generated columns that the
+  // ReferenceSegments point to.
+  TableColumnDefinitions output_column_definitions;
+  TableColumnDefinitions projection_result_column_definitions;
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+    const auto definition = TableColumnDefinition{expressions[column_id]->as_column_name(),
+                                                  expressions[column_id]->data_type(), column_is_nullable[column_id]};
+    output_column_definitions.emplace_back(definition);
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
-
-  // Maps input columns to output columns (which may be reordered). Only contains input column IDs that are forwarded
-  // to the output without modfications.
-  auto input_column_to_output_column = std::unordered_map<ColumnID, ColumnID>{};
-  for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
-    const auto& expression = expressions[expression_id];
-    if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
-      const auto& original_id = pqp_column_expression->column_id;
-      input_column_to_output_column[original_id] = expression_id;
+    if (!forwarded_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
+      projection_result_column_definitions.emplace_back(definition);
     }
   }
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
+  // Create the projection_result_table if needed
+  auto projection_result_table = std::shared_ptr<Table>{};
+  if (!projection_result_column_definitions.empty()) {
+    projection_result_table = std::make_shared<Table>(projection_result_column_definitions, TableType::Data,
+                                                      std::nullopt, input_table.uses_mvcc());
+  }
+
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
+  auto projection_result_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
+
+  // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
+  // changed. The mapping only contains column IDs that are forwarded without modfications.
+  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};
+  for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
+    const auto& expression = expressions[expression_id];
+    if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
+      if (forwarded_pqp_columns.contains(expression)) {
+        const auto& original_id = pqp_column_expression->column_id;
+        output_column_to_input_column[expression_id] = original_id;
+      }
+    }
+  }
+
+  // Create the actual chunks, and, if needed, fill the projection_result_table. Also set MVCC and
+  // individually_sorted_by information as needed.
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
+    auto projection_result_segments = Segments{};
+    const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_chunk->size());
+    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
+      // Turn newly generated ValueSegments into ReferenceSegments, if needed
+      if (!forwarded_pqp_columns.contains(expressions[column_id]) && output_table_type == TableType::References) {
+        projection_result_segments.emplace_back(output_segments_by_chunk[chunk_id][column_id]);
+
+        const auto projection_result_column_id =
+            ColumnID{static_cast<ColumnID::base_type>(projection_result_segments.size() - 1)};
+
+        output_segments_by_chunk[chunk_id][column_id] = std::make_shared<ReferenceSegment>(
+            projection_result_table, projection_result_column_id, entire_chunk_pos_list);
+      }
+    }
+
     // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
-    const auto chunk = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
-    chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
-    chunk->finalize();
+    auto chunk = std::shared_ptr<Chunk>{};
+    if (output_table_type == TableType::Data) {
+      chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]), input_chunk->mvcc_data());
+      chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
+      chunk->finalize();
+
+      DebugAssert(projection_result_segments.empty(),
+                  "For TableType::Data, projection_result_segments should be unused");
+    } else {
+      chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]));
+      // No need to increase_invalid_row_count here, as it is ignored for reference chunks anyway
+      chunk->finalize();
+
+      if (projection_result_table) {
+        projection_result_table->append_chunk(projection_result_segments, input_chunk->mvcc_data());
+        projection_result_table->last_chunk()->increase_invalid_row_count(input_chunk->invalid_row_count());
+      }
+    }
 
     // Forward sorted_by flags, mapping column ids
     const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
-      for (const auto& [column_id, mode] : sorted_by) {
-        if (!input_column_to_output_column.count(column_id)) {
-          continue;  // column is not present in output expression list
+
+      // We need to iterate both sorted information and the output/input mapping as multiple output columns might
+      // originate from the same sorted input column.
+      for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
+        const auto iter = std::find_if(
+            sorted_by.begin(), sorted_by.end(),
+            [input_column_id = input_column_id](const auto sort) { return input_column_id == sort.column; });
+        if (iter != sorted_by.end()) {
+          transformed.emplace_back(SortColumnDefinition{output_column_id, iter->sort_mode});
         }
-        const auto projected_column_id = input_column_to_output_column[column_id];
-        transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
         chunk->set_individually_sorted_by(transformed);
@@ -272,7 +318,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   step_performance_data.set_step_runtime(OperatorSteps::BuildOutput, timer.lap());
 
-  return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
+  return std::make_shared<Table>(output_column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.uses_mvcc());
 }
 
@@ -280,6 +326,49 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 std::shared_ptr<Table> Projection::dummy_table() {
   static auto shared_dummy = std::make_shared<DummyTable>();
   return shared_dummy;
+}
+
+/**
+ *  Method to determine PQPColumns to forward. As explained above, we forward columns that are simply projected and
+ *  need not be evaluated. But there are cases when forwarding is not beneficial. When a forwardable column is
+ *  also evaluated in an expression, the expression evaluator materializes this column and caches it. In case of having
+ *  a reference segment as input, forwarding the materialized and cached segment has a similar performance in the
+ *  projection operator, but is faster in the following operator. The reason is that the following operator does not
+ *  need to process the forwarded reference segment via its position list indirection but can directly access the value
+ *  segment sequentially.
+ */
+ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType table_type) const {
+  // First gather all forwardable PQP column expressions.
+  auto forwarded_pqp_columns = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    const auto& expression = expressions[column_id];
+    if (expression->type == ExpressionType::PQPColumn) {
+      forwarded_pqp_columns.emplace(expression);
+    }
+  }
+
+  // Iterate the expressions and check if a forwarded column is part of an expression. In this case, remove it from
+  // the list of forwarded columns. When the input is a data table (and thus the output table is as well) the
+  // forwarded column does not need to be accessed via its position list later. And since the following operator might
+  // have optimizations for accessing an encoded segment, we always forward for data tables.
+  if (table_type == TableType::References) {
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      const auto& expression = expressions[column_id];
+
+      if (expression->type == ExpressionType::PQPColumn) {
+        continue;
+      }
+
+      visit_expression(expression, [&](const auto& sub_expression) {
+        if (sub_expression->type == ExpressionType::PQPColumn) {
+          forwarded_pqp_columns.erase(sub_expression);
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+  }
+
+  return forwarded_pqp_columns;
 }
 
 }  // namespace opossum

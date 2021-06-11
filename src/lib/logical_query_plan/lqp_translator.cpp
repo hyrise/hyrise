@@ -89,7 +89,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *          |
    *     table_int_float2
    *
-   * would result in multiple operators created from predicate_c and thus in performance drops
+   * would result in multiple operators created from predicate_c and thus in performance drops.
+   *
+   * Deduplication:
+   * _operator_by_lqp_node compares entries by value (i.e., AbstractOperator::operator==), not by identity
+   * (shared_ptr::operator==). As a result, two separate, but equal LQP nodes will be translated into a single PQP
+   * node. This prevents us from executing the same operation twice.
+   *   Excursus: You would be right to wonder why this is not done on the LQP by some type of optimizer rule. That would
+   *   indeed be the cleaner way to do it. The problem is that self-joins are only representable in the LQP if we use
+   *   two independent StoredTableNodes. If we deduplicate these StoredTableNodes, the LQPColumnExpressions of the two
+   *   instances would also become indistinguishable. That breaks things left and right.
    */
 
   const auto operator_iter = _operator_by_lqp_node.find(node);
@@ -180,7 +189,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto value_variant = AllTypeVariant{NullValue{}};
   auto value2_variant = std::optional<AllTypeVariant>{};
 
-  // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
+  // Currently, we will only use IndexScans if the PredicateNode directly follows a StoredTableNode.
   // Our IndexScan implementation does not work on reference segments yet.
   Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
 
@@ -581,7 +590,25 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
       Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-      const auto subquery_pqp = translate_node(subquery_expression->lqp);
+      /**
+       * Notes on generating subquery PQPs:
+       *  a) For uncorrelated subqueries, operator results can be shared between identical parts in uncorrelated
+       *     subqueries and outer queries. Therefore, this LQPTranslator instance is used to deduplicate subquery PQPs
+       *     with _operator_by_lqp_node.
+       *
+       *  b) In contrast to uncorrelated subqueries, correlated subqueries cannot share identical parts with outer
+       *     queries because ExpressionEvaluator::_evaluate_subquery_expression_for_row always deep-copies the whole PQP
+       *     at evaluation time. The deep copy includes both correlated and uncorrelated parts.
+       *     Consequently, a new LQPTranslator instance is used for correlated subqueries to avoid deduplication
+       *     with outer queries. This prevents correlated subqueries from increasing the consumer count of
+       *     outer query operators, which would otherwise block the automatic clearing of results.
+       */
+      auto subquery_pqp = std::shared_ptr<AbstractOperator>();
+      if (subquery_expression->is_correlated()) {
+        subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
+      } else {
+        subquery_pqp = translate_node(subquery_expression->lqp);
+      }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
       subquery_parameters.reserve(subquery_expression->parameter_count());
