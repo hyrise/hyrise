@@ -9,7 +9,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_range_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
@@ -114,8 +114,8 @@ void IndexScan::_validate_input() {
 RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = AbstractIndex::Iterator{};
-  auto range_end = AbstractIndex::Iterator{};
+  auto range_begin = AbstractRangeIndex::Iterator{};
+  auto range_end = AbstractRangeIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = RowIDPosList{};

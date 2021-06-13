@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_range_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -18,11 +18,11 @@ class GroupKeyIndexTest;
 /**
  *
  * The GroupKeyIndex works on a single dictionary compressed segment.
- * Besides the AbstractIndex's positions list containing record positions for NULL values (`_null_positions`),
+ * Besides the AbstractRangeIndex's positions list containing record positions for NULL values (`_null_positions`),
  * this specialized index uses two additional structures. The first is a positions list containing record positions
  * (ie ChunkOffsets) for non-NULL values in the attribute vector, the second is a structure mapping non-NULL-value-ids
  * to the start offsets in the positions list.
- * Since the AbstractIndex's NULL position list only contains NULL value positions, a structure for mapping
+ * Since the AbstractRangeIndex's NULL position list only contains NULL value positions, a structure for mapping
  * NULL-value-ids to offsets isn't needed. 
  *
  * An example structure along with the corresponding dictionary segment might look like this:
@@ -46,17 +46,17 @@ class GroupKeyIndexTest;
  * 
  * NULL is represented in the Attribute Vector by ValueID{dictionary.size()}, i.e., ValueID{6} in this example.
  * x¹: Mark for the ending position.
- * x²: NULL positions are stored in `_null_positions` of the AbstractIndex
+ * x²: NULL positions are stored in `_null_positions` of the AbstractRangeIndex
  *
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey
  */
-class GroupKeyIndex : public AbstractIndex {
+class GroupKeyIndex : public AbstractRangeIndex {
   friend class GroupKeyIndexTest;
 
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See AbstractIndex::estimate_memory_consumption()
+   * See AbstractRangeIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 

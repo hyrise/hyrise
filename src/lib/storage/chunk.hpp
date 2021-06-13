@@ -21,12 +21,12 @@
 
 namespace opossum {
 
-class AbstractIndex;
+class AbstractRangeIndex;
 class AbstractSegment;
 class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
-using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
+using Indexes = pmr_vector<std::shared_ptr<AbstractRangeIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
@@ -87,17 +87,17 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
-  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(
+  std::vector<std::shared_ptr<AbstractRangeIndex>> get_indexes(
       const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
-  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<AbstractRangeIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
 
-  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
+  std::shared_ptr<AbstractRangeIndex> get_index(const SegmentIndexType index_type,
                                            const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
-  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
+  std::shared_ptr<AbstractRangeIndex> get_index(const SegmentIndexType index_type,
                                            const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>
-  std::shared_ptr<AbstractIndex> create_index(
+  std::shared_ptr<AbstractRangeIndex> create_index(
       const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
     DebugAssert(([&]() {
                   for (auto segment : segments_to_index) {
@@ -114,12 +114,12 @@ class Chunk : private Noncopyable {
   }
 
   template <typename Index>
-  std::shared_ptr<AbstractIndex> create_index(const std::vector<ColumnID>& column_ids) {
+  std::shared_ptr<AbstractRangeIndex> create_index(const std::vector<ColumnID>& column_ids) {
     const auto segments = _get_segments_for_ids(column_ids);
     return create_index<Index>(segments);
   }
 
-  void remove_index(const std::shared_ptr<AbstractIndex>& index);
+  void remove_index(const std::shared_ptr<AbstractRangeIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 

@@ -7,14 +7,14 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_range_index.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class MultiPredicateJoinEvaluator;
-using IndexRange = std::pair<AbstractIndex::Iterator, AbstractIndex::Iterator>;
+using IndexRange = std::pair<AbstractRangeIndex::Iterator, AbstractRangeIndex::Iterator>;
 
 /**
    * This operator joins two tables using one column of each table.
@@ -65,19 +65,19 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename ProbeIterator>
   void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                            const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                           const std::shared_ptr<AbstractIndex>& index);
+                                           const std::shared_ptr<AbstractRangeIndex>& index);
 
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_index(
       ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractIndex>& index,
+      const std::shared_ptr<AbstractRangeIndex>& index,
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
   std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                  const std::shared_ptr<AbstractIndex>& index) const;
+                                                  const std::shared_ptr<AbstractRangeIndex>& index) const;
 
-  void _append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
+  void _append_matches(const AbstractRangeIndex::Iterator& range_begin, const AbstractRangeIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
 

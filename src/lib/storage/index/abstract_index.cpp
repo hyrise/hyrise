@@ -1,4 +1,4 @@
-#include "abstract_index.hpp"
+#include "abstract_range_index.hpp"
 
 #include <memory>
 #include <vector>
@@ -7,6 +7,7 @@
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/partial_hash_index/partial_hash_index.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,8 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
+    case SegmentIndexType::PartialHash:
+      return PartialHashIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::Invalid:
       Fail("SegmentIndexType is invalid.");
   }
@@ -38,22 +41,6 @@ bool AbstractIndex::is_index_for(const std::vector<std::shared_ptr<const Abstrac
     if (segments[i] != indexed_segments[i]) return false;
   }
   return true;
-}
-
-AbstractIndex::Iterator AbstractIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert(
-      (_get_indexed_segments().size() >= values.size()),
-      "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
-
-  return _lower_bound(values);
-}
-
-AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert(
-      (_get_indexed_segments().size() >= values.size()),
-      "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
-
-  return _upper_bound(values);
 }
 
 AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }

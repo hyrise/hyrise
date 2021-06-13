@@ -452,8 +452,10 @@ set(
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
-    storage/index/abstract_index.cpp
-    storage/index/abstract_index.hpp
+        storage/index/abstract_index.cpp
+        storage/index/abstract_index.hpp
+        storage/index/abstract_range_index.cpp
+        storage/index/abstract_range_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -476,6 +478,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_statistics.cpp
     storage/index/index_statistics.hpp
+    storage/index/partial_hash_index/partial_hash_index.cpp
+    storage/index/partial_hash_index/partial_hash_index.hpp
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp

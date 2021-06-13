@@ -11,7 +11,7 @@ size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffse
 }
 
 BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
-    : AbstractIndex{get_index_type_of<BTreeIndex>()},
+    : AbstractRangeIndex{get_index_type_of<BTreeIndex>()},
       // Empty segment list is illegal but range check needed for accessing the first segment
       _indexed_segment(segments_to_index.empty() ? nullptr : segments_to_index[0]) {
   Assert(static_cast<bool>(_indexed_segment), "BTreeIndex requires segments_to_index not to be empty.");

@@ -13,7 +13,7 @@ namespace opossum {
 class AbstractSegment;
 
 /**
- * AbstractIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
+ * AbstractRangeIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indexes.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
@@ -29,12 +29,11 @@ class AbstractSegment;
  * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  *
- * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractIndex and
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractRangeIndex and
  *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 
 class AbstractIndex : private Noncopyable {
-  friend class GroupKeyIndexTest;
 
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
@@ -75,32 +74,6 @@ class AbstractIndex : private Noncopyable {
    * @return true if the given columns are covered by the index.
    */
   bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
-
-  /**
-   * Searches for the first entry within the chunk that is equal or greater than the given values.
-   * The number of given values has to be less or equal to the number of indexed segments. Additionally,
-   * the order of values and segments has to match. If less values are provided, the search is performed
-   * as if all entries of the table are truncated to the segments that got reference values.
-   *
-   * Calls _lower_bound() of the most derived class.
-   * See also upper_bound()
-   * @param values are used to query the index.
-   * @return An Iterator on the position of the first element equal or greater then provided values.
-   */
-  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
-
-  /**
-   * Searches for the first entry within the chunk that is greater than the given values.
-   * The number of given values has to be less or equal to number of indexed segments. Additionally,
-   * the order of values and segments has to match. If less values are provided, the search is performed
-   * as if all entries of the table are truncated to the segments that got reference values.
-   *
-   * Calls _upper_bound() of the most derived class.
-   * See also lower_bound()
-   * @param values are used to query the index.
-   * @return An Iterator on the position of the first element greater then provided values.
-   */
-  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
    * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
@@ -152,8 +125,6 @@ class AbstractIndex : private Noncopyable {
    * Seperate the public interface of the index from the interface for programmers implementing own
    * indexes. Each method has to fullfill the contract of the corresponding public methods.
    */
-  virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const = 0;
-  virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const = 0;

@@ -3,14 +3,14 @@
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_range_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class BTreeIndexTest;
 
-class BTreeIndex : public AbstractIndex {
+class BTreeIndex : public AbstractRangeIndex {
   friend BTreeIndexTest;
 
  public:
@@ -18,7 +18,7 @@ class BTreeIndex : public AbstractIndex {
 
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See AbstractIndex::estimate_memory_consumption()
+   * See AbstractRangeIndex::estimate_memory_consumption()
    * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
    * in reducing the memory footprint of these indexes, this is probably the first place you should look.
    */
