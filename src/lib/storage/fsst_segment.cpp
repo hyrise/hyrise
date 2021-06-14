@@ -16,82 +16,78 @@ namespace opossum {
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null_values)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
-    _values{std::move(values)}, _null_values{std::move(null_values) {
+    _null_values{std::move(null_values)} {
 
-      std::vector<unsigned char> output_buffer(output_size);
+    // TODO (anyone): handle null values
 
-    //---- playground
+    // our temporary data structure keeping char pointer and their length
+    std::vector<unsigned long> row_lengths;
+    std::vector<unsigned char*> row_pointers;
+    row_lengths.reserve(values.size());
+    row_pointers.reserve(values.size());
 
-          // our temporary data structure for holding
-      std::vector<unsigned long> row_lengths;       // row_l
-      std::vector<unsigned long> compressed_row_lengths;      // compressedRowLens
+    // needed for compression
+    _compressed_value_lengths.resize(values.size());
+    _compressed_value_pointers.resize(values.size());
 
-      // needed for symbol table creation
-      std::vector<unsigned char*> row_pointerscompressed_row_lengths;
-      std::vector<unsigned char*> compressed_row_pointers;
+    unsigned total_length = 0;
 
-      row_lengths.reserve(_values.size());
-      row_pointers.reserve(_values.size());
-      compressed_row_lengths.resize(_values.size());
-      compressed_row_pointers.resize(_values.size());
+    for (pmr_string& value : values) {
+      total_length += value.size();
+      row_lengths.push_back(value.size());
+      row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
+    }
 
-      unsigned total_length = 0;  //
+    _compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
 
-      for (std::string& value : values) {
-        totalLen += value.size();
-        row_lens.push_back(value.size());
-        row_ptrs.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data()))); // TODO: value.c_str()
+    // create symbol table
+    _encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
+
+    //      unsigned char buffer[sizeof(fsst_decoder_t)];
+    //      fsst_export(encoder, buffer);
+
+    //      fsst_compress(
+    //          fsst_encoder_t *encoder, /* IN: encoder obtained from fsst_create(). */
+    //          size_t nstrings,         /* IN: number of strings in batch to compress. */
+    //          size_t lenIn[],          /* IN: byte-lengths of the inputs */
+    //          unsigned char *strIn[],  /* IN: input string start pointers. */
+    //          size_t outsize,          /* IN: byte-length of output buffer. */
+    //          unsigned char *output,   /* OUT: memory buffer to put the compressed strings in (one after the other). */
+    //          size_t lenOut[],         /* OUT: byte-lengths of the compressed strings. */
+    //          unsigned char *strOut[]  /* OUT: output string start pointers. Will all point into [output,output+size). */
+    //      );
+
+    fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
+                  _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
+
+    // TODO (anyone): shrink the size of _compressed_values
+
+    // print compressed values
+    for (size_t i = 0; i < _compressed_value_pointers.size(); i++) {
+      for (size_t j = 0; j < _compressed_value_lengths[i]; j++) {
+        printf("%d ", _compressed_value_pointers[i][j]);
       }
-
-      std::vector<unsigned char> compressionBuffer, fullBuffer;
-
-      compressionBuffer.resize(16 + 2 * totalLen);
-
-      // COMPRESSION
-      fsst_encoder_t* encoder = fsst_create(values.size(), row_lens.data(), row_ptrs.data(), 0);
-
-      unsigned char buffer[sizeof(fsst_decoder_t)];
-      fsst_export(encoder, buffer);
-
-      fsst_compress(encoder, values.size(), row_lens.data(), row_ptrs.data(), compressionBuffer.size(),
-                    compressionBuffer.data(), compressedRowLens.data(), compressedRowPtrs.data());
-      //  fsst_destroy(encoder);
-
-      for (size_t i = 0; i < compressedRowPtrs.size(); i++) {
-        for (size_t j = 0; j < compressedRowLens[i]; j++) {
-          printf("%d ", compressedRowPtrs[i][j]);
-        }
-        printf("\n");
-      }
-
-      // DECOMPRESSION
-      fsst_decoder_t decoder = fsst_decoder(encoder);
-
-      size_t output_size = 6 + 1;
-      std::vector<unsigned char> output_buffer(output_size);
-      size_t output_size_after_decompression =
-          fsst_decompress(&decoder, compressedRowLens[0], compressedRowPtrs[0], output_size, output_buffer.data());
-
-      std::cout << output_size_after_decompression << std::endl;
-
-      for (size_t i = 0; i < output_size_after_decompression; i++) {
-        printf("%c", output_buffer[i]);
-      }
-
       printf("\n");
+    }
 
+    //      // DECOMPRESSION
+    //      fsst_decoder_t decoder = fsst_decoder(encoder);
+    //
+    //      size_t output_size = 6 + 1;
+    //      std::vector<unsigned char> output_buffer(output_size);
+    //      size_t output_size_after_decompression =
+    //          fsst_decompress(&decoder, compressedRowLens[0], compressedRowPtrs[0], output_size, output_buffer.data());
+    //
+    //      std::cout << output_size_after_decompression << std::endl;
+    //
+    //      for (size_t i = 0; i < output_size_after_decompression; i++) {
+    //        printf("%c", output_buffer[i]);
+    //      }
+    //
+    //      printf("\n");
 
-
-      //---
-
-      _compressed_values = pmr_vector<pmr_string>();
-  }
-
-
-
-
-  }
-
+      //--
+   }
 
 template <typename T>
 AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const {

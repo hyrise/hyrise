@@ -4,6 +4,7 @@
 #include <memory>
 #include <type_traits>
 
+#include <fsst.h>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
@@ -51,9 +52,12 @@ class FSSTSegment : public AbstractEncodedSegment {
   /**@}*/
 
  private:
-  pmr_vector<pmr_string> _values;
   pmr_vector<bool> _null_values;
+  std::vector<unsigned char> _compressed_values;
+  std::vector<unsigned long> _compressed_value_lengths;
+  std::vector<unsigned char*> _compressed_value_pointers;
 
+  fsst_encoder_t* _encoder;
 
 };
 
