@@ -20,7 +20,8 @@ template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
 
-  explicit FSSTSegment();
+//  explicit FSSTSegment();     // TODO: remove
+  FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null_values);
 
   /**
    * @defgroup AbstractSegment interface
@@ -50,6 +51,8 @@ class FSSTSegment : public AbstractEncodedSegment {
   /**@}*/
 
  private:
+  pmr_vector<pmr_string> _values;
+  pmr_vector<bool> _null_values;
 
 
 };

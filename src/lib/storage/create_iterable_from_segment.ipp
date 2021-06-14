@@ -91,4 +91,19 @@ auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
 }
 
 
+//template <typename T, bool EraseSegmentType>
+//auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
+//#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
+//  PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
+//  return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
+//#else
+//if constexpr (EraseSegmentType) {
+//  return create_any_segment_iterable<T>(segment);
+//} else {
+//  return FSSTSegmentIterable<T, FixedStringVector>{segment};
+//}
+//#endif
+//}
+
+
 }  // namespace opossum

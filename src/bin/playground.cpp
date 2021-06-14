@@ -31,7 +31,8 @@ int main() {
   for (std::string& value : values) {
     totalLen += value.size();
     row_lens.push_back(value.size());
-    row_ptrs.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
+//    row_ptrs.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
+      row_ptrs.push_back(reinterpret_cast<unsigned char* const>(value.data()));
   }
 
   std::vector<unsigned char> compressionBuffer, fullBuffer;
