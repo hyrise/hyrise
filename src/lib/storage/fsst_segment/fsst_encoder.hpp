@@ -24,14 +24,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   template <typename T>
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
                                                      const PolymorphicAllocator<T>& allocator) {
-
     auto values = pmr_vector<T>{allocator};
     auto null_values = pmr_vector<bool>{allocator};
 
     segment_iterable.with_iterators([&](auto it, auto end) {
       // Early out for empty segments, code below assumes it to be non-empty
       // is this needed?
-      if (it == end) {    // TODO: remove
+      if (it == end) {  // TODO: remove
         return;
       }
 
@@ -40,18 +39,18 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       null_values.reserve(segment_size);
 
       // Init is_current_null such that it does not equal the first entry
-      T current_value; // = T{};
-      bool is_current_null; //= !it->is_null();
-      SegmentPosition<T> segment_value;
+      T current_value;       // = T{};
+      bool is_current_null;  //= !it->is_null();
+                             //      SegmentPosition<T> segment_value;
       //      auto current_index = 0u;
 
       for (; it != end; ++it) {
-        segment_value = *it;
+        auto segment_value = *it;
 
         current_value = segment_value.value();
         is_current_null = segment_value.is_null();
 
-        values.emplace_back(current_value);         // TODO (anyone): check if we can save null values
+        values.emplace_back(current_value);  // TODO (anyone): check if we can save null values
         null_values.emplace_back(is_current_null);
       }
     });
@@ -62,15 +61,15 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     return std::make_shared<FSSTSegment<T>>(std::move(values), std::move(null_values));
     //TODO (anyone): add parameters to create empty Segment
-//    return nullptr;
+    //    return nullptr;
   }
 
-//  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
-//                                                     const PolymorphicAllocator<pmr_string>& allocator) {
-//
-//    //TODO (anyone): add parameters to create empty Segment
-//    return nullptr;
-//  }
+  //  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
+  //                                                     const PolymorphicAllocator<pmr_string>& allocator) {
+  //
+  //    //TODO (anyone): add parameters to create empty Segment
+  //    return nullptr;
+  //  }
 };
 
 }  // namespace opossum

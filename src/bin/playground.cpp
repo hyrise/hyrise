@@ -5,18 +5,24 @@
 #include <iostream>
 #include "types.hpp"
 
+#include <storage/fsst_segment.hpp>
+
 using namespace opossum;  // NOLINT
 
 int main() {
-  std::vector<std::string> values{
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
-      "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
+  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab",
+                                "Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
+
+  pmr_vector<bool> null_values = {false};
+  FSSTSegment<pmr_string>(values, null_values);
+
+  printf("FSST SEGMENT above\n");
 
   std::vector<unsigned long> row_lens, compressedRowLens;
   std::vector<unsigned char*> row_ptrs, compressedRowPtrs;
@@ -28,11 +34,11 @@ int main() {
 
   unsigned totalLen = 0;
 
-  for (std::string& value : values) {
+  for (pmr_string& value : values) {
     totalLen += value.size();
     row_lens.push_back(value.size());
-//    row_ptrs.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
-      row_ptrs.push_back(reinterpret_cast<unsigned char* const>(value.data()));
+    row_ptrs.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
+    //      row_ptrs.push_back(reinterpret_cast<unsigned char* const>(value.data()));
   }
 
   std::vector<unsigned char> compressionBuffer, fullBuffer;

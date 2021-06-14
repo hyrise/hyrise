@@ -20,8 +20,7 @@ namespace opossum {
 template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
-
-//  explicit FSSTSegment();     // TODO: remove
+  //  explicit FSSTSegment();     // TODO: remove
   FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null_values);
 
   /**
@@ -58,10 +57,10 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::vector<unsigned char*> _compressed_value_pointers;
 
   fsst_encoder_t* _encoder;
-
 };
 
-template<> std::optional<CompressedVectorType> FSSTSegment<pmr_string>::compressed_vector_type() const;
+template <>
+std::optional<CompressedVectorType> FSSTSegment<pmr_string>::compressed_vector_type() const;
 
 EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);
 
