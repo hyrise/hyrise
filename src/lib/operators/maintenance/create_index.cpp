@@ -7,16 +7,20 @@
 #include "operators/insert.hpp"
 #include "storage/table.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "utils/assert.hpp"
+
 
 namespace opossum {
 
 CreateIndex::CreateIndex(const std::string& init_index_name,
                          const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
+                         const bool init_if_not_exists,
                          const std::string& init_target_table_name,
                          const std::shared_ptr<const AbstractOperator>& input_operator)
     : AbstractReadWriteOperator(OperatorType::CreateIndex, input_operator),
       index_name(init_index_name),
       column_ids(init_column_ids),
+      if_not_exists(init_if_not_exists),
       target_table_name(init_target_table_name)
     {}
 
@@ -63,6 +67,10 @@ std::string CreateIndex::description(DescriptionMode description_mode) const {
 std::shared_ptr<const Table> CreateIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
   auto table_to_be_indexed = Hyrise::get().storage_manager.get_table(target_table_name);
 
+  if(if_not_exists) {
+    _check_if_index_already_exists(index_name, table_to_be_indexed);
+  }
+
   table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
@@ -71,11 +79,18 @@ std::shared_ptr<AbstractOperator> CreateIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<CreateIndex>(index_name, column_ids, target_table_name, copied_left_input);
+  return std::make_shared<CreateIndex>(index_name, column_ids, if_not_exists, target_table_name, copied_left_input);
 }
 
 void CreateIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   // No parameters possible for CREATE TABLE
+}
+
+void CreateIndex::_check_if_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table) {
+  auto index_statistics = table->indexes_statistics();
+  for(auto index:index_statistics) {
+    Assert(index.name != new_index_name, "Index " + new_index_name + " already exists");
+  }
 }
 
 }  // namespace opossum

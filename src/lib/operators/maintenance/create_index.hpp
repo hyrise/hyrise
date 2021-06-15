@@ -11,6 +11,7 @@ class CreateIndex : public AbstractReadWriteOperator {
  public:
   CreateIndex(const std::string& init_index_name,
               const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
+              const bool init_if_not_exists,
               const std::string& init_target_table_name,
               const std::shared_ptr<const AbstractOperator>& input_operator);
 
@@ -19,6 +20,7 @@ class CreateIndex : public AbstractReadWriteOperator {
 
   const std::string index_name;
   const std::shared_ptr<const std::vector<ColumnID>> column_ids;
+  const bool if_not_exists;
   const std::string target_table_name;
 
  protected:
@@ -36,5 +38,7 @@ class CreateIndex : public AbstractReadWriteOperator {
 
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
+
+  void _check_if_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);
 };
 }  // namespace opossum
