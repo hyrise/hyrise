@@ -212,6 +212,10 @@ TEST_F(CsvParserTest, ImportUnquotedNullStringThrows) {
   EXPECT_THROW(CsvParser::parse("resources/test_data/csv/string_with_bad_null.csv"), std::exception);
 }
 
+TEST_F(CsvParserTest, ImportUnquotedNullStringWithNullStringAsNullThrows) {
+  EXPECT_THROW(CsvParser::parse("resources/test_data/csv/null_as_string_with_bad_null.csv"), std::exception);
+}
+
 TEST_F(CsvParserTest, WithAndWithoutQuotes) {
   std::string csv_file = "resources/test_data/csv/with_and_without_quotes.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
