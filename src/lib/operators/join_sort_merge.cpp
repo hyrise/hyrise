@@ -34,9 +34,11 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   }
 
   // The sort-merge join supports inner joins for all predicate conditions and multiple predicates. Cross joins are not
-  // supported. Semi and anti joins are supported for multiple predicates if the predicate condition is equal. If
-  // the predicate condition is not equals, only single predicates are supported. All other joins are supported if the
-  // predicate condition is not equals.
+  // supported. Semi and anti joins are supported for multiple predicates if the predicate condition is equal. Anti and
+  // semi joins where the predicate condition is not equals, are not supported. The reason is that we do not have a
+  // query at the moment where the predicate is not equals and the implementation would increase the complexity. You
+  // can find an removed implementation for one predicate inside the PR #2367 under the commits e3164e59 and ae491ef5. 
+  // All other joins are supported if the predicate condition is not equals.
   switch (config.join_mode) {
     case JoinMode::Inner:
       return true;
@@ -426,7 +428,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       case PredicateCondition::LessThanEquals:
         throw std::logic_error("Unsupported predicate condition");
       default:
-        throw std::logic_error("Unknown PredicateCondition");
+        throw std::logic_error("Unknown predicate condition");
     }
   }
 
@@ -493,7 +495,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       default:
-        throw std::logic_error("Unknown PredicateCondition");
+        throw std::logic_error("Unknown predicate condition");
     }
   }
 
