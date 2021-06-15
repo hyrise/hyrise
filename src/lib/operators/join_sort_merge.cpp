@@ -43,8 +43,7 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
     case JoinMode::Cross:
       return false;
     case JoinMode::Semi:
-      if ((config.predicate_condition == PredicateCondition::Equals) ||
-          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
       return false;
@@ -432,17 +431,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        // We only get here if the right table has only one value. It must be ensured that the comparative value is not
-        // the same.
-        if (compare_result != CompareResult::Equal) {
-          _emit_left_range_only(cluster_id, left_run);
-        }
-        break;
       case PredicateCondition::GreaterThan:
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
       case PredicateCondition::LessThanEquals:
-        throw std::logic_error("Unsupported PredicateCondition");
+        throw std::logic_error("Unsupported predicate condition");
       default:
         throw std::logic_error("Unknown PredicateCondition");
     }
@@ -845,11 +838,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_rest);
         }
       } else if (_mode == JoinMode::Semi) {
-        if (_primary_predicate_condition == PredicateCondition::NotEquals) {
-          // We only get here if the right table has only one value. Since we know that there is no equal match
-          // to the one value, we can emit the rest of the left ranges.
-          _emit_left_range_only(cluster_id, left_rest);
-        }
+
       } else {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
@@ -1075,13 +1064,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
 
-    auto right_min_value = T{};
-    auto right_max_value = T{};
-
-    if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
-      right_min_value = _table_min_value(_sorted_right_table);
-      right_max_value = _table_max_value(_sorted_right_table);
-    }
     // Parallel join for each cluster
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
@@ -1101,24 +1083,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
 
-      const auto join_cluster_task = [this, cluster_id, right_min_value, right_max_value] {
+      const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
           multi_predicate_join_evaluator.emplace(*_sort_merge_join._left_input->get_output(),
                                                  *_sort_merge_join.right_input()->get_output(), _mode,
                                                  _secondary_join_predicates);
-        }
-        if (_mode == JoinMode::Semi && _primary_predicate_condition == PredicateCondition::NotEquals) {
-          // We need to check if there are at least two values. As a result all left rows will always find at least one
-          // match. Is that the case, we want to emit all rows from the left table with the exception where the value
-          // is NULL. If there is only one value, we need to run the join algorithm and check for equality.
-          if (right_min_value != right_max_value) {
-            for (const auto element : _sorted_left_table[cluster_id]) {
-              _output_pos_lists_left[cluster_id].push_back(element.row_id);
-            }
-            return;
-          }
         }
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
@@ -1175,11 +1146,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
   std::shared_ptr<const Table> _on_execute() override {
     if (_mode == JoinMode::Semi) {
-      if (_primary_predicate_condition == PredicateCondition::NotEquals &&
-          _sort_merge_join.right_input_table()->empty()) {
-        return _sort_merge_join.left_input_table();
-      }
-      if (_primary_predicate_condition == PredicateCondition::Equals && _sort_merge_join.right_input_table()->empty()) {
+      if (_sort_merge_join.right_input_table()->empty()) {
         return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
       }
     }
