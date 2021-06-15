@@ -838,7 +838,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         } else {
           _emit_left_range_only(cluster_id, left_rest);
         }
-      }  else if  (_mode != JoinMode::Semi){
+      } else if (_mode != JoinMode::Semi) {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
@@ -1150,15 +1150,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (_sort_merge_join.right_input_table()->empty()) {
         return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
       }
-    }
-    else if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
+    } else if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
       return _sort_merge_join.left_input_table();
-    }
-    else if (_mode == JoinMode::AntiNullAsTrue) {
+    } else if (_mode == JoinMode::AntiNullAsTrue) {
       if (_sort_merge_join.right_input_table()->empty()) {
         return _sort_merge_join.left_input_table();
-      }
-      else if (_secondary_join_predicates.empty()) {
+      } else if (_secondary_join_predicates.empty()) {
         auto right_side_has_null = _check_if_table_contains_null(*(_sort_merge_join.right_input_table()));
         if (right_side_has_null) {
           return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
