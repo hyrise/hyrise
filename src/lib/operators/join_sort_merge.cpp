@@ -37,7 +37,7 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   // supported. Semi and anti joins are supported for multiple predicates if the predicate condition is equal. Anti and
   // semi joins where the predicate condition is not equals, are not supported. The reason is that we do not have a
   // query at the moment where the predicate is not equals and the implementation would increase the complexity. You
-  // can find an removed implementation for one predicate inside the PR #2367 under the commits e3164e59 and ae491ef5. 
+  // can find an removed implementation for one predicate inside the PR #2367 under the commits e3164e59 and ae491ef5.
   // All other joins are supported if the predicate condition is not equals.
   switch (config.join_mode) {
     case JoinMode::Inner:
@@ -827,7 +827,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_left_range_only(cluster_id, left_rest);
         }
       } else if (_mode == JoinMode::Semi) {
-
       } else {
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
