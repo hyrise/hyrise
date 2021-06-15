@@ -1,15 +1,15 @@
-#include <iostream>
-#include <fstream>
-#include <iterator>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <iterator>
 
-
+#include "../benchmarklib/tpcds/tpcds_table_generator.hpp"
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "synthetic_table_generator.hpp"
-#include "../benchmarklib/tpcds/tpcds_table_generator.hpp"
 #include "types.hpp"
+#include "lossless_cast.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -19,10 +19,55 @@ using namespace opossum;  // NOLINT
 // IDEA: set_intersection can be optimized if jaccard index threshold is not reachable by exiting earlier.
 // IDEA: set_intersection can be optimized if jaccard index threshold is already reached by exiting earlier.
 
+template <typename T>
+bool canBeMerged(const std::shared_ptr<DictionarySegment<T>> segment1,
+                 const std::shared_ptr<DictionarySegment<T>> segment2) {
+  // TODO
+  return true;
+}
+
+/**
+* This will replace the dictionaries inside of the given segments by a shared (merged) dictionary.
+* All attribute vectors in the dictionary segments will be updated to point to the correct values inside the shared dictionary.
+*/
+template <typename T>
+void merge_dictionary_segments(std::vector<std::shared_ptr<DictionarySegment<T>>> segments,
+                               std::vector<T> merged_dictionary) {
+  // create new dictionary segments with shared dictionaries and replace the old ones
+  const auto allocator = PolymorphicAllocator<T>{};
+  auto shared_dictionary =
+      std::make_shared<pmr_vector<T>>(merged_dictionary.cbegin(), merged_dictionary.cend(), allocator);
+  for (auto segment : segments) {
+    auto uncompressed_attribute_vector = pmr_vector<uint32_t>{allocator};
+    const auto old_attribute_vector = segment->attribute_vector();
+    const auto old_attribute_vector_decompressor = old_attribute_vector->create_base_decompressor();
+    const auto old_attribute_vector_size = old_attribute_vector_decompressor->size();
+    uncompressed_attribute_vector.reserve(old_attribute_vector_size);
+
+    for (auto decompressor_index = 0ul; decompressor_index < old_attribute_vector_size; ++decompressor_index) {
+      const auto value_id = old_attribute_vector_decompressor->get(decompressor_index);
+      // TODO: lossless_variant_cast ?
+      const auto search_value = lossless_variant_cast<T>(segment->value_of_value_id(ValueID{value_id}));
+      const auto search_iter = std::lower_bound(merged_dictionary.begin(), merged_dictionary.end(), search_value);
+      const auto found_index = std::distance(merged_dictionary.begin(), search_iter);
+      uncompressed_attribute_vector.emplace_back(found_index);
+    }
+
+    const auto max_value_id = static_cast<uint32_t>(shared_dictionary->size());
+    const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
+        uncompressed_attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {max_value_id}));
+
+    const auto new_dictionary_segment =
+        std::make_shared<DictionarySegment<T>>(shared_dictionary, compressed_attribute_vector);
+    segment = std::move(new_dictionary_segment);
+  }
+}
+
 int main() {
   std::cout << "Playground: Jaccard-Index" << std::endl;
-  
+
   // Generate benchmark data
+  const auto jaccard_index_threshold = 0.95;
   const auto scale_factor = 1u;
   const auto chunk_size = Chunk::DEFAULT_SIZE;
   const auto table_generator = std::make_unique<TPCDSTableGenerator>(scale_factor, chunk_size);
@@ -30,7 +75,7 @@ int main() {
 
   // Create output file
   auto output_file_stream = std::ofstream("jaccard_index_log.txt", std::ofstream::out | std::ofstream::trunc);
-  
+
   // Get tables using storage manager
   const auto& sm = Hyrise::get().storage_manager;
   auto table_names = sm.table_names();
@@ -38,47 +83,90 @@ int main() {
 
   // Calculate jaccard index for each column in each table
   // The jaccard index is calculated between a dictionary segment and its preceding dictionary segment
-  for (const auto table_name : table_names){
-     const auto table = sm.get_table(table_name);
-     const auto column_count = table->column_count();
-     const auto chunk_count = table->chunk_count();
-     
-     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id){
-        const auto column_data_type = table->column_definitions()[column_id].data_type;
-        const auto column_name = table->column_definitions()[column_id].name; 
-        resolve_data_type(column_data_type, [&](const auto type) {
-          using ColumnDataType = typename decltype(type)::type;
+  for (const auto table_name : table_names) {
+    const auto table = sm.get_table(table_name);
+    const auto column_count = table->column_count();
+    const auto chunk_count = table->chunk_count();
 
-          std::shared_ptr<DictionarySegment<ColumnDataType>> dictionary_segment_a = nullptr;
-          std::shared_ptr<DictionarySegment<ColumnDataType>> dictionary_segment_b = nullptr;
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      const auto column_data_type = table->column_definitions()[column_id].data_type;
+      const auto column_name = table->column_definitions()[column_id].name;
+      resolve_data_type(column_data_type, [&](const auto type) {
+        using ColumnDataType = typename decltype(type)::type;
 
-          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-            const auto chunk = table->get_chunk(chunk_id);
-            const auto segment = chunk->get_segment(column_id);
-            dictionary_segment_b = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment);
+        auto current_merged_dictionary = std::vector<ColumnDataType>{};
+        auto dictionary_segments_to_merge = std::vector<std::shared_ptr<DictionarySegment<ColumnDataType>>>{};
+        std::shared_ptr<DictionarySegment<ColumnDataType>> previous_dictionary_segment = nullptr;
+        std::shared_ptr<DictionarySegment<ColumnDataType>> current_dictionary_segment = nullptr;
 
-            if (dictionary_segment_a && dictionary_segment_b){
-              Assert(dictionary_segment_a != dictionary_segment_b, "Comparison of the same segment.");
-              const auto dictionary_a = dictionary_segment_a->dictionary();
-              const auto dictionary_b = dictionary_segment_b->dictionary();
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto chunk = table->get_chunk(chunk_id);
+          const auto segment = chunk->get_segment(column_id);
+          current_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment);
 
-              std::vector<ColumnDataType> v_intersection;
-              std::set_intersection(dictionary_a->begin(), dictionary_a->end(),
-                                    dictionary_b->begin(), dictionary_b->end(),
-                                    std::back_inserter(v_intersection));
+          if (previous_dictionary_segment && current_dictionary_segment) {
+            Assert(previous_dictionary_segment != current_dictionary_segment, "Comparison of the same segment.");
+            const auto previous_dictionary = previous_dictionary_segment->dictionary();
+            const auto current_dictionary = current_dictionary_segment->dictionary();
 
-              const auto intersection_size = v_intersection.size();
-              const auto union_size = dictionary_a->size() + dictionary_b->size() - intersection_size;
-              const auto jaccard_index = intersection_size * 1.0 / union_size; 
-      
-              output_file_stream << "Jaccard index = " << jaccard_index << " (Table=" << table_name << ", Column=" << column_name << ", DataType=" << column_data_type << ", Chunk=" << chunk_id << "\n";
-              std::cout << "Jaccard index = " << jaccard_index << " (Table=" << table_name << ", Column=" << column_name << ", DataType=" << column_data_type << ", Chunk=" << chunk_id << std::endl;
-            } 
+            auto potential_new_merged_dictionary = std::vector<ColumnDataType>{};
+            auto intersection_size = 0ul;
+            auto union_size = 0ul;
+            if (current_merged_dictionary.empty()) {
+              std::set_union(previous_dictionary->begin(), previous_dictionary->end(), current_dictionary->begin(),
+                             current_dictionary->end(), std::back_inserter(potential_new_merged_dictionary));
+              union_size = potential_new_merged_dictionary.size();
+              intersection_size = previous_dictionary->size() + current_dictionary->size() - union_size;
+            } else {
+              std::set_union(current_merged_dictionary.begin(), current_merged_dictionary.end(),
+                             current_dictionary->begin(), current_dictionary->end(),
+                             std::back_inserter(potential_new_merged_dictionary));
+              union_size = potential_new_merged_dictionary.size();
+              intersection_size = current_merged_dictionary.size() + previous_dictionary->size() - union_size;
+            }
 
-            dictionary_segment_a = dictionary_segment_b;
+            const auto jaccard_index = intersection_size * 1.0 / union_size;
+            if (jaccard_index > jaccard_index_threshold) {
+              // add to dictionary sharing queue because dictionarys are similar enough (jaccard index is over threshold)
+              if (current_merged_dictionary.empty()) {
+                dictionary_segments_to_merge.push_back(previous_dictionary_segment);
+              }
+              dictionary_segments_to_merge.push_back(current_dictionary_segment);
+              current_merged_dictionary = potential_new_merged_dictionary;
+            } else {
+              if (!current_merged_dictionary.empty()) {
+                // make enqueued dictionaries shared
+
+                std::cout << "Merging " << dictionary_segments_to_merge.size()
+                          << " segments with dictionary sizes of: " << std::endl;
+                for (const auto segment : dictionary_segments_to_merge) {
+                  std::cout << segment->dictionary()->size() << ", ";
+                }
+                std::cout << std::endl;
+                merge_dictionary_segments<ColumnDataType>(dictionary_segments_to_merge, current_merged_dictionary);
+                std::cout << "Merge completed, new dictionary size: " << std::endl;
+                for (const auto segment : dictionary_segments_to_merge) {
+                  std::cout << segment->dictionary()->size() << ", ";
+                }
+                std::cout << std::endl;
+                // TODO: output dictionary_segments_to_merge
+
+                current_merged_dictionary.clear();
+                dictionary_segments_to_merge.clear();
+              }
+            }
+
+            output_file_stream << "Jaccard index = " << jaccard_index << " (Table=" << table_name
+                               << ", Column=" << column_name << ", DataType=" << column_data_type
+                               << ", Chunk=" << chunk_id << "\n";
+            std::cout << "Jaccard index = " << jaccard_index << " (Table=" << table_name << ", Column=" << column_name
+                      << ", DataType=" << column_data_type << ", Chunk=" << chunk_id << std::endl;
           }
-        });
-     }
+
+          previous_dictionary_segment = current_dictionary_segment;
+        }
+      });
+    }
   }
 
   output_file_stream.close();
