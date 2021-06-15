@@ -37,7 +37,7 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
   // supported. Semi and anti joins are supported for multiple predicates if the predicate condition is equal. Anti and
   // semi joins where the predicate condition is not equals, are not supported. The reason is that we do not have a
   // query at the moment where the predicate is not equals and the implementation would increase the complexity. You
-  // can find an removed implementation for one predicate inside the PR #2367 under the commits e3164e59 and ae491ef5.
+  // can find an removed implementation for one predicate inside the PR #2367 under the commits e3164e5 and ae491ef.
   // All other joins are supported if the predicate condition is not equals.
   switch (config.join_mode) {
     case JoinMode::Inner:
@@ -737,26 +737,26 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // the runs are compared and then we determine if we advanced the right run, left run or both runs. If the comparison
   // result is equal, we advance both runs, if it is less we advance the left one if it is greater we advance the right
   // one (the arrows are representing the runs (entries with the same value) we are currently looking at):
-  //  Compare result equal:   | After advancing run:
+  //  Compare result equal:   | After advancing both runs:
   //         a  | b           |         a  | b
   //       -----|----         |       -----|----
   //     -> [2] | [2] <-      |        [2] | [2]
   //        [3] | [4]         |     -> [3] | [4] <-
   //        [6] | [7]         |        [6] | [7]
   //
-  // Compare result less:     | After advancing run:
+  // Compare result less:     | After advancing left run:
   //        a  | b            |         a  | b
   //        ---|---           |       -----|----
   //    -> [3] | [4] <-       |        [3] | [4] <-
-  //       [6] | [7]          |     -> [6] | [7]
+  //       [6] | [5]          |     -> [6] | [5]
   //       [7] | [9]          |        [7] | [9]
   //
-  // compare result greater:  | After advancing run:
+  // compare result greater:  | After advancing right run:
   //        a  | b            |         a  | b
   //        ---|---           |       -----|----
-  //    -> [6] | [4] <-       |     -> [6] | [3]
-  //       [7] | [7]          |        [7] | [7] <-
-  //       8] | [9]          |         [8] | [9]
+  //    -> [6] | [4] <-       |     -> [6] | [4]
+  //       [7] | [5]          |        [7] | [5] <-
+  //       [8] | [9]          |        [8] | [9]
   // We can than use in every step the comparison information to join the combinations. For example if we have the
   // equal comparison and an equal join, we now that we emit the cross product between the rows from the left and right
   // and run.
