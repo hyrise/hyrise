@@ -733,18 +733,30 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   // This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   // The main logic of the algorithm is the following:
-  // We have for the left and right side a list of runs. There are also pointers that are pointing to the current run
-  // on either side of the lists. The values of the runs are compared and then we determine which pointer will be
-  // advanced. If the comparison result is equal we advance both pointers, if it is less we advance the left one if it
-  // greater we advance the right one:
-  //          Equal      |            Less      |         Greater
-  // (1) -> [2] | [2] <- |  (1) -> [3] | [4] <- | (1) -> [6] | [4] <-
-  //        [3] | [4]    |         [6] | [7]    |        [7] | [7]
-  //        [6] | [7]    |         [7] | [9]    |        [8] | [9]
-  // ------------------- | -------------------- | --------------------
-  // (2)    [2] | [2]    |  (2)   [3] | [4] <-  | (2) -> [6] | [3]
-  //     -> [3] | [4] <- |     -> [6] | [7]     |        [7] | [7] <-
-  //        [6] | [7]    |        [7] | [9]     |        [8] | [9]
+  // The values of the left and right join columns are grouped into runs (entries with the same value). The values of
+  // the runs are compared and then we determine if we advanced the right run, left run or both runs. If the comparison
+  // result is equal, we advance both runs, if it is less we advance the left one if it is greater we advance the right
+  // one (the arrows are representing the runs (entries with the same value) we are currently looking at):
+  //  Compare result equal:   | After advancing run:
+  //         a  | b           |         a  | b
+  //       -----|----         |       -----|----
+  //     -> [2] | [2] <-      |        [2] | [2]
+  //        [3] | [4]         |     -> [3] | [4] <-
+  //        [6] | [7]         |        [6] | [7]
+  //
+  // Compare result less:     | After advancing run:
+  //        a  | b            |         a  | b
+  //        ---|---           |       -----|----
+  //    -> [3] | [4] <-       |        [3] | [4] <-
+  //       [6] | [7]          |     -> [6] | [7]
+  //       [7] | [9]          |        [7] | [9]
+  //
+  // compare result greater:  | After advancing run:
+  //        a  | b            |         a  | b
+  //        ---|---           |       -----|----
+  //    -> [6] | [4] <-       |     -> [6] | [3]
+  //       [7] | [7]          |        [7] | [7] <-
+  //       8] | [9]          |         [8] | [9]
   // We can than use in every step the comparison information to join the combinations. For example if we have the
   // equal comparison and an equal join, we now that we emit the cross product between the rows from the left and right
   // and run.
