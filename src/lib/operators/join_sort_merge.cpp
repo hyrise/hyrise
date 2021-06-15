@@ -48,14 +48,12 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
       }
       return false;
     case JoinMode::AntiNullAsTrue:
-      if ((config.predicate_condition == PredicateCondition::Equals) ||
-          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
       return false;
     case JoinMode::AntiNullAsFalse:
-      if ((config.predicate_condition == PredicateCondition::Equals) ||
-          (config.predicate_condition == PredicateCondition::NotEquals && !config.secondary_predicates)) {
+      if (config.predicate_condition == PredicateCondition::Equals) {
         return true;
       }
       return false;
@@ -359,11 +357,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        // In the case of Anti not equals we only want to emit the rows where we know there is no equal match.
-        if (compare_result == CompareResult::Equal) {
-          _emit_left_range_only(cluster_id, left_run);
-        }
-        break;
       case PredicateCondition::GreaterThan:
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
@@ -399,10 +392,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Equal) {
-          _emit_left_range_only(cluster_id, left_run);
-        }
-        break;
       case PredicateCondition::GreaterThan:
       case PredicateCondition::GreaterThanEquals:
       case PredicateCondition::LessThan:
@@ -824,13 +813,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
 
     if (left_run_start < left_size) {
-      if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::Equals) {
-        // If the predicate condition is not equal, we do not need to emit anything since there are no equal matches
-        // in the last left runs. If the predicate condition is equal we know that there are no matches for the rest of
-        // the left runs. Through the radix clustering we know that there can also be no match inside the other
-        // clusters, because if there would be it would be in this cluster.
+      if (_mode == JoinMode::AntiNullAsFalse) {
+        // We know that there are no matches for the rest of  the left runs. Through the radix clustering we know that
+        // here can also be no match inside the other clusters, because if there would be it would be in this cluster.
         _emit_left_range_only(cluster_id, left_rest);
-      } else if (_mode == JoinMode::AntiNullAsTrue && _primary_predicate_condition == PredicateCondition::Equals) {
+      } else if (_mode == JoinMode::AntiNullAsTrue) {
         if (multi_predicate_join_evaluator) {
           _emit_multipredicate_anti_null_as_true(cluster_id, left_rest, right_rest, false,
                                                  *multi_predicate_join_evaluator);
@@ -1165,13 +1152,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    auto sort_clusters = true;
+    auto sort_clusters = _primary_predicate_condition != PredicateCondition::Equals;
     if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
-      // Since the not equal anti join does not support multiple predicates we are only interested in equal values. For
-      // that, we do not need to sort the tables.
-      sort_clusters = _primary_predicate_condition != PredicateCondition::NotEquals;
-    } else {
-      sort_clusters = _primary_predicate_condition != PredicateCondition::Equals;
+      // We always need to sort the table for the equal Anti case. Because we are interested in values that do not have
+      // a match.
+      sort_clusters = true;
     }
 
     const auto include_null_left =
@@ -1194,14 +1179,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer;
 
-    if (_mode == JoinMode::AntiNullAsFalse && _primary_predicate_condition == PredicateCondition::NotEquals &&
-        !_null_rows_right.empty()) {
-      // We only want to emit the rows where the value is NULL.
-      _output_pos_lists_left[0] = RowIDPosList{};
-      _output_pos_lists_right[0] = RowIDPosList{};
-    } else {
-      _perform_join();
-    }
+    _perform_join();
 
     if (_mode == JoinMode::AntiNullAsFalse) {
       include_null_right = false;
