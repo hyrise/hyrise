@@ -45,9 +45,11 @@ void merge_dictionary_segments(std::vector<std::shared_ptr<DictionarySegment<T>>
     uncompressed_attribute_vector.reserve(old_attribute_vector_size);
 
     for (auto decompressor_index = 0ul; decompressor_index < old_attribute_vector_size; ++decompressor_index) {
+      // TODO(hig): Ask how to get all value ids from dictionary segment
       const auto value_id = old_attribute_vector_decompressor->get(decompressor_index);
-      // TODO: lossless_variant_cast ?
-      const auto search_value = lossless_variant_cast<T>(segment->value_of_value_id(ValueID{value_id}));
+      const auto search_value_variant = segment->value_of_value_id(ValueID{value_id});
+      // TODO(hig): Ask how to convert AllTypeVariant to typed value
+      const auto search_value = boost::get<T>(search_value_variant);
       const auto search_iter = std::lower_bound(merged_dictionary.begin(), merged_dictionary.end(), search_value);
       const auto found_index = std::distance(merged_dictionary.begin(), search_iter);
       uncompressed_attribute_vector.emplace_back(found_index);
@@ -59,6 +61,8 @@ void merge_dictionary_segments(std::vector<std::shared_ptr<DictionarySegment<T>>
 
     const auto new_dictionary_segment =
         std::make_shared<DictionarySegment<T>>(shared_dictionary, compressed_attribute_vector);
+
+    // TODO(hig): Ask how to replace dictionary segment
     segment = std::move(new_dictionary_segment);
   }
 }
@@ -126,15 +130,18 @@ int main() {
             }
 
             const auto jaccard_index = intersection_size * 1.0 / union_size;
-            if (jaccard_index > jaccard_index_threshold) {
+            if (jaccard_index >= jaccard_index_threshold) {
               // add to dictionary sharing queue because dictionarys are similar enough (jaccard index is over threshold)
               if (current_merged_dictionary.empty()) {
                 dictionary_segments_to_merge.push_back(previous_dictionary_segment);
               }
               dictionary_segments_to_merge.push_back(current_dictionary_segment);
               current_merged_dictionary = potential_new_merged_dictionary;
-            } else {
-              if (!current_merged_dictionary.empty()) {
+            }
+            
+            bool is_last_chunk = chunk_id == chunk_count - 1;
+            if (jaccard_index < jaccard_index_threshold || is_last_chunk) {
+              if (!dictionary_segments_to_merge.empty()) {
                 // make enqueued dictionaries shared
 
                 std::cout << "Merging " << dictionary_segments_to_merge.size()
@@ -151,9 +158,9 @@ int main() {
                 std::cout << std::endl;
                 // TODO: output dictionary_segments_to_merge
 
-                current_merged_dictionary.clear();
                 dictionary_segments_to_merge.clear();
               }
+              current_merged_dictionary.clear();
             }
 
             output_file_stream << "Jaccard index = " << jaccard_index << " (Table=" << table_name
