@@ -838,8 +838,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         } else {
           _emit_left_range_only(cluster_id, left_rest);
         }
-      } else if (_mode == JoinMode::Semi) {
-      } else {
+      }  else if  (_mode != JoinMode::Semi){
         _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
       }
     } else if (right_run_start < right_size) {
@@ -1124,6 +1123,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   bool _check_if_table_contains_null(const Table& table) {
     const auto& table_column_definition =
         table.column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
+    // If the column is not nullable, it means that there can't be a null value inside the column. As a result we don't
+    // need to look for one.
     if (!table_column_definition.nullable) return false;
 
     const auto chunk_count = table.chunk_count();
@@ -1150,14 +1151,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
       }
     }
-    if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
+    else if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
       return _sort_merge_join.left_input_table();
     }
-    if (_mode == JoinMode::AntiNullAsTrue) {
+    else if (_mode == JoinMode::AntiNullAsTrue) {
       if (_sort_merge_join.right_input_table()->empty()) {
         return _sort_merge_join.left_input_table();
       }
-      if (_secondary_join_predicates.empty()) {
+      else if (_secondary_join_predicates.empty()) {
         auto right_side_has_null = _check_if_table_contains_null(*(_sort_merge_join.right_input_table()));
         if (right_side_has_null) {
           return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
