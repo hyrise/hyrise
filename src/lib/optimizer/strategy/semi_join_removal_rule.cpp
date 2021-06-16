@@ -37,7 +37,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   visit_lqp(root, [&](const auto& node) {
     // Check if the current node is a semi join (not necessarily a reduction)
     if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
-    const auto& join_node = static_cast<const JoinNode&>(*node);
+    const auto& join_node = static_cast<const JoinNode&>(*node); // todo(julian) rename semi_join_node
     if (join_node.join_mode != JoinMode::Semi) return LQPVisitation::VisitInputs;
     if (join_node.join_predicates().size() > 1) return LQPVisitation::VisitInputs;
     const auto semi_join_predicate = join_node.join_predicates().at(0);
@@ -96,9 +96,13 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       // Remove the semi join reduction if it does not help in properly reducing the cardinality of the original join's
       // input
+      std::cout << "join_input_cardinality: " << join_input_cardinality << std::endl;
+      std::cout << "semi_join_output_cardinality: " << semi_join_output_cardinality << std::endl;
       if (join_input_cardinality / semi_join_output_cardinality > MINIMUM_SELECTIVITY) {
+        std::cout << "removal candidate: " << join_input_cardinality / semi_join_output_cardinality << std::endl;
         removal_candidates.emplace(node);
       } else {
+        std::cout << "removal blocker: " << join_input_cardinality / semi_join_output_cardinality << std::endl;
         removal_blockers.emplace(node);
       }
 
