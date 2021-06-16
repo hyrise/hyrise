@@ -44,18 +44,22 @@ void merge_dictionary_segments(std::vector<std::shared_ptr<DictionarySegment<T>>
     const auto old_attribute_vector_size = old_attribute_vector_decompressor->size();
     uncompressed_attribute_vector.reserve(old_attribute_vector_size);
 
-    for (auto decompressor_index = 0ul; decompressor_index < old_attribute_vector_size; ++decompressor_index) {
-      // TODO(hig): Ask how to get all value ids from dictionary segment
-      const auto value_id = old_attribute_vector_decompressor->get(decompressor_index);
-      const auto search_value_variant = segment->value_of_value_id(ValueID{value_id});
-      // TODO(hig): Ask how to convert AllTypeVariant to typed value
-      const auto search_value = boost::get<T>(search_value_variant);
-      const auto search_iter = std::lower_bound(merged_dictionary.begin(), merged_dictionary.end(), search_value);
-      const auto found_index = std::distance(merged_dictionary.begin(), search_iter);
-      uncompressed_attribute_vector.emplace_back(found_index);
+    const auto max_value_id = static_cast<uint32_t>(shared_dictionary->size());
+    const auto chunk_size = segment->size();
+    for (auto chunk_index = ChunkOffset{0}; chunk_index < chunk_size; ++chunk_index) {
+      const auto search_value_opt = segment->get_typed_value(chunk_index);
+      if (search_value_opt){
+        const auto search_iter = std::lower_bound(merged_dictionary.cbegin(), merged_dictionary.cend(), search_value_opt.value());
+        DebugAssert(search_iter != merged_dictionary.end(), "Merged dictionary does not contain value.");
+        const auto found_index = std::distance(merged_dictionary.cbegin(), search_iter);
+        uncompressed_attribute_vector.emplace_back(found_index);
+      }
+      else{
+        // Assume that search value is NULL
+        uncompressed_attribute_vector.emplace_back(max_value_id);
+      }
     }
 
-    const auto max_value_id = static_cast<uint32_t>(shared_dictionary->size());
     const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
         uncompressed_attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {max_value_id}));
 
@@ -109,7 +113,7 @@ int main() {
           current_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment);
 
           if (previous_dictionary_segment && current_dictionary_segment) {
-            Assert(previous_dictionary_segment != current_dictionary_segment, "Comparison of the same segment.");
+            DebugAssert(previous_dictionary_segment != current_dictionary_segment, "Comparison of the same segment.");
             const auto previous_dictionary = previous_dictionary_segment->dictionary();
             const auto current_dictionary = current_dictionary_segment->dictionary();
 
@@ -117,13 +121,13 @@ int main() {
             auto intersection_size = 0ul;
             auto union_size = 0ul;
             if (current_merged_dictionary.empty()) {
-              std::set_union(previous_dictionary->begin(), previous_dictionary->end(), current_dictionary->begin(),
-                             current_dictionary->end(), std::back_inserter(potential_new_merged_dictionary));
+              std::set_union(previous_dictionary->cbegin(), previous_dictionary->cend(), current_dictionary->cbegin(),
+                             current_dictionary->cend(), std::back_inserter(potential_new_merged_dictionary));
               union_size = potential_new_merged_dictionary.size();
               intersection_size = previous_dictionary->size() + current_dictionary->size() - union_size;
             } else {
-              std::set_union(current_merged_dictionary.begin(), current_merged_dictionary.end(),
-                             current_dictionary->begin(), current_dictionary->end(),
+              std::set_union(current_merged_dictionary.cbegin(), current_merged_dictionary.cend(),
+                             current_dictionary->cbegin(), current_dictionary->cend(),
                              std::back_inserter(potential_new_merged_dictionary));
               union_size = potential_new_merged_dictionary.size();
               intersection_size = current_merged_dictionary.size() + previous_dictionary->size() - union_size;
