@@ -28,6 +28,7 @@ PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table
             _map[position.value()] = std::vector<RowID>();  // ToDo(pi) size
           }
           _map[position.value()].push_back(row_id);
+          _row_ids.push_back(row_id);
         }
       });
       _indexed_segments.push_back(indexed_segment);
@@ -42,11 +43,11 @@ PartialHashIndex::Iterator PartialHashIndex::equal(const std::vector<AllTypeVari
   return cbegin();
 }
 PartialHashIndex::Iterator PartialHashIndex::_cbegin() const {
-  return null_cbegin();
+  return _row_ids.begin();
 }
 
 PartialHashIndex::Iterator PartialHashIndex::_cend() const {
-  return null_cend();
+  return _row_ids.end();
 }
 
 std::vector<std::shared_ptr<const AbstractSegment>> PartialHashIndex::_get_indexed_segments() const {

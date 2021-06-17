@@ -114,10 +114,16 @@ TEST_F(PartialHashIndexTest, Values) {
   auto begin = index->cbegin();
   auto end = index->cend();
 
-  EXPECT_EQ(end - begin, 10);
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{0}}));
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{1}}));
-  //EXPECT_EQ(begin, end);
+  EXPECT_EQ(end - begin, 14);
+  for(uint32_t chunk_id = 0; chunk_id < 2;chunk_id++) {
+    for (uint32_t chunk_offset = 0; chunk_offset < 8; chunk_offset++) {
+      if((chunk_id == 0 && chunk_offset == 2) || (chunk_id == 1 && chunk_offset == 4)){
+        continue;
+      }
+      EXPECT_EQ(*(begin++), (RowID{ChunkID{chunk_id}, ChunkOffset{chunk_offset}}));
+    }
+  }
+  EXPECT_EQ(begin, end);
 }
 
 /*TEST_F(PartialHashIndexTest, IndexProbes) {

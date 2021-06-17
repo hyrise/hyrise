@@ -35,6 +35,7 @@ class PartialHashIndex : public AbstractIndex<RowID> {
 
  private:
   tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map;
+  std::vector<RowID> _row_ids;
   std::vector<std::shared_ptr<const AbstractSegment>> _indexed_segments;
 };
 
