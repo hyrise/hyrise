@@ -33,11 +33,12 @@ class AbstractSegment;
  *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 
+template <typename PositionEntry>
 class AbstractIndex : private Noncopyable {
 
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
-  using Iterator = std::vector<ChunkOffset>::const_iterator;
+  using Iterator = typename std::vector<PositionEntry>::const_iterator;
 
   /**
    * Predicts the memory consumption in bytes of creating an index with the specific index implementation <type>
@@ -59,7 +60,7 @@ class AbstractIndex : private Noncopyable {
    */
 
   AbstractIndex() = delete;
-  explicit AbstractIndex(const SegmentIndexType type);
+  explicit AbstractIndex(const SegmentIndexType type) : _type{type} {}
   AbstractIndex(AbstractIndex&&) = default;
   virtual ~AbstractIndex() = default;
 
@@ -73,7 +74,16 @@ class AbstractIndex : private Noncopyable {
    * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
+  bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
+    auto indexed_segments = _get_indexed_segments();
+    if (segments.size() > indexed_segments.size()) return false;
+    if (segments.empty()) return false;
+
+    for (size_t i = 0; i < segments.size(); ++i) {
+      if (segments[i] != indexed_segments[i]) return false;
+    }
+    return true;
+  }
 
   /**
    * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
@@ -82,7 +92,7 @@ class AbstractIndex : private Noncopyable {
    * Calls _cbegin() of the most derived class.
    * @return An Iterator on the position of first non-NULL element of the Index.
    */
-  Iterator cbegin() const;
+  Iterator cbegin() const { return _cbegin(); }
 
   /**
    * Returns an Iterator past the position of the largest indexed non-NULL element. This is useful for open
@@ -91,7 +101,7 @@ class AbstractIndex : private Noncopyable {
    * Calls _cend() of the most derived class.
    * @return An Iterator on the end of the non-NULL elements (one after the last element).
    */
-  Iterator cend() const;
+  Iterator cend() const { return _cend(); }
 
   /**
    * Returns an Iterator to the first NULL.
@@ -101,7 +111,7 @@ class AbstractIndex : private Noncopyable {
    *
    * @return An Iterator on the position of the first NULL.
    */
-  Iterator null_cbegin() const;
+  Iterator null_cbegin() const { return _null_positions.cbegin(); }
 
   /**
    * Returns an Iterator past the position of the last NULL.
@@ -111,14 +121,21 @@ class AbstractIndex : private Noncopyable {
    *
    * @return An Iterator on the end of the NULLs (one after the last NULL).
    */
-  Iterator null_cend() const;
+  Iterator null_cend() const { return _null_positions.cend(); }
 
-  SegmentIndexType type() const;
+  SegmentIndexType type() const { return _type; }
 
   /**
    * Returns the memory consumption of this Index in bytes
    */
-  size_t memory_consumption() const;
+  size_t memory_consumption() const {
+    size_t bytes{0u};
+    bytes += _memory_consumption();
+    bytes += sizeof(std::vector<ChunkOffset>);  // _null_positions
+    bytes += sizeof(ChunkOffset) * _null_positions.capacity();
+    bytes += sizeof(_type);
+    return bytes;
+  }
 
  protected:
   /**
@@ -129,7 +146,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
-  std::vector<ChunkOffset> _null_positions;
+  std::vector<PositionEntry> _null_positions;
 
  private:
   const SegmentIndexType _type;

@@ -8,11 +8,11 @@ namespace opossum {
 
 class PartialHashIndexTest;
 
-class PartialHashIndex : public AbstractIndex {
+class PartialHashIndex : public AbstractIndex<RowID> {
   friend PartialHashIndexTest;
 
  public:
-  using Iterator = std::vector<ChunkOffset>::const_iterator;
+  using Iterator = std::vector<RowID>::const_iterator;
 
   /**
  * Predicts the memory consumption in bytes of creating this index.
@@ -25,7 +25,7 @@ class PartialHashIndex : public AbstractIndex {
   PartialHashIndex() = delete;
   PartialHashIndex(const std::shared_ptr<Table>, const std::vector<ChunkID>&, const ColumnID);
 
-  Iterator equal(const AllTypeVariant& value) const;
+  Iterator equal(const std::vector<AllTypeVariant>& values) const;
 
  protected:
   Iterator _cbegin() const override;
@@ -34,7 +34,7 @@ class PartialHashIndex : public AbstractIndex {
   size_t _memory_consumption() const override;
 
  private:
-  tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map; // ToDo(pi) change alloator
+  tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map;
   std::vector<std::shared_ptr<const AbstractSegment>> _indexed_segments;
 };
 

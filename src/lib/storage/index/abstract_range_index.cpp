@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-AbstractRangeIndex::AbstractRangeIndex(const SegmentIndexType type) : AbstractIndex(type) {}
+AbstractRangeIndex::AbstractRangeIndex(const SegmentIndexType type) : AbstractIndex<ChunkOffset>(type) {}
 
 AbstractRangeIndex::Iterator AbstractRangeIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(

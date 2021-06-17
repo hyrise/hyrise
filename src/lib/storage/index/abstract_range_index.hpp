@@ -34,7 +34,8 @@ class AbstractSegment;
  *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 
-class AbstractRangeIndex : public AbstractIndex {
+//ToDo(pi) rename ordered
+class AbstractRangeIndex : public AbstractIndex<ChunkOffset> {
   friend class GroupKeyIndexTest;
 
  public:
