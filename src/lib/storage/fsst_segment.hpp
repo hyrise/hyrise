@@ -21,7 +21,7 @@ template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
   //  explicit FSSTSegment();     // TODO: remove
-  FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null_values);
+  FSSTSegment(pmr_vector<pmr_string> &values, std::optional<pmr_vector<bool>> null_values);
 
   /**
    * @defgroup AbstractSegment interface
@@ -51,7 +51,7 @@ class FSSTSegment : public AbstractEncodedSegment {
   /**@}*/
 
  private:
-  pmr_vector<bool> _null_values;
+  std::optional<pmr_vector<bool>> _null_values;
   std::vector<unsigned char> _compressed_values;
   std::vector<unsigned long> _compressed_value_lengths;
   std::vector<unsigned char*> _compressed_value_pointers;

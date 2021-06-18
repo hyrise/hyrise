@@ -26,6 +26,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
                                                      const PolymorphicAllocator<T>& allocator) {
     auto values = pmr_vector<T>{allocator};
     auto null_values = pmr_vector<bool>{allocator};
+    bool has_null_values = false;
 
     segment_iterable.with_iterators([&](auto it, auto end) {
       // Early out for empty segments, code below assumes it to be non-empty
@@ -49,8 +50,12 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
         current_value = segment_value.value();
         is_current_null = segment_value.is_null();
-
-        values.emplace_back(current_value);  // TODO (anyone): check if we can save null values
+        if (is_current_null) {
+          values.emplace_back("");
+          has_null_values = true;
+        } else {
+          values.emplace_back(current_value);
+        }
         null_values.emplace_back(is_current_null);
       }
     });
@@ -59,9 +64,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     values.shrink_to_fit();
     null_values.shrink_to_fit();
 
-    return std::make_shared<FSSTSegment<T>>(std::move(values), std::move(null_values));
+    if (has_null_values) {
+      return std::make_shared<FSSTSegment<T>>(values, std::make_optional(null_values));
+    } else {
+      return std::make_shared<FSSTSegment<T>>(values, std::nullopt);
+    }
+
     //TODO (anyone): add parameters to create empty Segment
-    //    return nullptr;
   }
 
   //  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,

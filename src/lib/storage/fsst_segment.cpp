@@ -14,8 +14,8 @@
 namespace opossum {
 
 template <typename T>
-FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null_values)
-    : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{std::move(null_values)} {
+FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
+    : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
   // TODO (anyone): handle null values
 
   // our temporary data structure keeping char pointer and their length
@@ -42,7 +42,6 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null
 
   fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
                 _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
-
 
   _decoder = fsst_decoder(_encoder);
   // TODO (anyone): shrink the size of _compressed_values
@@ -85,11 +84,16 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
 template <typename T>
 std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-   // TODO (anyone): Don't create on every function call
-
-  size_t output_size = _compressed_value_lengths[chunk_offset] * 8;
+  if (_null_values) {
+    if (_null_values.value()[chunk_offset]) {
+      return std::nullopt;
+    }
+  }
+  size_t output_size = _compressed_value_lengths[chunk_offset] * 8;  // TODO (anyone): is this correct?
   std::vector<unsigned char> output_buffer(output_size);
-  size_t output_size_after_decompression = fsst_decompress(&_decoder, _compressed_value_lengths[chunk_offset], _compressed_value_pointers[chunk_offset], output_size, output_buffer.data());
+  size_t output_size_after_decompression =
+      fsst_decompress(&_decoder, _compressed_value_lengths[chunk_offset], _compressed_value_pointers[chunk_offset],
+                      output_size, output_buffer.data());
   output_buffer.resize(output_size_after_decompression);
 
   pmr_string output{output_buffer.begin(), output_buffer.end()};
@@ -99,8 +103,8 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 template <typename T>
 ChunkOffset FSSTSegment<T>::size() const {
   // TODO add real values
-  return ChunkOffset{_compressed_value_pointers.size()};
-//  return static_cast<ChunkOffset>(0);
+  return static_cast<ChunkOffset>(_compressed_value_pointers.size());
+  //  return static_cast<ChunkOffset>(0);
 }
 
 template <typename T>
