@@ -82,6 +82,9 @@ add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
 
+## Build fsst
+set_property(TARGET fsst PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
 
