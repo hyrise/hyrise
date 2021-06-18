@@ -57,11 +57,13 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::vector<unsigned char*> _compressed_value_pointers;
 
   fsst_encoder_t* _encoder;
+  fsst_decoder_t _decoder;
 };
 
 template <>
 std::optional<CompressedVectorType> FSSTSegment<pmr_string>::compressed_vector_type() const;
 
-EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);
+//EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);
+extern template class FSSTSegment<pmr_string>;
 
 }  // namespace opossum

@@ -13,6 +13,8 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
+#include <iostream>
+
 namespace opossum {
 
 class StorageFSSTSegmentTest : public BaseTest {
@@ -35,6 +37,16 @@ TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
   pmr_vector<bool> null_values = {false};
   FSSTSegment<pmr_string> segment(values, null_values);
+}
+
+TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
+  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
+  pmr_vector<bool> null_values = {false};
+  FSSTSegment<pmr_string> segment(values, null_values);
+
+  std::optional<pmr_string> value = segment.get_typed_value(ChunkOffset{2});
+  std::cout << value.value() << std::endl;
+  ASSERT_EQ(values[2], value.value());
 }
 
 }  // namespace opossum
