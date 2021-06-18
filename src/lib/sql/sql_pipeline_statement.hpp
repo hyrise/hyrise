@@ -138,7 +138,10 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
   std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
   std::shared_ptr<AbstractOperator> _physical_plan;
+
+  std::shared_ptr<OperatorTask> _root_operator_task;
   std::vector<std::shared_ptr<AbstractTask>> _tasks;
+
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};

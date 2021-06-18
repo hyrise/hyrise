@@ -7,18 +7,18 @@
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
+class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
  public:
-  explicit FixedSizeByteAlignedDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
-  FixedSizeByteAlignedDecompressor(const FixedSizeByteAlignedDecompressor&) = default;
-  FixedSizeByteAlignedDecompressor(FixedSizeByteAlignedDecompressor&&) = default;
+  explicit FixedWidthIntegerDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
+  FixedWidthIntegerDecompressor(const FixedWidthIntegerDecompressor&) = default;
+  FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
 
-  FixedSizeByteAlignedDecompressor& operator=(const FixedSizeByteAlignedDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+  FixedWidthIntegerDecompressor& operator=(const FixedWidthIntegerDecompressor& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;
   }
-  FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+  FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;
   }
 

@@ -4,7 +4,7 @@
 #include <string>
 #include <type_traits>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "resolve_type.hpp"
 
@@ -24,17 +24,17 @@ PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id
   DebugAssert(*optional_data_type != DataType::Null, "Typed Placeholder should not be DataType::Null");
 }
 
-std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   if (optional_data_type) {
     return std::make_shared<PlaceholderExpression>(parameter_id, *optional_data_type);
-  } else {
-    return std::make_shared<PlaceholderExpression>(parameter_id);
   }
+  return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
 std::string PlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "Placeholder[id=" << std::to_string(parameter_id) << "]";
+  stream << "Placeholder[ParameterID=" << std::to_string(parameter_id) << "]";
   return stream.str();
 }
 

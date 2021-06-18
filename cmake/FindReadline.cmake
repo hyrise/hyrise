@@ -4,10 +4,10 @@
 #  READLINE_LIBRARY     : Library path of readline library
 #  READLINE_FOUND       : True if found.
 FIND_PATH(READLINE_INCLUDE_DIR NAME readline/readline.h
-    HINTS /usr/local/opt/readline/include/ $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
+    HINTS /usr/local/opt/readline/include/ /opt/homebrew/opt/readline/include/ $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
 
 FIND_LIBRARY(READLINE_LIBRARY NAME readline
-    HINTS /usr/local/opt/readline/lib/ $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib
+    HINTS /usr/local/opt/readline/lib/ /opt/homebrew/opt/readline/lib/ $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib
     )
 
 IF (READLINE_INCLUDE_DIR AND READLINE_LIBRARY)

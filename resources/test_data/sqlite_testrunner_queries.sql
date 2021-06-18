@@ -8,7 +8,7 @@ SELECT * FROM mixed_null;
 
 -- No FROM clause
 SELECT 1;
-SELECT -1;
+SELECT -1 AS negative;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
 SELECT 22 / 5 AS col;
 
@@ -32,7 +32,7 @@ SELECT * FROM mixed WHERE b + c < c * b - 100;
 SELECT * FROM mixed WHERE id > b;
 SELECT * FROM mixed WHERE id = b;
 SELECT * FROM mixed WHERE id IN (SELECT 14) AND b > (SELECT 15) AND b < (SELECT 98);
-SELECT * FROM mixed WHERE id IN (SELECT 14 + 1) AND b > (SELECT 15 + 2) AND b < (SELECT 98 + 3)
+SELECT * FROM mixed WHERE id IN (SELECT 14 + 1) AND b > (SELECT 15 + 2) AND b < (SELECT 98 + 3);
 SELECT * FROM mixed WHERE id >= 5.5;
 SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
 SELECT * FROM mixed WHERE id < 5.5;

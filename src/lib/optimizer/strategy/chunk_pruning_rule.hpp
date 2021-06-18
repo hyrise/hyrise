@@ -22,9 +22,9 @@ class Table;
 using PredicateChain = std::vector<std::shared_ptr<AbstractExpression>>;
 
 /**
- * This rule determines which chunks can be pruned from table scans based on
- * the predicates present in the LQP and stores that information in the stored
- * table nodes.
+ * For a given LQP, this rule determines the set of chunks that can be pruned from a table.
+ * To calculate the sets of pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP.
+ * The resulting pruning information is stored inside the StoredTableNode objects.
  */
 class ChunkPruningRule : public AbstractRule {
  public:
@@ -33,19 +33,34 @@ class ChunkPruningRule : public AbstractRule {
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
-  static std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
-                                                 const std::shared_ptr<StoredTableNode>& stored_table_node);
+  using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
+
+  static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
+      const std::shared_ptr<StoredTableNode>& stored_table_node);
+
+  std::set<ChunkID> _compute_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
+                                          const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
   static bool _can_prune(const BaseAttributeStatistics& base_segment_statistics,
                          const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                          const std::optional<AllTypeVariant>& variant_value2);
 
-  static bool _is_non_filtering_node(const AbstractLQPNode& node);
-
   static std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                                   OperatorScanPredicate predicate,
                                                                   size_t num_rows_pruned);
+
+  static std::set<ChunkID> _intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
+
+ private:
+  /**
+   * Caches intermediate results.
+   * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
+   */
+  using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;
+  mutable std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+                             boost::hash<StoredTableNodePredicateNodePair>>
+      _excluded_chunk_ids_by_predicate_node_cache;
 };
 
 }  // namespace opossum

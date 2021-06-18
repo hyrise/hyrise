@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <memory>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
@@ -246,8 +247,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
-    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan());
-    _tasks = std::vector<std::shared_ptr<AbstractTask>>(operator_tasks.cbegin(), operator_tasks.cend());
+    std::tie(_tasks, _root_operator_task) = OperatorTask::make_tasks_from_operator(get_physical_plan());
   }
   return _tasks;
 }
@@ -326,9 +326,22 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
-  // Get output from the last task if the task was an actual operator and not a transaction statement
+  // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
-    _result_table = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
+    // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
+    // other operators should be in OperatorState::ExecutedAndCleared.
+    Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
+           "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
+    if constexpr (HYRISE_DEBUG) {
+      for (const auto& task : tasks) {
+        const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
+        if (operator_task == _root_operator_task) continue;
+        Assert(operator_task->get_operator()->state() == OperatorState::ExecutedAndCleared,
+               "Expected non-root operator to be in OperatorState::ExecutedAndCleared.");
+      }
+    }
+    _result_table = _root_operator_task->get_operator()->get_output();
+    _root_operator_task->get_operator()->clear_output();
   }
 
   if (!_result_table) _query_has_output = false;

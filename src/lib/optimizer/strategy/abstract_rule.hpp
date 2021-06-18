@@ -49,18 +49,14 @@ class AbstractRule {
  protected:
   /**
    * This function applies the concrete rule to the given plan, but not to its subquery plans.
-   * To traverse LQPs, use the visit_lqp function. Do not call this function recursively.
+   *
+   * DO NOT CALL THIS FUNCTION RECURSIVELY!
+   *  The reason for this can be found in diamond LQPs: When using "trivial" recursion, we would go down both on the
+   *  left and the right side of the diamond. On both sides, we would reach the bottom of the diamond. From there, we
+   *  would look at each node twice. visit_lqp prevents this by tracking which nodes have already been visited and
+   *  avoiding visiting a node twice.
    */
   virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
-
-  /**
-   * LEGACY FUNCTION (see #2276): Use visit_lqp for LQP traversal instead.
-   *
-   * Calls _apply_to_plan_without_subqueries() for each input of @param node.
-   * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
-   * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
-   */
-  void _apply_to_plan_inputs_without_subqueries(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
 };
 
 }  // namespace opossum

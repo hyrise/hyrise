@@ -401,19 +401,6 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
 
-TEST_F(SQLPipelineTest, CleanupWithScheduler) {
-  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
-
-  Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  sql_pipeline.get_result_table();
-
-  for (auto task_it = sql_pipeline.get_tasks()[0].cbegin(); task_it != sql_pipeline.get_tasks()[0].cend() - 1;
-       ++task_it) {
-    EXPECT_EQ(std::dynamic_pointer_cast<OperatorTask>(*task_it)->get_operator()->get_output(), nullptr);
-  }
-}
-
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
   auto sql = "SELECT a + not_a_column FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();

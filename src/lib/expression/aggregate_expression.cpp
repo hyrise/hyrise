@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
@@ -21,8 +21,9 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
 }
 
-std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
+std::shared_ptr<AbstractExpression> AggregateExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy(copied_ops));
 }
 
 std::string AggregateExpression::description(const DescriptionMode mode) const {

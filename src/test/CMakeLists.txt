@@ -99,6 +99,7 @@ set(
     lib/operators/maintenance/create_view_test.cpp
     lib/operators/maintenance/drop_table_test.cpp
     lib/operators/maintenance/drop_view_test.cpp
+    lib/operators/operator_clear_output_test.cpp
     lib/operators/operator_deep_copy_test.cpp
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
@@ -202,7 +203,6 @@ set(
     lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
-    lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp

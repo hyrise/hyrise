@@ -2,7 +2,8 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
+
 #include "expression_utils.hpp"
 
 namespace opossum {
@@ -38,9 +39,10 @@ const std::shared_ptr<AbstractExpression>& ArithmeticExpression::left_operand() 
 
 const std::shared_ptr<AbstractExpression>& ArithmeticExpression::right_operand() const { return arguments[1]; }
 
-std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_copy() const {
-  return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand()->deep_copy(),
-                                                right_operand()->deep_copy());
+std::shared_ptr<AbstractExpression> ArithmeticExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand()->deep_copy(copied_ops),
+                                                right_operand()->deep_copy(copied_ops));
 }
 
 DataType ArithmeticExpression::data_type() const {
