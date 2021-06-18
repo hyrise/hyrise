@@ -19,8 +19,9 @@ class CreateIndexNode : public EnableMakeForLQPNode<CreateIndexNode>, public Abs
 
   const std::string index_name;
   const std::string indexed_table_name;
-  const std::vector<std::string> column_names;
   const bool if_not_exists;
+  const std::vector<std::string> column_names;
+
 
  protected:
   size_t _on_shallow_hash() const override;

@@ -12,35 +12,34 @@ namespace opossum {
 class CreateIndexNodeTest : public BaseTest {
  public:
   void SetUp() override {
-    
-    column_names.emplace_back("a", "b");
+    column_names.emplace_back("a");
+    column_names.emplace_back("b");
     create_index_node = CreateIndexNode::make("some_index", "some_table", false, column_names);
   }
 
-  
   std::shared_ptr<CreateIndexNode> create_index_node;
   std::vector<std::string> column_names;
 };
 
 TEST_F(CreateIndexNodeTest, Description) {
   EXPECT_EQ(create_index_node->description(), "[CreateIndex] Name: 'some_index' Table: 'some_table'");
-  auto create_index_node_2 = CreateIndexNode::make("some_index", "some_table", true, column_names);
-  EXPECT_EQ(create_index_node_2->description(), "[CreateIndex] IfNotExists Name: 'some_index' Table: 'some_table");
+  auto create_index_node_2 = CreateIndexNode::make("some_index2", "some_table2", true, column_names);
+  EXPECT_EQ(create_index_node_2->description(), "[CreateIndex] IfNotExists Name: 'some_index2' Table: 'some_table2'");
 }
 TEST_F(CreateIndexNodeTest, NodeExpressions) { ASSERT_EQ(create_index_node->node_expressions.size(), 0u); }
 
-TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {
+TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = create_index_node->deep_copy();
   EXPECT_EQ(*create_index_node, *deep_copy_node);
 
-  const auto different_create_index_node_a = CreateTableNode::make("some_table2", false, input_node);
-  const auto different_create_index_node_b = CreateTableNode::make("some_table", true, input_node);
+  const auto different_create_index_node_a = CreateIndexNode::make("some_index2", "some_table", false, column_names);
+  const auto different_create_index_node_b = CreateIndexNode::make("some_index", "some_table", true, column_names);
 
   TableColumnDefinitions different_column_definitions;
   different_column_definitions.emplace_back("a", DataType::Int, false);
   const auto different_input_node =
       std::make_shared<StaticTableNode>(Table::create_dummy_table(different_column_definitions));
-  const auto different_create_index_node_c = CreateTableNode::make("some_table", false, different_input_node);
+  const auto different_create_index_node_c = CreateIndexNode::make("some_index", "some_table", false, column_names);
 
   EXPECT_NE(*different_create_index_node_a, *create_index_node);
   EXPECT_NE(*different_create_index_node_b, *create_index_node);
@@ -51,6 +50,6 @@ TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(different_create_index_node_c->hash(), create_index_node->hash());
 }
 
-TEST_F(CreateTableNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }
+TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }
 
 }  // namespace opossum
