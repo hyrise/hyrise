@@ -79,7 +79,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                       "Chunk needs to be deleted logically before deleting it physically.");
 
-          std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
+          std::lock_guard<std::mutex> lock(_physical_delete_queue_mutex);
           _physical_delete_queue.emplace(table, chunk_id);
           saved_memory += chunk_memory;
           num_chunks++;
@@ -100,7 +100,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
+  std::lock_guard<std::mutex> lock(_physical_delete_queue_mutex);
 
   if (!_physical_delete_queue.empty()) {
     TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
