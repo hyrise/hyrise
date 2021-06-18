@@ -16,6 +16,7 @@ enum class LQPNodeType {
   Aggregate,
   Alias,
   ChangeMetaTable,
+  CreateIndex,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
