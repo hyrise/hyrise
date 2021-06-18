@@ -446,7 +446,7 @@ TEST_F(SQLPipelineStatementTest, ClearOperators) {
   // Check whether operator results have been cleared
   for (const auto& task : statement->get_tasks()) {
     const auto& executed_operator = static_cast<const OperatorTask&>(*task).get_operator();
-    EXPECT_EQ(executed_operator->get_output(), nullptr);
+    EXPECT_EQ(executed_operator->state(), OperatorState::ExecutedAndCleared);
   }
 }
 

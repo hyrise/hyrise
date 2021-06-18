@@ -56,6 +56,10 @@ void SQLiteTestRunner::SetUpTestCase() {
 void SQLiteTestRunner::SetUp() {
   const auto& param = GetParam();
 
+  // Enable multi-threading for SQLite test runner
+  Hyrise::get().topology.use_numa_topology();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   /**
    * Encode Tables if no encoded variant of a Table is in the cache
    */

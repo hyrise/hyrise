@@ -13,7 +13,7 @@ namespace opossum {
 
 class AbstractExpression;
 
-enum class ScanType : uint8_t { TableScan, IndexScan };
+enum class ScanType { TableScan, IndexScan };
 
 /**
  * This node type represents a filter.
