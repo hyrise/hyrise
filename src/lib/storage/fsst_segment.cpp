@@ -16,8 +16,6 @@ namespace opossum {
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
-  // TODO (anyone): handle null values
-
   // our temporary data structure keeping char pointer and their length
   std::vector<unsigned long> row_lengths;
   std::vector<unsigned char*> row_pointers;
@@ -40,37 +38,14 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   // create symbol table
   _encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
 
-  fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
-                _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
+  size_t compressed_size =
+      fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
+                    _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
+
+  _compressed_values.resize(compressed_size);
 
   _decoder = fsst_decoder(_encoder);
   // TODO (anyone): shrink the size of _compressed_values
-
-  // print compressed values
-  for (size_t i = 0; i < _compressed_value_pointers.size(); i++) {
-    for (size_t j = 0; j < _compressed_value_lengths[i]; j++) {
-      printf("%d ", _compressed_value_pointers[i][j]);
-    }
-    printf("\n");
-  }
-
-  //      // DECOMPRESSION
-  //      fsst_decoder_t decoder = fsst_decoder(encoder);
-  //
-  //      size_t output_size = 6 + 1;
-  //      std::vector<unsigned char> output_buffer(output_size);
-  //      size_t output_size_after_decompression =
-  //          fsst_decompress(&decoder, compressedRowLens[0], compressedRowPtrs[0], output_size, output_buffer.data());
-  //
-  //      std::cout << output_size_after_decompression << std::endl;
-  //
-  //      for (size_t i = 0; i < output_size_after_decompression; i++) {
-  //        printf("%c", output_buffer[i]);
-  //      }
-  //
-  //      printf("\n");
-
-  //--
 }
 
 template <typename T>
@@ -78,8 +53,13 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
-  // TODO add real values
-  return T{};
+  // TODO(anyone): what if value is null
+
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (typed_value) {
+    return typed_value.value();
+  }
+  return NULL_VALUE;
 }
 
 template <typename T>
@@ -102,9 +82,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 
 template <typename T>
 ChunkOffset FSSTSegment<T>::size() const {
-  // TODO add real values
   return static_cast<ChunkOffset>(_compressed_value_pointers.size());
-  //  return static_cast<ChunkOffset>(0);
 }
 
 template <typename T>
@@ -115,7 +93,7 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
 
 template <typename T>
 size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
-  // TODO add real values
+  // TODO (anyone): which memory usage should we return? compressed data or all memory
   return size_t{0};
 }
 
@@ -126,12 +104,6 @@ EncodingType FSSTSegment<T>::encoding_type() const {
 
 template <typename T>
 std::optional<CompressedVectorType> FSSTSegment<T>::compressed_vector_type() const {
-  // TODO add real values
-  return std::nullopt;
-}
-
-template <>
-std::optional<CompressedVectorType> FSSTSegment<pmr_string>::compressed_vector_type() const {
   // TODO add real values
   return std::nullopt;
 }

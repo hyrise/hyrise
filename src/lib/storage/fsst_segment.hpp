@@ -60,9 +60,6 @@ class FSSTSegment : public AbstractEncodedSegment {
   mutable fsst_decoder_t _decoder;
 };
 
-template <>
-std::optional<CompressedVectorType> FSSTSegment<pmr_string>::compressed_vector_type() const;
-
 //EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);
 extern template class FSSTSegment<pmr_string>;
 
