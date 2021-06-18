@@ -57,7 +57,7 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::vector<unsigned char*> _compressed_value_pointers;
 
   fsst_encoder_t* _encoder;
-  fsst_decoder_t _decoder;
+  mutable fsst_decoder_t _decoder;
 };
 
 template <>

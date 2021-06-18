@@ -44,7 +44,7 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string> values, pmr_vector<bool> null
                 _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
 
 
-
+  _decoder = fsst_decoder(_encoder);
   // TODO (anyone): shrink the size of _compressed_values
 
   // print compressed values
@@ -85,25 +85,22 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
 template <typename T>
 std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  fsst_decoder_t decoder = fsst_decoder(_encoder);
+   // TODO (anyone): Don't create on every function call
 
   size_t output_size = _compressed_value_lengths[chunk_offset] * 8;
   std::vector<unsigned char> output_buffer(output_size);
-  size_t output_size_after_decompression = fsst_decompress(&decoder, _compressed_value_lengths[chunk_offset], _compressed_value_pointers[chunk_offset], output_size, output_buffer.data());
+  size_t output_size_after_decompression = fsst_decompress(&_decoder, _compressed_value_lengths[chunk_offset], _compressed_value_pointers[chunk_offset], output_size, output_buffer.data());
   output_buffer.resize(output_size_after_decompression);
 
-//  pmr_string output {output_buffer.data()};
   pmr_string output{output_buffer.begin(), output_buffer.end()};
   return {output};
-
-//  return std::nullopt;
-
 }
 
 template <typename T>
 ChunkOffset FSSTSegment<T>::size() const {
   // TODO add real values
-  return static_cast<ChunkOffset>(0);
+  return ChunkOffset{_compressed_value_pointers.size()};
+//  return static_cast<ChunkOffset>(0);
 }
 
 template <typename T>
