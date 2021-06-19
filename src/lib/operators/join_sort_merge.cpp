@@ -1224,7 +1224,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
       // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
       // 1. There is no match with one of the right null rows where all predicates are satisfied.
-      // 2. There is no match with one of the left rows (not null) where all predicates are satisfied.
+      // 2. There is no match with one of the right rows (not null) where all predicates are satisfied.
       // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
       // to emit the row.
       auto null_output_left = RowIDPosList();
