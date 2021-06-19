@@ -212,7 +212,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
+    void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) const {
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -1150,16 +1150,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // - The right table is empty. We can return the left input table.
     // - If there is only one join predicate and the right table contains a null value in the join column, we can
     //   return an empty left table.
-    if (_mode == JoinMode::Semi) {
-      if (_sort_merge_join.right_input_table()->empty()) {
-        return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
-      }
+    if (_mode == JoinMode::Semi && _sort_merge_join.right_input_table()->empty()) {
+      return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
     } else if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
       return _sort_merge_join.left_input_table();
     } else if (_mode == JoinMode::AntiNullAsTrue) {
-      if (_sort_merge_join.right_input_table()->empty()) {
-        return _sort_merge_join.left_input_table();
-      } else if (_secondary_join_predicates.empty()) {
+      if (_sort_merge_join.right_input_table()->empty()) return _sort_merge_join.left_input_table();
+      if (_secondary_join_predicates.empty()) {
         auto right_side_has_null = _check_if_table_contains_null(*(_sort_merge_join.right_input_table()));
         if (right_side_has_null) {
           return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
@@ -1177,8 +1174,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     const auto include_null_left =
         (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse ||
          (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()));
-    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter ||
-                               _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
+    const auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter ||
+                                     _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
                             _sort_merge_join._primary_predicate.column_ids, sort_clusters, include_null_left,
@@ -1196,10 +1193,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     _perform_join();
 
-    if (_mode == JoinMode::AntiNullAsFalse) {
-      include_null_right = false;
-    }
-
     if ((include_null_left || include_null_right) && _mode != JoinMode::AntiNullAsTrue) {
       auto null_output_left = RowIDPosList();
       auto null_output_right = RowIDPosList();
@@ -1212,7 +1205,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           null_output_left.push_back(row_id_left);
         }
       }
-      if (include_null_right) {
+      if (include_null_right && _mode != JoinMode::AntiNullAsFalse) {
         null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
         null_output_right.reserve(_null_rows_right.size());
         for (const auto& row_id_right : _null_rows_right) {
@@ -1228,45 +1221,41 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    if (_mode == JoinMode::AntiNullAsTrue) {
+    if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
       // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
       // 1. There is no match with one of the right null rows where all predicates are satisfied.
       // 2. There is no match with one of the left rows (not null) where all predicates are satisfied.
       // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
       // to emit the row.
-      if (!_secondary_join_predicates.empty()) {
-        auto null_output_left = RowIDPosList();
-        null_output_left.reserve(_null_rows_left.size());
-
-        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
-                                                                   *_sort_merge_join.right_input()->get_output(), _mode,
-                                                                   _secondary_join_predicates);
-        auto end_of_right_table = _end_of_table(_sorted_right_table);
-        auto right_range = TablePosition(0, 0).to(end_of_right_table);
-        for (const auto& row_id_left : _null_rows_left) {
-          auto match = false;
-          for (const auto& row_id_right : _null_rows_right) {
+      auto null_output_left = RowIDPosList();
+      null_output_left.reserve(_null_rows_left.size());
+      MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
+                                                                 *_sort_merge_join.right_input()->get_output(), _mode,
+                                                                 _secondary_join_predicates);
+      const auto right_range = TablePosition(0, 0).to(_end_of_table(_sorted_right_table));
+      for (const auto& row_id_left : _null_rows_left) {
+        auto match = false;
+        for (const auto& row_id_right : _null_rows_right) {
+          if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+            match = true;
+            break;
+          }
+        }
+        if (!match) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
             if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
               match = true;
-              break;
+              return;
             }
-          }
-          if (!match) {
-            right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
-                match = true;
-                return;
-              }
-            });
-          }
-          if (!match) {
-            null_output_left.push_back(row_id_left);
-          }
+          });
         }
-        if (!null_output_left.empty()) {
-          _output_pos_lists_left.push_back(std::move(null_output_left));
-          _output_pos_lists_right.push_back(RowIDPosList());
+        if (!match) {
+          null_output_left.push_back(row_id_left);
         }
+      }
+      if (!null_output_left.empty()) {
+        _output_pos_lists_left.push_back(std::move(null_output_left));
+        _output_pos_lists_right.push_back(RowIDPosList());
       }
     }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
