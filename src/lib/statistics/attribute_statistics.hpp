@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "base_attribute_statistics.hpp"
+#include "statistics/statistics_objects/dips_min_max_filter.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
@@ -45,6 +46,7 @@ class AttributeStatistics : public BaseAttributeStatistics {
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
   std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
+  std::shared_ptr<DipsMinMaxFilter<T>> dips_min_max_filter;
 };
 
 template <typename T>
@@ -58,6 +60,11 @@ std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& att
   if (attribute_statistics.min_max_filter) {
     // TODO(anybody) implement printing of MinMaxFilter if ever required
     stream << "Has MinMaxFilter" << std::endl;
+  }
+
+  if (attribute_statistics.dips_min_max_filter) {
+    // TODO(anybody) implement printing of DipsMinMaxFilter if ever required
+    stream << "Has DipsMinMaxFilter" << std::endl;
   }
 
   if (attribute_statistics.range_filter) {

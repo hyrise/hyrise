@@ -52,6 +52,8 @@ class Chunk : private Noncopyable {
   // account for NULL being encoded as a separate value id.
   static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
 
+  bool has_generated_pruning_statistics = false;
+
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 

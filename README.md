@@ -193,7 +193,9 @@ Contact: firstname.lastname@hpi.de
 -   Dominik   Meier
 -   Julian    Menzler
 -   Torben    Meyer
+-   Tobias    Nack
 -   Leander   Neiß
+-   Petr      Tsayun
 -   Hendrik   Rätz
 -   Alexander Riese
 -   Johannes  Schneider

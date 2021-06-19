@@ -300,6 +300,8 @@ set(
     optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/dependent_group_by_reduction_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
+    optimizer/strategy/dips_pruning_rule.cpp
+    optimizer/strategy/dips_pruning_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/in_expression_rewrite_rule.cpp
@@ -399,6 +401,8 @@ set(
     statistics/statistics_objects/abstract_histogram.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
+    statistics/statistics_objects/dips_min_max_filter.cpp
+    statistics/statistics_objects/dips_min_max_filter.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp
