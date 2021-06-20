@@ -55,7 +55,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                       const HistogramDomain<T>& domain = {});
 
   static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_1,
-                                                               std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_2);
+                                                               std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_2,
+                                                               BinID bin_count_target);
     std::string name() const override;
     std::shared_ptr<AbstractHistogram<T>> clone() const override;
     HistogramCountType total_distinct_count() const override;
