@@ -14,7 +14,7 @@ class EqualDistinctCountHistogramTest : public BaseTest {
   void SetUp() override {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _int_float4_multichunk = load_table("resources/test_data/tbl/int_float4.tbl", 5);
-    _int_float4_multichunk_large = load_table("resources/test_data/tbl/int_with_nulls_large.tbl",25);
+    _int_float_multichunk_large = load_table("resources/test_data/tbl/int_float_merging_hist.tbl", 6);
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
     _string2 = load_table("resources/test_data/tbl/string2.tbl");
   }
@@ -22,7 +22,7 @@ class EqualDistinctCountHistogramTest : public BaseTest {
  protected:
   std::shared_ptr<Table> _int_float4;
   std::shared_ptr<Table> _int_float4_multichunk;
-  std::shared_ptr<Table> _int_float4_multichunk_large;
+  std::shared_ptr<Table> _int_float_multichunk_large;
   std::shared_ptr<Table> _float2;
   std::shared_ptr<Table> _string2;
 };
@@ -119,15 +119,36 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentIntMultipleChunks) {
   EXPECT_EQ(hist2->bin(BinID{0}), HistogramBin<int32_t>(12, 123456, 2, 2));
 }
 
-TEST_F(EqualDistinctCountHistogramTest, HistogramMerging) {
+TEST_F(EqualDistinctCountHistogramTest, IntHistogramMerging) {
   const auto hist =
-      EqualDistinctCountHistogram<int32_t>::from_segment(*_int_float4_multichunk_large, ColumnID{0}, ChunkID{0}, 3u);
+      EqualDistinctCountHistogram<int32_t>::from_segment(*_int_float_multichunk_large, ColumnID{0}, ChunkID{0}, 6u);
 
   const auto hist2 =
-      EqualDistinctCountHistogram<int32_t>::from_segment(*_int_float4_multichunk_large, ColumnID{0}, ChunkID{1}, 3u);
+      EqualDistinctCountHistogram<int32_t>::from_segment(*_int_float_multichunk_large, ColumnID{0}, ChunkID{1}, 6u);
 
-  EqualDistinctCountHistogram<int32_t>::merge(hist, hist2);
+  const auto merged_hist = EqualDistinctCountHistogram<int32_t>::merge(hist, hist2);
 
+  ASSERT_EQ(merged_hist->bin_count(), 6u);
+  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<int32_t>(1, 2, 2, 2));
+  EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<int32_t>(3, 4, 2, 2));
+  EXPECT_EQ(merged_hist->bin(BinID{2}), HistogramBin<int32_t>(5, 6, 2, 2));
+  EXPECT_EQ(merged_hist->bin(BinID{3}), HistogramBin<int32_t>(7, 8, 2, 2));
+  EXPECT_EQ(merged_hist->bin(BinID{4}), HistogramBin<int32_t>(9, 10, 2, 2));
+  EXPECT_EQ(merged_hist->bin(BinID{5}), HistogramBin<int32_t>(11, 12, 2, 2));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, FloatHistogramMerging) {
+  const auto hist =
+      EqualDistinctCountHistogram<float>::from_segment(*_int_float_multichunk_large, ColumnID{1}, ChunkID{0}, 2u);
+
+  const auto hist2 =
+      EqualDistinctCountHistogram<float>::from_segment(*_int_float_multichunk_large, ColumnID{1}, ChunkID{1}, 2u);
+
+  const auto merged_hist = EqualDistinctCountHistogram<float>::merge(hist, hist2);
+
+  ASSERT_EQ(merged_hist->bin_count(), 2u);
+  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<float>(0.42, 50.6, 6, 6));
+  EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<float>(50.8, 100.42, 6, 5));
 }
 
 }  // namespace opossum
