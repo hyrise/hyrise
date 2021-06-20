@@ -20,7 +20,9 @@ std::string CreateIndexNode::description(const DescriptionMode mode) const {
 
 size_t CreateIndexNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(index_name);
+  boost::hash_combine(hash, indexed_table_name);
   boost::hash_combine(hash, if_not_exists);
+  boost::hash_combine(hash, column_names);
   return hash;
 }
 
@@ -30,7 +32,10 @@ std::shared_ptr<AbstractLQPNode> CreateIndexNode::_on_shallow_copy(LQPNodeMappin
 
 bool CreateIndexNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& create_Index_node = static_cast<const CreateIndexNode&>(rhs);
-  return index_name == create_Index_node.index_name && if_not_exists == create_Index_node.if_not_exists;
+  return index_name == create_Index_node.index_name &&
+         indexed_table_name == create_Index_node.indexed_table_name &&
+         if_not_exists == create_Index_node.if_not_exists &&
+         column_names == create_Index_node.column_names;
 }
 
 }  // namespace opossum
