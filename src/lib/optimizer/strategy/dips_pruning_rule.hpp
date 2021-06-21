@@ -249,3 +249,4 @@ class DipsPruningRule : public AbstractRule {
 };
 
 }  // namespace opossum
+

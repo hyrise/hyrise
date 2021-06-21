@@ -236,3 +236,4 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) 
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {}
 
 }  // namespace opossum
+

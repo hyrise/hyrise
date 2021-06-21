@@ -19,3 +19,4 @@ DipsMinMaxFilter<T>::DipsMinMaxFilter(T init_min, T init_max, CommitID init_comm
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DipsMinMaxFilter);
 
 }  // namespace opossum
+
