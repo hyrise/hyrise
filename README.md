@@ -195,7 +195,6 @@ Contact: firstname.lastname@hpi.de
 -   Torben    Meyer
 -   Tobias    Nack
 -   Leander   Neiß
--   Petr      Tsayun
 -   Hendrik   Rätz
 -   Alexander Riese
 -   Johannes  Schneider
@@ -208,6 +207,7 @@ Contact: firstname.lastname@hpi.de
 -   Nils      Thamm
 -   Hendrik   Tjabben
 -   Justin    Trautmann
+-   Petr      Tsayun
 -   Carsten   Walther
 -   Marcel    Weisgut
 -   Lukas     Wenzel
