@@ -519,11 +519,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
   for(auto column_name: create_index_node->column_names) {
     column_ids->push_back(target_table->column_id_by_name(column_name));
   }
-
+  //think i am too dumb for this, let's start here tomorrow :-)
+  auto table = translate_node(std::dynamic_pointer_cast<AbstractLQPNode>((create_index_node->stored_table)&));
   //TODO we pack the target table in a table wrapper node. this we would suggest takes place in the sql translation.
   // We would have to adapt all existing nodes slightly.
 
-  return std::make_shared<CreateIndex>(create_index_node->index_name, column_ids,  create_index_node->if_not_exists, target_table_name);
+  return std::make_shared<CreateIndex>(create_index_node->index_name, column_ids,  create_index_node->if_not_exists, target_table_name, table);
 
 }
 

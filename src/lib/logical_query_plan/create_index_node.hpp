@@ -5,6 +5,7 @@
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table_column_definition.hpp"
+#include "stored_table_node.hpp"
 
 namespace opossum {
 
@@ -13,7 +14,7 @@ namespace opossum {
  */
 class CreateIndexNode : public EnableMakeForLQPNode<CreateIndexNode>, public AbstractNonQueryNode {
  public:
-  CreateIndexNode(const std::string& init_index_name, const std::string& indexed_table_name, const bool init_if_not_exists, const std::vector<std::string> column_names);
+  CreateIndexNode(const std::string& init_index_name, const std::string& indexed_table_name, const bool init_if_not_exists, const std::vector<std::string> column_names, StoredTableNode init_stored_table);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
@@ -21,6 +22,7 @@ class CreateIndexNode : public EnableMakeForLQPNode<CreateIndexNode>, public Abs
   const std::string target_table_name;
   const bool if_not_exists;
   const std::vector<std::string> column_names;
+  const StoredTableNode stored_table;
 
 
  protected:
