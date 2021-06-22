@@ -20,15 +20,23 @@ using namespace opossum;  // NOLINT
 // IDEA: Not only compare with previous segment but also with already created dictionaries. This would also allow cross column comparisons.
 // IDEA: set_union can be optimized if jaccard index threshold is not reachable by exiting earlier.
 
+template <typename T>
+struct SegmentLocationData {
+  std::shared_ptr<DictionarySegment<T>> segment;
+  std::shared_ptr<Chunk> chunk;
+  ColumnID column_id;
+};
+
 /**
 * Replaces the dictionary segments of the given segments by new dictionary segments that have a shared dictionary.
 */
 template <typename T>
-void apply_shared_dictionary_to_segments(const std::vector<std::shared_ptr<DictionarySegment<T>>>& segments,
+void apply_shared_dictionary_to_segments(const std::vector<SegmentLocationData<T>>& segmentLocationData,
                                          const std::shared_ptr<pmr_vector<T>> shared_dictionary,
                                          const PolymorphicAllocator<T>& allocator) {
   const auto max_value_id = static_cast<uint32_t>(shared_dictionary->size());
-  for (auto segment : segments) {
+  for (auto segmentLocation : segmentLocationData) {
+    const auto segment = segmentLocation.segment;
     const auto chunk_size = segment->size();
 
     // Construct new attribute vector that maps to the shared dictionary
@@ -58,8 +66,7 @@ void apply_shared_dictionary_to_segments(const std::vector<std::shared_ptr<Dicti
         std::make_shared<DictionarySegment<T>>(shared_dictionary, compressed_attribute_vector);
 
     // Replace dictionary segment with new one that has a shared dictionary
-    // TODO(hig): Consider using Chunk::replace_segment
-    segment = std::move(new_dictionary_segment);
+    segmentLocation.chunk->replace_segment(segmentLocation.column_id, new_dictionary_segment);
   }
 }
 
@@ -78,22 +85,13 @@ void log_jaccard_index(const double jaccard_index, const std::string& table_name
                      << compare_type << ";" << jaccard_index << std::endl;
 }
 
-template <typename T>
-void debug_output_segment_counts(const std::vector<std::shared_ptr<DictionarySegment<T>>>& dictionary_segments_to_merge,
-                                 const std::string& text) {
-  std::cout << "Dictionary segments to merge " << text << " " << dictionary_segments_to_merge.size()
-            << " segments with dictionary sizes of: " << std::endl;
-  for (const auto segmentPtr : dictionary_segments_to_merge) {
-    std::cout << segmentPtr->dictionary()->size() << ", ";
-  }
-  std::cout << std::endl;
-}
-
 int main() {
   std::cout << "Playground: Jaccard-Index" << std::endl;
+  uint64_t total_merged_dictionaries = 0;
+  uint64_t total_new_shared_dictionaries = 0;
   // Generate benchmark data
-  const auto jaccard_index_threshold = 0.95;
-  const auto table_path = std::string{"/home/Halil.Goecer/hyrise/imdb/"};
+  const auto jaccard_index_threshold = 0.6;
+  const auto table_path = std::string{"/home/Halil.Goecer/imdb/"};
   
   // const auto table_generator = std::make_unique<FileBasedTableGenerator>(
   //     std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), table_path);
@@ -130,7 +128,7 @@ int main() {
 
         auto previous_shared_dictionary = std::make_shared<pmr_vector<ColumnDataType>>(allocator);
         auto current_shared_dictionary = std::make_shared<pmr_vector<ColumnDataType>>(allocator);
-        auto dictionary_segments_to_merge = std::vector<std::shared_ptr<DictionarySegment<ColumnDataType>>>{};
+        auto dictionary_segments_to_merge = std::vector<SegmentLocationData<ColumnDataType>>{};
 
         std::shared_ptr<DictionarySegment<ColumnDataType>> previous_dictionary_segment = nullptr;
         std::shared_ptr<DictionarySegment<ColumnDataType>> current_dictionary_segment = nullptr;
@@ -190,7 +188,8 @@ int main() {
 
           if (current_jaccard_index >= jaccard_index_threshold) {
             // The jaccard index matches the threshold, so we add the segment to the collection
-            dictionary_segments_to_merge.push_back(current_dictionary_segment);
+            const auto segmentLocation = SegmentLocationData<ColumnDataType>{current_dictionary_segment, chunk, column_id};
+            dictionary_segments_to_merge.push_back(segmentLocation);
             current_shared_dictionary = potential_new_shared_dictionary;
           }
 
@@ -199,10 +198,10 @@ int main() {
             // The jaccard index is below the threshold or we processed the last chunk.
             // This means that we apply the the shared dictionary to the collected segments.
             if (!dictionary_segments_to_merge.empty()) {
-              debug_output_segment_counts(dictionary_segments_to_merge, "before");
+              total_merged_dictionaries += dictionary_segments_to_merge.size();
+              total_new_shared_dictionaries++;
               apply_shared_dictionary_to_segments<ColumnDataType>(dictionary_segments_to_merge,
                                                                   current_shared_dictionary, allocator);
-              debug_output_segment_counts(dictionary_segments_to_merge, "after");
 
               // Save current_shared_dictionary to previous_shared_dictionary and reset
               std::swap(previous_shared_dictionary, current_shared_dictionary);
@@ -222,6 +221,7 @@ int main() {
     }
   }
 
+  std::cout << "Merged " << total_merged_dictionaries << " dictionaries to " << total_new_shared_dictionaries << " shared dictionaries.\n";
   output_file_stream.close();
   return 0;
 }
