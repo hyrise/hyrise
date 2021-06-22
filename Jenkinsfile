@@ -53,7 +53,7 @@ try {
       sh "hostname"
     }
   
-    docker.withRegistry('https://registry.hub.docker.com', 'docker') {
+    docker.withRegistry('', 'docker') {
       def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
       oppossumCI.pull()
 
