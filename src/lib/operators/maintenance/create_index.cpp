@@ -15,13 +15,11 @@ namespace opossum {
 CreateIndex::CreateIndex(const std::string& init_index_name,
                          const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
                          const bool init_if_not_exists,
-                         const std::string& init_target_table_name,
                          const std::shared_ptr<const AbstractOperator>& input_operator)
     : AbstractReadWriteOperator(OperatorType::CreateIndex, input_operator),
       index_name(init_index_name),
       column_ids(init_column_ids),
-      if_not_exists(init_if_not_exists),
-      target_table_name(init_target_table_name)
+      if_not_exists(init_if_not_exists)
     {}
 
 const std::string& CreateIndex::name() const {
@@ -65,7 +63,7 @@ std::string CreateIndex::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<const Table> CreateIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
-  auto table_to_be_indexed = Hyrise::get().storage_manager.get_table(target_table_name);
+  auto table_to_be_indexed = std::const_pointer_cast<Table>(left_input()->get_output());
 
   if(if_not_exists) {
     _check_if_index_already_exists(index_name, table_to_be_indexed);
@@ -79,7 +77,7 @@ std::shared_ptr<AbstractOperator> CreateIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<CreateIndex>(index_name, column_ids, if_not_exists, target_table_name, copied_left_input);
+  return std::make_shared<CreateIndex>(index_name, column_ids, if_not_exists, copied_left_input);
 }
 
 void CreateIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

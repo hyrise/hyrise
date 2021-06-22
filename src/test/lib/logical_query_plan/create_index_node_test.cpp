@@ -13,21 +13,21 @@ class CreateIndexNodeTest : public BaseTest {
  public:
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-    stored_table = StoredTableNode::make("t_a");
-    column_names.emplace_back("a");
-    column_names.emplace_back("b");
-    create_index_node = CreateIndexNode::make("some_index", "some_table", false, column_names, stored_table);
+    table_node = std::make_shared<StoredTableNode>("t_a");
+    column_ids->emplace_back(1);
+    column_ids->emplace_back(2);
+    create_index_node = CreateIndexNode::make("some_index", false, column_ids, table_node);
   }
-
+  std::shared_ptr<AbstractLQPNode> table_node;
   std::shared_ptr<CreateIndexNode> create_index_node;
-  std::vector<std::string> column_names;
-  StoredTableNode stored_table;
+  std::shared_ptr<std::vector<ColumnID>> column_ids;
+
 };
 
 TEST_F(CreateIndexNodeTest, Description) {
-  EXPECT_EQ(create_index_node->description(), "[CreateIndex] Name: 'some_index' Table: 'some_table'");
-  auto create_index_node_2 = CreateIndexNode::make("some_index2", "some_table2", true, column_names, stored_table);
-  EXPECT_EQ(create_index_node_2->description(), "[CreateIndex] IfNotExists Name: 'some_index2' Table: 'some_table2'");
+  EXPECT_EQ(create_index_node->description(), "[CreateIndex] Name: 'some_index'");
+  auto create_index_node_2 = CreateIndexNode::make("some_index2", true, column_ids, table_node);
+  EXPECT_EQ(create_index_node_2->description(), "[CreateIndex] IfNotExists Name: 'some_index2'");
 }
 TEST_F(CreateIndexNodeTest, NodeExpressions) { ASSERT_EQ(create_index_node->node_expressions.size(), 0u); }
 
@@ -35,24 +35,23 @@ TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = create_index_node->deep_copy();
   EXPECT_EQ(*create_index_node, *deep_copy_node);
 
-  const auto different_create_index_node_a = CreateIndexNode::make("some_index1", "some_table", false, column_names, stored_table);
-  const auto different_create_index_node_b = CreateIndexNode::make("some_index", "some_table1", false, column_names, stored_table);
-  const auto different_create_index_node_c = CreateIndexNode::make("some_index", "some_table", true, column_names, stored_table);
+  const auto different_create_index_node_a = CreateIndexNode::make("some_index1", false, column_ids, table_node);
+  const auto different_create_index_node_b = CreateIndexNode::make("some_index",  true, column_ids, table_node);
 
-  auto different_column_names = std::vector<std::string>();
-  different_column_names.push_back("c");
-  different_column_names.push_back("d");
-  const auto different_create_index_node_d = CreateIndexNode::make("some_index", "some_table", false, different_column_names, stored_table);
+  auto different_column_ids = std::shared_ptr<std::vector<ColumnID>>();
+  different_column_ids->emplace_back(0);
+  different_column_ids->emplace_back(3);
+  const auto different_create_index_node_c = CreateIndexNode::make("some_index", false, different_column_ids, table_node);
 
   EXPECT_NE(*different_create_index_node_a, *create_index_node);
   EXPECT_NE(*different_create_index_node_b, *create_index_node);
   EXPECT_NE(*different_create_index_node_c, *create_index_node);
-  EXPECT_NE(*different_create_index_node_d, *create_index_node);
+
 
   EXPECT_NE(different_create_index_node_a->hash(), create_index_node->hash());
   EXPECT_NE(different_create_index_node_b->hash(), create_index_node->hash());
   EXPECT_NE(different_create_index_node_c->hash(), create_index_node->hash());
-  EXPECT_NE(different_create_index_node_d->hash(), create_index_node->hash());
+
 }
 
 TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }

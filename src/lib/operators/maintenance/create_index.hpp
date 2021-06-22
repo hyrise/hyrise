@@ -12,7 +12,6 @@ class CreateIndex : public AbstractReadWriteOperator {
   CreateIndex(const std::string& init_index_name,
               const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
               const bool init_if_not_exists,
-              const std::string& init_target_table_name,
               const std::shared_ptr<const AbstractOperator>& input_operator);
 
   const std::string& name() const override;
@@ -21,7 +20,6 @@ class CreateIndex : public AbstractReadWriteOperator {
   const std::string index_name;
   const std::shared_ptr<const std::vector<ColumnID>> column_ids;
   const bool if_not_exists;
-  const std::string target_table_name;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
