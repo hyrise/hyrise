@@ -1,7 +1,4 @@
-#include "abstract_range_index.hpp"
-
-#include <memory>
-#include <vector>
+#include "abstract_index.hpp"
 
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"

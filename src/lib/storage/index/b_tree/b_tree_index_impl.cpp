@@ -1,6 +1,6 @@
 #include "b_tree_index_impl.hpp"
 
-#include "storage/index/abstract_range_index.hpp"
+#include "storage/index/abstract_ordered_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

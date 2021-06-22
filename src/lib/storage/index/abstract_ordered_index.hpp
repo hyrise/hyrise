@@ -13,29 +13,7 @@ namespace opossum {
 
 class AbstractSegment;
 
-/**
- * AbstractRangeIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
- * ARTIndex etc.
- * It is assumed that all index types support range queries and that they are composite indexes.
- * I.e. the index is sorted based on the column order. To check whether a key is less than another
- * key, the comparison is performed for the first column. If and only if they are equal, a check is
- * executed for the part of the next column. If needed, this step is repeated for all column
- * parts of both keys.
- * Since all indexes have to support range queries, we chose to use iterators as means to get all
- * values that are requested from an index.
- * Further, this allows to use many stl functions like std::transform, std::for_each, std::find ...
- * In addition to that, we save space and time as it is not needed to copy values (compared to returning vectors of
- * values).
- * Instead, each index is able to return an index for the lower and one for the upper bound of the requested value(s).
- * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
- * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
- *
- * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractRangeIndex and
- *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
- **/
-
-//ToDo(pi) rename ordered
-class AbstractRangeIndex : public AbstractIndex<ChunkOffset> {
+class AbstractOrderedIndex : public AbstractIndex<ChunkOffset> {
   friend class GroupKeyIndexTest;
 
  public:
@@ -48,10 +26,10 @@ class AbstractRangeIndex : public AbstractIndex<ChunkOffset> {
    * leads to very different indexes.
    */
 
-  AbstractRangeIndex() = delete;
-  explicit AbstractRangeIndex(const SegmentIndexType type);
-  AbstractRangeIndex(AbstractRangeIndex&&) = default;
-  virtual ~AbstractRangeIndex() = default;
+  AbstractOrderedIndex() = delete;
+  explicit AbstractOrderedIndex(const SegmentIndexType type);
+  AbstractOrderedIndex(AbstractOrderedIndex&&) = default;
+  virtual ~AbstractOrderedIndex() = default;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.

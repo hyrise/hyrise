@@ -12,7 +12,7 @@
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
-#include "storage/index/abstract_range_index.hpp"
+#include "storage/index/abstract_ordered_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -315,7 +315,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                     const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                    const std::shared_ptr<AbstractRangeIndex>& index) {
+                                                    const std::shared_ptr<AbstractOrderedIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
@@ -328,7 +328,7 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractRangeIndex>& index,
+    const std::shared_ptr<AbstractOrderedIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     RowIDPosList index_scan_pos_list;
@@ -355,7 +355,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                           const std::shared_ptr<AbstractRangeIndex>& index) const {
+                                                           const std::shared_ptr<AbstractOrderedIndex>& index) const {
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
 
@@ -372,8 +372,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   }
 
   if (!probe_side_position.is_null()) {
-    auto range_begin = AbstractRangeIndex::Iterator{};
-    auto range_end = AbstractRangeIndex::Iterator{};
+    auto range_begin = AbstractOrderedIndex::Iterator{};
+    auto range_end = AbstractOrderedIndex::Iterator{};
 
     switch (_adjusted_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
@@ -421,7 +421,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   return index_ranges;
 }
 
-void JoinIndex::_append_matches(const AbstractRangeIndex::Iterator& range_begin, const AbstractRangeIndex::Iterator& range_end,
+void JoinIndex::_append_matches(const AbstractOrderedIndex::Iterator& range_begin, const AbstractOrderedIndex::Iterator& range_end,
                                 const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                                 const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);

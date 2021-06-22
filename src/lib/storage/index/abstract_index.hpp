@@ -13,7 +13,7 @@ namespace opossum {
 class AbstractSegment;
 
 /**
- * AbstractRangeIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
+ * AbstractIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indexes.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
@@ -29,7 +29,7 @@ class AbstractSegment;
  * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  *
- * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractRangeIndex and
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractIndex and
  *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 

@@ -38,10 +38,15 @@ PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table
 
 //ToDO(pi) change index (add) chunks later after creation
 
-PartialHashIndex::Iterator PartialHashIndex::equal(const std::vector<AllTypeVariant>& values) const {
-  //ToDo(pi) implement
-  return cbegin();
+std::pair<PartialHashIndex::Iterator, PartialHashIndex::Iterator> PartialHashIndex::equals(const AllTypeVariant& value) const {
+  auto result = _map.find(value);
+  if(result == _map.end()){
+    auto end_iter = _cend();
+    return std::make_pair(end_iter, end_iter); // ToDo public or protected member
+  }
+  return std::make_pair(result->second.begin(), result->second.end());
 }
+
 PartialHashIndex::Iterator PartialHashIndex::_cbegin() const {
   return _row_ids.begin();
 }

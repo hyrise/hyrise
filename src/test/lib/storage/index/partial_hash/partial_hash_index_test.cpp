@@ -126,6 +126,25 @@ TEST_F(PartialHashIndexTest, Values) {
   EXPECT_EQ(begin, end);
 }
 
+TEST_F(PartialHashIndexTest, EqualsValue) {
+  auto value = "delta";
+  auto [begin, end] = index->equals(value);
+
+  EXPECT_EQ(end - begin, 3);
+  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{1}}));
+  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{3}}));
+  EXPECT_EQ(*(begin++), (RowID{ChunkID{1}, ChunkOffset{1}}));
+  EXPECT_EQ(begin, end);
+}
+
+TEST_F(PartialHashIndexTest, EqualsValueNotFound) {
+  auto value = 42;
+  auto [begin, end] = index->equals(value);
+
+  EXPECT_EQ(end, begin);
+  EXPECT_EQ(end, index->cend());
+}
+
 /*TEST_F(PartialHashIndexTest, IndexProbes) {
   auto begin = index->cbegin();
   EXPECT_EQ(index->equal({"apple"}) - begin, 0);

@@ -41,8 +41,8 @@ class MultiSegmentIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<AbstractRangeIndex> index_int_str = nullptr;
-  std::shared_ptr<AbstractRangeIndex> index_str_int = nullptr;
+  std::shared_ptr<AbstractOrderedIndex> index_int_str = nullptr;
+  std::shared_ptr<AbstractOrderedIndex> index_str_int = nullptr;
   std::shared_ptr<AbstractSegment> dict_segment_int = nullptr;
   std::shared_ptr<AbstractSegment> dict_segment_str = nullptr;
 };

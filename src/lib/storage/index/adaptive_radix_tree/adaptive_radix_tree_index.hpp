@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/abstract_range_index.hpp"
+#include "storage/index/abstract_ordered_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -29,7 +29,7 @@ class BaseDictionarySegment;
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/ART
  *
  */
-class AdaptiveRadixTreeIndex : public AbstractRangeIndex {
+class AdaptiveRadixTreeIndex : public AbstractOrderedIndex {
   friend class AdaptiveRadixTreeIndexTest;
 
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
@@ -39,7 +39,7 @@ class AdaptiveRadixTreeIndex : public AbstractRangeIndex {
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See AbstractRangeIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 

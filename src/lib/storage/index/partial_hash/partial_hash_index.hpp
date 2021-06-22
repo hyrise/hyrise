@@ -1,7 +1,7 @@
 #pragma once
 
 #include <storage/table.hpp>
-#include "storage/index/abstract_range_index.hpp"
+#include "storage/index/abstract_ordered_index.hpp"
 #include "tsl/robin_map.h"
 
 namespace opossum {
@@ -16,7 +16,7 @@ class PartialHashIndex : public AbstractIndex<RowID> {
 
   /**
  * Predicts the memory consumption in bytes of creating this index.
- * See AbstractRangeIndex::estimate_memory_consumption()
+ * See AbstractIndex::estimate_memory_consumption()
  * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
  * in reducing the memory footprint of these indexes, this is probably the first place you should look.
  */
@@ -25,7 +25,7 @@ class PartialHashIndex : public AbstractIndex<RowID> {
   PartialHashIndex() = delete;
   PartialHashIndex(const std::shared_ptr<Table>, const std::vector<ChunkID>&, const ColumnID);
 
-  Iterator equal(const std::vector<AllTypeVariant>& values) const;
+  std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const;
 
  protected:
   Iterator _cbegin() const override;
