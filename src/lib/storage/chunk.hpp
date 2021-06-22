@@ -6,7 +6,7 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <shared_mutex>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -201,6 +201,8 @@ class Chunk : private Noncopyable {
   bool _is_mutable = true;
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
+  std::mutex _statistics_update_mutex;
 
   // Default value of zero means "not set"
   std::atomic<CommitID> _cleanup_commit_id{0};

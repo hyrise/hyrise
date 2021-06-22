@@ -213,6 +213,8 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
   Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as Chunk");
 
+  const std::lock_guard<std::mutex> lock(_statistics_update_mutex);
+
   _pruning_statistics = pruning_statistics;
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
