@@ -4,6 +4,10 @@
 #include <iterator>
 
 #include "../benchmarklib/tpcds/tpcds_table_generator.hpp"
+#include "../lib/import_export/binary/binary_parser.hpp"
+#include "../lib/import_export/binary/binary_writer.hpp"
+#include "benchmark_config.hpp"
+#include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/table_wrapper.hpp"
@@ -87,21 +91,24 @@ void debug_output_segment_counts(const std::vector<std::shared_ptr<DictionarySeg
 
 int main() {
   std::cout << "Playground: Jaccard-Index" << std::endl;
-
   // Generate benchmark data
   const auto jaccard_index_threshold = 0.95;
-  const auto scale_factor = 1u;
-  const auto chunk_size = Chunk::DEFAULT_SIZE;
-  // TODO: generate joinorderbenchmark tables
-  const auto table_generator = std::make_unique<TPCDSTableGenerator>(scale_factor, chunk_size);
-  table_generator->generate_and_store();
+  const auto table_path = std::string{"/home/Halil.Goecer/hyrise/imdb/"};
+  
+  // const auto table_generator = std::make_unique<FileBasedTableGenerator>(
+  //     std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), table_path);
+  // table_generator->generate_and_store();
+
+  // Get tables using storage manager
+  auto& sm = Hyrise::get().storage_manager;
+
+  const auto table = BinaryParser::parse(table_path + "company_name.bin");
+  sm.add_table("company_name", table);
 
   // Create output file
   auto output_file_stream = std::ofstream("jaccard_index_log.csv", std::ofstream::out | std::ofstream::trunc);
-  output_file_stream << "Table;Column;DataType;Chunk;CompareType;JaccardIndex";
+  output_file_stream << "Table;Column;DataType;Chunk;CompareType;JaccardIndex\n";
 
-  // Get tables using storage manager
-  const auto& sm = Hyrise::get().storage_manager;
   auto table_names = sm.table_names();
   std::sort(table_names.begin(), table_names.end());
 
@@ -109,6 +116,7 @@ int main() {
   // The jaccard index is calculated between a dictionary segment and its preceding dictionary segment
   for (const auto table_name : table_names) {
     const auto table = sm.get_table(table_name);
+    // BinaryWriter::write(*table, table_path + "company_name.bin");
     const auto column_count = table->column_count();
     const auto chunk_count = table->chunk_count();
 
@@ -132,6 +140,10 @@ int main() {
           const auto segment = chunk->get_segment(column_id);
 
           current_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment);
+          if (!current_dictionary_segment) {
+            std::cerr << "Not a dictionary segment! " << chunk_id << "/" << column_id << std::endl;
+            continue;
+          }
           const auto current_dictionary = current_dictionary_segment->dictionary();
           auto current_jaccard_index = 0.0;
           auto current_compare_type = std::string{};
