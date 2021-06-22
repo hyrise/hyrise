@@ -18,6 +18,7 @@ class CreateIndexNodeTest : public BaseTest {
     column_ids->emplace_back(2);
     create_index_node = CreateIndexNode::make("some_index", false, column_ids, table_node);
   }
+
   std::shared_ptr<AbstractLQPNode> table_node;
   std::shared_ptr<CreateIndexNode> create_index_node;
   std::shared_ptr<std::vector<ColumnID>> column_ids;
