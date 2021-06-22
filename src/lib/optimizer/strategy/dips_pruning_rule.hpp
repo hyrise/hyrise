@@ -173,6 +173,8 @@ class DipsPruningRule : public AbstractRule {
         const auto segment_statistics =
             std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
 
+        Assert(segment_statistics, "expected AttributeStatistics");
+
         if constexpr (std::is_arithmetic_v<COLUMN_TYPE>) {
           if (segment_statistics->range_filter) {  // false if all values in the chunk are NULL
             ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(

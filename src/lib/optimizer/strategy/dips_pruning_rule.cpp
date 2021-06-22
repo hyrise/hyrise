@@ -40,10 +40,15 @@ void DipsPruningRule::_bottom_up_dip_traversal(
     auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
     auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
 
-    std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-        std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
-    std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-        std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+    Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
+
+    auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+    auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
+
+    Assert (l && r, "Expected StoredTableNode");
+
+    std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+    std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
 
     if (!left_stored_table_node || !right_stored_table_node) {
       return;
@@ -71,10 +76,15 @@ void DipsPruningRule::_top_down_dip_traversal(
       auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
       auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
 
-      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-          std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
-      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-          std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+      Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
+
+      auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+      auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
+
+      Assert (l && r, "Expected StoredTableNode");
+
+      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
 
       if (!left_stored_table_node || !right_stored_table_node) {
         return;
@@ -116,6 +126,8 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
       std::shared_ptr<BinaryPredicateExpression> binary_predicate =
           std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
 
+      Assert(binary_predicate, "Expected BinaryPredicateExpression!");
+
       if (binary_predicate->predicate_condition != PredicateCondition::Equals) {
         continue;
       }
@@ -129,11 +141,13 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
       if (!left_lqp || !right_lqp) {
         continue;
       }
-      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-          std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock()));
+      auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+      auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
 
-      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(
-          std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock()));
+      Assert (l && r, "Expected StoredTableNode");
+
+      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
 
       // access join graph nodes
       auto left_join_graph_node = join_graph->get_node_for_table(left_stored_table_node);
