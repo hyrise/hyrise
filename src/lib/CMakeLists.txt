@@ -225,6 +225,8 @@ set(
     operators/maintenance/create_table.hpp
     operators/maintenance/create_index.cpp
     operators/maintenance/create_index.hpp
+    operators/maintenance/drop_index.cpp
+    operators/maintenance/drop_index.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_table.cpp

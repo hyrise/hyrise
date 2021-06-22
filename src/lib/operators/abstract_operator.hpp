@@ -24,6 +24,7 @@ enum class OperatorType {
   ChangeMetaTable,
   CreateTable,
   CreateIndex,
+  DropIndex,
   CreatePreparedPlan,
   CreateView,
   DropTable,
