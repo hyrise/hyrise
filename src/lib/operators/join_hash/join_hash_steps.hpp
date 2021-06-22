@@ -5,9 +5,10 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
-#include <uninitialized_vector.hpp>
 
 #include "bytell_hash_map.hpp"
+#include "uninitialized_vector.hpp"
+
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"

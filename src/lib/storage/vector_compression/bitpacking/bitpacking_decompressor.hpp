@@ -1,7 +1,8 @@
 #pragma once
 
+// #include "compact_vector.hpp"
+
 #include "bitpacking_vector_type.hpp"
-#include "compact_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 
 namespace opossum {

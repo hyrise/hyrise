@@ -5,7 +5,6 @@
 
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
-#include "uninitialized_vector.hpp"
 
 namespace opossum {
 
