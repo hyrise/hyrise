@@ -182,6 +182,9 @@ class Table : private Noncopyable {
 
   std::vector<IndexStatistics> indexes_statistics() const;
 
+  // ToDo(pi) new create_partial_index method for whole table PHI
+  // ToDo(pi) implement get_indexes(column_id)
+  // ToDo(pi) Frage: index nur auf immutable chunks? wo check?
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
@@ -193,7 +196,7 @@ class Table : private Noncopyable {
 
       chunk->create_index<Index>(column_ids);
     }
-    IndexStatistics index_statistics = {column_ids, name, index_type};
+    IndexStatistics index_statistics = {column_ids, name, index_type}; // ToDo(pi) add chunkIDs to IndexStatistics
     _indexes.emplace_back(index_statistics);
   }
 

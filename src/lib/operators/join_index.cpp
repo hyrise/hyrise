@@ -202,6 +202,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
+    // ToDo(pi) first use all PHIs on table to calculate first result, for other chunks do fallback
     const auto chunk_count_index_input_table = _index_input_table->chunk_count();
     for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
@@ -209,7 +210,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
       const auto& indexes =
           index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
-
+      //ToDo(pi) check has one or more PHI
       if (!indexes.empty()) {
         // We assume the first index to be efficient for our join
         // as we do not want to spend time on evaluating the best index inside of this join loop
