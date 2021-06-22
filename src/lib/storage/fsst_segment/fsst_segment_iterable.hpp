@@ -35,10 +35,13 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
 
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
-    // TODO
+
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
-
+    using PosListIteratorType = decltype(position_filter->cbegin());
+    auto begin = PointAccessIterator<PosListIteratorType>{_segment, position_filter->cbegin(), position_filter->cbegin()};
+    auto end = PointAccessIterator<PosListIteratorType>{_segment, position_filter->cbegin(), position_filter->cend()};
+    functor(begin, end);
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -109,33 +112,34 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                         SegmentPosition<T>, PosListIteratorType> {
    public:
-    using ValueType = T;
-    using IterableType = FSSTSegmentIterable<T>;
-    using DataIteratorType = typename std::vector<T>::const_iterator;
-    using NullValueIterator = typename pmr_vector<bool>::const_iterator;
+//    using ValueType = T;
+//    using IterableType = FSSTSegmentIterable<T>;
+//    using DataIteratorType = typename std::vector<T>::const_iterator;
+//    using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
     // Begin Iterator
-    PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
+    PointAccessIterator(const FSSTSegment<T>& segment,
                         PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
-          _data_it{std::move(data_it)},
-          _null_value_it{std::move(null_value_it)} {}
+          _segment{segment} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      const auto& value = *(_data_it + chunk_offsets.offset_in_poslist);
-      const auto is_null = _null_value_it && *(*_null_value_it + chunk_offsets.offset_in_referenced_chunk);
-      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
+      std::optional<T> value = _segment.get_typed_value(chunk_offsets.offset_in_referenced_chunk);
+      bool has_value = value.has_value();
+      return SegmentPosition<T>(has_value ? value.value() : T{}, !has_value, chunk_offsets.offset_in_poslist); // Why offset_in_poslist?
+//      const auto& value = *(_data_it + chunk_offsets.offset_in_poslist);
+//      const auto is_null = _null_value_it && *(*_null_value_it + chunk_offsets.offset_in_referenced_chunk);
+//      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    DataIteratorType _data_it;
-    std::optional<NullValueIterator> _null_value_it;
+    const FSSTSegment<T>& _segment;
   };
 };
 

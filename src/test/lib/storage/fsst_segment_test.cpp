@@ -65,21 +65,54 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
 
   auto segment_iterable = FSSTSegmentIterable(segment);
 
-
-  segment_iterable.with_iterators([&collected_values](auto it, auto end) {
-    while(it != end){
+  segment_iterable._on_with_iterators([&collected_values](auto it, auto end) {
+    while (it != end) {
       collected_values.push_back(*it);
       it++;
     }
   });
 
-  for(size_t index=0; index < values.size(); ++index){
+  for (size_t index = 0; index < values.size(); ++index) {
     auto segment_position = collected_values.at(index);
     ASSERT_EQ(segment_position.is_null(), null_values.at(index));
-    if (!null_values.at(index)){
+    if (!null_values.at(index)) {
       ASSERT_EQ(segment_position.value(), values.at(index));
     }
   }
+}
+
+TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
+  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
+  pmr_vector<bool> null_values = {false, false, true};
+  FSSTSegment<pmr_string> segment(values, std::optional(null_values));
+
+  pmr_vector<SegmentPosition<pmr_string>> collected_values;
+
+  auto segment_iterable = FSSTSegmentIterable(segment);
+
+  const auto position_filter = std::make_shared<RowIDPosList>();
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
+  position_filter->guarantee_single_chunk();
+
+  segment_iterable.with_iterators(position_filter, [&collected_values](auto it, auto end) {
+    while (it != end) {
+      collected_values.push_back(*it);
+      it++;
+    }
+  });
+
+  for (size_t index = 0; index < position_filter->size(); ++index){
+    auto position = (*position_filter)[index];
+    auto real_chunk_offset = position.chunk_offset;
+    auto segment_position = collected_values.at(index);
+
+    ASSERT_EQ(segment_position.is_null(), null_values.at(real_chunk_offset));
+    if (!null_values.at(real_chunk_offset)) {
+      ASSERT_EQ(segment_position.value(), values.at(real_chunk_offset));
+    }
+  }
+
 }
 
 }  // namespace opossum
