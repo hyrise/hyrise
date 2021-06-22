@@ -143,9 +143,6 @@ class DipsJoinGraph {
 std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
 
 class DipsPruningRule : public AbstractRule {
- public:
-  void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& node) const override;
-
  protected:
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

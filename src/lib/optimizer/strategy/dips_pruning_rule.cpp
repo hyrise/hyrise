@@ -23,26 +23,6 @@
 
 namespace opossum {
 
-void DipsPruningRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& node) const {
-  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
-  _build_join_graph(node, join_graph);
-
-  if (join_graph->is_empty()) {
-    return;
-  }
-
-  if (join_graph->is_tree()) {
-    std::shared_ptr<DipsJoinGraphNode> root =
-        join_graph
-            ->nodes[0];  // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
-    join_graph->set_root(root);
-    _bottom_up_dip_traversal(root);
-    _top_down_dip_traversal(root);
-  } else {
-    // Assumption: Hyrise handles cycles itself
-  }
-}
-
 void DipsPruningRule::_bottom_up_dip_traversal(
     const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
   for (const auto& child : node->children) {
@@ -233,7 +213,25 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) 
   return stream;
 }
 
-void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {}
+void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+  _build_join_graph(lqp_root, join_graph);
+
+  if (join_graph->is_empty()) {
+    return;
+  }
+
+  if (join_graph->is_tree()) {
+    std::shared_ptr<DipsJoinGraphNode> root =
+        join_graph
+            ->nodes[0];  // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
+    join_graph->set_root(root);
+    _bottom_up_dip_traversal(root);
+    _top_down_dip_traversal(root);
+  } else {
+    // Assumption: Hyrise handles cycles itself
+  }
+}
 
 }  // namespace opossum
 
