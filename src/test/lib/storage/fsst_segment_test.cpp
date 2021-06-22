@@ -56,4 +56,30 @@ TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
   ASSERT_EQ(std::nullopt, value);
 }
 
+TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
+  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
+  pmr_vector<bool> null_values = {false, false, true};
+  FSSTSegment<pmr_string> segment(values, std::optional(null_values));
+
+  pmr_vector<SegmentPosition<pmr_string>> collected_values;
+
+  auto segment_iterable = FSSTSegmentIterable(segment);
+
+
+  segment_iterable.with_iterators([&collected_values](auto it, auto end) {
+    while(it != end){
+      collected_values.push_back(*it);
+      it++;
+    }
+  });
+
+  for(size_t index=0; index < values.size(); ++index){
+    auto segment_position = collected_values.at(index);
+    ASSERT_EQ(segment_position.is_null(), null_values.at(index));
+    if (!null_values.at(index)){
+      ASSERT_EQ(segment_position.value(), values.at(index));
+    }
+  }
+}
+
 }  // namespace opossum
