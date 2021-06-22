@@ -62,8 +62,27 @@ void apply_shared_dictionary_to_segments(const std::vector<std::shared_ptr<Dicti
 /**
 * Calculates and returns Jaccard index.
 */
-double calc_jaccard_index(size_t union_size, size_t intersection_size) {
-  return intersection_size * 1.0 / union_size;
+double calc_jaccard_index(size_t union_size, size_t intersection_size) { return intersection_size * 1.0 / union_size; }
+
+void log_jaccard_index(const double jaccard_index, const std::string& table_name, const std::string& column_name,
+                       const std::string& compare_type, const DataType& column_data_type, const ChunkID chunk_id,
+                       std::ofstream& output_file_stream) {
+  const auto data_type_name = data_type_to_string.left.at(column_data_type);
+  std::cout << "Jaccard index = " << jaccard_index << " (" << compare_type << ") (Table=" << table_name
+            << ", Column=" << column_name << ", DataType=" << column_data_type << ", Chunk=" << chunk_id << "\n";
+  output_file_stream << table_name << ";" << column_name << ";" << data_type_name << ";" << chunk_id << ";"
+                     << compare_type << ";" << jaccard_index << std::endl;
+}
+
+template <typename T>
+void debug_output_segment_counts(const std::vector<std::shared_ptr<DictionarySegment<T>>>& dictionary_segments_to_merge,
+                                 const std::string& text) {
+  std::cout << "Dictionary segments to merge " << text << " " << dictionary_segments_to_merge.size()
+            << " segments with dictionary sizes of: " << std::endl;
+  for (const auto segmentPtr : dictionary_segments_to_merge) {
+    std::cout << segmentPtr->dictionary()->size() << ", ";
+  }
+  std::cout << std::endl;
 }
 
 int main() {
@@ -73,11 +92,13 @@ int main() {
   const auto jaccard_index_threshold = 0.95;
   const auto scale_factor = 1u;
   const auto chunk_size = Chunk::DEFAULT_SIZE;
+  // TODO: generate joinorderbenchmark tables
   const auto table_generator = std::make_unique<TPCDSTableGenerator>(scale_factor, chunk_size);
   table_generator->generate_and_store();
 
   // Create output file
-  auto output_file_stream = std::ofstream("jaccard_index_log.txt", std::ofstream::out | std::ofstream::trunc);
+  auto output_file_stream = std::ofstream("jaccard_index_log.csv", std::ofstream::out | std::ofstream::trunc);
+  output_file_stream << "Table;Column;DataType;Chunk;CompareType;JaccardIndex";
 
   // Get tables using storage manager
   const auto& sm = Hyrise::get().storage_manager;
@@ -113,6 +134,7 @@ int main() {
           current_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment);
           const auto current_dictionary = current_dictionary_segment->dictionary();
           auto current_jaccard_index = 0.0;
+          auto current_compare_type = std::string{};
 
           auto potential_new_shared_dictionary = std::make_shared<pmr_vector<ColumnDataType>>(allocator);
 
@@ -129,17 +151,18 @@ int main() {
               const auto total_size = current_dictionary->size() + previous_shared_dictionary->size();
               const auto union_size = potential_new_shared_dictionary->size();
               current_jaccard_index = calc_jaccard_index(union_size, total_size - union_size);
+              current_compare_type = "PreviousShared";
             }
 
             if (current_jaccard_index < jaccard_index_threshold && previous_dictionary_segment) {
               // If the merge with the last shared dictionary was not successful, try to merge the neighboring segments.
               const auto previous_dictionary = previous_dictionary_segment->dictionary();
-              std::set_union(current_dictionary->cbegin(), current_dictionary->cend(),
-                             previous_dictionary->cbegin(), previous_dictionary->cend(),
-                             std::back_inserter(*potential_new_shared_dictionary));
+              std::set_union(current_dictionary->cbegin(), current_dictionary->cend(), previous_dictionary->cbegin(),
+                             previous_dictionary->cend(), std::back_inserter(*potential_new_shared_dictionary));
               const auto total_size = current_dictionary->size() + previous_dictionary->size();
               const auto union_size = potential_new_shared_dictionary->size();
               current_jaccard_index = calc_jaccard_index(union_size, total_size - union_size);
+              current_compare_type = "NeighboringSegments";
             }
           } else {
             // The current shared dictionary is not empty.
@@ -150,6 +173,7 @@ int main() {
             const auto total_size = current_dictionary->size() + current_shared_dictionary->size();
             const auto union_size = potential_new_shared_dictionary->size();
             current_jaccard_index = calc_jaccard_index(union_size, total_size - union_size);
+            current_compare_type = "CurrentShared";
           }
 
           if (current_jaccard_index >= jaccard_index_threshold) {
@@ -163,37 +187,22 @@ int main() {
             // The jaccard index is below the threshold or we processed the last chunk.
             // This means that we apply the the shared dictionary to the collected segments.
             if (!dictionary_segments_to_merge.empty()) {
-
-              std::cout << "Merging " << dictionary_segments_to_merge.size()
-                        << " segments with dictionary sizes of: " << std::endl;
-              for (const auto segment : dictionary_segments_to_merge) {
-                std::cout << segment->dictionary()->size() << ", ";
-              }
-              std::cout << std::endl;
+              debug_output_segment_counts(dictionary_segments_to_merge, "before");
               apply_shared_dictionary_to_segments<ColumnDataType>(dictionary_segments_to_merge,
                                                                   current_shared_dictionary, allocator);
-              std::cout << "Merge completed, new dictionary size: " << std::endl;
-              for (const auto segment : dictionary_segments_to_merge) {
-                std::cout << segment->dictionary()->size() << ", ";
-              }
-              std::cout << std::endl;
-              
+              debug_output_segment_counts(dictionary_segments_to_merge, "after");
+
               // Save current_shared_dictionary to previous_shared_dictionary and reset
               std::swap(previous_shared_dictionary, current_shared_dictionary);
               current_shared_dictionary->clear();
               dictionary_segments_to_merge.clear();
-            }
-            else{
+            } else {
               current_shared_dictionary->clear();
             }
           }
 
-          output_file_stream << "Jaccard index = " << current_jaccard_index << " (Table=" << table_name
-                             << ", Column=" << column_name << ", DataType=" << column_data_type
-                             << ", Chunk=" << chunk_id << "\n";
-          std::cout << "Jaccard index = " << current_jaccard_index << " (Table=" << table_name
-                    << ", Column=" << column_name << ", DataType=" << column_data_type << ", Chunk=" << chunk_id
-                    << std::endl;
+          log_jaccard_index(current_jaccard_index, table_name, column_name, current_compare_type, column_data_type,
+                            chunk_id, output_file_stream);
 
           previous_dictionary_segment = current_dictionary_segment;
         }
