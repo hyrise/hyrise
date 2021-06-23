@@ -12,6 +12,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -2261,6 +2262,20 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   // clang-format on
 
   EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateIndex) {
+  const auto query = "CREATE INDEX my_index ON int_int_int (a, b);";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->emplace_back(ColumnID{0});
+  column_ids->emplace_back(ColumnID{1});
+
+  const auto expected_lqp = CreateIndexNode::make("my_index", false, column_ids, stored_table_node_int_int_int);
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
