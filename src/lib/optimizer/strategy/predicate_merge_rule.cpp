@@ -9,6 +9,11 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
+std::string PredicateMergeRule::name() const {
+  static const auto name = std::string{"PredicateMergeRule"};
+  return name;
+}
+
 /**
  * Merge subplans that only consists of PredicateNodes and UnionNodes (with SetOperationMode::Positions) into a single
  * PredicateNode. A subplan consists of linear "chain" and forked "diamond" parts.
