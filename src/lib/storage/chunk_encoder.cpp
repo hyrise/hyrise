@@ -55,6 +55,8 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
       pmr_vector<ColumnDataType> values;
       pmr_vector<bool> null_values;
 
+      auto segment_contains_null_values = false;
+
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
       iterable.with_iterators([&](auto it, const auto end) {
         const auto segment_size = std::distance(it, end);
@@ -69,10 +71,15 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
             values[current_position] = segment_item.value();
           } else {
             values[current_position] = {};
+            segment_contains_null_values = true;
           }
         }
       });
-      result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      if (segment_contains_null_values) {
+        result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      } else {
+        result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      }
     } else {
       auto encoder = create_encoder(encoding_spec.encoding_type);
       if (encoding_spec.vector_compression_type) {
