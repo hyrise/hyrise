@@ -64,7 +64,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_segment_index(index_statistics)) return false;
 
-  if (index_statistics.type != SegmentIndexType::GroupKey) return false;
+  if (index_statistics.type != IndexType::GroupKey) return false;
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);

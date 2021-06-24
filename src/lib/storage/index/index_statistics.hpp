@@ -10,7 +10,7 @@ namespace opossum {
 struct IndexStatistics {
   std::vector<ColumnID> column_ids;
   std::string name;
-  SegmentIndexType type;
+  IndexType type;
 };
 
 // For googletest

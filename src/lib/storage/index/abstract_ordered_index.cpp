@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-AbstractOrderedIndex::AbstractOrderedIndex(const SegmentIndexType type) : AbstractIndex<ChunkOffset>(type) {}
+AbstractOrderedIndex::AbstractOrderedIndex(const IndexType type) : AbstractIndex<ChunkOffset>(type) {}
 
 AbstractOrderedIndex::Iterator AbstractOrderedIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(

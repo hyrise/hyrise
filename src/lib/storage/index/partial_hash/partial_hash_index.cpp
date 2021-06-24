@@ -10,7 +10,7 @@ size_t PartialHashIndex::estimate_memory_consumption(ChunkOffset row_count, Chun
 }
 
 PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table, const std::vector<ChunkID>& chunk_ids_to_index, const ColumnID column_id)
-    : AbstractIndex<RowID>{get_index_type_of<PartialHashIndex>()} {
+    : AbstractTableIndex{get_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
 
   resolve_data_type(referenced_table->get_chunk(chunk_ids_to_index.front())->get_segment(column_id)->data_type(), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
@@ -38,7 +38,7 @@ PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table
 
 //ToDO(pi) change index (add) chunks later after creation
 
-std::pair<PartialHashIndex::Iterator, PartialHashIndex::Iterator> PartialHashIndex::equals(const AllTypeVariant& value) const {
+std::pair<PartialHashIndex::Iterator, PartialHashIndex::Iterator> PartialHashIndex::_equals(const AllTypeVariant& value) const {
   auto result = _map.find(value);
   if(result == _map.end()){
     auto end_iter = _cend();

@@ -9,21 +9,21 @@
 namespace opossum {
 
 template <typename PositionEntry>
-size_t AbstractIndex<PositionEntry>::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count,
+size_t AbstractIndex<PositionEntry>::estimate_memory_consumption(IndexType type, ChunkOffset row_count,
                                                   ChunkOffset distinct_count, uint32_t value_bytes) {
   switch (type) {
-    case SegmentIndexType::GroupKey:
+    case IndexType::GroupKey:
       return GroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case SegmentIndexType::CompositeGroupKey:
+    case IndexType::CompositeGroupKey:
       return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case SegmentIndexType::AdaptiveRadixTree:
+    case IndexType::AdaptiveRadixTree:
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case SegmentIndexType::BTree:
+    case IndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case SegmentIndexType::PartialHash:
+    case IndexType::PartialHash:
       return PartialHashIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case SegmentIndexType::Invalid:
-      Fail("SegmentIndexType is invalid.");
+    case IndexType::Invalid:
+      Fail("IndexType is invalid.");
   }
   Fail("GCC thinks this is reachable.");
 }

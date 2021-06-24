@@ -10,7 +10,7 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree, PartialHash };
+enum class IndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree, PartialHash };
 
 class GroupKeyIndex;
 class CompositeGroupKeyIndex;
@@ -21,17 +21,17 @@ class PartialHashIndex;
 namespace detail {
 
 constexpr auto segment_index_map =
-    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey),
-                   hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey),
-                   hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, SegmentIndexType::AdaptiveRadixTree),
-                   hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree),
-                   hana::make_pair(hana::type_c<PartialHashIndex>, SegmentIndexType::PartialHash));
+    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, IndexType::GroupKey),
+                   hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, IndexType::CompositeGroupKey),
+                   hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, IndexType::AdaptiveRadixTree),
+                   hana::make_pair(hana::type_c<BTreeIndex>, IndexType::BTree),
+                   hana::make_pair(hana::type_c<PartialHashIndex>, IndexType::PartialHash));
 
 }  // namespace detail
 
-template <typename IndexType>
-SegmentIndexType get_index_type_of() {
-  return detail::segment_index_map[hana::type_c<IndexType>];
+template <typename Type>
+IndexType get_index_type_of() {
+  return detail::segment_index_map[hana::type_c<Type>];
 }
 
 }  // namespace opossum

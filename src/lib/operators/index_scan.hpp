@@ -21,7 +21,7 @@ class AbstractTask;
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
+  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const IndexType index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
@@ -44,7 +44,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   RowIDPosList _scan_chunk(const ChunkID chunk_id);
 
  private:
-  const SegmentIndexType _index_type;
+  const IndexType _index_type;
   const std::vector<ColumnID> _left_column_ids;
   const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;

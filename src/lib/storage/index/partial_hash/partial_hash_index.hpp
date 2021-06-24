@@ -1,14 +1,14 @@
 #pragma once
 
-#include <storage/table.hpp>
+#include "storage/table.hpp"
 #include "storage/index/abstract_ordered_index.hpp"
-#include "tsl/robin_map.h"
+#include <tsl/robin_map.h>
 
 namespace opossum {
 
 class PartialHashIndexTest;
 
-class PartialHashIndex : public AbstractIndex<RowID> {
+class PartialHashIndex : public AbstractTableIndex {
   friend PartialHashIndexTest;
 
  public:
@@ -25,7 +25,9 @@ class PartialHashIndex : public AbstractIndex<RowID> {
   PartialHashIndex() = delete;
   PartialHashIndex(const std::shared_ptr<Table>, const std::vector<ChunkID>&, const ColumnID);
 
-  std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const;
+
+
+
 
  protected:
   Iterator _cbegin() const override;
@@ -33,10 +35,18 @@ class PartialHashIndex : public AbstractIndex<RowID> {
   std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
   size_t _memory_consumption() const override;
 
+  std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const override;
+
+  bool _is_index_for(const ColumnID column_id) const override {
+    return column_id == _column_id;
+  }
  private:
   tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map;
+  // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
+  ColumnID _column_id;
   std::vector<RowID> _row_ids;
   std::vector<std::shared_ptr<const AbstractSegment>> _indexed_segments;
+
 };
 
 }  // namespace opossum

@@ -319,7 +319,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+std::vector<IndexStatistics> Table::indexes_statistics() const { return _index_statistics; }
 
 const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 
@@ -393,6 +393,14 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   }
 
   _value_clustered_by = value_clustered_by;
+}
+
+std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(
+    const ColumnID column_id) const {
+  auto result = std::vector<std::shared_ptr<AbstractTableIndex>>();
+  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
+               [&](const auto& index) { return index->is_index_for(column_id); });
+  return result;
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {

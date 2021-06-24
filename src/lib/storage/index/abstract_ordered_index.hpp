@@ -27,9 +27,30 @@ class AbstractOrderedIndex : public AbstractIndex<ChunkOffset> {
    */
 
   AbstractOrderedIndex() = delete;
-  explicit AbstractOrderedIndex(const SegmentIndexType type);
+  explicit AbstractOrderedIndex(const IndexType type);
   AbstractOrderedIndex(AbstractOrderedIndex&&) = default;
   virtual ~AbstractOrderedIndex() = default;
+
+  /**
+   * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
+   * and the columns of the index match, and the given segments are either exactly or a subset of the indexed segments.
+   *
+   * For example:
+   * We have an index on columns DAB.
+   * The index is considered to be applicable for columns D, DA and DAB.
+   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
+   * @return true if the given columns are covered by the index.
+   */
+  bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
+    auto indexed_segments = _get_indexed_segments();
+    if (segments.size() > indexed_segments.size()) return false;
+    if (segments.empty()) return false;
+
+    for (size_t i = 0; i < segments.size(); ++i) {
+      if (segments[i] != indexed_segments[i]) return false;
+    }
+    return true;
+  }
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.

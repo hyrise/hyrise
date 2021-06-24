@@ -202,7 +202,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
-    // ToDo(pi) first use all PHIs on table to calculate first result, for other chunks do fallback
+    // ToDo(pi) first use all PHIs on table to calculate first result, for unindexed chunks don't do segment fallback
+    // hash join fallback for PHI
+    // do only PHI, no Chunk Indices
     const auto chunk_count_index_input_table = _index_input_table->chunk_count();
     for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);

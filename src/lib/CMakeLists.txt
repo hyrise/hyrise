@@ -456,6 +456,8 @@ set(
     storage/index/abstract_index.hpp
     storage/index/abstract_ordered_index.cpp
     storage/index/abstract_ordered_index.hpp
+    storage/index/abstract_table_index.cpp
+    storage/index/abstract_table_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -480,6 +482,8 @@ set(
     storage/index/index_statistics.hpp
     storage/index/partial_hash/partial_hash_index.cpp
     storage/index/partial_hash/partial_hash_index.hpp
+    storage/index/partial_index_statistics.cpp
+    storage/index/partial_index_statistics.hpp
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp

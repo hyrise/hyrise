@@ -118,12 +118,12 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}),
+  EXPECT_EQ(chunk->get_index(IndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{ColumnID{1}}), index_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{1}}), nullptr);
+  EXPECT_EQ(chunk->get_index(IndexType::GroupKey, std::vector<ColumnID>{ColumnID{1}}), index_str);
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{1}}), nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
@@ -133,17 +133,17 @@ TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
+  EXPECT_EQ(chunk->get_index(IndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey,
                              std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey,
                              std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
+  EXPECT_EQ(chunk->get_index(IndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
             index_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+  EXPECT_EQ(chunk->get_index(IndexType::CompositeGroupKey,
                              std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
             nullptr);
 }

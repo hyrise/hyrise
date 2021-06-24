@@ -239,7 +239,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     }
     // Check if chunk has GroupKey index
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    if (chunk && chunk->get_index(IndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
     ++pruned_table_chunk_id;
@@ -247,7 +247,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+  auto index_scan = std::make_shared<IndexScan>(input_operator, IndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);

@@ -10,7 +10,9 @@
 
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
+#include "storage/index/abstract_table_index.hpp"
 #include "storage/index/index_statistics.hpp"
+// #include "storage/index/partial_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
 #include "types.hpp"
@@ -182,12 +184,24 @@ class Table : private Noncopyable {
 
   std::vector<IndexStatistics> indexes_statistics() const;
 
-  // ToDo(pi) new create_partial_index method for whole table PHI
+  // TODO(pi) restrict to partial indexes
+  template <typename Index>
+  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const std::string& name = "") {
+    IndexType index_type = get_index_type_of<Index>();
+
+    auto index = std::make_shared<Index>(std::make_shared<Table>(*this), chunk_ids, column_id);
+    _table_indexes.emplace_back(index);
+
+    //PartialIndexStatistics index_statistics = {{std::vector<ColumnID>{column_id}, name, index_type}, chunk_ids}; // ToDo(pi) add chunkIDs to IndexStatistics
+    //_partial_index_statistics.emplace_back(index_statistics);
+  }
+
+  // ToDo(pi) new create_table_index method for whole table PHI
   // ToDo(pi) implement get_indexes(column_id)
-  // ToDo(pi) Frage: index nur auf immutable chunks? wo check?
+  // ToDo(pi) Frage: index nur auf immutable chunks? wo check? -> checkchunk immutable
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    SegmentIndexType index_type = get_index_type_of<Index>();
+    IndexType index_type = get_index_type_of<Index>();
 
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -197,7 +211,7 @@ class Table : private Noncopyable {
       chunk->create_index<Index>(column_ids);
     }
     IndexStatistics index_statistics = {column_ids, name, index_type}; // ToDo(pi) add chunkIDs to IndexStatistics
-    _indexes.emplace_back(index_statistics);
+    _index_statistics.emplace_back(index_statistics);
   }
 
   /**
@@ -206,6 +220,8 @@ class Table : private Noncopyable {
    */
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
+
+  std::vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes(const ColumnID column_id) const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -247,7 +263,9 @@ class Table : private Noncopyable {
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexStatistics> _indexes;
+  std::vector<IndexStatistics> _index_statistics;
+  //std::vector<PartialIndexStatistics> _partial_index_statistics;
+  pmr_vector<std::shared_ptr<AbstractTableIndex>> _table_indexes;
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
   // chunks more than once.

@@ -50,7 +50,7 @@ class AbstractIndex : private Noncopyable {
    *
    * If no prediction is possible (or it is not implemented yet), this shall fail.
    */
-  static size_t estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
+  static size_t estimate_memory_consumption(IndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
                                             uint32_t value_bytes);
 
   /**
@@ -60,30 +60,9 @@ class AbstractIndex : private Noncopyable {
    */
 
   AbstractIndex() = delete;
-  explicit AbstractIndex(const SegmentIndexType type) : _type{type} {}
+  explicit AbstractIndex(const IndexType type) : _type{type} {}
   AbstractIndex(AbstractIndex&&) = default;
   virtual ~AbstractIndex() = default;
-
-  /**
-   * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
-   * and the columns of the index match, and the given segments are either exactly or a subset of the indexed segments.
-   *
-   * For example:
-   * We have an index on columns DAB.
-   * The index is considered to be applicable for columns D, DA and DAB.
-   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
-   * @return true if the given columns are covered by the index.
-   */
-  bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-    auto indexed_segments = _get_indexed_segments();
-    if (segments.size() > indexed_segments.size()) return false;
-    if (segments.empty()) return false;
-
-    for (size_t i = 0; i < segments.size(); ++i) {
-      if (segments[i] != indexed_segments[i]) return false;
-    }
-    return true;
-  }
 
   /**
    * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
@@ -123,7 +102,7 @@ class AbstractIndex : private Noncopyable {
    */
   Iterator null_cend() const { return _null_positions.cend(); }
 
-  SegmentIndexType type() const { return _type; }
+  IndexType type() const { return _type; }
 
   /**
    * Returns the memory consumption of this Index in bytes
@@ -149,6 +128,6 @@ class AbstractIndex : private Noncopyable {
   std::vector<PositionEntry> _null_positions;
 
  private:
-  const SegmentIndexType _type;
+  const IndexType _type;
 };
 }  // namespace opossum

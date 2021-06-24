@@ -470,13 +470,13 @@ TYPED_TEST(SingleSegmentIndexTest, NullCBeginCEndTest) {
 
 TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
   if constexpr (std::is_same_v<TypeParam, AdaptiveRadixTreeIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::AdaptiveRadixTree);
+    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::AdaptiveRadixTree);
   } else if constexpr (std::is_same_v<TypeParam, BTreeIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::BTree);
+    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::BTree);
   } else if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::CompositeGroupKey);
+    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::CompositeGroupKey);
   } else if constexpr (std::is_same_v<TypeParam, GroupKeyIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::GroupKey);
+    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::GroupKey);
   }
 }
 
