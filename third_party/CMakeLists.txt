@@ -27,6 +27,7 @@ add_library(
     benchmark/src/counter.cc
     benchmark/src/csv_reporter.cc
     benchmark/src/json_reporter.cc
+    benchmark/src/perf_counters.cc
     benchmark/src/reporter.cc
     benchmark/src/sleep.cc
     benchmark/src/statistics.cc
