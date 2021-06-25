@@ -14,15 +14,13 @@ namespace opossum {
  */
 class CreateIndexNode : public EnableMakeForLQPNode<CreateIndexNode>, public AbstractNonQueryNode {
  public:
-  CreateIndexNode(const std::string& init_index_name, const std::string& indexed_table_name, const bool init_if_not_exists, const std::vector<std::string> column_names, StoredTableNode init_stored_table);
+  CreateIndexNode(const std::string& init_index_name, const bool init_if_not_exists, const std::shared_ptr<std::vector<ColumnID>> column_ids);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string index_name;
-  const std::string target_table_name;
   const bool if_not_exists;
-  const std::vector<std::string> column_names;
-  const StoredTableNode stored_table;
+  const std::shared_ptr<std::vector<ColumnID>> column_ids;
 
 
  protected:

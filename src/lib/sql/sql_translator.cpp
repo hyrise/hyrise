@@ -36,6 +36,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -1251,6 +1252,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView:
       return _translate_create_view(create_statement);
+    case hsql::CreateType::kCreateIndex:
+      return _translate_create_index(create_statement);
     case hsql::CreateType::kCreateTable:
       return _translate_create_table(create_statement);
     case hsql::CreateType::kCreateTableFromTbl:
@@ -1283,6 +1286,29 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
   return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names),
                               create_statement.ifNotExists);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hsql::CreateStatement& create_statement) {
+
+  Assert(Hyrise::get().storage_manager.has_table(create_statement.tableName), "table not existent");
+
+  auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+
+  for (auto column_definition: *(create_statement.columns)) {
+    auto column_id = target_table->column_id_by_name(column_definition->name);
+    if(column_id != INVALID_COLUMN_ID) {
+      column_ids->emplace_back(column_id);
+    } else {
+      throw "no column id found for given column name";
+    }
+  }
+
+  auto input_node = StoredTableNode::make(create_statement.tableName);
+
+  return CreateIndexNode::make(create_statement.indexName, create_statement.ifNotExists, column_ids, input_node);
+
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {

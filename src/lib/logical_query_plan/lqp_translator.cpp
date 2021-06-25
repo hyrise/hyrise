@@ -511,20 +511,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_index_node = std::dynamic_pointer_cast<CreateIndexNode>(node);
-  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  const auto input_node = create_index_node->left_input();
 
-  auto target_table_name = create_index_node->target_table_name;
-
-  auto target_table = Hyrise::get().storage_manager.get_table(target_table_name);
-  for(auto column_name: create_index_node->column_names) {
-    column_ids->push_back(target_table->column_id_by_name(column_name));
-  }
-  //think i am too dumb for this, let's start here tomorrow :-)
-  auto table = translate_node(std::dynamic_pointer_cast<AbstractLQPNode>((create_index_node->stored_table)&));
-  //TODO we pack the target table in a table wrapper node. this we would suggest takes place in the sql translation.
-  // We would have to adapt all existing nodes slightly.
-
-  return std::make_shared<CreateIndex>(create_index_node->index_name, column_ids,  create_index_node->if_not_exists, target_table_name, table);
+  return std::make_shared<CreateIndex>(create_index_node->index_name, create_index_node->column_ids,  create_index_node->if_not_exists, translate_node(input_node));
 
 }
 
