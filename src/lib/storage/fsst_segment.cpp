@@ -11,11 +11,19 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
+#include <iostream>
+
 namespace opossum {
 
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
+  if (values.size() == 0) {
+    _null_values = std::nullopt;
+    _encoder = nullptr;
+    return;
+  }
+
   // our temporary data structure keeping char pointer and their length
   std::vector<unsigned long> row_lengths;
   std::vector<unsigned char*> row_pointers;
@@ -37,7 +45,6 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   _compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
   // create symbol table
   _encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
-
   size_t compressed_size =
       fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
                     _compressed_values.data(), _compressed_value_lengths.data(), _compressed_value_pointers.data());
@@ -47,6 +54,20 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   _decoder = fsst_decoder(_encoder);
   // TODO (anyone): shrink the size of _compressed_values
 }
+
+template <typename T>
+FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
+                            pmr_vector<unsigned long>& compressed_value_lengths,
+                            pmr_vector<unsigned char*>& compressed_value_pointers,
+                            std::optional<pmr_vector<bool>>& null_values, fsst_encoder_t* encoder,
+                            fsst_decoder_t& decoder)
+    : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
+      _compressed_values{std::move(compressed_values)},
+      _compressed_value_lengths{std::move(compressed_value_lengths)},
+      _compressed_value_pointers{std::move(compressed_value_pointers)},
+      _null_values{std::move(null_values)},
+      _encoder{encoder},
+      _decoder{std::move(decoder)} {}
 
 template <typename T>
 AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -60,6 +81,13 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
     return typed_value.value();
   }
   return NULL_VALUE;
+}
+
+template <typename T>
+FSSTSegment<T>::~FSSTSegment() {
+  if (_encoder != nullptr){
+    fsst_destroy(_encoder);
+  }
 }
 
 template <typename T>
@@ -88,7 +116,31 @@ ChunkOffset FSSTSegment<T>::size() const {
 template <typename T>
 std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // TODO add real values
-  return std::shared_ptr<FSSTSegment<T>>();
+
+  //Dictionary segment
+  //  const PolymorphicAllocator<size_t>& alloc) const {
+  //    auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+  //    auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);
+  //    auto copy = std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
+  //    copy->access_counter = access_counter;
+  //    return copy;
+  //  }
+
+  // lz4
+  auto new_null_values =
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
+  auto new_compressed_values = pmr_vector<unsigned char>{_compressed_values, alloc};
+  auto new_compressed_value_lengths = pmr_vector<unsigned long>{_compressed_value_lengths, alloc};
+  auto new_compressed_value_pointers = pmr_vector<unsigned char*>{_compressed_value_pointers, alloc};
+
+  fsst_encoder_t* new_encoder = fsst_duplicate(_encoder);
+  fsst_decoder_t new_decoder = _decoder;
+
+  auto new_segment =
+      std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_value_lengths, new_compressed_value_pointers,
+                                    new_null_values, new_encoder, new_decoder);
+
+  return std::dynamic_pointer_cast<AbstractSegment>(new_segment);
 }
 
 template <typename T>

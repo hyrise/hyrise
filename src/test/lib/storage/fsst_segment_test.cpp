@@ -20,7 +20,7 @@ namespace opossum {
 class StorageFSSTSegmentTest : public BaseTest {
  protected:
   //  static constexpr auto row_count = FSSTEncoder::_block_size + size_t{1000u};
-  //  std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
+  std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
 template <typename T>
@@ -29,15 +29,22 @@ std::shared_ptr<FSSTSegment<T>> compress(std::shared_ptr<ValueSegment<T>> segmen
   return std::dynamic_pointer_cast<FSSTSegment<T>>(encoded_segment);
 }
 
-//TEST_F(StorageFSSTSegmentTest, IdleTest) {
-//  auto empty_str_segment = compress(std::make_shared<ValueSegment<pmr_string>>(true), DataType::String);
-//}
+TEST_F(StorageFSSTSegmentTest, CreateEmptyFSSTSegmentTest) {
+  pmr_vector<pmr_string> values;
+  pmr_vector<bool> null_values;
+  FSSTSegment<pmr_string> segment(values, null_values);
+
+  ASSERT_EQ(segment.size(), 0);
+  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 0);
+}
+
 
 TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
   pmr_vector<bool> null_values = {false};
   FSSTSegment<pmr_string> segment(values, null_values);
 }
+
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
@@ -102,7 +109,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
     }
   });
 
-  for (size_t index = 0; index < position_filter->size(); ++index){
+  for (size_t index = 0; index < position_filter->size(); ++index) {
     auto position = (*position_filter)[index];
     auto real_chunk_offset = position.chunk_offset;
     auto segment_position = collected_values.at(index);
@@ -112,7 +119,6 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
       ASSERT_EQ(segment_position.value(), values.at(real_chunk_offset));
     }
   }
-
 }
 
 }  // namespace opossum
