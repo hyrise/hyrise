@@ -205,12 +205,6 @@ class Table : private Noncopyable {
         _indexes.begin(), _indexes.end(),
         [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
 
-    // remove index statistics
-    auto new_end = std::remove_if(
-        _indexes.begin(), _indexes.end(),
-        [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
-    _indexes.erase(new_end, _indexes.end());
-
     if(index_stats != std::end(_indexes)){
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto chunk = std::atomic_load(&_chunks[chunk_id]);
@@ -219,6 +213,13 @@ class Table : private Noncopyable {
         auto index = chunk->get_index(index_stats->type, index_stats->column_ids);
         chunk->remove_index(index);
       }
+
+      // remove index statistics
+      auto new_end = std::remove_if(
+          _indexes.begin(), _indexes.end(),
+          [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
+      _indexes.erase(new_end, _indexes.end());
+
     } else {
       throw std::invalid_argument("No index with name " + name);
     }

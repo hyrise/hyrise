@@ -58,7 +58,7 @@ TEST_F(DropIndexTest, IndexStatisticsEmpty) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
-  auto drop_index = std::make_shared<DropIndex>(index_name, table_name, table_wrapper);
+  auto drop_index = std::make_shared<DropIndex>(index_name, table_wrapper);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   drop_index->set_transaction_context(context);
@@ -72,7 +72,7 @@ TEST_F(DropIndexTest, FailOnWrongIndexName) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
-  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", table_name, table_wrapper);
+  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", table_wrapper);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   drop_index->set_transaction_context(context);

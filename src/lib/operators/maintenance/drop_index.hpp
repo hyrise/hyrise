@@ -10,7 +10,6 @@ namespace opossum {
 class DropIndex : public AbstractReadWriteOperator {
  public:
   DropIndex(const std::string& init_index_name,
-              const std::string& init_target_table_name,
               const std::shared_ptr<const AbstractOperator>& input_operator);
 
   const std::string& name() const override;
