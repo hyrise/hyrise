@@ -45,7 +45,7 @@ void DipsPruningRule::_bottom_up_dip_traversal(
     auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
     auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
 
-    Assert (l && r, "Expected StoredTableNode");
+    Assert(l && r, "Expected StoredTableNode");
 
     std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
     std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
@@ -81,7 +81,7 @@ void DipsPruningRule::_top_down_dip_traversal(
       auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
       auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
 
-      Assert (l && r, "Expected StoredTableNode");
+      Assert(l && r, "Expected StoredTableNode");
 
       std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
       std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
@@ -144,7 +144,7 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
       auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
       auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
 
-      Assert (l && r, "Expected StoredTableNode");
+      Assert(l && r, "Expected StoredTableNode");
 
       std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
       std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
@@ -248,4 +248,3 @@ void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Ab
 }
 
 }  // namespace opossum
-

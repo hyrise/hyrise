@@ -387,4 +387,3 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
 }
 
 }  // namespace opossum
-
