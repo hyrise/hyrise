@@ -180,21 +180,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
 
     auto target_chunk_statistic = target_chunk->pruning_statistics();
-
-    std::vector<bool> is_initialized = std::vector<bool>(target_chunk->column_count());
-    std::optional<ChunkPruningStatistics> new_target_chunk_statistic = {};
-
-    if (target_chunk_statistic.has_value()) {
-      new_target_chunk_statistic = target_chunk_statistic;
-      for (size_t column_id = 0; column_id < target_chunk->column_count(); column_id++) {
-        is_initialized[column_id] = true;
-      }
-    } else {
-      new_target_chunk_statistic =
-          std::make_optional(std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count()));
-      for (size_t column_id = 0; column_id < target_chunk->column_count(); column_id++) {
-        is_initialized[column_id] = false;
-      }
+    auto is_initialized = target_chunk_statistic.has_value();
+    if (!is_initialized){
+      target_chunk_statistic =
+          std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count());
     }
 
     auto target_chunk_offset = target_chunk_range.begin_chunk_offset;
@@ -216,9 +205,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
                                            target_chunk_offset, num_rows_current_iteration);
 
+
+
           std::shared_ptr<BaseAttributeStatistics> segment_statistic = nullptr;
-          if (is_initialized[column_id]) {
-            segment_statistic = new_target_chunk_statistic.value()[static_cast<size_t>(column_id)];
+          if (is_initialized) {
+            segment_statistic = target_chunk_statistic.value()[static_cast<size_t>(column_id)];
           } else {
             segment_statistic = std::make_shared<AttributeStatistics<ColumnDataType>>();
           }
@@ -226,8 +217,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
               _update_segment_statistic<ColumnDataType>(source_segment, source_row_id.chunk_offset, segment_statistic,
                                                         num_rows_current_iteration, context);
 
-          new_target_chunk_statistic.value()[column_id] = new_segment_statistic;
-          is_initialized[static_cast<size_t>(column_id)] = true;
+          target_chunk_statistic.value()[column_id] = new_segment_statistic;
         });
       }
 
@@ -243,7 +233,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       target_chunk_range_remaining_rows -= num_rows_current_iteration;
     }
 
-    target_chunk->set_pruning_statistics(new_target_chunk_statistic);
+    target_chunk->set_pruning_statistics(target_chunk_statistic);
   }
 
   // 3. Update DipsStatistics to keep pruning statistics on newest chunk up-to-date
