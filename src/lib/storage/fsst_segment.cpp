@@ -3,7 +3,7 @@
 #include <climits>
 #include <sstream>
 #include <string>
-
+#include <libfsst.hpp>
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
@@ -145,8 +145,20 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
 
 template <typename T>
 size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+
+  // enum class MemoryUsageCalculationMode { Sampled, Full };
+
+  auto compressed_values_size = _compressed_values.size() * sizeof(unsigned char);
+  auto value_lengths_size = _compressed_value_lengths.size() * sizeof(unsigned long);
+  auto value_pointers_size = _compressed_value_pointers.size() * sizeof(unsigned char*);
+  auto null_value_size =  (_null_values.has_value()? _null_values.value().size() * sizeof(bool) : size_t{0}) + sizeof(std::optional<pmr_vector<bool>>);
+
+//  auto dereferrenced_encoder = *(std::static_pointer_cast<Encoder*>(_encoder));
+  auto encoder_size = sizeof(Encoder) + sizeof(SymbolTable);
+
+  auto decoder_size = sizeof(fsst_decoder_t);
   // TODO (anyone): which memory usage should we return? compressed data or all memory
-  return size_t{0};
+  return compressed_values_size + value_lengths_size + value_pointers_size + null_value_size + encoder_size + decoder_size;
 }
 
 template <typename T>
