@@ -14,14 +14,14 @@ class CreateIndexNodeTest : public BaseTest {
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
     table_node = std::make_shared<StoredTableNode>("t_a");
+    column_ids->emplace_back(0);
     column_ids->emplace_back(1);
-    column_ids->emplace_back(2);
     create_index_node = CreateIndexNode::make("some_index", false, column_ids, table_node);
   }
 
   std::shared_ptr<AbstractLQPNode> table_node;
   std::shared_ptr<CreateIndexNode> create_index_node;
-  std::shared_ptr<std::vector<ColumnID>> column_ids;
+  std::shared_ptr<std::vector<ColumnID>> column_ids = std::make_shared<std::vector<ColumnID>>();
 
 };
 

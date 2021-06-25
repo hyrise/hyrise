@@ -112,6 +112,8 @@ set(
     logical_query_plan/create_table_node.cpp
     logical_query_plan/create_table_node.hpp
     logical_query_plan/create_index_node.cpp
+    logical_query_plan/drop_index_node.cpp
+    logical_query_plan/drop_index_node.hpp
     logical_query_plan/create_index_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp

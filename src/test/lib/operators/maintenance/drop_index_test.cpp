@@ -31,7 +31,7 @@ class DropIndexTest: public BaseTest {
 
     column_ids->emplace_back(ColumnID{static_cast<ColumnID>(test_table->column_id_by_name("b"))});
 
-    create_index = std::make_shared<CreateIndex>(index_name, column_ids, true, table_name, dummy_table_wrapper);
+    create_index = std::make_shared<CreateIndex>(index_name, column_ids, true, dummy_table_wrapper);
 
     auto compression_task_0 = std::make_shared<ChunkCompressionTask>("TestTable", ChunkID{0});
     auto compression_task_1 = std::make_shared<ChunkCompressionTask>("TestTable", ChunkID{1});
