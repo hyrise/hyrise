@@ -17,6 +17,24 @@
 
 namespace opossum {
 
+// A simple polymorphic memory resource that tracks how much memory was allocated
+class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+ public:
+  size_t allocated{0};
+
+  void* do_allocate(std::size_t bytes, std::size_t alignment) override {
+    allocated += bytes;
+    return std::malloc(bytes);  // NOLINT
+  }
+
+  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
+    allocated -= bytes;
+    std::free(p);  // NOLINT
+  }
+
+  bool do_is_equal(const memory_resource& other) const noexcept override { Fail("Not implemented"); }
+};
+
 class StorageFSSTSegmentTest : public BaseTest {
  protected:
   //  static constexpr auto row_count = FSSTEncoder::_block_size + size_t{1000u};
@@ -35,9 +53,18 @@ TEST_F(StorageFSSTSegmentTest, CreateEmptyFSSTSegmentTest) {
   FSSTSegment<pmr_string> segment(values, null_values);
 
   ASSERT_EQ(segment.size(), 0);
-  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 0);
+  //  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 0); TODO(anyone): check memory consumption
 }
 
+TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
+  vs_str->append("Moritz");
+  vs_str->append("ChrisChr");
+  vs_str->append("Christopher");
+  auto segment = compress(vs_str, DataType::String);
+
+  ASSERT_EQ(segment->size(), 3);
+  //  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 12); TODO(anyone): check memory consumption
+}
 
 TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
@@ -45,13 +72,31 @@ TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
   FSSTSegment<pmr_string> segment(values, null_values);
 }
 
-
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
   FSSTSegment<pmr_string> segment(values, std::nullopt);
 
   std::optional<pmr_string> value = segment.get_typed_value(ChunkOffset{2});
   ASSERT_EQ(values[2], value.value());
+}
+
+TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
+  pmr_vector<pmr_string> values = {"Moritz", "Chris", "Peter"};
+
+  for (const auto& value : values) {
+    vs_str->append(value);
+  }
+
+  auto resource = SimpleTrackingMemoryResource{};
+  const auto allocator = PolymorphicAllocator<size_t>(&resource);
+
+  auto segment = compress(vs_str, DataType::String);
+  auto copied_segment = std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
+
+  ASSERT_EQ(copied_segment->size(), values.size());
+  for (size_t index = 0; index < values.size(); ++index) {
+    ASSERT_EQ(copied_segment->get_typed_value(index), std::optional{values[index]});
+  }
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
