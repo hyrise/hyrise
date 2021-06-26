@@ -45,9 +45,9 @@ class Insert : public AbstractReadWriteOperator {
 
   template <typename T>
   std::shared_ptr<AttributeStatistics<T>> _update_min_max_filter_segment_statistics(
-      std::shared_ptr<AbstractSegment> source_segment, ChunkOffset source_chunk_offset,
+      const std::shared_ptr<AbstractSegment>& source_segment, ChunkOffset source_chunk_offset,
       std::shared_ptr<AttributeStatistics<T>> attribute_statistics, ChunkOffset num_rows_current_iteration,
-      std::shared_ptr<TransactionContext> context);
+      const std::shared_ptr<TransactionContext>& context);
 
   // Ranges of rows to which the inserted values are written
   struct ChunkRange {
