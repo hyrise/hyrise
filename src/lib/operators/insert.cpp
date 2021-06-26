@@ -242,9 +242,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
 template <typename T>
 std::shared_ptr<AttributeStatistics<T>> Insert::_update_min_max_filter_segment_statistics(
-    const std::shared_ptr<AbstractSegment> &source_segment, ChunkOffset source_chunk_offset,
+    const std::shared_ptr<AbstractSegment>& source_segment, ChunkOffset source_chunk_offset,
     std::shared_ptr<AttributeStatistics<T>> attribute_statistics, ChunkOffset num_rows_current_iteration,
-    const std::shared_ptr<TransactionContext> &context) {
+    const std::shared_ptr<TransactionContext>& context) {
   std::shared_ptr<AttributeStatistics<T>> result = std::make_shared<AttributeStatistics<T>>();
 
   segment_with_iterators<T>(*source_segment, [&](const auto source_begin, const auto source_end) {

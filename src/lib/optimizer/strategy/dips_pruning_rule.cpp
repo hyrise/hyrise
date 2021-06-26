@@ -117,7 +117,6 @@ void DipsPruningRule::_top_down_dip_traversal(
 // 6. Add the predicates to the associated edges.
 void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
                                         const std::shared_ptr<DipsJoinGraph>& join_graph) const {
-
   // Why do we exit in this cases ?
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
@@ -174,7 +173,7 @@ void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& 
       auto left_right_edge = left_join_graph_node->get_edge_for_table(right_join_graph_node);
       auto right_left_edge = right_join_graph_node->get_edge_for_table(left_join_graph_node);
 
-      // append predicates 
+      // append predicates
       left_right_edge->append_predicate(
           binary_predicate);  // TODO(somebody): visit every node in LQP only once (avoid cycles) -> use "simple" append
       right_left_edge->append_predicate(binary_predicate);
