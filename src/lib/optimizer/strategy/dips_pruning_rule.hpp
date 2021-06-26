@@ -44,6 +44,7 @@ class DipsJoinGraphEdge {
 
   explicit DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> edge_partner_node) {
     this->partner_node = edge_partner_node;
+    // Save predicates inside the edges, because a table can have the same predicates.
     this->predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>();
   }
 
@@ -72,6 +73,7 @@ class DipsJoinGraphNode {
         return edge;
       }
     }
+    // If no edge is connecting the partner table node with this node connect it with a new edge and return the edge.
     std::shared_ptr<DipsJoinGraphEdge> edge = std::make_shared<DipsJoinGraphEdge>(partner_table_node);
     edges.push_back(edge);
     return edge;
@@ -83,11 +85,13 @@ class DipsJoinGraph {
   std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
 
   std::shared_ptr<DipsJoinGraphNode> get_node_for_table(std::shared_ptr<StoredTableNode> table_node) {
+    // Traverse the graph until the node is found
     for (auto graph_node : nodes) {
       if (graph_node->table_node == table_node) {
         return graph_node;
       }
     }
+    // if no node is found, add it to the nodes. At this point the node is not connected to any node.
     std::shared_ptr<DipsJoinGraphNode> graph_node = std::make_shared<DipsJoinGraphNode>(table_node);
     nodes.push_back(graph_node);
     return graph_node;
@@ -112,9 +116,11 @@ class DipsJoinGraph {
   void set_root(std::shared_ptr<DipsJoinGraphNode> root) { _set_root_dfs(nullptr, root); }
 
  private:
+  // Check if graph has no cycle (with the exception between two direct nodes). Is graph tree.
   bool _is_tree_dfs(std::shared_ptr<DipsJoinGraphNode> parent_node, std::shared_ptr<DipsJoinGraphNode> node,
                     std::shared_ptr<std::vector<std::shared_ptr<DipsJoinGraphNode>>> visited_nodes) {
     visited_nodes->push_back(node);
+
     for (auto edge : node->edges) {
       if (edge->partner_node != parent_node) {
         if (std::find(visited_nodes->begin(), visited_nodes->end(), edge->partner_node) == visited_nodes->end()) {
