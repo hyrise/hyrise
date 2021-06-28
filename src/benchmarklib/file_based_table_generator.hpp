@@ -15,8 +15,8 @@ class FileBasedTableGenerator : virtual public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
   /**
-   * @param add_constraints_callback is called after the table data has been added to the StorageManager.
-   * It should be used to define table constraints, if available.
+   * Set @param add_constraints_callback to define table constraints, if available. It is called by _add_constraints
+   * after tables have been generated.
    */
   void set_add_constraints_callback(
       const std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)>& add_constraints_callback);
