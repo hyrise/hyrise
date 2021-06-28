@@ -117,6 +117,8 @@ TEST_F(OptimizerTest, VerifiesResults) {
       projection_node->node_expressions[0] = out_of_plan_expression;
     }
 
+    std::string name() const override { return "LQPBreakingRule"; }
+
     std::shared_ptr<AbstractExpression> out_of_plan_expression;
   };
 
@@ -136,6 +138,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
+    std::string name() const override { return "MockRule"; }
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
