@@ -72,7 +72,20 @@ class OperatorsJoinIndexTest : public BaseTest {
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
+    // ToDo(pi) new test is built here
+    // build index over all chunks and columns
+    std::vector<ChunkID> chunk_ids(table->chunk_count());
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      chunk_ids[chunk_id] = chunk_id;
+    }
+    auto column_count = table->get_chunk(ChunkID{0})->column_count();
+    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+      // ToDo(pi) this line somehow makes it all fail
+      //table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
+    }
+
+    // old impl
+    /*for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
       std::vector<ColumnID> columns{1};
@@ -80,7 +93,7 @@ class OperatorsJoinIndexTest : public BaseTest {
         columns[0] = column_id;
         chunk->create_index<GroupKeyIndex>(columns);
       }
-    }
+    }*/
 
     return std::make_shared<TableWrapper>(table);
   }

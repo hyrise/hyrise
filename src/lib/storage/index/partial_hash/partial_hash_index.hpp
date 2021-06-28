@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "storage/table.hpp"
 #include "storage/index/abstract_ordered_index.hpp"
 #include <tsl/robin_map.h>
@@ -23,7 +25,7 @@ class PartialHashIndex : public AbstractTableIndex {
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   PartialHashIndex() = delete;
-  PartialHashIndex(const std::shared_ptr<Table>, const std::vector<ChunkID>&, const ColumnID);
+  PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
 
 
@@ -41,7 +43,7 @@ class PartialHashIndex : public AbstractTableIndex {
     return column_id == _column_id;
   }
  private:
-  tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map;
+  tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map; // ToDo(pi) check unordered map? sortiert wegen greater than etc.
   // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
   ColumnID _column_id;
   std::vector<RowID> _row_ids;

@@ -37,8 +37,11 @@ class PartialHashIndexTest : public BaseTest {
     table->append_chunk(segments1);
     table->append_chunk(segments2);
 
-    std::vector<ChunkID> chunks_to_index = {ChunkID{0}, ChunkID{1}};
-    index = std::make_shared<PartialHashIndex>(table, chunks_to_index , ColumnID{0});
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+    chunks_to_index.push_back(std::make_pair(ChunkID{0}, table->get_chunk(ChunkID{0})));
+    chunks_to_index.push_back(std::make_pair(ChunkID{1}, table->get_chunk(ChunkID{1})));
+
+    index = std::make_shared<PartialHashIndex>(chunks_to_index , ColumnID{0});
 
     index_map = &(index->_map);
   }

@@ -5,6 +5,7 @@
 
 namespace opossum {
 
+//ToDo(pi) add is_index_for(chunk)
 class AbstractTableIndex : public AbstractIndex<RowID> {
 
  public:

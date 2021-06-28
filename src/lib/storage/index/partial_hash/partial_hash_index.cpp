@@ -9,18 +9,18 @@ size_t PartialHashIndex::estimate_memory_consumption(ChunkOffset row_count, Chun
   Fail("PartialHashIndex::estimate_memory_consumption() is not implemented yet");
 }
 
-PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table, const std::vector<ChunkID>& chunk_ids_to_index, const ColumnID column_id)
+PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
     : AbstractTableIndex{get_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
 
-  resolve_data_type(referenced_table->get_chunk(chunk_ids_to_index.front())->get_segment(column_id)->data_type(), [&](const auto column_data_type) {
+  resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
 
     // ToDo(pi) check all have same data type by taking first and comapring rest
     //ToDo(pi) set null positions
-    for(const auto&chunk_id:chunk_ids_to_index){
-      auto indexed_segment = referenced_table->get_chunk(chunk_id)->get_segment(column_id);
+    for(const auto&chunk:chunks_to_index){
+      auto indexed_segment = chunk.second->get_segment(column_id);
       segment_iterate<ColumnDataType>(*indexed_segment, [&](const auto& position) {
-        auto row_id = RowID{chunk_id, position.chunk_offset()};
+        auto row_id = RowID{chunk.first, position.chunk_offset()};
         if(position.is_null()){
           _null_positions.emplace_back(row_id);
         } else {
@@ -38,6 +38,7 @@ PartialHashIndex::PartialHashIndex(const std::shared_ptr<Table> referenced_table
 
 //ToDO(pi) change index (add) chunks later after creation
 
+// ToDo(pi) return from cbegin to cend instead of map vectors
 std::pair<PartialHashIndex::Iterator, PartialHashIndex::Iterator> PartialHashIndex::_equals(const AllTypeVariant& value) const {
   auto result = _map.find(value);
   if(result == _map.end()){

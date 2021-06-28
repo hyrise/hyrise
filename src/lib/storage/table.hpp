@@ -189,7 +189,13 @@ class Table : private Noncopyable {
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const std::string& name = "") {
     IndexType index_type = get_index_type_of<Index>();
 
-    auto index = std::make_shared<Index>(std::make_shared<Table>(*this), chunk_ids, column_id);
+    // ToDo(pi) Note: Passing a shared_ptr for the table here would create a cyclic dependency because the index is owned by the table
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+    chunks_to_index.reserve(chunk_ids.size());
+    for(auto chunk_id: chunk_ids){
+      chunks_to_index.push_back(std::make_pair(chunk_id, get_chunk(chunk_id)));
+    }
+    auto index = std::make_shared<Index>(chunks_to_index, column_id);
     _table_indexes.emplace_back(index);
 
     //PartialIndexStatistics index_statistics = {{std::vector<ColumnID>{column_id}, name, index_type}, chunk_ids}; // ToDo(pi) add chunkIDs to IndexStatistics

@@ -205,6 +205,19 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // ToDo(pi) first use all PHIs on table to calculate first result, for unindexed chunks don't do segment fallback
     // hash join fallback for PHI
     // do only PHI, no Chunk Indices
+    const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
+    if(!table_indexes.empty()){
+      //const auto & index = table_indexes.front();
+
+      // ToDo(pi) Frage: output des operators bestimmte form, also "sortierter" join (reihenfolge der input iteratoren)
+      if(true /* has chunk */){
+        // join via index
+      } else {
+        // fallback join
+      }
+    } else {
+      // fill with fallback chunk-based join
+    }
     const auto chunk_count_index_input_table = _index_input_table->chunk_count();
     for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
