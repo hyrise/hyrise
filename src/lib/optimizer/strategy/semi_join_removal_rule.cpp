@@ -97,8 +97,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
     // Since multiple output nodes profit from the reduction, we do not remove it. Compare JOB query 29b, for example.
     if (semi_join_node.output_count() > 1) {
-      std::cout << "Enter: semi_join_node.output_count() > 1" << std::endl;
-      removal_candidates.emplace(node);
+      removal_blockers.emplace(node);
       return LQPVisitation::VisitInputs;
     }
 
