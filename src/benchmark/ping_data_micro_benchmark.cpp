@@ -195,7 +195,7 @@ class TableWrapper;
 // Defining the base fixture class
 class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) {
+  void SetUp(::benchmark::State& state) override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
     // Generate tables
@@ -270,7 +270,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State&) {}
+  void TearDown(::benchmark::State&) override {}
 
   inline static bool _data_generated = false;
 
