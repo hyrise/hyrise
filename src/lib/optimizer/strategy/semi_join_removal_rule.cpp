@@ -24,11 +24,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
-  // You might be able to come up with a case where this caches too much (especially when looking at nested semi joins),
-  // but the chance of this is slim enough to risk it and benefit from cached results.
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
-
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
   // be translated into the same operator. If we remove one of these reductions, we block the reuse of the join result.
   // To counter these cases, we track semi join reductions that should not be removed. `removal_candidates` holds the
@@ -100,21 +95,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // as a sanity check, we want to make sure that we do not remove non-reduction nodes.
       DebugAssert(node->comment == "Semi Reduction", "Expected found semi join to be marked as reduction");
 
-      // Estimate the output cardinality of the semi join reduction and the input cardinality of the join
-      const auto semi_join_output_cardinality = estimator->estimate_cardinality(node);
-      const auto join_input_cardinality = estimator->estimate_cardinality(upper_node->input(input_side));
 
-      // Remove the semi join reduction if it does not help in properly reducing the cardinality of the original join's
-      // input
-      std::cout << "join_input_cardinality: " << join_input_cardinality << std::endl;
-      std::cout << "semi_join_output_cardinality: " << semi_join_output_cardinality << std::endl;
-      if (join_input_cardinality / semi_join_output_cardinality > MINIMUM_SELECTIVITY) {
-        std::cout << "removal candidate: " << join_input_cardinality / semi_join_output_cardinality << std::endl;
-        removal_candidates.emplace(node);
-      } else {
-        std::cout << "removal blocker: " << join_input_cardinality / semi_join_output_cardinality << std::endl;
-        removal_blockers.emplace(node);
-      }
+      
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
