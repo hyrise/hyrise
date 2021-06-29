@@ -164,10 +164,17 @@ class DipsPruningRule : public AbstractRule {
   void _top_down_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
   void _bottom_up_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
 
+  // The algorithm works as follows:
+  // 1. Get all chunk ids that are already pruned.
+  // 2. Iterate overall not pruned chunks of the table.
+  // 3. Get the segment statistic.
+  // 4. Get the range statistic (for example: [(10, 400), (5000, 6000), ...]). If no range statistic exists use the
+  //    min-max value instead.
+  // 5. Return all ranges for the respective chunks.
   template <typename COLUMN_TYPE>
   static std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
       const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) {
-    /* For every non pruned chunk, return its ranges for the given attribute (segment) */
+    // For every non pruned chunk, we are saving the respective ranges.
     std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> ranges;
 
     auto pruned_chunks_ids = table_node->pruned_chunk_ids();  // const std::vector<ChunkID>&
@@ -204,6 +211,7 @@ class DipsPruningRule : public AbstractRule {
           }
         }
 
+        // We should  not use insert. Instead we should manually check if there is already an entry.
         if (segment_statistics->min_max_filter) {
           ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
               chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>({std::pair<COLUMN_TYPE, COLUMN_TYPE>(
@@ -222,6 +230,9 @@ class DipsPruningRule : public AbstractRule {
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }
 
+  // We can only prune a chunk if no ranges of it are overlapping with any ranges in the chunks of the join table. To
+  // check this we are iterating over every chunk and its ranges and comparing it with all ranges from the partner
+  // table. If there is one case where the ranges intersect we skip the pruning of the chunk.
   template <typename COLUMN_TYPE>
   static std::set<ChunkID> _calculate_pruned_chunks(
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,

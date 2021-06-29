@@ -21,6 +21,8 @@
 // #include "hyrise.hpp"
 // #include <fstream>
 
+// TODO(Alex): Add comment which describes the basic idea of dips on an example with two tables.
+
 namespace opossum {
 
 void DipsPruningRule::_bottom_up_dip_traversal(
@@ -54,6 +56,7 @@ void DipsPruningRule::_bottom_up_dip_traversal(
       return;
     }
 
+    // We check for both join tables which chunks we can prune.
     // LEFT -> RIGHT
     _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
                   right_lqp->original_column_id);
@@ -63,7 +66,7 @@ void DipsPruningRule::_bottom_up_dip_traversal(
                   left_lqp->original_column_id);
   }
 }
-
+// Code looks very similar to bottom up. Extract code to a visit function?
 void DipsPruningRule::_top_down_dip_traversal(
     const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
   if (node->parent != nullptr) {                             // handle root
@@ -243,6 +246,27 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) 
   return stream;
 }
 
+// First we are building a tree that represents the joins between the tables and its predicates. The nodes are the join
+// tables and inside the edges are the join predicates. For example the following join procedure:
+//            |><|
+//           /    \
+// A.a=C.d /        \ A.a=C.d
+//       /            \
+//     A              |><|
+//                   /    \
+//         B.b=C.d /        \ B.b=C.d
+//               /            \
+//             B                C
+// will result in the following graph:
+//                     C
+//                   /    \
+//         B.b=C.d /        \ A.a=C.d
+//               /            \
+//             B                A
+// After that the basic procedure is to traverse the tree button up and then top down. In every visit we are running
+// the dip pruning algorithm for the current node. The algorithm uses the predicates which are saved in the edge that
+// is connecting the current node with its parent node. Inside the algorithm we check which chunks can be pruned in
+// both the join tables.
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
   _build_join_graph(lqp_root, join_graph);
