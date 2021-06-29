@@ -104,7 +104,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
     // Since multiple output nodes profit from the reduction, we do not remove it. Compare JOB query 29b, for example.
     if (semi_reduction_node.output_count() > 1) {
-      removal_blockers.emplace(semi_reduction_node);
+      removal_blockers.emplace(node);
       return LQPVisitation::VisitInputs;
     }
 
@@ -139,7 +139,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
       const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
       if (!semi_join_is_left_input && !semi_join_is_right_input) {
-        removal_blockers.emplace(semi_reduction_node);
+        removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
       auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
