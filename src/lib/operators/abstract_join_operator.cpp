@@ -60,13 +60,6 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
 
   const auto* const separator = (description_mode == DescriptionMode::SingleLine) ? " " : "\n";
 
-  // Check for semi join reduction
-  std::string comment;
-  if (_mode == JoinMode::Semi && lqp_node) {
-    const auto semi_join_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
-    if (semi_join_node->is_reducer()) { comment = "Semi Reduction"; }
-  }
-
   std::stringstream ss;
   ss << name() << separator;
   ss << "(" << _mode << " Join where ";
@@ -74,15 +67,21 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   ss << _primary_predicate.predicate_condition << " ";
   ss << column_name(false, _primary_predicate.column_ids.second);
 
-  // add information about secondary join predicates
+  // Add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
     ss << " AND " << column_name(true, secondary_predicate.column_ids.first) << " "
-           << secondary_predicate.predicate_condition << " "
-           << column_name(false, secondary_predicate.column_ids.second);
+       << secondary_predicate.predicate_condition << " " << column_name(false, secondary_predicate.column_ids.second);
   }
 
-  ss << ")" << separator;
-  ss << comment;
+  ss << ")";
+
+  // Add comment about semi join reduction if known.
+  if (_mode == JoinMode::Semi && lqp_node) {
+    const auto semi_join_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
+    if (semi_join_node->is_reducer()) {
+      ss << separator << "Semi Reduction";
+    }
+  }
 
   return ss.str();
 }
