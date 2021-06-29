@@ -5,6 +5,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -58,8 +59,6 @@ std::string SemiJoinRemovalRule::name() const {
 }
 
 void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  const auto& root = lqp_root;
-
   // Approach: Find a semi reduction node and the corresponding original join node and check whether the cardinality is
   // reduced between the semi join reduction and the original join. If it is not, the semi join reduction is likely not
   // helpful and should be removed.
@@ -123,7 +122,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
-      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
+//      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
 
       // Check whether the semi join reduction predicate matches one of the predicates of the upper join
       if (std::none_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
