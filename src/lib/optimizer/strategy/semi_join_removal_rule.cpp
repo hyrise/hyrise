@@ -26,7 +26,7 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
   // Todo LIKE expression?
 
   /**
-   * In List(...)
+   * IN List(...)
    */
   const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
   if (in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
@@ -63,7 +63,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   // reduced between the semi join reduction and the original join. If it is not, the semi join reduction is likely not
   // helpful and should be removed.
 
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "SemiJoinRemovalRule needs root to hold onto");
 
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
   // be translated into the same operator. If we remove one of these reductions, we block the reuse of the join result.
@@ -87,6 +87,12 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
     const auto& semi_join_node = static_cast<const JoinNode&>(*node);
     const auto semi_join_predicate = semi_join_node.join_predicates().at(0);
+
+    // Since multiple output nodes profit from the reduction, we do not remove it. Compare JOB query 29b, for example.
+    if (semi_join_node.output_count() > 1) {
+      removal_candidates.emplace(node);
+      return LQPVisitation::VisitInputs;
+    }
 
     // Find an upper node that corresponds to this node
     visit_lqp_upwards(node, [&](const auto& upper_node) {  // todo maybe pass semi_join_node instead of node
