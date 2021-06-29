@@ -2,9 +2,9 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
-#include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -17,19 +17,18 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
   /**
    * ColumnVsColumn
    */
-    const auto binary_predicate =
-        std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-    if (binary_predicate && binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
-        binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
-      return true;
-    }
-    // Todo LIKE expression?
+  const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+  if (binary_predicate && binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
+      binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
+    return true;
+  }
+  // Todo LIKE expression?
 
   /**
    * In List(...)
    */
-   const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
-   if(in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
+  const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
+  if (in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
 
   /**
    * Correlated Subqueries
@@ -49,8 +48,7 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
   return false;
 }
 
-
-} // namespace
+}  // namespace
 
 namespace opossum {
 
@@ -92,7 +90,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto semi_join_predicate = semi_join_node.join_predicates().at(0);
 
     // Find an upper node that corresponds to this node
-    visit_lqp_upwards(node, [&](const auto& upper_node) { // todo maybe pass semi_join_node instead of node
+    visit_lqp_upwards(node, [&](const auto& upper_node) {  // todo maybe pass semi_join_node instead of node
       // Skip the semi node found before, i.e., start with its outputs
       if (node == upper_node) return LQPUpwardVisitation::VisitOutputs;
 
@@ -111,7 +109,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           removal_blockers.emplace(node);
           return LQPUpwardVisitation::DoNotVisitOutputs;
         }
-
       }
 
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
