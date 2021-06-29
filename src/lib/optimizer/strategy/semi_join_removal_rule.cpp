@@ -16,13 +16,13 @@ std::string SemiJoinRemovalRule::name() const {
 }
 
 void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  const auto& root = lqp_root;  // TODO(anyone) rename below
+  const auto& root = lqp_root;
 
   // Approach: Find a semi reduction node and the corresponding original join node and check whether the cardinality is
   // reduced between the semi join reduction and the original join. If it is not, the semi join reduction is likely not
   // helpful and should be removed.
 
-  Assert(root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   // You might be able to come up with a case where this caches too much (especially when looking at nested semi joins),
   // but the chance of this is slim enough to risk it and benefit from cached results.
@@ -40,13 +40,17 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   auto removal_blockers =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
-  visit_lqp(root, [&](const auto& node) {
-    // Check if the current node is a semi join (not necessarily a reduction)
-    if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
-    const auto& join_node = static_cast<const JoinNode&>(*node); // todo(julian) rename semi_join_node
-    if (join_node.join_mode != JoinMode::Semi) return LQPVisitation::VisitInputs;
-    if (join_node.join_predicates().size() > 1) return LQPVisitation::VisitInputs;
-    const auto semi_join_predicate = join_node.join_predicates().at(0);
+  visit_lqp(lqp_root, [&](const auto& node) {
+    {
+      // Check if the current node is a semi join (not necessarily a reduction)
+      if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
+      const auto& join_node = static_cast<const JoinNode&>(*node);
+      if (join_node.join_mode != JoinMode::Semi) return LQPVisitation::VisitInputs;
+      if (join_node.join_predicates().size() > 1) return LQPVisitation::VisitInputs;
+    }
+
+    const auto& semi_join_node = static_cast<const JoinNode&>(*node);
+    const auto semi_join_predicate = semi_join_node.join_predicates().at(0);
 
     // Find an upper node that corresponds to this node
     visit_lqp_upwards(node, [&](const auto& upper_node) {
@@ -78,8 +82,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // In most cases, the right side of the semi join reduction is one of the inputs of the original join. In rare
       // cases, this is not true (see try_deeper_reducer_node in semi_join_reduction_rule.cpp). Those cases are not
       // covered by this removal rule yet.
-      const auto semi_join_is_left_input = upper_join_node.right_input() == join_node.right_input();
-      const auto semi_join_is_right_input = upper_join_node.left_input() == join_node.right_input();
+      const auto semi_join_is_left_input = upper_join_node.right_input() == semi_join_node.right_input();
+      const auto semi_join_is_right_input = upper_join_node.left_input() == semi_join_node.right_input();
       if (!semi_join_is_left_input && !semi_join_is_right_input) {
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
