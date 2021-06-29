@@ -144,9 +144,10 @@ TEST_F(EqualDistinctCountHistogramTest, FloatHistogramMerging) {
   const auto hist2 =
       EqualDistinctCountHistogram<float>::from_segment(*_int_float_multichunk_large, ColumnID{1}, ChunkID{1}, 2u);
 
-  const auto merged_hist = EqualDistinctCountHistogram<float>::merge(hist, hist2, 2u);
-
+  // const auto merged_hist = EqualDistinctCountHistogram<float>::merge(hist, hist2, 2u);
+  const auto merged_hist = EqualDistinctCountHistogram<float>::merge({hist, hist2}, 2u);
   ASSERT_EQ(merged_hist->bin_count(), 2u);
+  std::cout << (merged_hist->bin(BinID{1}).min == 50.6f) << std::endl;
   EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<float>(0.42, 50.6, 6, 6));
   EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<float>(50.8, 100.42, 6, 5));
 }

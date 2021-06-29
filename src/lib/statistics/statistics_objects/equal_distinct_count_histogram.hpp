@@ -9,6 +9,8 @@
 
 #include "abstract_histogram.hpp"
 #include "types.hpp"
+#include "utils/hyperloglog.hpp"
+#include "utils/murmur_hash2.h"
 
 namespace opossum {
 
@@ -36,9 +38,14 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
   EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
+                              std::vector<HyperLogLog>&& bin_hlls,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const HistogramDomain<T>& domain = {});
 
+  EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
+                              std::vector<HistogramCountType>&& bin_heights,
+                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
+                              const HistogramDomain<T>& domain = {});
   /**
    * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
@@ -57,6 +64,10 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_1,
                                                                std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_2,
                                                                BinID bin_count_target);
+
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
+                                                               BinID bin_count_target);
+
     std::string name() const override;
     std::shared_ptr<AbstractHistogram<T>> clone() const override;
     HistogramCountType total_distinct_count() const override;
@@ -99,6 +110,9 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
     // Number of values on a per-bin basis.
     std::vector<HistogramCountType> _bin_heights;
+
+    // HyperLogLog data structures on a per-bin basis.
+    std::vector<HyperLogLog> _bin_hlls;
 
     // Number of distinct values per bin.
     HistogramCountType _distinct_count_per_bin;

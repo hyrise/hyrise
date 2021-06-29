@@ -569,6 +569,7 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/hyperloglog.hpp
     utils/invalid_input_exception.hpp
     utils/list_directory.cpp
     utils/list_directory.hpp
@@ -607,6 +608,8 @@ set(
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
     utils/meta_tables/segment_meta_data.hpp
+    utils/murmur_hash2.h
+    utils/murmur_hash2.cpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -629,6 +632,7 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/two_hyperloglog_statistic.hpp
     utils/tracing/probes.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp

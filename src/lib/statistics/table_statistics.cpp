@@ -16,7 +16,6 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
   std::vector<std::shared_ptr<BaseAttributeStatistics>> new_column_statistics(table.column_count());
   std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics(table.column_count());
-
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
    * (for tables with >= 200m rows) are created.
@@ -94,7 +93,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             segment_statistics[my_column_id].push_back(output_chunk_column_statistics);
           }
           if (column_data_type != DataType::String) {
-            std::cout << column_data_type << " in column " << my_column_id<< std::endl;
+            // std::cout << column_data_type << " in column " << my_column_id<< std::endl;
 
             // std::cout << "Merging chunk based histograms for column, chunk count = " << chunk_count << ", " << my_column_id << std::endl;
             //Merge small histograms
@@ -108,9 +107,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
               if (!std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id])) continue;
               const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id]);
               const auto histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
-              // std::cout << "Start Merging (col)" << my_column_id << std::endl;
               merged_histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(merged_histogram, histogram, histogram_bin_count);
-              // std::cout << "End Merging (col)" << my_column_id << std::endl;
             }
             const auto new_output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
             if (merged_histogram) {
@@ -131,6 +128,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             }
             new_column_statistics[my_column_id] = new_output_column_statistics;
           }
+          else {
+            new_column_statistics[my_column_id] = column_statistics[my_column_id];
+          }
           // std::cout << "Finished chunk based histograms for column" << my_column_id << std::endl;
         });
       }
@@ -141,7 +141,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     thread.join();
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), std::move(new_column_statistics), std::move(segment_statistics),
+  return std::make_shared<TableStatistics>(std::move(new_column_statistics), std::move(column_statistics), std::move(segment_statistics),
                                            table.row_count());
 }
 
