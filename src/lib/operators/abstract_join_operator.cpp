@@ -63,7 +63,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   // Check for semi join reduction
   std::string comment;
   if (_mode == JoinMode::Semi && lqp_node) {
-    const auto semi_join_node = std::dynamic_pointer_cast<JoinNode>(lqp_node);
+    const auto semi_join_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
     if (semi_join_node->is_reducer()) { comment = "Semi Reduction"; }
   }
 
