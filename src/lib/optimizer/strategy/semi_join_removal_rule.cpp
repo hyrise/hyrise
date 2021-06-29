@@ -74,6 +74,11 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
   Assert(lqp_root->type == LQPNodeType::Root, "SemiJoinRemovalRule needs root to hold onto");
 
+  // You might be able to come up with a case where this caches too much (especially when looking at nested semi joins),
+  // but the chance of this is slim enough to risk it and benefit from cached results.
+  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction();
+
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
   // be translated into the same operator. If we remove one of these reductions, we block the reuse of the join result.
   // To counter these cases, we track semi join reductions that should not be removed. `removal_candidates` holds the
@@ -137,7 +142,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
-//      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
+      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
 
       // Check whether the semi join reduction predicate matches one of the predicates of the upper join
       if (std::none_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
@@ -147,9 +152,23 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       // By design, we do not distinguish between semi join reduction nodes and "regular" semi join nodes. Still,
       // as a sanity check, we want to make sure that we do not remove non-reduction nodes.
-      DebugAssert(node->comment == "Semi Reduction", "Expected found semi join to be marked as reduction");
+      DebugAssert(node->comment == "Semi Reduction", "Expected found semi join to be marked as reduction"); // todo
 
-      removal_candidates.emplace(node);
+      // Estimate the output cardinality of the semi join reduction and the input cardinality of the corresponding join
+      const auto semi_join_input_cardinality = estimator->estimate_cardinality(node->left_input());
+      const auto semi_join_output_cardinality = estimator->estimate_cardinality(node);
+      const auto join_input_cardinality = estimator->estimate_cardinality(upper_node->input(input_side));
+
+      const auto semi_join_selectivity = semi_join_output_cardinality / semi_join_input_cardinality;
+      const auto upper_nodes_selectivity = join_input_cardinality / semi_join_output_cardinality;
+
+
+      // Remove the semi join reduction if it does not help ...
+      if (semi_join_input_cardinality < upper_nodes_selectivity) {
+        removal_blockers.emplace(node);
+      } else {
+        removal_candidates.emplace(node);
+      }
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
