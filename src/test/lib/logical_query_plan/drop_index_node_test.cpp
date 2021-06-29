@@ -65,31 +65,19 @@ class DropIndexNodeTest : public BaseTest {
 TEST_F(DropIndexNodeTest, Description) {
   EXPECT_EQ(drop_index_node->description(), "[DropIndex] Name: 'some_index'");
 }
-//TEST_F(CreateIndexNodeTest, NodeExpressions) { ASSERT_EQ(create_index_node->node_expressions.size(), 0u); }
-//
-//TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
-//  const auto deep_copy_node = create_index_node->deep_copy();
-//  EXPECT_EQ(*create_index_node, *deep_copy_node);
-//
-//  const auto different_create_index_node_a = CreateIndexNode::make("some_index1", false, column_ids, table_node);
-//  const auto different_create_index_node_b = CreateIndexNode::make("some_index",  true, column_ids, table_node);
-//
-//  auto different_column_ids = std::shared_ptr<std::vector<ColumnID>>();
-//  different_column_ids->emplace_back(0);
-//  different_column_ids->emplace_back(3);
-//  const auto different_create_index_node_c = CreateIndexNode::make("some_index", false, different_column_ids, table_node);
-//
-//  EXPECT_NE(*different_create_index_node_a, *create_index_node);
-//  EXPECT_NE(*different_create_index_node_b, *create_index_node);
-//  EXPECT_NE(*different_create_index_node_c, *create_index_node);
-//
-//
-//  EXPECT_NE(different_create_index_node_a->hash(), create_index_node->hash());
-//  EXPECT_NE(different_create_index_node_b->hash(), create_index_node->hash());
-//  EXPECT_NE(different_create_index_node_c->hash(), create_index_node->hash());
-//
-//}
-//
-//TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }
+TEST_F(DropIndexNodeTest, NodeExpressions) { ASSERT_EQ(drop_index_node->node_expressions.size(), 0u); }
+
+TEST_F(DropIndexNodeTest, HashingAndEqualityCheck) {
+  const auto deep_copy_node = drop_index_node->deep_copy();
+  EXPECT_EQ(*drop_index_node, *deep_copy_node);
+
+  const auto different_drop_index_node_a = DropIndexNode::make("some_index1", table_node);
+
+  EXPECT_NE(*different_drop_index_node_a, *drop_index_node);
+
+  EXPECT_NE(different_drop_index_node_a->hash(), drop_index_node->hash());
+}
+
+TEST_F(DropIndexNodeTest, Copy) { EXPECT_EQ(*drop_index_node, *drop_index_node->deep_copy()); }
 
 }  // namespace opossum
