@@ -15,21 +15,23 @@ namespace {
 using namespace opossum;  // NOLINT
 
 bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
-  /**
-   * ColumnVsColumn
-   */
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-  if (binary_predicate && binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
-      binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
-    return true;
-  }
+  if (binary_predicate) {
+    /**
+     * ColumnVsColumn
+     */
+    if (binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
+        binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
+      return true;
+    }
 
-  /**
-   * LIKE
-   */
-  if (binary_predicate->predicate_condition == PredicateCondition::Like ||
-      binary_predicate->predicate_condition == PredicateCondition::NotLike) {
-    return true;
+    /**
+     * LIKE
+     */
+    if (binary_predicate->predicate_condition == PredicateCondition::Like ||
+        binary_predicate->predicate_condition == PredicateCondition::NotLike) {
+      return true;
+    }
   }
 
   /**
