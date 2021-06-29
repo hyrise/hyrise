@@ -89,7 +89,7 @@ TEST_F(OperatorsJoinHashTest, DescriptionAndName) {
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinHash (Inner Join where a = a AND a != a) Radix bits: Unspecified");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where a = a AND a != a) Radix bits: Unspecified");
+            "JoinHash\n(Inner Join where a = a AND a != a)\nRadix bits: Unspecified");
 
   EXPECT_EQ(join_operator->name(), "JoinHash");
 }
