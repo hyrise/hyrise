@@ -224,8 +224,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
     std::string name() const override { return "MockRule"; }
 
-   protected:
     size_t& counter;
+   protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       ++counter;
     }
