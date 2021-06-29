@@ -1307,7 +1307,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
 
   auto input_node = StoredTableNode::make(create_statement.tableName);
 
-  return CreateIndexNode::make(create_statement.indexName, create_statement.ifNotExists, column_ids, input_node);
+  //TODO: add right index name
+  return CreateIndexNode::make("create_statement.indexName", create_statement.ifNotExists, column_ids, input_node);
 
 }
 

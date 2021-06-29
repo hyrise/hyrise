@@ -22,6 +22,7 @@ enum class LQPNodeType {
   CreateView,
   Delete,
   DropView,
+  DropIndex,
   DropTable,
   DummyTable,
   Except,

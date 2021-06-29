@@ -27,7 +27,6 @@ class CreateIndexTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("TestTable", test_table);
     dummy_table_wrapper = std::make_shared<TableWrapper>(test_table);
     dummy_table_wrapper->execute();
-
     column_ids->emplace_back(ColumnID{static_cast<ColumnID>(test_table->column_id_by_name("b"))});
 
     create_index = std::make_shared<CreateIndex>(index_name, column_ids, true, dummy_table_wrapper);

@@ -14,14 +14,14 @@ class CreateIndexNodeTest : public BaseTest {
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
     table_node = std::make_shared<StoredTableNode>("t_a");
+    column_ids->emplace_back(0);
     column_ids->emplace_back(1);
-    column_ids->emplace_back(2);
     create_index_node = CreateIndexNode::make("some_index", false, column_ids, table_node);
   }
 
   std::shared_ptr<AbstractLQPNode> table_node;
   std::shared_ptr<CreateIndexNode> create_index_node;
-  std::shared_ptr<std::vector<ColumnID>> column_ids;
+  std::shared_ptr<std::vector<ColumnID>> column_ids = std::make_shared<std::vector<ColumnID>>();
 
 };
 
@@ -39,7 +39,7 @@ TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
   const auto different_create_index_node_a = CreateIndexNode::make("some_index1", false, column_ids, table_node);
   const auto different_create_index_node_b = CreateIndexNode::make("some_index",  true, column_ids, table_node);
 
-  auto different_column_ids = std::shared_ptr<std::vector<ColumnID>>();
+  auto different_column_ids = std::make_shared<std::vector<ColumnID>>();
   different_column_ids->emplace_back(0);
   different_column_ids->emplace_back(3);
   const auto different_create_index_node_c = CreateIndexNode::make("some_index", false, different_column_ids, table_node);

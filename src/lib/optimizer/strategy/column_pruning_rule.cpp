@@ -65,6 +65,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
     case LQPNodeType::DropView:
+    case LQPNodeType::DropIndex:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
     case LQPNodeType::Import:
