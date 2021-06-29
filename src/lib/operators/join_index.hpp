@@ -15,6 +15,7 @@ namespace opossum {
 
 class MultiPredicateJoinEvaluator;
 using IndexRange = std::pair<AbstractOrderedIndex::Iterator, AbstractOrderedIndex::Iterator>;
+using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
 /**
    * This operator joins two tables using one column of each table.
@@ -68,6 +69,11 @@ class JoinIndex : public AbstractJoinOperator {
                                            const std::shared_ptr<AbstractOrderedIndex>& index);
 
   template <typename ProbeIterator>
+  void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+                                           const ChunkID probe_chunk_id,
+                                           const std::shared_ptr<AbstractTableIndex>& table_index);
+
+  template <typename ProbeIterator>
   void _reference_join_two_segments_using_index(
       ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
       const std::shared_ptr<AbstractOrderedIndex>& index,
@@ -80,6 +86,9 @@ class JoinIndex : public AbstractJoinOperator {
   void _append_matches(const AbstractOrderedIndex::Iterator& range_begin, const AbstractOrderedIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
+
+  void _append_matches_table_index(const AbstractTableIndex::Iterator& range_begin, const AbstractTableIndex::Iterator& range_end,
+                       const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                     const RowIDPosList& index_table_matches);

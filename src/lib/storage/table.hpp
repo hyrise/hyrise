@@ -187,7 +187,7 @@ class Table : private Noncopyable {
   // TODO(pi) restrict to partial indexes
   template <typename Index>
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const std::string& name = "") {
-    IndexType index_type = get_index_type_of<Index>();
+    //IndexType index_type = get_index_type_of<Index>();
 
     // ToDo(pi) Note: Passing a shared_ptr for the table here would create a cyclic dependency because the index is owned by the table
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;

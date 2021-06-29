@@ -2,7 +2,6 @@
 
 #include <utility>
 
-#include "storage/table.hpp"
 #include "storage/index/abstract_ordered_index.hpp"
 #include <tsl/robin_map.h>
 

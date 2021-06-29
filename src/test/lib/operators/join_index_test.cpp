@@ -12,7 +12,8 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
+//#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -80,8 +81,7 @@ class OperatorsJoinIndexTest : public BaseTest {
     }
     auto column_count = table->get_chunk(ChunkID{0})->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      // ToDo(pi) this line somehow makes it all fail
-      //table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
+      table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
     }
 
     // old impl
