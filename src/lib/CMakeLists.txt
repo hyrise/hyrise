@@ -168,6 +168,10 @@ set(
     lossless_cast.hpp
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
+    memory/dram_memory_resource.cpp
+    memory/dram_memory_resource.hpp
+    memory/nvm_memory_resource.cpp
+    memory/nvm_memory_resource.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
@@ -668,6 +672,10 @@ if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
+if (${ENABLE_MEMKIND})
+    set(LIBRARIES ${LIBRARIES} ${MEMKIND_LIBRARY})
+endif()
+
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
 string(REPLACE "," ";" ERASE_SEGMENT_TYPES_LIST "${ERASE_SEGMENT_TYPES}")
 string(TOUPPER "${ERASE_SEGMENT_TYPES_LIST}" ERASE_SEGMENT_TYPES_UPPER)
@@ -725,6 +733,10 @@ endif()
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_link_libraries_system(hyrise_impl robin_map)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+if (ENABLE_MEMKIND)
+    target_include_directories(hyrise_impl PUBLIC ${MEMKIND_INCLUDE_DIR})
+endif()
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.

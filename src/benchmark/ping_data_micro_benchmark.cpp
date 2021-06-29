@@ -34,26 +34,16 @@ constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "ping";
-const auto CHUNK_SIZE = size_t{10'000'000};
+const auto CHUNK_SIZE = size_t{1'000'000};
 const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
+
 // Frame of References supports only int columns
 // Dictionary Encoding should always have the id 0
 const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
 const auto CREATE_INDEX = true; 
 
-// quantile benchmark values (mixed data type table)
-// determined by column stats python script calculated with pandas, settings nearest 
-///////////////////////////////
-// const auto BM_VAL_CAPTAIN_ID = std::vector{4, 4115, 11787, 57069, 176022, 451746, 616628, 901080, 1156169, 1233112, 1414788};
-// const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
-// const auto BM_VAL_LATITUDE = std::vector{10.2191832, 25.0455204, 25.0699667, 25.0872227, 25.1030861, 25.1244186, 25.1724729, 25.1966912, 25.2164364, 25.2437205, 60.1671321};
-// const auto BM_VAL_LONGITUDE = std::vector{-213.5243575, 55.1423584, 55.1549474, 55.1792718, 55.2072508, 55.2470842, 55.2692599, 55.2806365, 55.3156638, 55.3640991, 212.33914};
-// const auto BM_VAL_TIMESTAMP = std::vector{"2018-11-05 00:01:19", "2018-11-05 07:17:17", "2018-11-05 12:49:23", "2018-11-05 18:38:21", "2018-11-22 23:04:04", "2018-12-22 00:20:20", "2018-12-22 11:34:55", "2018-12-22 23:33:37", "2019-01-28 04:06:07", "2019-01-28 11:35:48", "2019-01-29 00:01:02"};
-
-// 10 mio pings sort table
+// 10 mio pings table
 
 // quantile benchmark values (int table)
 // timestamp values --> unix timestamp
@@ -76,30 +66,6 @@ const std::vector<std::vector<int>> BM_BETWEEN_VAL_CAPTAIN_STATUS {{1, 1}, {1, 1
 const std::vector<std::vector<int>> BM_BETWEEN_VAL_LATITUDE {{251229635, 251229817}, {251205580, 251244877}, {251186382, 251258863}, {251156067, 251327418}, {251118305, 251435758}, {251076483, 251562689}, {251013562, 251682671}, {250957584, 251801594}, {250915520, 251867848}, {250834293, 251944398}, {250767202, 252085778}, {250683994, 252179506}, {250558091, 252303117}, {250495668, 252364041}, {250451594, 252447268}, {250302032, 252608756}, {-31439997, 525276124}};
 const std::vector<std::vector<int>> BM_BETWEEN_VAL_LONGITUDE {{552419834, 552420525}, {552401293, 552446079}, {552375420, 552467950}, {552297534, 552509809}, {552205344, 552567678}, {552121165, 552621719}, {552056083, 552663696}, {551998586, 552712421}, {551937507, 552746462}, {551769067, 552803335}, {551661225, 552904369}, {551527705, 553155586}, {551464705, 553433091}, {551435500, 553528324}, {551411140, 553625274}, {551340698, 553989117}, {-1347527969, 2100403189}};
 const std::vector<std::vector<int>> BM_BETWEEN_VAL_TIMESTAMP {{1541138598, 1541138612}, {1541137889, 1541139310}, {1541137112, 1541139993}, {1541134602, 1541141812}, {1541130169, 1541146881}, {1541125209, 1541150508}, {1541117270, 1541154132}, {1541106624, 1541158501}, {1541100595, 1541162844}, {1541089685, 1541171747}, {1541076481, 1541180035}, {1541065715, 1541190288}, {1541056831, 1541209600}, {1541053133, 1541215064}, {1541049411, 1541219269}, {1541040924, 1541227207}, {1541026811, 1541236836}};
-
-// 10 mio pings table
-
-// quantile benchmark values (int table)
-// timestamp values --> unix timestamp
-// [0.0001, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
-///////////////////////////////
-//const auto BM_VAL_CAPTAIN_ID = std::vector{4, 464, 844, 1628, 4115, 6362, 11787, 24882, 57069, 176022, 451746, 616628, 901080, 954443, 1156169, 1233112, 1414788};
-//const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
-//const auto BM_VAL_LATITUDE = std::vector{243973175, 249279532, 249973158, 250299799, 250455204, 250573540, 250699666, 250775666, 250872227, 251030861, 251244185, 251724729, 251966912, 252081200, 252164364, 252437204, 601671321};
-//const auto BM_VAL_LONGITUDE = std::vector{543540652, 550593981, 551164532, 551349072, 551423584, 551481989, 551549474, 551685925, 551792718, 552072508, 552470842, 552692599, 552806365, 552898481, 553156638, 553640991, 2123391399};
-//const auto BM_VAL_TIMESTAMP = std::vector{1541372629, 1541379924, 1541382930, 1541389423, 1541398637, 1541408022, 1541418563, 1541428900, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1547639955, 1548644767, 1548671748, 1548716462};
-
-//const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
-
-// quantile between benchmark values (int table)
-// timestamp values --> unix timestamp
-// [0.0001, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
-///////////////////////////////
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_CAPTAIN_ID {{451745, 451746}, {435398, 460428}, {422254, 464467}, {403006, 496125}, {298194, 538889}, {229320, 570621}, {176022, 616628}, {140460, 695666}, {100762, 748517}, {57069, 901080}, {24882, 954443}, {11787, 1156169}, {6362, 1204047}, {4873, 1216443}, {4115, 1233112}, {1628, 1308975}, {4, 1414788}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_CAPTAIN_STATUS {{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_LATITUDE {{251244097, 251244248}, {251230315, 251257525}, {251209843, 251282647}, {251163169, 251357987}, {251129117, 251483861}, {251088242, 251602810}, {251030861, 251724729}, {250980490, 251843563}, {250938817, 251886562}, {250872227, 251966912}, {250775666, 252081200}, {250699666, 252164364}, {250573540, 252290339}, {250500198, 252342398}, {250455204, 252437204}, {250299799, 252579811}, {102191832, 601671321}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_LONGITUDE {{552470640, 552471070}, {552454391, 552489962}, {552431658, 552503086}, {552373107, 552528396}, {552248024, 552598718}, {552163676, 552647236}, {552072508, 552692599}, {552030164, 552730356}, {551962965, 552761497}, {551792718, 552806365}, {551685925, 552898482}, {551549474, 553156638}, {551481989, 553443178}, {551450469, 553532204}, {551423584, 553640991}, {551349072, 553979534}, {-2135243575, 2123391399}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_TIMESTAMP {{1545434360, 1545434475}, {1544130507, 1545440081}, {1544125430, 1545444223}, {1544112365, 1545451370}, {1544084375, 1545459820}, {1544070890, 1545467594}, {1542924244, 1545474895}, {1542878145, 1545483158}, {1542855912, 1545490798}, {1541439501, 1545518018}, {1541428900, 1547639955}, {1541418563, 1548644767}, {1541408022, 1548658352}, {1541403370, 1548665723}, {1541398637, 1548671748}, {1541389423, 1548687353}, {1541372479, 1548716462}};
 
 // 400 mio pings table
 
@@ -547,6 +513,5 @@ BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqu
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenPerformance)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenIndexScan)->Apply(CustomArguments);
-
 
 }  // namespace opossum

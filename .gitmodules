@@ -47,6 +47,9 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/or-tools/"]
+	path = "third_party/or-tools"
+	url = https://github.com/mrks/or-tools.git
 [submodule "third_party/robin-map"]
 	path = third_party/robin-map
 	url = https://github.com/Tessil/robin-map.git

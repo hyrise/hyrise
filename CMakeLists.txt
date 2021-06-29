@@ -124,6 +124,11 @@ find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS container system date_time)
 
+option(ENABLE_MEMKIND "Set to OFF to build Hyrise without memkind support" ON)
+if (${ENABLE_MEMKIND})
+    find_package(Memkind REQUIRED)
+endif()
+
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested

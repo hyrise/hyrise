@@ -6,6 +6,12 @@ endif()
 
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
 
+if (ENABLE_MEMKIND)
+    add_definitions(-DENABLE_MEMKIND=1)
+else()
+    add_definitions(-DENABLE_MEMKIND=0)
+endif()
+
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
 if (NOT ${NUMA_FOUND})
@@ -44,7 +50,7 @@ set(CMAKE_CXX_STANDARD 20)
 # Hotfix for boost bug (https://github.com/boostorg/asio/issues/312):
 add_compile_options(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
-add_compile_options(-pthread -Wno-unknown-warning-option)
+add_compile_options(-pthread -Wno-unknown-warning-option -Wno-deprecated-copy -Wno-maybe-uninitialized -Wno-thread-safety-negative)
 
 # Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
 if (NOT "${HYRISE_RELAXED_BUILD}")

@@ -23,6 +23,10 @@
 #include "utils/timer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
+#include "memory/dram_memory_resource.hpp"
+//#include "memory/umap_memory_resource.hpp"
+#include "memory/nvm_memory_resource.hpp"
+
 using namespace opossum::expression_functional;  // NOLINT
 
 using namespace opossum;  // NOLINT
@@ -330,7 +334,20 @@ int main() {
           "Undefined encoding specified in configuration file");
 
         const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
-        added_chunk->replace_segment(column_id, encoded_segment);
+
+        // Move segments of sorted single chunk table to defined storage medium
+        const auto storage_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][5]));
+        auto allocator = PolymorphicAllocator<void>{};
+
+        if (storage_id == 0) {
+          allocator = PolymorphicAllocator<void>{&DRAMMemoryResource::get()};
+        } else {
+          allocator = PolymorphicAllocator<void>{&NVMMemoryResource::get()};
+          std::cout << " NVM " << std::endl;
+        }
+
+        const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
+        added_chunk->replace_segment(column_id, migrated_segment);
 
         //Store index columns 
 
