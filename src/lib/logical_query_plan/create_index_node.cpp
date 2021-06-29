@@ -33,7 +33,7 @@ bool CreateIndexNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   const auto& create_Index_node = static_cast<const CreateIndexNode&>(rhs);
   return index_name == create_Index_node.index_name &&
          if_not_exists == create_Index_node.if_not_exists &&
-         column_ids == create_Index_node.column_ids;
+         *column_ids == *(create_Index_node.column_ids);
 }
 
 }  // namespace opossum

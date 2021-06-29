@@ -1295,19 +1295,31 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
   auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  std::string column_name_string;
 
-  for (auto column_definition: *(create_statement.columns)) {
-    auto column_id = target_table->column_id_by_name(column_definition->name);
+  for (auto column_name : *(create_statement.indexColumns)) {
+    auto column_id = target_table->column_id_by_name(column_name);
+    column_name_string += "_";
+    column_name_string += column_name;
     if(column_id != INVALID_COLUMN_ID) {
       column_ids->emplace_back(column_id);
     } else {
-      throw "no column id found for given column name";
+      FailInput("Column " + std::string(column_name) +
+                " does not exist on table " + std::string(create_statement.tableName) +
+                "." );
     }
   }
 
   auto input_node = StoredTableNode::make(create_statement.tableName);
 
-  return CreateIndexNode::make(create_statement.indexName, create_statement.ifNotExists, column_ids, input_node);
+  std::string index_name;
+  if(create_statement.indexName) {
+    index_name = create_statement.indexName;
+  } else {
+    index_name = create_statement.tableName + column_name_string;
+  }
+
+  return CreateIndexNode::make(index_name, create_statement.ifNotExists, column_ids, input_node);
 
 }
 
