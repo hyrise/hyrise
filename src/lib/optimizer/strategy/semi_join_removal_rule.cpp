@@ -2,11 +2,55 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+
+namespace {
+using namespace opossum;  // NOLINT
+
+bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
+  /**
+   * ColumnVsColumn
+   */
+    const auto binary_predicate =
+        std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+    if (binary_predicate && binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
+        binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
+      return true;
+    }
+    // Todo LIKE expression?
+
+  /**
+   * In List(...)
+   */
+   const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
+   if(in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
+
+  /**
+   * Correlated Subqueries
+   */
+  auto predicate_contains_correlated_subquery = false;
+  visit_expression(predicate, [&](const auto& sub_expression) {
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+        subquery_expression && subquery_expression->is_correlated()) {
+      predicate_contains_correlated_subquery = true;
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else {
+      return ExpressionVisitation::VisitArguments;
+    }
+  });
+  if (predicate_contains_correlated_subquery) return true;
+
+  return false;
+}
+
+
+} // namespace
 
 namespace opossum {
 
@@ -62,13 +106,12 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       if (upper_node->type == LQPNodeType::Predicate) {
         const auto& upper_predicate_node = static_cast<const PredicateNode&>(*upper_node);
-        const auto binary_predicate =
-            std::dynamic_pointer_cast<BinaryPredicateExpression>(upper_predicate_node.predicate());
-        if (binary_predicate && binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
-            binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
+
+        if (is_expensive_predicate(upper_predicate_node.predicate())) {
           removal_blockers.emplace(node);
           return LQPUpwardVisitation::DoNotVisitOutputs;
         }
+
       }
 
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
