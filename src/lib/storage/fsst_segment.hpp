@@ -23,8 +23,9 @@ class FSSTSegment : public AbstractEncodedSegment {
   //  explicit FSSTSegment();     // TODO: remove
   FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values);
   FSSTSegment(pmr_vector<unsigned char>& compressed_values,
-              pmr_vector<unsigned long>& compressed_value_lengths,
-              pmr_vector<unsigned char*>& compressed_value_pointers,
+              pmr_vector<unsigned long>& compressed_offsets,
+//              pmr_vector<unsigned long>& compressed_value_lengths,
+//              pmr_vector<unsigned char*>& compressed_value_pointers,
               std::optional<pmr_vector<bool>>& null_values,
               fsst_encoder_t* encoder,
               fsst_decoder_t& decoder);
@@ -59,8 +60,9 @@ class FSSTSegment : public AbstractEncodedSegment {
 
  private:
   pmr_vector<unsigned char> _compressed_values;
-  pmr_vector<unsigned long> _compressed_value_lengths;
-  pmr_vector<unsigned char*> _compressed_value_pointers;
+  pmr_vector<unsigned long> _compressed_offsets;
+//  pmr_vector<unsigned long> _compressed_value_lengths;
+//  pmr_vector<unsigned char*> _compressed_value_pointers;
   std::optional<pmr_vector<bool>> _null_values;
 
   fsst_encoder_t* _encoder;
