@@ -92,7 +92,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto semi_join_predicate = semi_join_node.join_predicates().at(0);
 
     // Find an upper node that corresponds to this node
-    visit_lqp_upwards(node, [&](const auto& upper_node) {
+    visit_lqp_upwards(node, [&](const auto& upper_node) { // todo maybe pass semi_join_node instead of node
       // Skip the semi node found before, i.e., start with its outputs
       if (node == upper_node) return LQPUpwardVisitation::VisitOutputs;
 
@@ -138,8 +138,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // as a sanity check, we want to make sure that we do not remove non-reduction nodes.
       DebugAssert(node->comment == "Semi Reduction", "Expected found semi join to be marked as reduction");
 
-
-      
+      removal_candidates.emplace(node);
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });

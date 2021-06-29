@@ -73,34 +73,34 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.
-//  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-//
-//  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
-//
-//  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
-//  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
-//  // StoredTableNode as possible where the ChunkPruningRule can work with them.
-//  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-//
-//  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
-//  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
-//  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
-//  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
-//
-//  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
-//  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
-//
-//  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
-//  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
-//  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
-//  // joins and would not recognize such a rewritten predicate.
-//  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
-//
-//  optimizer->add_rule(std::make_unique<IndexScanRule>());
-//
-//  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
-//
-//  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
+  // StoredTableNode as possible where the ChunkPruningRule can work with them.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
+  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
+  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
+  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
+  // joins and would not recognize such a rewritten predicate.
+  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
+
+  optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
 
   return optimizer;
 }
