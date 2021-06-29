@@ -96,7 +96,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
       const auto& join_node = static_cast<const JoinNode&>(*node);
       if (!join_node.is_reducer()) return LQPVisitation::VisitInputs;
-      Assert(join_node.join_predicates().size() > 1, "Did not expect multi-predicate semi join reduction.");
+      Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
     }
 
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*node);
