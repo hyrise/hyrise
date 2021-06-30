@@ -20,6 +20,12 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
+#include "operators/table_scan.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "storage/segment_iterate.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -104,6 +110,45 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     probe_column_id = _primary_predicate.column_ids.second;
   }
 
+  auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
+  // HACK perform scan when right side of semi join is just one tuple
+  const auto right_in_table = _right_input->get_output();
+  if (_mode == JoinMode::Semi && right_in_table->chunk_count() == 1) {
+    Timer hack_timer;
+    if (right_in_table->row_count() == 1) {
+      std::shared_ptr<const Table> out;
+      join_hash_performance_data.radix_bits = 99;
+      const auto right_column_id = _primary_predicate.column_ids.second;
+      join_hash_performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, hack_timer.lap());
+      /*const auto right_column_type = right_in_table->column_definitions().at(right_column_id).data_type;
+      resolve_data_type(right_column_type, [&](auto type){
+        using ColumnDataType = typename decltype(type)::type;
+        const auto scan_value = *(right_in_table->get_value<ColumnDataType>(right_column_id, 0));
+        auto scan_column = PQPColumnExpression::from_table(*_left_input->get_output(), _primary_predicate.column_ids.first);
+        auto scan = std::make_shared<TableScan>(_left_input, equals_(scan_value, scan_column));
+        scan->execute();
+        return scan->get_output();
+      });*/
+      // const auto scan_value = (*(right_in_table->get_chunk(ChunkID{0})->get_segment(right_column_id)))[0];
+      const auto right_segment = right_in_table->get_chunk(ChunkID{0})->get_segment(right_column_id);
+      const auto right_column_type = right_in_table->column_definitions().at(right_column_id).data_type;
+      resolve_data_type(right_column_type, [&](auto type){
+        using ColumnDataType = typename decltype(type)::type;
+        segment_iterate<ColumnDataType>(*right_segment, [&](const auto& pos){
+          const auto scan_value = pos.value();
+          auto scan_column = PQPColumnExpression::from_table(*_left_input->get_output(), _primary_predicate.column_ids.first);
+          join_hash_performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, hack_timer.lap());
+          auto scan = std::make_shared<TableScan>(_left_input, equals_(scan_column, scan_value));
+          scan->execute();
+          join_hash_performance_data.set_step_runtime(OperatorSteps::Clustering, hack_timer.lap());
+          out = scan->get_output();
+        });
+      });
+      return out;
+    }
+  }
+  // HACK END
+
   // If the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the secondary join predicates.
   auto adjusted_secondary_predicates = _secondary_predicates;
@@ -132,7 +177,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::LeftFirstRightSecond;
   }
 
-  auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
     resolve_data_type(probe_column_type, [&](const auto probe_data_type_t) {
