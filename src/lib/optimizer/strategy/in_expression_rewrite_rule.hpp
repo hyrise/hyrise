@@ -25,6 +25,8 @@ class InExpressionRewriteRule : public AbstractRule {
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
 
+  bool prevents_caching() const override;
+
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
   // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
   enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };

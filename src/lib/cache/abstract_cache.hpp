@@ -10,7 +10,7 @@ inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
 
 // Generic template for a cache implementation.
 // It guarantees the capacity to be thread-safe. Any other guarantees have to be fulfilled by the implementation.
-template <typename Key, typename Value>
+template <typename Key, typename Value, typename Hash, typename KeyEqual>
 class AbstractCache {
  public:
   explicit AbstractCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : _capacity(capacity) {}

@@ -37,6 +37,17 @@ PredicateCondition get_between_predicate_condition(bool left_inclusive, bool rig
 namespace opossum {
 
 /**
+ * Rewriting predicate chains into between expressions renders the LQP non-cacheable.
+ * Deoending on the actual parameter values, predicates may be coposed into between statemets
+ * or not. When changing these parameters, the composition might no longer be valid,
+ * resulting in wrong results.
+ * E.g.
+ *    'WHERE a >= 5 AND a <= 7' is equivalent to     'WHERE a BETWEEN 5 AND 7' but
+ *    'WHERE a >= 7 AND a <= 5' is not equivalent to 'WHERE a BETWEEN 7 AND 5'
+*/
+bool BetweenCompositionRule::prevents_caching() const { return true; }
+
+/**
  * Distinction from the ChunkPruningRule:
  *  Both rules search for predicate chains, but of different types:
  *   a) The ChunkPruningRule searches for chains of predicates that relate to specific StoredTableNodes. Predicate

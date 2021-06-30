@@ -25,6 +25,7 @@ for benchmark_json in data["benchmarks"]:
 
     sum_parse_duration = 0.0
     sum_sql_translation_duration = 0.0
+    sum_cache_duration = 0.0
     sum_optimization_duration = 0.0
     sum_optimizer_rule_durations = {}
     sum_lqp_translation_duration = 0.0
@@ -38,6 +39,7 @@ for benchmark_json in data["benchmarks"]:
 
             for statement in metrics["statements"]:
                 sum_sql_translation_duration += statement["sql_translation_duration"]
+                sum_cache_duration += statement["cache_duration"]
                 sum_optimization_duration += statement["optimization_duration"]
                 sum_lqp_translation_duration += statement["lqp_translation_duration"]
                 sum_plan_execution_duration += statement["plan_execution_duration"]
@@ -53,6 +55,7 @@ for benchmark_json in data["benchmarks"]:
 
     benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
     benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_cache_duration / len(benchmark_json["successful_runs"]))
     benchmark.append(sum_optimization_duration / len(benchmark_json["successful_runs"]))
     benchmark.append(sum_lqp_translation_duration / len(benchmark_json["successful_runs"]))
     benchmark.append(sum_plan_execution_duration / len(benchmark_json["successful_runs"]))
@@ -65,7 +68,7 @@ for benchmark_json in data["benchmarks"]:
     rule_benchmarks.append(rule_benchmark)
 
 benchmark_df = pd.DataFrame(
-    benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", "Optimizer", "LQPTranslator", "Execution"]
+    benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", "Cache", "Optimizer", "LQPTranslator", "Execution"]
 )
 
 # summing up the runtimes from all stages for each query
@@ -87,7 +90,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + r"$\emptyset$ " + f"{total_time[label_id]/1e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
@@ -127,7 +130,7 @@ ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
-    label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{optimizer_total_time[label_id]/10e6:.2f} ms")
+    label.set_text(label.get_text() + r"$\emptyset$ " + f"{optimizer_total_time[label_id]/1e6:.2f} ms")
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()

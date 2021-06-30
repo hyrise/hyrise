@@ -11,6 +11,8 @@ set(
     all_type_variant.hpp
     cache/abstract_cache.hpp
     cache/gdfs_cache.hpp
+    cache/parameterized_plan_cache_handler.cpp
+    cache/parameterized_plan_cache_handler.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp

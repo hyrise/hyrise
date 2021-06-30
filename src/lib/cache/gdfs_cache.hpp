@@ -14,8 +14,8 @@ namespace opossum {
  * To iterate over the cache in a thread-safe manner, use the copy provided by snapshot().
  * Different cache implementations existed in the past, but were retired with PR 2129.
  */
-template <typename Key, typename Value>
-class GDFSCache : public AbstractCache<Key, Value> {
+template <typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -31,10 +31,12 @@ class GDFSCache : public AbstractCache<Key, Value> {
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
-  using CacheMap = typename std::unordered_map<Key, Handle>;
-  using SnapshotEntry = typename AbstractCache<Key, Value>::SnapshotEntry;
 
-  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
+  using CacheMap = typename std::unordered_map<Key, Handle, Hash, KeyEqual>;
+  using SnapshotEntry = typename AbstractCache<Key, Value, Hash, KeyEqual>::SnapshotEntry;
+
+  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY)
+      : AbstractCache<Key, Value, Hash, KeyEqual>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);

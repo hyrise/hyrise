@@ -33,6 +33,9 @@ namespace opossum {
  * that are inputs to a merged subplan but do not necessarily belong to that subplan. When it becomes necessary, this
  * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
+
+bool PredicateMergeRule::prevents_caching() const { return false; }
+
 void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 

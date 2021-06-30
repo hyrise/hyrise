@@ -13,5 +13,5 @@ provider hyrise {
         probe operator_tasks(uintptr_t abstract_operator, uintptr_t operator_task);
         probe operator_started(char* operator_name);
         probe operator_executed(char* operator_name, long execution_time, long output_rows, long output_chunks, uintptr_t this_pointer);
-        probe summary(char* query_string, long translation_time, long optimization_time, long compile_time, long execution_time, int query_plan_cached, size_t tasks_size, uintptr_t this_pointer);
+        probe summary(char* query_string, long translation_time, long cache_time, long optimization_time, long compile_time, long execution_time, int query_plan_cached, size_t tasks_size, uintptr_t this_pointer);
 };

@@ -131,6 +131,12 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
 
 namespace opossum {
 
+// Chunk pruning may render the LQP non-cacheable.
+// Chunks may be pruned based on parameters in the plan.
+// However, with different parameters, the same chunks may
+// be relevant and their pruning would lead to wrong results.
+bool ChunkPruningRule::prevents_caching() const { return true; }
+
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>
       predicate_pruning_chains_by_stored_table_node;

@@ -12,6 +12,8 @@ class ValueExpression : public AbstractExpression {
  public:
   explicit ValueExpression(const AllTypeVariant& init_value);
 
+  explicit ValueExpression(const AllTypeVariant& init_value, const ValueExpressionID init_value_expression_id);
+
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
@@ -19,6 +21,7 @@ class ValueExpression : public AbstractExpression {
   DataType data_type() const override;
 
   const AllTypeVariant value;
+  const std::optional<ValueExpressionID> value_expression_id = std::nullopt;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

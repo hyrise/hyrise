@@ -7,8 +7,10 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "cache/parameterized_plan_cache_handler.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
@@ -17,6 +19,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
@@ -28,6 +31,17 @@ std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_c
       if (node->type != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
         return join_node->join_mode == opossum::JoinMode::Cross;
+      }
+      return false;
+    };
+
+// This function relies on the ChunkPruningRule in the post cache optimizer and could break if something is changed
+// in the post caching optimizer.
+std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> has_pruned_chunks =
+    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
+      if (node->type != opossum::LQPNodeType::StoredTable) return false;
+      if (auto stored_table_node = std::dynamic_pointer_cast<opossum::StoredTableNode>(node)) {
+        return !stored_table_node->pruned_chunk_ids().empty();
       }
       return false;
     };
@@ -78,6 +92,11 @@ class SQLPipelineStatementTest : public BaseTest {
     return sql_pipeline._get_sql_pipeline_statements();
   }
 
+  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>> split_lqp_values(
+      const std::shared_ptr<AbstractLQPNode>& lqp) {
+    return ParameterizedPlanCacheHandler::_split_lqp_values(lqp);
+  }
+
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _table_int;
@@ -93,9 +112,10 @@ class SQLPipelineStatementTest : public BaseTest {
   const std::string _invalid_sql = "SELECT FROM table_a";
   const std::string _join_query =
       "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a, table_b WHERE table_a.a = table_b.a AND table_a.a "
-      "> 1000";
+      "> 2000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
+  const std::string _parameter_query = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
 
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
@@ -142,7 +162,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
 TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
-  const auto optimizer = Optimizer::create_default_optimizer();
+  const auto optimizer = Optimizer::create_default_pre_caching_optimizer();
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
@@ -250,6 +270,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQP) {
   const auto& lqp = statement->get_optimized_logical_plan();
 
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_TRUE(contained_in_lqp(lqp, has_pruned_chunks));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPTwice) {
@@ -260,6 +281,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPTwice) {
   const auto& lqp = statement->get_optimized_logical_plan();
 
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_TRUE(contained_in_lqp(lqp, has_pruned_chunks));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
@@ -282,62 +304,6 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
   // We did not need the context yet
   EXPECT_EQ(statement->transaction_context(), nullptr);
   EXPECT_FALSE(lqp_is_validated(lqp));
-}
-
-TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
-  // Expect cache to be empty
-  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
-
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
-
-  const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
-  EXPECT_TRUE(lqp_is_validated(validated_lqp));
-
-  // Expect cache to contain validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
-  EXPECT_TRUE(lqp_is_validated(*validated_cached_lqp));
-
-  // Evict validated version by requesting a not validated version
-  auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
-  const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
-  EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
-
-  // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
-  EXPECT_FALSE(lqp_is_validated(*not_validated_cached_lqp));
-}
-
-TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
-  // Expect cache to be empty
-  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
-
-  auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
-
-  const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
-  EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
-
-  // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
-  EXPECT_FALSE(lqp_is_validated(*not_validated_cached_lqp));
-
-  // Evict not validated version by requesting a validated version
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
-  const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
-  EXPECT_TRUE(lqp_is_validated(validated_lqp));
-
-  // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
-  EXPECT_TRUE(lqp_is_validated(*validated_cached_lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
@@ -626,8 +592,11 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   statement->get_result_table();
 
+  auto unoptimized_lqp = statement->get_unoptimized_logical_plan();
+  const auto [cache_key, extracted_values] = split_lqp_values(unoptimized_lqp);
+
   EXPECT_EQ(_lqp_cache->size(), 1u);
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
@@ -704,8 +673,6 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   statement->get_result_table();
 
   EXPECT_EQ(_lqp_cache->size(), 0u);
-  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
-
   EXPECT_EQ(_pqp_cache->size(), 0u);
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }

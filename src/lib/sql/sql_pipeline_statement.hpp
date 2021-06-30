@@ -20,6 +20,7 @@ namespace opossum {
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translation_duration{};
+  std::chrono::nanoseconds cache_duration{};
   std::chrono::nanoseconds optimization_duration{};
   std::vector<OptimizerRuleMetrics> optimizer_rule_durations{};
   std::chrono::nanoseconds lqp_translation_duration{};
@@ -56,6 +57,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<Optimizer>& default_post_caching_optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                        const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
@@ -103,7 +105,13 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
+  static void expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
+                                              std::vector<std::shared_ptr<AbstractExpression>>& values);
+  const std::tuple<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<AbstractExpression>>>
+  split_logical_plan(const std::shared_ptr<const AbstractLQPNode>& logical_plan);
+
  private:
+  friend class ParameterizedPlanCacheHandlerTest;
   bool _is_transaction_statement();
 
   // Returns the tasks that execute transaction statements
@@ -114,10 +122,16 @@ class SQLPipelineStatement : public Noncopyable {
   // Throws an InvalidInputException if an invalid PQP is detected.
   static void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp);
 
+  std::vector<ParameterID> _get_parameter_ordering(
+      std::vector<std::shared_ptr<AbstractExpression>> unoptimized_extracted_values);
+  std::optional<const std::shared_ptr<opossum::PreparedPlan>> _try_get_cached_optimized_lqp(
+      const std::shared_ptr<AbstractLQPNode>& unoptimized_lqp_with_placeholders);
+
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
   const std::shared_ptr<Optimizer> _optimizer;
+  const std::shared_ptr<Optimizer> _default_post_caching_optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

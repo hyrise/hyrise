@@ -18,6 +18,12 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
+// Reducing expressions may render the LQP non-cacheable.
+// Since removing of constant expressions might merge parameters and thus
+// change the number of parameters in the LQP, an optimized LQP cannot be
+// instantiated anymore with the parameter list from the original SQL query.
+bool ExpressionReductionRule::prevents_caching() const { return true; }
+
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");

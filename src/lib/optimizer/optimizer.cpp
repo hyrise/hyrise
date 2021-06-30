@@ -34,7 +34,20 @@ namespace opossum {
  * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
  * optimization costs reasonable.
  */
-std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
+
+std::shared_ptr<Optimizer> Optimizer::create_default_post_caching_optimizer() {
+  auto optimizer = std::make_shared<Optimizer>();
+  // Some rules may prevent caching/safe reuse of the optimized plan. (see prevents_caching() of each rule for
+  // detailed explanation).
+  // For most of these rules, this is not critical, since they only act a part in the optimization of a few plans.
+  // However, the ChunkPruningRule has an impact on nearly every plan optimization, which would render nearly every
+  // plan non-cacheable and the whole cache useless. Therefore, this rule is applied after caching in a seperate
+  // optimizer.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+  return optimizer;
+}
+
+std::shared_ptr<Optimizer> Optimizer::create_default_pre_caching_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
@@ -76,11 +89,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
-  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
-  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
-  // StoredTableNode as possible where the ChunkPruningRule can work with them.
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-
   // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
   // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
   // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
@@ -110,8 +118,8 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
-    std::shared_ptr<AbstractLQPNode> input,
-    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
+    std::shared_ptr<AbstractLQPNode> input, const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations,
+    const std::shared_ptr<bool>& cacheable) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -127,7 +135,20 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
-    rule->apply_to_plan(root_node);
+
+    if (rule->prevents_caching()) {
+      // Some rules may prevent caching, however if they have no effect on the plan, it can be cached anyway
+      const auto previous_plan = root_node->deep_copy();
+      rule->apply_to_plan(root_node);
+
+      if (*previous_plan != *root_node) {
+        // only in case it changed the plan, we can't reuse it
+        *cacheable = false;
+      }
+    } else {
+      rule->apply_to_plan(root_node);
+    }
+
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {

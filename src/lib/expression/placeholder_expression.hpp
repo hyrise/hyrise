@@ -11,6 +11,7 @@ namespace opossum {
 class PlaceholderExpression : public AbstractExpression {
  public:
   explicit PlaceholderExpression(const ParameterID init_parameter_id);
+  explicit PlaceholderExpression(const ParameterID init_parameter_id, const DataType init_data_type);
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> _on_deep_copy(
@@ -19,6 +20,7 @@ class PlaceholderExpression : public AbstractExpression {
   DataType data_type() const override;
 
   const ParameterID parameter_id;
+  const std::optional<DataType> optional_data_type;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
