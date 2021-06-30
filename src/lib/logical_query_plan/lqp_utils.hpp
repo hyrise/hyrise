@@ -246,4 +246,6 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
 
+void remove_invalid_ods(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<OrderDependency>& ods);
+
 }  // namespace opossum

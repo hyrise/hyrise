@@ -313,6 +313,17 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   return union_fds(non_trivial_fds, trivial_fds);
 }
 
+std::vector<OrderDependency> AbstractLQPNode::order_dependencies() {
+  // forward ODs from left input. Needs specialization for Aggregates, Stored/StaticTableNode, Joins
+  // make sure that there is one single input
+  Assert(left_input() && !right_input(), "Expect one input for OD forwarding. Please override this function.");
+  if (!_retrieved_ods) {
+    _order_dependencies = left_input()->order_dependencies();
+    _retrieved_ods = true;
+  }
+  return _order_dependencies;
+}
+
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");

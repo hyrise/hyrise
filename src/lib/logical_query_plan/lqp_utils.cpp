@@ -506,4 +506,35 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
    */
 }
 
+void remove_invalid_ods(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<OrderDependency>& ods) {
+  if (ods.empty()) return;
+  const auto& output_expressions = lqp->output_expressions();
+  const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+
+  // Remove invalid or unnecessary FDs
+  ods.erase(std::remove_if(ods.begin(), ods.end(),
+                           [&lqp, &output_expressions_set](auto& od) {
+
+                             /**
+                              * Remove FDs with determinant expressions that are
+                              *  a) not part of the node's output expressions
+                              *  b) are nullable
+                              */
+                             for (const auto& od_determinant_expression : od.determinants) {
+                               if (!output_expressions_set.contains(od_determinant_expression) ||
+                                   lqp->is_column_nullable(lqp->get_column_id(*od_determinant_expression))) {
+                                 return true;
+                               }
+                             }
+                             for (const auto& od_dependent_expression : od.dependents) {
+                               if (!output_expressions_set.contains(od_dependent_expression) ||
+                                   lqp->is_column_nullable(lqp->get_column_id(*od_dependent_expression))) {
+                                 return true;
+                               }
+                             }
+                             return false;
+                           }),
+            ods.end());
+}
+
 }  // namespace opossum

@@ -226,6 +226,31 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   }
 }
 
+std::vector<OrderDependency> JoinNode::order_dependencies() {
+  // even if tuples are discarded or multiplied, ODs still hold
+  // TO DO transitive ODs:
+  // A.a -> A.b, B.a -> B.b
+  // Join on A.b = B.a yields new dependency A.a -> B.b
+  if (_retrieved_ods) return _order_dependencies;
+
+  auto left_dependencies = left_input()->order_dependencies();
+  auto right_dependencies = right_input()->order_dependencies();
+  remove_invalid_ods(shared_from_this(), left_dependencies);
+  remove_invalid_ods(shared_from_this(), right_dependencies);
+
+  // make sure not to have anything twice on self joins
+  _order_dependencies = left_dependencies;
+  for (const auto& right_od : right_dependencies) {
+    bool is_known = false;
+    for (const auto& left_od : left_dependencies) {
+      is_known = is_known || right_od == left_od;
+    }
+    if (!is_known) _order_dependencies.emplace_back(right_od);
+  }
+  _retrieved_ods = true;
+  return _order_dependencies;
+}
+
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }

@@ -354,6 +354,30 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 }
 
+const TableOrderConstraints& Table::soft_order_constraints() const { return _table_order_constraints; }
+
+void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
+  Assert(_type == TableType::Data, "Order constraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns
+  for (const auto& column_id : table_order_constraint.determinants()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    // OCs require non-nullable columns
+    Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+  }
+  for (const auto& column_id : table_order_constraint.dependents()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    // OCs require non-nullable columns
+    Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+  }
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    _table_order_constraints.push_back(table_order_constraint);
+  }
+}
+
+
 const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {

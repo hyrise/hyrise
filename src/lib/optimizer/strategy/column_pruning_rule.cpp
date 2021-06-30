@@ -296,6 +296,63 @@ void try_join_to_semi_rewrite(
       join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
+
+  if (equals_predicate_expressions_left.size() == 1 && equals_predicate_expressions_right.size() == 1) {
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right);
+  }
+
+}
+
+// Expect discarded input to be the right one
+// only allow child plans containing one scan, storedtable, validate
+void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, const ExpressionUnorderedSet& equals_predicate_expressions_right) {
+  std::shared_ptr<AbstractLQPNode> scan;
+  bool abort = false;
+
+  // find previous scan
+  visit_pqp(join->right_input(), [&](auto node){
+    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable && node_type != LQPNodeType::Validate) {
+      abort = true;
+      return PQPVisitation::DoNotVisitInputs;
+    }
+
+    if (node->type == LQPNodeType::Predicate) {
+      if (scan) {
+        abort = true;
+        return PQPVisitation::DoNotVisitInputs;
+      }
+      scan = node;
+    }
+    return PQPVisitation::VisitInputs;
+  });
+
+  if (abort || !scan) {
+    return;
+  }
+
+  // if order dependency between join and scan column, rewrite
+  const auto order_dependencies = scan->order_dependencies();
+  auto join_column_expression = equals_predicate_expressions_right[0];
+  const auto casted_scan = static_pointer_cast<PredicateNode>(scan);
+  const auto scan_predicate = casted_scan->predicate();
+  AbstractExpression new_scan_predicate;
+  for (const auto& od : order_dependencies) {
+    // skip larger ODs
+    if (od.determinants.size() != 1 || od.dependents.size() != 1) {
+      continue;
+    }
+    switch (scan_predicate->type) {
+      case ExpressionType::Value: {
+        // TO DO: execute subplan, get result, build new scan with other column in result as predicate
+        // PRUNING --> sonst scan ggf langsamer
+      } break;
+      case ExpressionType::Between: {
+        // TO DO: execute subplan, get result, search min/max, build new scan
+        // PRUNING
+      } break;
+      default: return;
+  }
+
 }
 
 void prune_projection_node(

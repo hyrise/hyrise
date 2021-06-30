@@ -187,4 +187,6 @@ using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const Abs
 using ExpressionUnorderedSet =
     std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
+using ExpressionList = std::vector<std::shared_ptr<AbstractExpression>>;
+
 }  // namespace opossum

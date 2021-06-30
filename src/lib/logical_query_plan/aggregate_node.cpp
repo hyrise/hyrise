@@ -158,6 +158,15 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
   return non_trivial_fds;
 }
 
+std::vector<OrderDependency> AggregateNode::order_dependencies() {
+  if (_retrieved_ods) return _order_dependencies;
+  auto forward_ods = left_input()->order_dependencies();
+  remove_invalid_ods(shared_from_this(), forward_ods);
+  _order_dependencies = forward_ods;
+  _retrieved_ods = true;
+  return _order_dependencies;
+}
+
 size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

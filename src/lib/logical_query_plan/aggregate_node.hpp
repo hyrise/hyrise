@@ -38,6 +38,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
   size_t aggregate_expressions_begin_idx;
 
+  std::vector<OrderDependency> order_dependencies() override;
+
  protected:
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -128,6 +128,8 @@ set(
     logical_query_plan/export_node.hpp
     logical_query_plan/functional_dependency.cpp
     logical_query_plan/functional_dependency.hpp
+    logical_query_plan/order_dependency.cpp
+    logical_query_plan/order_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -300,6 +302,8 @@ set(
     optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/dependent_group_by_reduction_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
+    optimizer/strategy/dependent_join_rewrite_rule.cpp
+    optimizer/strategy/dependent_join_rewrite_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/in_expression_rewrite_rule.cpp
@@ -427,6 +431,8 @@ set(
     storage/abstract_table_constraint.hpp
     storage/table_key_constraint.cpp
     storage/table_key_constraint.hpp
+    storage/table_order_constraint.cpp
+    storage/table_order_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp

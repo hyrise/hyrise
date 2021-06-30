@@ -13,6 +13,7 @@
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
+#include "table_order_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -204,6 +205,9 @@ class Table : private Noncopyable {
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
 
+  void add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
+  const TableOrderConstraints& soft_order_constraints() const;
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
@@ -240,6 +244,7 @@ class Table : private Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
+  TableOrderConstraints _table_order_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
