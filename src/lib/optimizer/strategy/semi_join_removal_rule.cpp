@@ -158,16 +158,10 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto semi_join_selectivity = semi_join_output_cardinality / semi_join_input_cardinality;
       const auto upper_nodes_selectivity = join_input_cardinality / semi_join_output_cardinality;
 
-      std::cout << "SemiJoinReduction: \n" << semi_reduction_node.description(JoinNode::DescriptionMode::Short);
-      std::cout << " semi_join_selectivity blocker: " << semi_join_selectivity << std::endl;
-      std::cout << " removal upper_nodes_selectivity: " << upper_nodes_selectivity << std::endl;
-
-      // Remove the semi join reduction if it does not help ...
-      if (semi_join_selectivity < upper_nodes_selectivity) {
-        std::cout << " -> blocker" << std::endl;
+      // Remove the semi join reduction if it does not help ... validate nodes have selectivity 1.0
+      if (upper_nodes_selectivity < 1.0 && semi_join_selectivity < upper_nodes_selectivity) {
         removal_blockers.emplace(node);
       } else {
-        std::cout << " -> candidate" << std::endl;
         removal_candidates.emplace(node);
       }
 
