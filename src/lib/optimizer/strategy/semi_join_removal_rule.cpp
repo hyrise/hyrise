@@ -113,11 +113,9 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     // Semi join reductions should have a minimum selectivity
     const auto semi_join_input_cardinality = estimator->estimate_cardinality(semi_reduction_node.left_input());
     const auto semi_join_output_cardinality = estimator->estimate_cardinality(semi_reduction_node.shared_from_this());
-    Assert(semi_join_output_cardinality < semi_join_input_cardinality, "Semi join reduction should not increase "
-           "cardinality!");
-    const auto semi_join_selectivity = semi_join_output_cardinality / semi_join_input_cardinality;
-    std::cout << "Semi join reduction selectivity: " << semi_join_selectivity << std::endl;
-    if (semi_join_selectivity < 0.5) return LQPVisitation::VisitInputs;
+    const auto semi_join_selectivity = semi_join_input_cardinality >= 0.0 ? semi_join_output_cardinality /
+                                       semi_join_input_cardinality : 0.0;
+    if (semi_join_selectivity < 0.25) return LQPVisitation::VisitInputs;
 
     // Since multiple output nodes profit from the reduction, we do not remove it. Compare JOB query 29b, for example.
     if (semi_reduction_node.output_count() > 1) {
