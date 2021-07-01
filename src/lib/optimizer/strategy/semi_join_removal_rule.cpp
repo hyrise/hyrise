@@ -6,6 +6,7 @@
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "expression/is_null_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -33,6 +34,11 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
       return true;
     }
   }
+
+  /**
+   * IS NULL
+   */
+  if (std::dynamic_pointer_cast<IsNullExpression>(predicate)) return true;
 
   /**
    * IN List(...)
