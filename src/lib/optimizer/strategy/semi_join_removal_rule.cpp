@@ -82,8 +82,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
   // You might be able to come up with a case where this caches too much (especially when looking at nested semi joins),
   // but the chance of this is slim enough to risk it and benefit from cached results.
-//  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-//  estimator->guarantee_bottom_up_construction();
+  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction();
 
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
   // be translated into the same operator. If we remove one of these reductions, we block the reuse of the join result.
@@ -96,17 +96,28 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   auto removal_blockers =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
+  /**
+   * Phase 1: Find semi join reductions & determine removal blockers.
+   */
   visit_lqp(lqp_root, [&](const auto& node) {
-    {
-      // Check if the current node is a semi join reduction
-      if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
-      const auto& join_node = static_cast<const JoinNode&>(*node);
-      if (!join_node.is_reducer()) return LQPVisitation::VisitInputs;
-      Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
-    }
+    // Check if the current node is a semi join reduction
+    if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
+    const auto& join_node = static_cast<const JoinNode&>(*node);
+    if (!join_node.is_reducer()) return LQPVisitation::VisitInputs;
+    // todo rename rule if we continue to look at semi join reductions only
+    Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
 
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*node);
     const auto semi_join_predicate = semi_reduction_node.join_predicates().at(0);
+
+    // Semi join reductions should have a minimum selectivity
+    const auto semi_join_input_cardinality = estimator->estimate_cardinality(semi_reduction_node.left_input());
+    const auto semi_join_output_cardinality = estimator->estimate_cardinality(semi_reduction_node.shared_from_this());
+    Assert(semi_join_output_cardinality < semi_join_input_cardinality, "Semi join reduction should not increase "
+           "cardinality!");
+    const auto semi_join_selectivity = semi_join_output_cardinality / semi_join_input_cardinality;
+    std::cout << "Semi join reduction selectivity: " << semi_join_selectivity << std::endl;
+    if (semi_join_selectivity < 0.5) return LQPVisitation::VisitInputs;
 
     // Since multiple output nodes profit from the reduction, we do not remove it. Compare JOB query 29b, for example.
     if (semi_reduction_node.output_count() > 1) {
@@ -114,7 +125,10 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       return LQPVisitation::VisitInputs;
     }
 
-    // Find an upper node that corresponds to this node
+    /**
+     * Traverse upwards until finding the JoinNode that corresponds to semi_reduction_node.
+     * Add removal blocker in case of expensive nodes and predicates that benefit from semi_reduction_node.
+     */
     visit_lqp_upwards(node, [&](const auto& upper_node) {  // todo maybe pass semi_reduction_node instead of node
       // Skip the semi node found before, i.e., start with its outputs
       if (node == upper_node) return LQPUpwardVisitation::VisitOutputs;
@@ -170,8 +184,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
-      // todo Assert (this semi join should not be in removal_blockers, right)?
-
 //      // Estimate the output cardinality of the semi join reduction and the input cardinality of the corresponding join
 //      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
 //      const auto semi_join_input_cardinality = estimator->estimate_cardinality(node->left_input());
@@ -194,6 +206,9 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     return LQPVisitation::VisitInputs;
   });
 
+  /**
+   * Phase 2: Remove semi join reductions
+   */
   for (const auto& removal_candidate : removal_candidates) {
     if (removal_blockers.contains(removal_candidate)) continue;
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
