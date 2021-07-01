@@ -116,11 +116,17 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // The estimation for aggregate and column/column scans is bad, so whenever one of these occurs between the semi
       // join reduction and the original join, do not remove the semi join reduction (i.e., abort the search for an
       // upper node).
+      /**
+       * AggregateNode
+       */
       if (upper_node->type == LQPNodeType::Aggregate) {
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
+      /**
+       * PredicateNode
+       */
       if (upper_node->type == LQPNodeType::Predicate) {
         const auto& upper_predicate_node = static_cast<const PredicateNode&>(*upper_node);
 
@@ -130,7 +136,12 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         }
       }
 
+      // Skip all other nodes, except for Joins.
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
+
+      /**
+       * JoinNode
+       */
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
 
       // In most cases, the right side of the semi join reduction is one of the inputs of the original join. In rare
@@ -138,19 +149,25 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // covered by this removal rule yet.
       const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
       const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
-      if (!semi_join_is_left_input && !semi_join_is_right_input) {
+      bool is_corresponding_join = false;
+      if (semi_join_is_left_input || semi_join_is_right_input) {
+        // Check whether the semi join reduction predicate matches one of the predicates of the upper join
+        if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
+                             [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
+          is_corresponding_join = true;
+        }
+      }
+
+      // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
+      if (!is_corresponding_join) {
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
-//      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
 
-      // Check whether the semi join reduction predicate matches one of the predicates of the upper join
-      if (std::none_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
-                       [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
-        return LQPUpwardVisitation::VisitOutputs;
-      }
+      // todo Assert (this semi join should not be in removal_blockers, right)?
 
 //      // Estimate the output cardinality of the semi join reduction and the input cardinality of the corresponding join
+//      auto input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
 //      const auto semi_join_input_cardinality = estimator->estimate_cardinality(node->left_input());
 //      const auto semi_join_output_cardinality = estimator->estimate_cardinality(node);
 //      const auto join_input_cardinality = estimator->estimate_cardinality(upper_node->input(input_side));
@@ -162,7 +179,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 //      if (upper_nodes_selectivity < 1.0 && semi_join_selectivity < upper_nodes_selectivity) {
 //        removal_blockers.emplace(node);
 //      } else {
-        removal_candidates.emplace(node);
+      removal_candidates.emplace(node);
 //      }
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
