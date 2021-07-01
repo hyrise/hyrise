@@ -1,8 +1,8 @@
 create table dbgen_version
 (
     dv_version                varchar(16)                   ,
-    dv_create_date            date                          ,
-    dv_create_time            time                          ,
+    dv_create_date            varchar(20)                   ,
+    dv_create_time            varchar(20)                   ,
     dv_cmdline_args           varchar(200)                  
 );
 
@@ -19,9 +19,8 @@ create table customer_address
     ca_state                  char(2)                       ,
     ca_zip                    char(10)                      ,
     ca_country                varchar(20)                   ,
-    ca_gmt_offset             decimal(5,2)                  ,
-    ca_location_type          char(20)                      ,
-    primary key (ca_address_sk)
+    ca_gmt_offset             float                         ,
+    ca_location_type          char(20)                      
 );
 
 create table customer_demographics
@@ -34,15 +33,14 @@ create table customer_demographics
     cd_credit_rating          char(10)                      ,
     cd_dep_count              integer                       ,
     cd_dep_employed_count     integer                       ,
-    cd_dep_college_count      integer                       ,
-    primary key (cd_demo_sk)
+    cd_dep_college_count      integer                       
 );
 
 create table date_dim
 (
     d_date_sk                 integer               not null,
     d_date_id                 char(16)              not null,
-    d_date                    date                          ,
+    d_date                    varchar(20)                   ,
     d_month_seq               integer                       ,
     d_week_seq                integer                       ,
     d_quarter_seq             integer                       ,
@@ -67,8 +65,7 @@ create table date_dim
     d_current_week            char(1)                       ,
     d_current_month           char(1)                       ,
     d_current_quarter         char(1)                       ,
-    d_current_year            char(1)                       ,
-    primary key (d_date_sk)
+    d_current_year            char(1)                       
 );
 
 create table warehouse
@@ -86,8 +83,7 @@ create table warehouse
     w_state                   char(2)                       ,
     w_zip                     char(10)                      ,
     w_country                 varchar(20)                   ,
-    w_gmt_offset              decimal(5,2)                  ,
-    primary key (w_warehouse_sk)
+    w_gmt_offset              float                         
 );
 
 create table ship_mode
@@ -97,8 +93,7 @@ create table ship_mode
     sm_type                   char(30)                      ,
     sm_code                   char(10)                      ,
     sm_carrier                char(20)                      ,
-    sm_contract               char(20)                      ,
-    primary key (sm_ship_mode_sk)
+    sm_contract               char(20)                      
 );
 
 create table time_dim
@@ -112,35 +107,32 @@ create table time_dim
     t_am_pm                   char(2)                       ,
     t_shift                   char(20)                      ,
     t_sub_shift               char(20)                      ,
-    t_meal_time               char(20)                      ,
-    primary key (t_time_sk)
+    t_meal_time               char(20)                      
 );
 
 create table reason
 (
     r_reason_sk               integer               not null,
     r_reason_id               char(16)              not null,
-    r_reason_desc             char(100)                     ,
-    primary key (r_reason_sk)
+    r_reason_desc             char(100)                     
 );
 
 create table income_band
 (
     ib_income_band_sk         integer               not null,
     ib_lower_bound            integer                       ,
-    ib_upper_bound            integer                       ,
-    primary key (ib_income_band_sk)
+    ib_upper_bound            integer                       
 );
 
 create table item
 (
     i_item_sk                 integer               not null,
     i_item_id                 char(16)              not null,
-    i_rec_start_date          date                          ,
-    i_rec_end_date            date                          ,
+    i_rec_start_date          varchar(20)                   ,
+    i_rec_end_date            varchar(20)                   ,
     i_item_desc               varchar(200)                  ,
-    i_current_price           decimal(7,2)                  ,
-    i_wholesale_cost          decimal(7,2)                  ,
+    i_current_price           float                         ,
+    i_wholesale_cost          float                         ,
     i_brand_id                integer                       ,
     i_brand                   char(50)                      ,
     i_class_id                integer                       ,
@@ -155,16 +147,15 @@ create table item
     i_units                   char(10)                      ,
     i_container               char(10)                      ,
     i_manager_id              integer                       ,
-    i_product_name            char(50)                      ,
-    primary key (i_item_sk)
+    i_product_name            char(50)                      
 );
 
 create table store
 (
     s_store_sk                integer               not null,
     s_store_id                char(16)              not null,
-    s_rec_start_date          date                          ,
-    s_rec_end_date            date                          ,
+    s_rec_start_date          varchar(20)                   ,
+    s_rec_end_date            varchar(20)                   ,
     s_closed_date_sk          integer                       ,
     s_store_name              varchar(50)                   ,
     s_number_employees        integer                       ,
@@ -188,17 +179,16 @@ create table store
     s_state                   char(2)                       ,
     s_zip                     char(10)                      ,
     s_country                 varchar(20)                   ,
-    s_gmt_offset              decimal(5,2)                  ,
-    s_tax_precentage          decimal(5,2)                  ,
-    primary key (s_store_sk)
+    s_gmt_offset              float                         ,
+    s_tax_precentage          float                         
 );
 
 create table call_center
 (
     cc_call_center_sk         integer               not null,
     cc_call_center_id         char(16)              not null,
-    cc_rec_start_date         date                          ,
-    cc_rec_end_date           date                          ,
+    cc_rec_start_date         varchar(20)                   ,
+    cc_rec_end_date           varchar(20)                   ,
     cc_closed_date_sk         integer                       ,
     cc_open_date_sk           integer                       ,
     cc_name                   varchar(50)                   ,
@@ -224,9 +214,8 @@ create table call_center
     cc_state                  char(2)                       ,
     cc_zip                    char(10)                      ,
     cc_country                varchar(20)                   ,
-    cc_gmt_offset             decimal(5,2)                  ,
-    cc_tax_percentage         decimal(5,2)                  ,
-    primary key (cc_call_center_sk)
+    cc_gmt_offset             float                         ,
+    cc_tax_percentage         float                         
 );
 
 create table customer
@@ -248,16 +237,15 @@ create table customer
     c_birth_country           varchar(20)                   ,
     c_login                   char(13)                      ,
     c_email_address           char(50)                      ,
-    c_last_review_date        char(10)                      ,
-    primary key (c_customer_sk)
+    c_last_review_date        char(10)                      
 );
 
 create table web_site
 (
     web_site_sk               integer               not null,
     web_site_id               char(16)              not null,
-    web_rec_start_date        date                          ,
-    web_rec_end_date          date                          ,
+    web_rec_start_date        varchar(20)                   ,
+    web_rec_end_date          varchar(20)                   ,
     web_name                  varchar(50)                   ,
     web_open_date_sk          integer                       ,
     web_close_date_sk         integer                       ,
@@ -278,9 +266,8 @@ create table web_site
     web_state                 char(2)                       ,
     web_zip                   char(10)                      ,
     web_country               varchar(20)                   ,
-    web_gmt_offset            decimal(5,2)                  ,
-    web_tax_percentage        decimal(5,2)                  ,
-    primary key (web_site_sk)
+    web_gmt_offset            float                         ,
+    web_tax_percentage        float                         
 );
 
 create table store_returns
@@ -296,16 +283,15 @@ create table store_returns
     sr_reason_sk              integer                       ,
     sr_ticket_number          integer               not null,
     sr_return_quantity        integer                       ,
-    sr_return_amt             decimal(7,2)                  ,
-    sr_return_tax             decimal(7,2)                  ,
-    sr_return_amt_inc_tax     decimal(7,2)                  ,
-    sr_fee                    decimal(7,2)                  ,
-    sr_return_ship_cost       decimal(7,2)                  ,
-    sr_refunded_cash          decimal(7,2)                  ,
-    sr_reversed_charge        decimal(7,2)                  ,
-    sr_store_credit           decimal(7,2)                  ,
-    sr_net_loss               decimal(7,2)                  ,
-    primary key (sr_item_sk, sr_ticket_number)
+    sr_return_amt             float                         ,
+    sr_return_tax             float                         ,
+    sr_return_amt_inc_tax     float                         ,
+    sr_fee                    float                         ,
+    sr_return_ship_cost       float                         ,
+    sr_refunded_cash          float                         ,
+    sr_reversed_charge        float                         ,
+    sr_store_credit           float                         ,
+    sr_net_loss               float                         
 );
 
 create table household_demographics
@@ -314,16 +300,15 @@ create table household_demographics
     hd_income_band_sk         integer                       ,
     hd_buy_potential          char(15)                      ,
     hd_dep_count              integer                       ,
-    hd_vehicle_count          integer                       ,
-    primary key (hd_demo_sk)
+    hd_vehicle_count          integer                       
 );
 
 create table web_page
 (
     wp_web_page_sk            integer               not null,
     wp_web_page_id            char(16)              not null,
-    wp_rec_start_date         date                          ,
-    wp_rec_end_date           date                          ,
+    wp_rec_start_date         varchar(20)                   ,
+    wp_rec_end_date           varchar(20)                   ,
     wp_creation_date_sk       integer                       ,
     wp_access_date_sk         integer                       ,
     wp_autogen_flag           char(1)                       ,
@@ -333,8 +318,7 @@ create table web_page
     wp_char_count             integer                       ,
     wp_link_count             integer                       ,
     wp_image_count            integer                       ,
-    wp_max_ad_count           integer                       ,
-    primary key (wp_web_page_sk)
+    wp_max_ad_count           integer                       
 );
 
 create table promotion
@@ -344,7 +328,7 @@ create table promotion
     p_start_date_sk           integer                       ,
     p_end_date_sk             integer                       ,
     p_item_sk                 integer                       ,
-    p_cost                    decimal(15,2)                 ,
+    p_cost                    float                         ,
     p_response_target         integer                       ,
     p_promo_name              char(50)                      ,
     p_channel_dmail           char(1)                       ,
@@ -357,8 +341,7 @@ create table promotion
     p_channel_demo            char(1)                       ,
     p_channel_details         varchar(100)                  ,
     p_purpose                 char(15)                      ,
-    p_discount_active         char(1)                       ,
-    primary key (p_promo_sk)
+    p_discount_active         char(1)                       
 );
 
 create table catalog_page
@@ -371,8 +354,7 @@ create table catalog_page
     cp_catalog_number         integer                       ,
     cp_catalog_page_number    integer                       ,
     cp_description            varchar(100)                  ,
-    cp_type                   varchar(100)                  ,
-    primary key (cp_catalog_page_sk)
+    cp_type                   varchar(100)                  
 );
 
 create table inventory
@@ -380,8 +362,7 @@ create table inventory
     inv_date_sk               integer               not null,
     inv_item_sk               integer               not null,
     inv_warehouse_sk          integer               not null,
-    inv_quantity_on_hand      integer                       ,
-    primary key (inv_date_sk, inv_item_sk, inv_warehouse_sk)
+    inv_quantity_on_hand      integer                       
 );
 
 create table catalog_returns
@@ -404,16 +385,15 @@ create table catalog_returns
     cr_reason_sk              integer                       ,
     cr_order_number           integer               not null,
     cr_return_quantity        integer                       ,
-    cr_return_amount          decimal(7,2)                  ,
-    cr_return_tax             decimal(7,2)                  ,
-    cr_return_amt_inc_tax     decimal(7,2)                  ,
-    cr_fee                    decimal(7,2)                  ,
-    cr_return_ship_cost       decimal(7,2)                  ,
-    cr_refunded_cash          decimal(7,2)                  ,
-    cr_reversed_charge        decimal(7,2)                  ,
-    cr_store_credit           decimal(7,2)                  ,
-    cr_net_loss               decimal(7,2)                  ,
-    primary key (cr_item_sk, cr_order_number)
+    cr_return_amount          float                         ,
+    cr_return_tax             float                         ,
+    cr_return_amt_inc_tax     float                         ,
+    cr_fee                    float                         ,
+    cr_return_ship_cost       float                         ,
+    cr_refunded_cash          float                         ,
+    cr_reversed_charge        float                         ,
+    cr_store_credit           float                         ,
+    cr_net_loss               float                         
 );
 
 create table web_returns
@@ -433,16 +413,15 @@ create table web_returns
     wr_reason_sk              integer                       ,
     wr_order_number           integer               not null,
     wr_return_quantity        integer                       ,
-    wr_return_amt             decimal(7,2)                  ,
-    wr_return_tax             decimal(7,2)                  ,
-    wr_return_amt_inc_tax     decimal(7,2)                  ,
-    wr_fee                    decimal(7,2)                  ,
-    wr_return_ship_cost       decimal(7,2)                  ,
-    wr_refunded_cash          decimal(7,2)                  ,
-    wr_reversed_charge        decimal(7,2)                  ,
-    wr_account_credit         decimal(7,2)                  ,
-    wr_net_loss               decimal(7,2)                  ,
-    primary key (wr_item_sk, wr_order_number)
+    wr_return_amt             float                         ,
+    wr_return_tax             float                         ,
+    wr_return_amt_inc_tax     float                         ,
+    wr_fee                    float                         ,
+    wr_return_ship_cost       float                         ,
+    wr_refunded_cash          float                         ,
+    wr_reversed_charge        float                         ,
+    wr_account_credit         float                         ,
+    wr_net_loss               float                         
 );
 
 create table web_sales
@@ -466,22 +445,21 @@ create table web_sales
     ws_promo_sk               integer                       ,
     ws_order_number           integer               not null,
     ws_quantity               integer                       ,
-    ws_wholesale_cost         decimal(7,2)                  ,
-    ws_list_price             decimal(7,2)                  ,
-    ws_sales_price            decimal(7,2)                  ,
-    ws_ext_discount_amt       decimal(7,2)                  ,
-    ws_ext_sales_price        decimal(7,2)                  ,
-    ws_ext_wholesale_cost     decimal(7,2)                  ,
-    ws_ext_list_price         decimal(7,2)                  ,
-    ws_ext_tax                decimal(7,2)                  ,
-    ws_coupon_amt             decimal(7,2)                  ,
-    ws_ext_ship_cost          decimal(7,2)                  ,
-    ws_net_paid               decimal(7,2)                  ,
-    ws_net_paid_inc_tax       decimal(7,2)                  ,
-    ws_net_paid_inc_ship      decimal(7,2)                  ,
-    ws_net_paid_inc_ship_tax  decimal(7,2)                  ,
-    ws_net_profit             decimal(7,2)                  ,
-    primary key (ws_item_sk, ws_order_number)
+    ws_wholesale_cost         float                         ,
+    ws_list_price             float                         ,
+    ws_sales_price            float                         ,
+    ws_ext_discount_amt       float                         ,
+    ws_ext_sales_price        float                         ,
+    ws_ext_wholesale_cost     float                         ,
+    ws_ext_list_price         float                         ,
+    ws_ext_tax                float                         ,
+    ws_coupon_amt             float                         ,
+    ws_ext_ship_cost          float                         ,
+    ws_net_paid               float                         ,
+    ws_net_paid_inc_tax       float                         ,
+    ws_net_paid_inc_ship      float                         ,
+    ws_net_paid_inc_ship_tax  float                         ,
+    ws_net_profit             float                         
 );
 
 create table catalog_sales
@@ -505,22 +483,21 @@ create table catalog_sales
     cs_promo_sk               integer                       ,
     cs_order_number           integer               not null,
     cs_quantity               integer                       ,
-    cs_wholesale_cost         decimal(7,2)                  ,
-    cs_list_price             decimal(7,2)                  ,
-    cs_sales_price            decimal(7,2)                  ,
-    cs_ext_discount_amt       decimal(7,2)                  ,
-    cs_ext_sales_price        decimal(7,2)                  ,
-    cs_ext_wholesale_cost     decimal(7,2)                  ,
-    cs_ext_list_price         decimal(7,2)                  ,
-    cs_ext_tax                decimal(7,2)                  ,
-    cs_coupon_amt             decimal(7,2)                  ,
-    cs_ext_ship_cost          decimal(7,2)                  ,
-    cs_net_paid               decimal(7,2)                  ,
-    cs_net_paid_inc_tax       decimal(7,2)                  ,
-    cs_net_paid_inc_ship      decimal(7,2)                  ,
-    cs_net_paid_inc_ship_tax  decimal(7,2)                  ,
-    cs_net_profit             decimal(7,2)                  ,
-    primary key (cs_item_sk, cs_order_number)
+    cs_wholesale_cost         float                         ,
+    cs_list_price             float                         ,
+    cs_sales_price            float                         ,
+    cs_ext_discount_amt       float                         ,
+    cs_ext_sales_price        float                         ,
+    cs_ext_wholesale_cost     float                         ,
+    cs_ext_list_price         float                         ,
+    cs_ext_tax                float                         ,
+    cs_coupon_amt             float                         ,
+    cs_ext_ship_cost          float                         ,
+    cs_net_paid               float                         ,
+    cs_net_paid_inc_tax       float                         ,
+    cs_net_paid_inc_ship      float                         ,
+    cs_net_paid_inc_ship_tax  float                         ,
+    cs_net_profit             float                         
 );
 
 create table store_sales
@@ -536,17 +513,16 @@ create table store_sales
     ss_promo_sk               integer                       ,
     ss_ticket_number          integer               not null,
     ss_quantity               integer                       ,
-    ss_wholesale_cost         decimal(7,2)                  ,
-    ss_list_price             decimal(7,2)                  ,
-    ss_sales_price            decimal(7,2)                  ,
-    ss_ext_discount_amt       decimal(7,2)                  ,
-    ss_ext_sales_price        decimal(7,2)                  ,
-    ss_ext_wholesale_cost     decimal(7,2)                  ,
-    ss_ext_list_price         decimal(7,2)                  ,
-    ss_ext_tax                decimal(7,2)                  ,
-    ss_coupon_amt             decimal(7,2)                  ,
-    ss_net_paid               decimal(7,2)                  ,
-    ss_net_paid_inc_tax       decimal(7,2)                  ,
-    ss_net_profit             decimal(7,2)                  ,
-    primary key (ss_item_sk, ss_ticket_number)
+    ss_wholesale_cost         float                         ,
+    ss_list_price             float                         ,
+    ss_sales_price            float                         ,
+    ss_ext_discount_amt       float                         ,
+    ss_ext_sales_price        float                         ,
+    ss_ext_wholesale_cost     float                         ,
+    ss_ext_list_price         float                         ,
+    ss_ext_tax                float                         ,
+    ss_coupon_amt             float                         ,
+    ss_net_paid               float                         ,
+    ss_net_paid_inc_tax       float                         ,
+    ss_net_profit             float                         
 );
