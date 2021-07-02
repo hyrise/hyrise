@@ -206,7 +206,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // hash join fallback for PHI
     // do only PHI, no Chunk Indices
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-    if (!table_indexes.empty()) {  // ToDo (pi) assert equi join // table-based index join
+
+    if (!table_indexes.empty() && _adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals && (_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _secondary_predicates.empty()) {  // ToDo (pi) assert equi join // table-based index join
+
       const auto& table_index = table_indexes.front();
 
       // Scan all chunks from the probe side input
@@ -231,9 +233,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           indexed_chunk_ids_iterator++;
           continue;
         } else {
-          _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
+          if(indexed_chunk_ids.find(index_side_chunk_id) == indexed_chunk_ids.end()) {
+            _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                                  secondary_predicate_evaluator);
+            nested_loop_joining_duration += timer.lap();
+          }
         }
       }
     } else {  // Fallback chunk-based index join
