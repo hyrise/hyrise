@@ -217,7 +217,15 @@ HistogramCountType combineDistinctCounts(T bin_min, T bin_max, HistogramCountTyp
                                          HistogramCountType distinct_a, HistogramCountType distinct_b) {
   // TODO: Improve by using additional statistics
   return std::max(distinct_a, distinct_b);
-} 
+}
+
+template<>
+HistogramCountType combineDistinctCounts<float>(float bin_min, float bin_max, HistogramCountType cardinality,
+                                         HistogramCountType distinct_a, HistogramCountType distinct_b) {
+  // TODO: Improve by using additional statistics
+  if (bin_min == bin_max) return std::max(distinct_a, distinct_b); //should be one anyways...
+  return distinct_a + distinct_b;
+}
 
 template <>
 std::shared_ptr<EqualDistinctCountHistogram<pmr_string>> EqualDistinctCountHistogram<pmr_string>::merge(
@@ -260,7 +268,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto bin_heights = std::vector<HistogramCountType>();
   auto bin_minima = std::vector<T>();
   auto bin_maxima = std::vector<T>();
-
   auto kept_previous_split_bin = false;
 
   std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>> involved_histograms;
@@ -297,15 +304,23 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     ---- --- ---- ----- -- ---------------------
       -------------------------  --- -- ----------
     */
+
     for (auto h1 = 0u; h1 < involved_histograms.size(); h1++) {    
       const auto hist_1 = involved_histograms[h1];
       const auto bounds_1 = hist_1->bin_bounds();
+      
+      const auto hist_1_first_bin = hist_1->_bin_for_value(bin_min);
+      const auto hist_1_last_bin = hist_1->_bin_for_value(bin_max);
       for (auto h2 = h1+1; h2 < involved_histograms.size(); h2++) {
         const auto hist_2 = involved_histograms[h2];
         const auto bounds_2 = hist_2->bin_bounds();
-        for (auto i = BinID{0}; i < bounds_1.size(); i++) {
+
+        const auto hist_2_first_bin = hist_2->_bin_for_value(bin_min);
+        const auto hist_2_last_bin = hist_2->_bin_for_value(bin_max);
+
+        for (auto i = hist_1_first_bin; i <= hist_1_last_bin; i++) {
           const auto bin_bounds_1 = bounds_1[i];
-          for (auto j = BinID{0}; j < bounds_2.size(); j++) {
+          for (auto j = hist_2_first_bin; j <= hist_2_last_bin; j++) {
             const auto bin_bounds_2 = bounds_2[j];
             if ((bin_bounds_1.second < bin_min) || (bin_bounds_1.first > bin_max)) {
               continue;
@@ -313,25 +328,62 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
             if ((bin_bounds_2.second < bin_min) || (bin_bounds_2.first > bin_max)) {
               continue;
             }
-            if (
-              (bin_bounds_1.first < bin_bounds_2.first && bin_bounds_1.second > bin_bounds_2.first) ||
-              (bin_bounds_1.first < bin_bounds_2.second && bin_bounds_1.second > bin_bounds_2.second) ||
-              (bin_bounds_1.first > bin_bounds_2.first && bin_bounds_1.second < bin_bounds_2.second)
-            ) {
+            auto intersection_length = -1.0; // There can be intersections of size 0, i.e. if both bins are the same bin with only one value.
+            if (bin_bounds_1.first <= bin_bounds_2.first && bin_bounds_1.second >= bin_bounds_2.first){
+              //b1     ###################?????????????
+              //b2            #####################
+              intersection_length = std::min(bin_bounds_1.second, bin_bounds_2.second) - bin_bounds_2.first;
+            }
+            else if (bin_bounds_1.first <= bin_bounds_2.second && bin_bounds_1.second >= bin_bounds_2.second) {
+              //b1      ???????????????###################
+              //b2            #####################
+              intersection_length = std::min(bin_bounds_1.second, bin_bounds_2.second) - bin_bounds_1.first;
+            }
+            else if (bin_bounds_1.first >= bin_bounds_2.first && bin_bounds_1.second <= bin_bounds_2.second) {
+              //b1                  ##########
+              //b2            #####################
+              intersection_length = bin_bounds_1.second - bin_bounds_1.first;
+            }
+            if (intersection_length > -1.0) {
               const auto intersection_min = std::max(bin_bounds_1.first, bin_bounds_2.first);
               const auto intersection_max = std::min(bin_bounds_1.second, bin_bounds_2.second);
               const auto hll1 = hist_1->_bin_hlls[i];
               const auto hll2 = hist_2->_bin_hlls[j];
               const auto stat = HyperLogLog::getJointStatistic(hll1, hll2);
               const auto equal_counts = stat.getEqualCounts();
-              auto bin_intersection = HistogramCountType(std::accumulate(equal_counts.begin() +1, equal_counts.end(), 0)); 
-              const auto ratio_in_bin = ((float)(bin_max -  bin_min)) / ((float)(intersection_max - intersection_min));
-              bin_intersection = bin_intersection * ratio_in_bin;
-              combined_distinct_count -= bin_intersection; 
+              auto bin_intersection_count = HistogramCountType(std::accumulate(equal_counts.begin() +1, equal_counts.end(), 0)); 
+              const auto intersection_length_in_bin = (float)(intersection_max - intersection_min);
+              auto ratio_of_intersection_in_bin = intersection_length_in_bin / intersection_length;
+              if (intersection_length == 0.0) {
+                ratio_of_intersection_in_bin = intersection_length_in_bin;
+                if (intersection_length_in_bin == 0.0) {
+                  ratio_of_intersection_in_bin = 1.0; //because 0/0 = 1, obviously.¯\_(ツ)_/¯
+                }
+              }
+
+              //Kind of wrong if we have 0.3-0.4 and 0.4-0.7...
+              /*
+              mi        1                 7                   ma    10                           40
+                        #####################################|#######                      
+                                          ###################|####################################
+                                          ###################|#######
+                                                  A              B            Intersection length = A+B = C
+
+              A / (A+B);
+
+              bin_intersection = how much is in the intersection of the two bins * how much of that is in (bin_min, bin_max)
+                               = how much is in the intersection of the two bins * how much of that is in A
+
+              */
+              bin_intersection_count = bin_intersection_count * ratio_of_intersection_in_bin;
+              combined_distinct_count -= bin_intersection_count; 
             }
           }
         }
       }
+    }
+    if (combined_distinct_count < 1.0) {
+      combined_distinct_count = 1.0; //Assumes that all input bins of histograms have a distinct_count >= 1.0.
     }
     distinct_counts.push_back(combined_distinct_count);
     bin_heights.push_back(combined_cardinality);
@@ -356,20 +408,17 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto merged_histogram_bin_heights = std::vector<HistogramCountType>();
   auto merged_histogram_bin_minima = std::vector<T>();
   auto merged_histogram_bin_maxima = std::vector<T>();
-
-  auto current_bin_distinct_count = HistogramCountType{0};
-  auto current_bin_height = HistogramCountType{0};
+  auto current_bin_distinct_count = HistogramCountType{0.0};
+  auto current_bin_height = HistogramCountType{0.0};
   auto current_bin_start = bin_minima[0];
   auto current_bin_count = BinID{0};
   auto domain = histograms[0]->domain();
-  
   for (auto i = BinID{0}; i < bin_count;) {
     // std::cout << "Merging unlimited for loop " << i << "; bin_count = " << bin_count << "; current_start = " << current_bin_start << std::endl;
     // auto defacto_bin_start = std::max(current_bin_start, splitted_bounds_minima[i]);
     const auto cardinality = bin_heights[i];
     const auto distinct_count = distinct_counts[i];
     auto current_bin_distinct_count_target = distinct_count_per_bin_target;
-
     if (current_bin_count < bin_count_with_extra_value) {
       current_bin_distinct_count_target++;
     }
@@ -392,7 +441,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       merged_histogram_bin_minima.push_back(current_bin_start);
       merged_histogram_bin_maxima.push_back(split_bin_maximum);
       merged_histogram_bin_heights.push_back(current_bin_height);
-
       if (split_bin_maximum != bin_maxima[i]) {
         current_bin_start = domain.next_value_clamped(split_bin_maximum);
       } else if (i != bin_count - 1) {
@@ -419,12 +467,10 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   //   std::cout << "Bin("<< merged_histogram_bin_minima[i] << ", " << merged_histogram_bin_maxima[i] << "), ";
   // }
   // std::cout << std::endl;
-
   auto merged_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(merged_histogram_bin_minima), std::move(merged_histogram_bin_maxima),
       std::move(merged_histogram_bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin_target),
       bin_count_with_extra_value, domain);
-
   return merged_histogram;
 }
 
