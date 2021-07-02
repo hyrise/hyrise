@@ -43,6 +43,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -352,6 +353,35 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
+  const auto& left_input_type = join_node->left_input()->type;
+  const auto& right_input_type = join_node->right_input()->type;
+
+  auto left_table_type = TableType::References;
+  auto right_table_type = TableType::References;
+
+  auto index_side = std::optional<IndexSide>{};
+
+  if (left_input_type == LQPNodeType::StoredTable) {
+    left_table_type = TableType::Data;
+    index_side = IndexSide::Left;
+  }
+
+  if (right_input_type == LQPNodeType::StoredTable) {
+    right_table_type = TableType::Data;
+    index_side = IndexSide::Right;
+  }
+
+  Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
+         "Both input tables are data tables. Add additional logic to make a decision about the IndexSide.");
+
+  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals && index_side &&
+      JoinIndex::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                           right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
+                           index_side})) {
+    return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
+                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side);
+  }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
