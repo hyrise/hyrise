@@ -21,7 +21,6 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   if (values.size() == 0) {
     _compressed_offsets.resize(1);
     _null_values = std::nullopt;
-    _encoder = nullptr;
     return;
   }
 
@@ -49,9 +48,9 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
 
   _compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
   // create symbol table
-  _encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
+  fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
   size_t number_compressed_strings =
-      fsst_compress(_encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
+      fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
                     _compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
 
   DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
@@ -65,18 +64,17 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   }
 
   _compressed_values.resize(aggregated_offset_sum);
-  _decoder = fsst_decoder(_encoder);
+  _decoder = fsst_decoder(encoder);
+  fsst_destroy(encoder);
 }
 
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values, pmr_vector<unsigned long>& compressed_offsets,
-                            std::optional<pmr_vector<bool>>& null_values, fsst_encoder_t* encoder,
-                            fsst_decoder_t& decoder)
+                            std::optional<pmr_vector<bool>>& null_values, fsst_decoder_t& decoder)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
       _compressed_values{std::move(compressed_values)},
       _compressed_offsets{std::move(compressed_offsets)},
       _null_values{std::move(null_values)},
-      _encoder{encoder},
       _decoder{std::move(decoder)} {}
 
 template <typename T>
@@ -89,13 +87,6 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
     return typed_value.value();
   }
   return NULL_VALUE;
-}
-
-template <typename T>
-FSSTSegment<T>::~FSSTSegment() {
-  if (_encoder != nullptr) {
-    fsst_destroy(_encoder);
-  }
 }
 
 template <typename T>
@@ -137,12 +128,10 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
   auto new_compressed_values = pmr_vector<unsigned char>{_compressed_values, alloc};
   auto new_compressed_offsets = pmr_vector<unsigned long>{_compressed_offsets, alloc};
 
-  fsst_encoder_t* new_encoder = fsst_duplicate(_encoder);
-//  fsst_encoder_t* new_encoder = _encoder;
   fsst_decoder_t new_decoder = _decoder;
 
-  auto new_segment = std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_null_values,
-                                                   new_encoder, new_decoder);
+  auto new_segment =
+      std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_null_values, new_decoder);
 
   return std::dynamic_pointer_cast<AbstractSegment>(new_segment);
 }
@@ -157,12 +146,9 @@ size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
   auto null_value_size = (_null_values.has_value() ? _null_values.value().size() * sizeof(bool) : size_t{0}) +
                          sizeof(std::optional<pmr_vector<bool>>);
 
-  //  auto dereferrenced_encoder = *(std::static_pointer_cast<Encoder*>(_encoder));
-  auto encoder_size = sizeof(Encoder) + sizeof(SymbolTable);
-
   auto decoder_size = sizeof(fsst_decoder_t);
   // TODO (anyone): which memory usage should we return? compressed data or all memory
-  return compressed_values_size + compressed_offsets_size + null_value_size + encoder_size + decoder_size;
+  return compressed_values_size + compressed_offsets_size + null_value_size + decoder_size;
 }
 
 template <typename T>

@@ -63,7 +63,8 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
   auto segment = compress(vs_str, DataType::String);
 
   ASSERT_EQ(segment->size(), 3);
-  //  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 12); TODO(anyone): check memory consumption
+  // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2429); // TODO(anyone): check memory consumption
 }
 
 TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
