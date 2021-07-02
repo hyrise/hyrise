@@ -261,9 +261,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           nested_loop_joining_duration += timer.lap();
         }
       }
-
-      _append_matches_non_inner(is_semi_or_anti_join);
     }
+    _append_matches_non_inner(is_semi_or_anti_join);
+
   }
 
   // write output chunks
