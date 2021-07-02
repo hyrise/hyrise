@@ -206,7 +206,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // hash join fallback for PHI
     // do only PHI, no Chunk Indices
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-    if (!table_indexes.empty()) {  // table-based index join
+    if (!table_indexes.empty()) {  // ToDo (pi) assert equi join // table-based index join
       const auto& table_index = table_indexes.front();
 
       // Scan all chunks from the probe side input
@@ -223,10 +223,18 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         join_index_performance_data.chunks_scanned_with_index++;
       }
 
-      if (true /* has chunk */) {
-        // join via index
-      } else {
-        // fallback join
+      const auto chunk_count_index_input_table = _index_input_table->chunk_count();
+      auto indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+      auto indexed_chunk_ids_iterator = indexed_chunk_ids.begin();
+      for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
+        if(*indexed_chunk_ids_iterator == index_side_chunk_id && indexed_chunk_ids_iterator != indexed_chunk_ids.end()){
+          indexed_chunk_ids_iterator++;
+          continue;
+        } else {
+          _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                                secondary_predicate_evaluator);
+          nested_loop_joining_duration += timer.lap();
+        }
       }
     } else {  // Fallback chunk-based index join
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();

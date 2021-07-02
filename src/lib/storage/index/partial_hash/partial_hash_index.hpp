@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_table_index.hpp"
 #include <tsl/robin_map.h>
 
 namespace opossum {
@@ -38,14 +38,20 @@ class PartialHashIndex : public AbstractTableIndex {
 
   std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const override;
 
+  // ToDO(pi) impl on cpp
   bool _is_index_for(const ColumnID column_id) const override {
     return column_id == _column_id;
+  }
+  // returns sorted array
+  std::set<ChunkID> _get_indexed_chunk_ids() const override {
+    return _indexed_chunk_ids;
   }
  private:
   tsl::robin_map<AllTypeVariant, std::vector<RowID>> _map; // ToDo(pi) check unordered map? sortiert wegen greater than etc.
   // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
   ColumnID _column_id;
   std::vector<RowID> _row_ids;
+  std::set<ChunkID> _indexed_chunk_ids; // constant time lookup
   std::vector<std::shared_ptr<const AbstractSegment>> _indexed_segments;
 
 };

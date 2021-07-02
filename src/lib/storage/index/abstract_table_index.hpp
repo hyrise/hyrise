@@ -5,7 +5,6 @@
 
 namespace opossum {
 
-//ToDo(pi) add is_index_for(chunk)
 class AbstractTableIndex : public AbstractIndex<RowID> {
 
  public:
@@ -28,9 +27,12 @@ class AbstractTableIndex : public AbstractIndex<RowID> {
 
   bool is_index_for(const ColumnID column_id) const;
 
+  std::set<ChunkID> get_indexed_chunk_ids() const;
+
  protected:
   virtual std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
+  virtual std::set<ChunkID> _get_indexed_chunk_ids() const = 0;
 
 
 };

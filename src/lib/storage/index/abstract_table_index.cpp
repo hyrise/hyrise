@@ -12,4 +12,8 @@ bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
   return _is_index_for(column_id);
 }
 
+std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
+  return _get_indexed_chunk_ids();
+}
+
 }  // namespace opossum
