@@ -1364,12 +1364,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::CHAR:
         case hsql::DataType::VARCHAR:
         case hsql::DataType::TEXT:
+        case hsql::DataType::DATE:
+        case hsql::DataType::DATETIME:
+        case hsql::DataType::TIME:
+          // Naive parsing of different data types into string.
           // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
           column_definition.data_type = DataType::String;
           break;
-        case hsql::DataType::DATE:
-        case hsql::DataType::DATETIME:
-          Fail("Date(time) types are not supported yet");
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
