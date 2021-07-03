@@ -254,8 +254,6 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
-        operators/create_table_key_constraint.cpp
-        operators/create_table_key_constraint.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
     operators/table_scan/abstract_dereferenced_column_table_scan_impl.cpp
