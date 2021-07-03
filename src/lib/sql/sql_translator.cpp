@@ -1384,8 +1384,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.nullable = parser_column_definition->nullable;
     }
     input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+
+    auto keyConstraints = std::make_shared<TableKeyCostraints>();
+    for( auto keyConstraint : createStatement.keyConstraints) {
+      switch (keyConstraint->keyType) {
+        case "primaryKey":
+          std::unordered_set<ColumnID> column_ids = keyConstraint->ColumnIDs;
+          keyConstraints->emplace_back({column_ids, KeyConstraintType::PRIMARY_KEY});
+        case "uniqueKey":
+          std::unordered_set<ColumnID> column_ids = keyConstraint->ColumnIDs;
+          keyConstraints->emplace_back({column_ids, KeyConstraintType::UNIQUE_KEY});
+      }
+    }
   }
-  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
+  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, keyConstraints, input_node);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
