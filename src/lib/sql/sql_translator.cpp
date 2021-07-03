@@ -37,6 +37,7 @@
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -1323,6 +1324,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
 
 }
 
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
+
+  Assert(Hyrise::get().storage_manager.has_table(drop_statement.name), "table not existent");
+  auto table = Hyrise::get().storage_manager.get_table(drop_statement.name);
+  auto input_node = StoredTableNode::make(drop_statement.name);
+
+  return DropIndexNode::make(drop_statement.index_name, input_node);
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
@@ -1381,6 +1391,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
       return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropSchema:
     case hsql::DropType::kDropIndex:
+      return _translate_drop_index(drop_statement);
     case hsql::DropType::kDropPreparedStatement:
       FailInput("This DROP type is not implemented yet");
   }
