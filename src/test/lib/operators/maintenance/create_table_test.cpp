@@ -13,6 +13,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_key_constraint.hpp"
 
 namespace opossum {
 
@@ -218,6 +219,19 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   context_3->commit();
 
   EXPECT_EQ(validate_3->get_output()->row_count(), 0);
+}
+
+TEST_F(CreateTableTest, CreateTableWithKeyConstraints) {
+  auto key_constraints = std::make_shared<TableKeyConstraints>();
+  key_constraints->push_back({{dummy_table_wrapper->table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
+  const auto constraint_table = std::make_shared<CreateTable>("t", false, dummy_table_wrapper, key_constraints);
+
+  const auto constraint_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  constraint_table->set_transaction_context(constraint_context);
+  constraint_table->execute();
+  constraint_context->commit();
+
+  EXPECT_EQ(constraint_table->get_output()->soft_key_constraints(), *key_constraints);
 }
 
 }  // namespace opossum
