@@ -156,6 +156,7 @@ set(
     lib/server/result_serializer_test.cpp
     lib/server/transaction_handling_test.cpp
     lib/server/write_buffer_test.cpp
+    lib/ddl/ddl_statement_test.cpp
     lib/sql/sql_identifier_resolver_test.cpp
     lib/sql/sql_pipeline_statement_test.cpp
     lib/sql/sql_pipeline_test.cpp
