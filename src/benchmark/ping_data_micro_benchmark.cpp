@@ -34,7 +34,7 @@ constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "ping";
-const auto CHUNK_SIZE = size_t{10'000'000};
+const auto CHUNK_SIZE = size_t{1'000'000};
 const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 // Frame of References supports only int columns
