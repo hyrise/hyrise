@@ -1381,7 +1381,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           Fail("UNKNOWN data type cannot be handled here");
       }
 
-
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
 
@@ -1425,10 +1424,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       }
     }
   }
-
-
-
-
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, tableKeyConstraints, input_node);
 }
 
