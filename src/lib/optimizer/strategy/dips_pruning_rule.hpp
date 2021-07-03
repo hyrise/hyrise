@@ -146,6 +146,119 @@ class DipsJoinGraph {
   }
 };
 
+
+using JoinGraphVertexSet = std::set<size_t>;
+
+struct JoinGraphEdge {
+ public:
+
+  explicit JoinGraphEdge(JoinGraphVertexSet init_vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate)  : vertex_set(init_vertex_set) {
+    predicates.push_back(predicate);
+  };
+
+  void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
+    // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
+    if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {
+      predicates.push_back(predicate);
+    }
+  }
+  JoinGraphVertexSet vertex_set;
+  std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
+};
+
+struct Graph {
+
+  void build_graph(const std::shared_ptr<AbstractLQPNode>& node){
+  // Why do we exit in this cases ?
+  if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
+    return;
+  }
+
+  if (node->left_input()) build_graph(node->left_input());
+  if (node->right_input()) build_graph(node->right_input());
+
+  // This rule only supports the inner and semi join
+  if (node->type == LQPNodeType::Join) {
+    if (std::find(supported_join_types.begin(), supported_join_types.end(),
+                  std::dynamic_pointer_cast<JoinNode>(node)->join_mode) == supported_join_types.end()) {
+      return;
+    }
+    const auto& join_node = static_cast<JoinNode&>(*node);
+    const auto& join_predicates = join_node.join_predicates();
+
+    for (const auto& predicate : join_predicates) {
+      // Why do we need to cast the predicates to binary predicate expressions?
+      std::shared_ptr<BinaryPredicateExpression> binary_predicate =
+          std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+
+      Assert(binary_predicate, "Expected BinaryPredicateExpression!");
+
+      // We are only interested in equal predicate conditions (The dibs rule is only working with equal predicates)
+      if (binary_predicate->predicate_condition != PredicateCondition::Equals) {
+        continue;
+      }
+
+      auto left_operand = binary_predicate->left_operand();
+      auto right_operand = binary_predicate->right_operand();
+
+      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+
+      // We need to check that the type is LQPColumn
+      if (!left_lqp || !right_lqp) {
+        continue;
+      }
+
+      auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+      auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
+
+      Assert(l && r, "Expected StoredTableNode");
+
+      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
+
+      // access join graph nodes (every storage table note is represented inside the join graph)
+      auto left_join_graph_node = _get_vertex(left_stored_table_node);
+      auto right_join_graph_node = _get_vertex(right_stored_table_node);
+
+      auto vertex_set = _get_vertex_set(left_join_graph_node, right_join_graph_node);
+
+      _add_edge(vertex_set, binary_predicate);
+    }
+  }
+  }
+
+private:
+  size_t _get_vertex(std::shared_ptr<StoredTableNode> table_node) {
+    auto it = std::find(vertices.begin(), vertices.end(), table_node);
+    if (it != vertices.end()) {
+      return it - vertices.begin();
+    }
+    vertices.push_back(table_node);
+    return vertices.size();
+  }
+
+  JoinGraphVertexSet _get_vertex_set(size_t noda_a, size_t noda_b){
+    Assert((it_node_a > vertices.size() || it_node_b  > vertices.size()), "Nodes should exist in graph");
+
+    return JoinGraphVertexSet{noda_a, noda_b};
+  }
+
+  void _add_edge(JoinGraphVertexSet vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate) {
+     for (auto& edge : edges) {
+      if (vertex_set == edge.vertex_set) {
+        edge.append_predicate(predicate);
+        return;
+      }
+     }
+     edges.emplace_back(vertex_set, predicate);
+  }
+
+
+  std::vector<std::shared_ptr<StoredTableNode>> vertices;
+  std::vector<JoinGraphEdge> edges;
+};
+
 std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
 
 class DipsPruningRule : public AbstractRule {
