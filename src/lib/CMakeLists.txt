@@ -550,6 +550,8 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
+    tasks/dictionary_sharing_task.cpp
+    tasks/dictionary_sharing_task.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
