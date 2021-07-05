@@ -71,15 +71,15 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
   }
 }
 
-std::vector<DipsPruningGraph::JoinGraphEdge> DipsPruningGraph::top_down_traversal() {
-  std::vector<DipsPruningGraph::JoinGraphEdge> traversal_order{};
+std::vector<DipsPruningGraphEdge> DipsPruningGraph::top_down_traversal() {
+  std::vector<DipsPruningGraphEdge> traversal_order{};
   std::set<size_t> visited{};
   _top_down_traversal_visit(0, traversal_order, visited);
   return traversal_order;  
 }
 
-std::vector<DipsPruningGraph::JoinGraphEdge> DipsPruningGraph::bottom_up_traversal() {
-  std::vector<DipsPruningGraph::JoinGraphEdge> traversal_order{};
+std::vector<DipsPruningGraphEdge> DipsPruningGraph::bottom_up_traversal() {
+  std::vector<DipsPruningGraphEdge> traversal_order{};
   std::set<size_t> visited{};
   _bottom_up_traversal_visit(0, traversal_order, visited);
   return traversal_order;
@@ -133,7 +133,7 @@ bool DipsPruningGraph::_is_tree_visit(size_t current_node, size_t parrent, std::
   return true;
 }
 
-  void DipsPruningGraph::_top_down_traversal_visit(size_t current_node, std::vector<JoinGraphEdge>& traversal_order, std::set<size_t>& visited){
+  void DipsPruningGraph::_top_down_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order, std::set<size_t>& visited){
     visited.insert(current_node);
     for (auto& edge : edges) {
       if (edge.connects_vertex(current_node)) {
@@ -146,7 +146,7 @@ bool DipsPruningGraph::_is_tree_visit(size_t current_node, size_t parrent, std::
     }
   }
 
-void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node, std::vector<JoinGraphEdge>& traversal_order, std::set<size_t>& visited) {
+void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order, std::set<size_t>& visited) {
   visited.insert(current_node);
   // TODO: Fix Hacky solution
   auto parent_edge = edges[0];

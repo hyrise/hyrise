@@ -285,9 +285,9 @@ TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
 
 TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
   auto graph = DipsPruningGraph{};
-  auto edge_a_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_d = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,3}, nullptr};
+  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2,3}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_d);
@@ -297,9 +297,9 @@ TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
 
 TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNoTree) {
   auto graph = DipsPruningGraph{};
-  auto edge_a_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,1}, nullptr};
+  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2,1}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_b);
@@ -315,11 +315,11 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
 //        /    \      \
 //       3      4      5
   auto graph = DipsPruningGraph{};
-  auto edge_0_1 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_0_2 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_1_3 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{1,3}, nullptr};
-  auto edge_1_4 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{1,4}, nullptr};
-  auto edge_2_5 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,5}, nullptr};
+  auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1,3}, nullptr};
+  auto edge_1_4 = DipsPruningGraphEdge{std::set<size_t>{1,4}, nullptr};
+  auto edge_2_5 = DipsPruningGraphEdge{std::set<size_t>{2,5}, nullptr};
   graph.edges.push_back(edge_0_1);
   graph.edges.push_back(edge_0_2);
   graph.edges.push_back(edge_1_3);

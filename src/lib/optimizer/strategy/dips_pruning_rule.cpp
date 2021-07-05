@@ -25,7 +25,7 @@
 
 namespace opossum {
 
-void DipsPruningRule::_visit_edge(DipsPruningGraph::JoinGraphEdge& edge) const {
+void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
   for (const auto& predicate : edge.predicates) {
     auto left_operand = predicate->left_operand();
     auto right_operand = predicate->right_operand();

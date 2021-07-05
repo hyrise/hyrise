@@ -302,6 +302,7 @@ set(
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
     optimizer/strategy/dips_pruning_graph.cpp
     optimizer/strategy/dips_pruning_graph.hpp
+    optimizer/strategy/dips_pruning_graph_edge.hpp  
     optimizer/strategy/dips_pruning_rule.cpp
     optimizer/strategy/dips_pruning_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
