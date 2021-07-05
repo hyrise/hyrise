@@ -25,17 +25,8 @@
 
 namespace opossum {
 
-void DipsPruningRule::_bottom_up_dip_traversal(
-    const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
-  for (const auto& child : node->children) {
-    _bottom_up_dip_traversal(child);
-  }
-  if (node->parent == nullptr) {  // handle root
-    return;
-  }
-  auto edge = node->get_edge_for_table(node->parent);
-
-  for (const auto& predicate : edge->predicates) {
+void DipsPruningRule::_visit_edge(Graph::JoinGraphEdge& edge) const {
+  for (const auto& predicate : edge.predicates) {
     auto left_operand = predicate->left_operand();
     auto right_operand = predicate->right_operand();
 
@@ -56,7 +47,6 @@ void DipsPruningRule::_bottom_up_dip_traversal(
       return;
     }
 
-    // We check for both join tables which chunks we can prune.
     // LEFT -> RIGHT
     _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
                   right_lqp->original_column_id);
@@ -64,123 +54,6 @@ void DipsPruningRule::_bottom_up_dip_traversal(
     // RIGHT -> LEFT
     _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
                   left_lqp->original_column_id);
-  }
-}
-// Code looks very similar to bottom up. Extract code to a visit function?
-void DipsPruningRule::_top_down_dip_traversal(
-    const std::shared_ptr<DipsJoinGraphNode>& node) const {  // expects root in the first call
-  if (node->parent != nullptr) {                             // handle root
-    auto edge = node->get_edge_for_table(node->parent);
-
-    for (const auto& predicate : edge->predicates) {
-      auto left_operand = predicate->left_operand();
-      auto right_operand = predicate->right_operand();
-
-      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
-
-      Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
-
-      auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
-      auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
-
-      Assert(l && r, "Expected StoredTableNode");
-
-      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
-      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
-
-      if (!left_stored_table_node || !right_stored_table_node) {
-        return;
-      }
-
-      // LEFT -> RIGHT
-      _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
-                    right_lqp->original_column_id);
-
-      // RIGHT -> LEFT
-      _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
-                    left_lqp->original_column_id);
-    }
-  }
-
-  for (const auto& child : node->children) {
-    _top_down_dip_traversal(child);
-  }
-}
-
-// To be able to push dips through joins we first need to construct a graph on which we can execute the main algorithm.
-//  We are doing this by recursively traversing over the LQP graph. In every visit of a node the following steps are
-// executed:
-// 1. Check that the currently visited node is a join node.
-// 2. Get the join predicates
-// 3. Check that the left and right operands are LQPColumnExpression.
-// 4. Get each of the associated StoredTableNode of the left and right expressions.
-// 5. Add both of the storage nodes to the graph (if they are not in it) and connect them with edges (if they are not
-// connected).
-// 6. Add the predicates to the associated edges.
-void DipsPruningRule::_build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
-                                        const std::shared_ptr<DipsJoinGraph>& join_graph) const {
-  // Why do we exit in this cases ?
-  if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
-    return;
-  }
-
-  if (node->left_input()) _build_join_graph(node->left_input(), join_graph);
-  if (node->right_input()) _build_join_graph(node->right_input(), join_graph);
-
-  // This rule only supports the inner and semi join
-  if (node->type == LQPNodeType::Join) {
-    if (std::find(supported_join_types.begin(), supported_join_types.end(),
-                  std::dynamic_pointer_cast<JoinNode>(node)->join_mode) == supported_join_types.end()) {
-      return;
-    }
-    const auto& join_node = static_cast<JoinNode&>(*node);
-    const auto& join_predicates = join_node.join_predicates();
-
-    for (const auto& predicate : join_predicates) {
-      // Why do we need to cast the predicates to binary predicate expressions?
-      std::shared_ptr<BinaryPredicateExpression> binary_predicate =
-          std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-
-      Assert(binary_predicate, "Expected BinaryPredicateExpression!");
-
-      // We are only interested in equal predicate conditions (The dibs rule is only working with equal predicates)
-      if (binary_predicate->predicate_condition != PredicateCondition::Equals) {
-        continue;
-      }
-
-      auto left_operand = binary_predicate->left_operand();
-      auto right_operand = binary_predicate->right_operand();
-
-      auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-      auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
-
-      // We need to check that the type is LQPColumn
-      if (!left_lqp || !right_lqp) {
-        continue;
-      }
-
-      auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
-      auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
-
-      Assert(l && r, "Expected StoredTableNode");
-
-      std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
-      std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
-
-      // access join graph nodes (every storage table note is represented inside the join graph)
-      auto left_join_graph_node = join_graph->get_node_for_table(left_stored_table_node);
-      auto right_join_graph_node = join_graph->get_node_for_table(right_stored_table_node);
-
-      // access edges (Connect left and right node with edges if there are none)
-      auto left_right_edge = left_join_graph_node->get_edge_for_table(right_join_graph_node);
-      auto right_left_edge = right_join_graph_node->get_edge_for_table(left_join_graph_node);
-
-      // append predicates
-      left_right_edge->append_predicate(
-          binary_predicate);  // TODO(somebody): visit every node in LQP only once (avoid cycles) -> use "simple" append
-      right_left_edge->append_predicate(binary_predicate);
-    }
   }
 }
 
@@ -215,36 +88,36 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
   });
 }
 
-std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
-  stream << "==== Vertices ====" << std::endl;
-  if (join_graph.nodes.empty()) {
-    stream << "<none>" << std::endl;
-  } else {
-    for (const auto& node : join_graph.nodes) {
-      stream << node->table_node->description() << std::endl;
-      stream << "      ==== Adress ====" << std::endl;
-      stream << "          " << node << std::endl;
-      stream << "      ==== Parent ====" << std::endl;
-      stream << "          " << node->parent << std::endl;
-      stream << "      ==== Children ====" << std::endl;
-      for (const auto& child : node->children) {
-        stream << "          " << child << std::endl;
-      }
+// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
+//   stream << "==== Vertices ====" << std::endl;
+//   if (join_graph.nodes.empty()) {
+//     stream << "<none>" << std::endl;
+//   } else {
+//     for (const auto& node : join_graph.nodes) {
+//       stream << node->table_node->description() << std::endl;
+//       stream << "      ==== Adress ====" << std::endl;
+//       stream << "          " << node << std::endl;
+//       stream << "      ==== Parent ====" << std::endl;
+//       stream << "          " << node->parent << std::endl;
+//       stream << "      ==== Children ====" << std::endl;
+//       for (const auto& child : node->children) {
+//         stream << "          " << child << std::endl;
+//       }
 
-      stream << "      ==== Edges ====" << std::endl;
-      for (const auto& edge : node->edges) {
-        stream << "      " << edge->partner_node->table_node->description() << std::endl;
-        stream << "            ==== Predicates ====" << std::endl;
-        for (const auto& predicate : edge->predicates) {
-          stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
-                 << std::endl;
-        }
-      }
-    }
-  }
+//       stream << "      ==== Edges ====" << std::endl;
+//       for (const auto& edge : node->edges) {
+//         stream << "      " << edge->partner_node->table_node->description() << std::endl;
+//         stream << "            ==== Predicates ====" << std::endl;
+//         for (const auto& predicate : edge->predicates) {
+//           stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
+//                  << std::endl;
+//         }
+//       }
+//     }
+//   }
 
-  return stream;
-}
+//   return stream;
+// }
 
 // First we are building a tree that represents the joins between the tables and its predicates. The nodes are the join
 // tables and inside the edges are the join predicates. For example the following join procedure:
@@ -268,20 +141,19 @@ std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) 
 // is connecting the current node with its parent node. Inside the algorithm we check which chunks can be pruned in
 // both the join tables.
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
-  _build_join_graph(lqp_root, join_graph);
-
-  if (join_graph->is_empty()) {
+  auto graph = Graph{};
+  graph.build_graph(lqp_root);
+  if (graph.empty()) {
     return;
   }
 
-  if (join_graph->is_tree()) {
-    std::shared_ptr<DipsJoinGraphNode> root =
-        join_graph
-            ->nodes[0];  // Note: we don't use parallel JoinGraph traversal, thus root node can be chosen arbitrary
-    join_graph->set_root(root);
-    _bottom_up_dip_traversal(root);
-    _top_down_dip_traversal(root);
+  if (graph.is_tree()) {
+    for (auto& edge : graph.bottom_up_traversal()) {
+      _visit_edge(edge);
+    }
+    for (auto& edge : graph.top_down_traversal()) {
+      _visit_edge(edge);
+    }
   } else {
     // Assumption: Hyrise handles cycles itself
   }

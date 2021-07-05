@@ -44,13 +44,13 @@ class DipsPruningRuleTestClass : DipsPruningRule {
     return DipsPruningRule::_calculate_pruned_chunks<COLUMN_TYPE>(base_chunk_ranges, partner_chunk_ranges);
   }
 
-  void _bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
-    return DipsPruningRule::_bottom_up_dip_traversal(node);
-  }
+  // void _bottom_up_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+  //   return DipsPruningRule::_bottom_up_dip_traversal(node);
+  // }
 
-  void _top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
-    return DipsPruningRule::_top_down_dip_traversal(node);
-  }
+  // void _top_down_dip_traversal(std::shared_ptr<DipsJoinGraphNode> node) const {
+  //   return DipsPruningRule::_top_down_dip_traversal(node);
+  // }
 };
 
 class DipsPruningRuleTest : public StrategyBaseTest {
@@ -220,11 +220,11 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_pruned_ids_left);
 }
 
-TEST_F(DipsPruningRuleTest, DipsJoinGraphIsEmpty) {
-  std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
+// TEST_F(DipsPruningRuleTest, DipsJoinGraphIsEmpty) {
+//   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
 
-  EXPECT_TRUE(join_graph->is_empty());
-}
+//   EXPECT_TRUE(join_graph->is_empty());
+// }
 
 TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
 // We are expecting the build function to transform the following LQP:
@@ -340,8 +340,6 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
   EXPECT_EQ(bottom_up_result[2].vertex_set, edge_0_1.vertex_set);
   EXPECT_EQ(bottom_up_result[3].vertex_set, edge_2_5.vertex_set);
   EXPECT_EQ(bottom_up_result[4].vertex_set, edge_0_2.vertex_set);
-
-
 }
 
 // TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {

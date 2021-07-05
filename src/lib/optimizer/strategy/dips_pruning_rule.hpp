@@ -33,119 +33,6 @@
 namespace opossum {
 
 class AbstractLQPNode;
-class DipsJoinGraphEdge;
-class DipsJoinGraphNode;
-class DipsJoinGraph;
-
-class DipsJoinGraphEdge {
- public:
-  std::shared_ptr<DipsJoinGraphNode> partner_node;
-  std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
-
-  explicit DipsJoinGraphEdge(std::shared_ptr<DipsJoinGraphNode> edge_partner_node) {
-    this->partner_node = edge_partner_node;
-    // Save predicates inside the edges, because a table can have the same predicates.
-    this->predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>();
-  }
-
-  void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
-    // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
-    if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {
-      predicates.push_back(predicate);
-    }
-  }
-};
-
-class DipsJoinGraphNode {
- public:
-  std::vector<std::shared_ptr<DipsJoinGraphNode>> children = std::vector<std::shared_ptr<DipsJoinGraphNode>>();
-  std::shared_ptr<DipsJoinGraphNode> parent;
-  std::shared_ptr<StoredTableNode> table_node;
-  std::vector<std::shared_ptr<DipsJoinGraphEdge>> edges;
-
-  explicit DipsJoinGraphNode(std::shared_ptr<StoredTableNode> stored_table_node) {
-    this->table_node = stored_table_node;
-  }
-
-  std::shared_ptr<DipsJoinGraphEdge> get_edge_for_table(std::shared_ptr<DipsJoinGraphNode> partner_table_node) {
-    for (auto edge : edges) {
-      if (edge->partner_node == partner_table_node) {
-        return edge;
-      }
-    }
-    // If no edge is connecting the partner table node with this node connect it with a new edge and return the edge.
-    std::shared_ptr<DipsJoinGraphEdge> edge = std::make_shared<DipsJoinGraphEdge>(partner_table_node);
-    edges.push_back(edge);
-    return edge;
-  }
-};
-
-class DipsJoinGraph {
- public:
-  std::vector<std::shared_ptr<DipsJoinGraphNode>> nodes;
-
-  std::shared_ptr<DipsJoinGraphNode> get_node_for_table(std::shared_ptr<StoredTableNode> table_node) {
-    // Traverse the graph until the node is found
-    for (auto graph_node : nodes) {
-      if (graph_node->table_node == table_node) {
-        return graph_node;
-      }
-    }
-    // if no node is found, add it to the nodes. At this point the node is not connected to any node.
-    std::shared_ptr<DipsJoinGraphNode> graph_node = std::make_shared<DipsJoinGraphNode>(table_node);
-    nodes.push_back(graph_node);
-    return graph_node;
-  }
-
-  bool is_empty() {
-    if (nodes.size() == 0) {
-      return true;
-    }
-    return false;
-  }
-
-  bool is_tree() {
-    if (nodes.size() == 0) {
-      return true;
-    }
-    std::shared_ptr<std::vector<std::shared_ptr<DipsJoinGraphNode>>> visited_nodes =
-        std::make_shared<std::vector<std::shared_ptr<DipsJoinGraphNode>>>();
-    return _is_tree_dfs(nullptr, nodes[0], visited_nodes);
-  }
-
-  void set_root(std::shared_ptr<DipsJoinGraphNode> root) { _set_root_dfs(nullptr, root); }
-
- private:
-  // Check if graph has no cycle (with the exception between two direct nodes). Is graph tree.
-  bool _is_tree_dfs(std::shared_ptr<DipsJoinGraphNode> parent_node, std::shared_ptr<DipsJoinGraphNode> node,
-                    std::shared_ptr<std::vector<std::shared_ptr<DipsJoinGraphNode>>> visited_nodes) {
-    visited_nodes->push_back(node);
-
-    for (auto edge : node->edges) {
-      if (edge->partner_node != parent_node) {
-        if (std::find(visited_nodes->begin(), visited_nodes->end(), edge->partner_node) == visited_nodes->end()) {
-          if (!_is_tree_dfs(node, edge->partner_node, visited_nodes)) {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  void _set_root_dfs(std::shared_ptr<DipsJoinGraphNode> parent_node, std::shared_ptr<DipsJoinGraphNode> node) {
-    node->parent = parent_node;
-
-    for (auto edge : node->edges) {
-      if (edge->partner_node != parent_node) {
-        node->children.push_back(edge->partner_node);
-        _set_root_dfs(node, edge->partner_node);
-      }
-    }
-  }
-};
-
 
 struct Graph {
   friend class DipsPruningRuleTest_BuildJoinGraph_Test;
@@ -185,7 +72,16 @@ struct Graph {
     std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
   };
 
-
+  // To be able to push dips through joins we first need to construct a graph on which we can execute the main algorithm.
+  //  We are doing this by recursively traversing over the LQP graph. In every visit of a node the following steps are
+  // executed:
+  // 1. Check that the currently visited node is a join node.
+  // 2. Get the join predicates
+  // 3. Check that the left and right operands are LQPColumnExpression.
+  // 4. Get each of the associated StoredTableNode of the left and right expressions.
+  // 5. Add both of the storage nodes to the graph (if they are not in it) and connect them with edges (if they are not
+  // connected).
+  // 6. Add the predicates to the associated edges.
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node){
   // Why do we exit in this cases ?
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
@@ -346,7 +242,7 @@ private:
   std::vector<JoinGraphEdge> edges;
 };
 
-std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
+// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
 
 class DipsPruningRule : public AbstractRule {
  protected:
@@ -356,13 +252,10 @@ class DipsPruningRule : public AbstractRule {
   static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                             std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
 
-  void _build_join_graph(const std::shared_ptr<AbstractLQPNode>& node,
-                         const std::shared_ptr<DipsJoinGraph>& join_graph) const;
+  void _visit_edge(Graph::JoinGraphEdge& edge) const;
 
   static void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                                     const std::set<ChunkID>& pruned_chunk_ids);
-  void _top_down_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
-  void _bottom_up_dip_traversal(const std::shared_ptr<DipsJoinGraphNode>& node) const;
 
   // The algorithm works as follows:
   // 1. Get all chunk ids that are already pruned.
