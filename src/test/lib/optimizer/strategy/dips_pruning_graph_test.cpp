@@ -45,7 +45,6 @@ class DipsPruningGraphTest : public StrategyBaseTest {
     auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_sorted_mixed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted_mixed", int_float2_sorted_mixed_table);
-
   }
 };
 
