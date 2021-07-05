@@ -226,6 +226,63 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphIsEmpty) {
   EXPECT_TRUE(join_graph->is_empty());
 }
 
+TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
+// We are expecting the build function to transform the following LQP:
+//            |><|
+//           A.a=B.a
+//           /    \
+//         /        \ 
+//       /            \
+//     A              |><|
+//                   B.b=C.b
+//                   /    \
+//                 /        \
+//               /            \
+//             B                C
+// to the following graph:
+//                     B=0
+//                   /    \
+//         B.b=C.b /        \ A.a=B.a
+//               /            \
+//            C=1              A=2
+// vertices: [B,C,A]
+// edges: [({0,1}, B.b=C.b), ({0,2}, A.a=B.a)]
+
+  const auto stored_table_node_a = StoredTableNode::make("int_float2");
+  const auto stored_table_node_b = StoredTableNode::make("int_float2_sorted");
+  const auto stored_table_node_c = StoredTableNode::make("int_float2_sorted_mixed");
+
+  std::shared_ptr<LQPColumnExpression> a_a, b_a, b_b, c_b;
+
+  a_a = stored_table_node_a->get_column("a");
+  b_a = stored_table_node_b->get_column("a");
+  b_b = stored_table_node_b->get_column("b");
+  c_b = stored_table_node_c->get_column("b");
+
+  const auto join_node_b_c = JoinNode::make(JoinMode::Inner, equals_(b_b,c_b), stored_table_node_b, stored_table_node_c);
+  const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a,b_a), stored_table_node_a, join_node_b_c);
+  auto graph = Graph{};
+  graph.build_graph(input_lqp);
+
+  std::vector<std::shared_ptr<StoredTableNode>> vertices { stored_table_node_b,  stored_table_node_c, stored_table_node_a};
+  auto expected_edge_vertex_set_b_c = std::set<size_t>{0,1};
+  auto expected_edge_predicate_b_c = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node_b_c->join_predicates()[0]);
+  auto expected_edge_vertex_set_a_b= std::set<size_t>{2,0};
+  auto expected_edge_predicate_a_b = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_lqp->join_predicates()[0]);
+
+  EXPECT_EQ(graph.vertices[0], vertices[0]);
+  EXPECT_EQ(graph.vertices[1], vertices[1]);
+  EXPECT_EQ(graph.vertices[2], vertices[2]);
+
+  // We only have one predicate per edge in this test scenario.
+  EXPECT_EQ(graph.edges[0].vertex_set, expected_edge_vertex_set_b_c);
+  EXPECT_EQ(graph.edges[0].predicates[0], expected_edge_predicate_b_c);
+
+  EXPECT_EQ(graph.edges[1].vertex_set, expected_edge_vertex_set_a_b);
+  EXPECT_EQ(graph.edges[1].predicates[0], expected_edge_predicate_a_b);
+}
+
+
 TEST_F(DipsPruningRuleTest, DipsJoinGraphAddsNewNode) {
   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();
 

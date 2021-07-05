@@ -147,26 +147,26 @@ class DipsJoinGraph {
 };
 
 
-using JoinGraphVertexSet = std::set<size_t>;
-
-struct JoinGraphEdge {
- public:
-
-  explicit JoinGraphEdge(JoinGraphVertexSet init_vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate)  : vertex_set(init_vertex_set) {
-    predicates.push_back(predicate);
-  };
-
-  void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
-    // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
-    if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {
-      predicates.push_back(predicate);
-    }
-  }
-  JoinGraphVertexSet vertex_set;
-  std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
-};
-
 struct Graph {
+  friend class DipsPruningRuleTest_BuildJoinGraph_Test;
+  using JoinGraphVertexSet = std::set<size_t>;
+
+  struct JoinGraphEdge {
+   public:
+
+    explicit JoinGraphEdge(JoinGraphVertexSet init_vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate)  : vertex_set(init_vertex_set) {
+       predicates.push_back(predicate);
+    }
+
+    void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
+      // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
+      if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {
+        predicates.push_back(predicate);
+      }
+    }
+    JoinGraphVertexSet vertex_set;
+    std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
+  };
 
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node){
   // Why do we exit in this cases ?
@@ -226,7 +226,7 @@ struct Graph {
       _add_edge(vertex_set, binary_predicate);
     }
   }
-  }
+}
 
 private:
   size_t _get_vertex(std::shared_ptr<StoredTableNode> table_node) {
@@ -235,11 +235,11 @@ private:
       return it - vertices.begin();
     }
     vertices.push_back(table_node);
-    return vertices.size();
+    return vertices.size() - 1;
   }
 
   JoinGraphVertexSet _get_vertex_set(size_t noda_a, size_t noda_b){
-    Assert((it_node_a > vertices.size() || it_node_b  > vertices.size()), "Nodes should exist in graph");
+    Assert((noda_a < vertices.size() || noda_b  < vertices.size()), "Nodes should exist in graph");
 
     return JoinGraphVertexSet{noda_a, noda_b};
   }
@@ -251,10 +251,10 @@ private:
         return;
       }
      }
-     edges.emplace_back(vertex_set, predicate);
+      edges.emplace_back(vertex_set, predicate);
   }
 
-
+  std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};
   std::vector<std::shared_ptr<StoredTableNode>> vertices;
   std::vector<JoinGraphEdge> edges;
 };
