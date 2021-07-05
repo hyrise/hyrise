@@ -151,7 +151,7 @@ struct Graph {
   friend class DipsPruningRuleTest_BuildJoinGraph_Test;
   friend class DipsPruningRuleTest_JoinGraphIsTree_Test;
   friend class DipsPruningRuleTest_DipsJoinGraphIsNoTree_Test;
-  friend class DipsPruningRuleTest_DipsJoinGraphTopDownTraversal_Test;
+  friend class DipsPruningRuleTest_DipsJoinGraphTraversal_Test;
   using JoinGraphVertexSet = std::set<size_t>;
 
   struct JoinGraphEdge {
@@ -253,6 +253,13 @@ std::vector<JoinGraphEdge> top_down_traversal() {
   return traversal_order;
 }
 
+std::vector<JoinGraphEdge> bottom_up_traversal() {
+  std::vector<JoinGraphEdge> traversal_order{};
+  std::set<size_t> visited{};
+  _bottom_up_traversal_visit(0, traversal_order, visited);
+  return traversal_order;
+}
+
 bool is_tree() {
   std::set<size_t> visited{};
   return _is_tree_visit(0, 0, visited);
@@ -314,6 +321,23 @@ private:
         _top_down_traversal_visit(neighbour, traversal_order, visited);
       }
     }
+  }
+
+  void _bottom_up_traversal_visit(size_t current_node, std::vector<JoinGraphEdge>& traversal_order, std::set<size_t>& visited) {
+    visited.insert(current_node);
+    // TODO: Fix Hacky solution
+    auto parent_edge = edges[0];
+    for (auto& edge : edges) {
+      if (edge.connects_vertex(current_node)) {
+        auto neighbour = edge.neighbour(current_node);
+        if (visited.find(neighbour) != visited.end()) {
+          parent_edge = edge;
+          continue;
+        }
+        _bottom_up_traversal_visit(neighbour, traversal_order, visited);
+      }
+    }
+    traversal_order.push_back(parent_edge);
   }
 
 
