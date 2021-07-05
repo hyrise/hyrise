@@ -151,6 +151,7 @@ struct Graph {
   friend class DipsPruningRuleTest_BuildJoinGraph_Test;
   friend class DipsPruningRuleTest_JoinGraphIsTree_Test;
   friend class DipsPruningRuleTest_DipsJoinGraphIsNoTree_Test;
+  friend class DipsPruningRuleTest_DipsJoinGraphTopDownTraversal_Test;
   using JoinGraphVertexSet = std::set<size_t>;
 
   struct JoinGraphEdge {
@@ -245,6 +246,13 @@ struct Graph {
   }
 }
 
+std::vector<JoinGraphEdge> top_down_traversal() {
+  std::vector<JoinGraphEdge> traversal_order{};
+  std::set<size_t> visited{};
+  _top_down_traversal_visit(0, traversal_order, visited);
+  return traversal_order;
+}
+
 bool is_tree() {
   std::set<size_t> visited{};
   return _is_tree_visit(0, 0, visited);
@@ -288,14 +296,26 @@ private:
         auto neighbour = edge.neighbour(current_node);
         // We do not want to go back to the parent node.
         if (neighbour == parrent) continue;
-        if (visited.find(neighbour) != visited.end()) {
-          return false;
-        }
+        if (visited.find(neighbour) != visited.end()) return false;
         if (!_is_tree_visit(neighbour, current_node, visited)) return false;
       }
     }
     return true;
   }
+
+  void _top_down_traversal_visit(size_t current_node, std::vector<JoinGraphEdge>& traversal_order, std::set<size_t>& visited){
+    visited.insert(current_node);
+    for (auto& edge : edges) {
+      if (edge.connects_vertex(current_node)) {
+        auto neighbour = edge.neighbour(current_node);
+        // We do not want to go back to the parent node.
+        if (visited.find(neighbour) != visited.end()) continue;
+        traversal_order.push_back(edge);
+        _top_down_traversal_visit(neighbour, traversal_order, visited);
+      }
+    }
+  }
+
 
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};
   std::vector<std::shared_ptr<StoredTableNode>> vertices;

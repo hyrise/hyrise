@@ -306,6 +306,33 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNoTree) {
   EXPECT_FALSE(graph.is_tree());
 }
 
+TEST_F(DipsPruningRuleTest, DipsJoinGraphTopDownTraversal) {
+// We are traversing the following tree:
+//             0
+//           /    \
+//          1      2
+//        /    \      \
+//       3      4      5
+  auto graph = Graph{};
+  auto edge_0_1 = Graph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_0_2 = Graph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_1_3 = Graph::JoinGraphEdge{std::set<size_t>{1,3}, nullptr};
+  auto edge_1_4 = Graph::JoinGraphEdge{std::set<size_t>{1,4}, nullptr};
+  auto edge_2_5 = Graph::JoinGraphEdge{std::set<size_t>{2,5}, nullptr};
+  graph.edges.push_back(edge_0_1);
+  graph.edges.push_back(edge_0_2);
+  graph.edges.push_back(edge_1_3);
+  graph.edges.push_back(edge_1_4);
+  graph.edges.push_back(edge_2_5);
+
+  auto result = graph.top_down_traversal();
+
+  EXPECT_EQ(result[0].vertex_set, edge_0_1.vertex_set);
+  EXPECT_EQ(result[1].vertex_set, edge_1_3.vertex_set);
+  EXPECT_EQ(result[2].vertex_set, edge_1_4.vertex_set);
+  EXPECT_EQ(result[3].vertex_set, edge_0_2.vertex_set);
+  EXPECT_EQ(result[4].vertex_set, edge_2_5.vertex_set);
+}
 
 TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
   // [table1 <-> table2 <-> table3] cycle free structure
