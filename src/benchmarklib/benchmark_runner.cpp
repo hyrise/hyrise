@@ -24,6 +24,8 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
+#include "tasks/dictionary_sharing_task.hpp"
+
 namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
@@ -54,7 +56,13 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 
   _table_generator->generate_and_store();
-
+  
+  // dictionary sharing testing start
+  auto output_file_stream = std::ofstream("/home/Halil.Goecer/hyrise/jaccard_index_log.csv", std::ofstream::out | std::ofstream::trunc);
+  auto dictionary_sharing_task = DictionarySharingTask{};
+  dictionary_sharing_task.do_segment_sharing(std::make_optional<std::ofstream>(std::move(output_file_stream)));
+  // dictionary sharing testing end
+  
   _benchmark_item_runner->on_tables_loaded();
 
   // SQLite data is only loaded if the dedicated result set is not complete, i.e,
