@@ -131,9 +131,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
-      auto& rule_reference = *rule;
-      auto rule_name = std::string(typeid(rule_reference).name());
-      rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
+      rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
     if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
