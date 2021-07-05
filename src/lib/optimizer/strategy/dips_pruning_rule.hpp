@@ -149,6 +149,8 @@ class DipsJoinGraph {
 
 struct Graph {
   friend class DipsPruningRuleTest_BuildJoinGraph_Test;
+  friend class DipsPruningRuleTest_JoinGraphIsTree_Test;
+  friend class DipsPruningRuleTest_DipsJoinGraphIsNoTree_Test;
   using JoinGraphVertexSet = std::set<size_t>;
 
   struct JoinGraphEdge {
@@ -164,9 +166,24 @@ struct Graph {
         predicates.push_back(predicate);
       }
     }
+
+    bool connects_vertex(size_t vertex) {
+      return vertex_set.find(vertex) != vertex_set.end();
+    }
+
+    size_t neighbour(size_t vertex) {
+      for(auto neighbour : vertex_set) {
+        if (neighbour != vertex) {
+          return neighbour;
+        }
+      }
+      Assert(false, "There always should be a neighbor");
+    }
+
     JoinGraphVertexSet vertex_set;
     std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
   };
+
 
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node){
   // Why do we exit in this cases ?
@@ -228,6 +245,15 @@ struct Graph {
   }
 }
 
+bool is_tree() {
+  std::set<size_t> visited{};
+  return _is_tree_visit(0, 0, visited);
+}
+
+bool empty() {
+  return vertices.size() == 0;
+}
+
 private:
   size_t _get_vertex(std::shared_ptr<StoredTableNode> table_node) {
     auto it = std::find(vertices.begin(), vertices.end(), table_node);
@@ -252,6 +278,23 @@ private:
       }
      }
       edges.emplace_back(vertex_set, predicate);
+  }
+
+  bool _is_tree_visit(size_t current_node, size_t parrent, std::set<size_t>& visited) {
+    visited.insert(current_node);
+
+    for (auto& edge : edges) {
+      if (edge.connects_vertex(current_node)) {
+        auto neighbour = edge.neighbour(current_node);
+        // We do not want to go back to the parent node.
+        if (neighbour == parrent) continue;
+        if (visited.find(neighbour) != visited.end()) {
+          return false;
+        }
+        if (!_is_tree_visit(neighbour, current_node, visited)) return false;
+      }
+    }
+    return true;
   }
 
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};
