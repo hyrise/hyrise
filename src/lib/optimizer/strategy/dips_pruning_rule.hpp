@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "dips_pruning_graph.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -13,7 +14,6 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "dips_pruning_graph.hpp"
 
 #include "abstract_rule.hpp"
 

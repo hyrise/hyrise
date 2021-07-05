@@ -11,7 +11,7 @@ namespace opossum {
 // 5. Add both of the storage nodes to the graph (if they are not in it) and connect them with edges (if they are not
 // connected).
 // 6. Add the predicates to the associated edges.
-void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node){
+void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node) {
   // Why do we exit in this cases ?
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
@@ -75,7 +75,7 @@ std::vector<DipsPruningGraphEdge> DipsPruningGraph::top_down_traversal() {
   std::vector<DipsPruningGraphEdge> traversal_order{};
   std::set<size_t> visited{};
   _top_down_traversal_visit(0, traversal_order, visited);
-  return traversal_order;  
+  return traversal_order;
 }
 
 std::vector<DipsPruningGraphEdge> DipsPruningGraph::bottom_up_traversal() {
@@ -90,32 +90,30 @@ bool DipsPruningGraph::is_tree() {
   return _is_tree_visit(0, 0, visited);
 }
 
-bool DipsPruningGraph::empty() {
-  return vertices.size() == 0;
-}
+bool DipsPruningGraph::empty() { return vertices.size() == 0; }
 
 size_t DipsPruningGraph::_get_vertex(std::shared_ptr<StoredTableNode> table_node) {
-    auto it = std::find(vertices.begin(), vertices.end(), table_node);
-    if (it != vertices.end()) {
-      return it - vertices.begin();
-    }
-    vertices.push_back(table_node);
-    return vertices.size() - 1;
+  auto it = std::find(vertices.begin(), vertices.end(), table_node);
+  if (it != vertices.end()) {
+    return it - vertices.begin();
+  }
+  vertices.push_back(table_node);
+  return vertices.size() - 1;
 }
 
-std::set<size_t> DipsPruningGraph::_get_vertex_set(size_t noda_a, size_t noda_b){
-    Assert((noda_a < vertices.size() || noda_b  < vertices.size()), "Nodes should exist in graph");
-    return std::set<size_t>{noda_a, noda_b};
+std::set<size_t> DipsPruningGraph::_get_vertex_set(size_t noda_a, size_t noda_b) {
+  Assert((noda_a < vertices.size() || noda_b < vertices.size()), "Nodes should exist in graph");
+  return std::set<size_t>{noda_a, noda_b};
 }
 
 void DipsPruningGraph::_add_edge(std::set<size_t> vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate) {
-    for (auto& edge : edges) {
-        if (vertex_set == edge.vertex_set) {
-        edge.append_predicate(predicate);
-        return;
-        }
+  for (auto& edge : edges) {
+    if (vertex_set == edge.vertex_set) {
+      edge.append_predicate(predicate);
+      return;
     }
-    edges.emplace_back(vertex_set, predicate);
+  }
+  edges.emplace_back(vertex_set, predicate);
 }
 
 bool DipsPruningGraph::_is_tree_visit(size_t current_node, size_t parrent, std::set<size_t>& visited) {
@@ -133,20 +131,24 @@ bool DipsPruningGraph::_is_tree_visit(size_t current_node, size_t parrent, std::
   return true;
 }
 
-  void DipsPruningGraph::_top_down_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order, std::set<size_t>& visited){
-    visited.insert(current_node);
-    for (auto& edge : edges) {
-      if (edge.connects_vertex(current_node)) {
-        auto neighbour = edge.neighbour(current_node);
-        // We do not want to go back to the parent node.
-        if (visited.find(neighbour) != visited.end()) continue;
-        traversal_order.push_back(edge);
-        _top_down_traversal_visit(neighbour, traversal_order, visited);
-      }
+void DipsPruningGraph::_top_down_traversal_visit(size_t current_node,
+                                                 std::vector<DipsPruningGraphEdge>& traversal_order,
+                                                 std::set<size_t>& visited) {
+  visited.insert(current_node);
+  for (auto& edge : edges) {
+    if (edge.connects_vertex(current_node)) {
+      auto neighbour = edge.neighbour(current_node);
+      // We do not want to go back to the parent node.
+      if (visited.find(neighbour) != visited.end()) continue;
+      traversal_order.push_back(edge);
+      _top_down_traversal_visit(neighbour, traversal_order, visited);
     }
   }
+}
 
-void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order, std::set<size_t>& visited) {
+void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node,
+                                                  std::vector<DipsPruningGraphEdge>& traversal_order,
+                                                  std::set<size_t>& visited) {
   visited.insert(current_node);
   // TODO: Fix Hacky solution
   auto parent_edge = edges[0];
@@ -163,4 +165,4 @@ void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node, std::vect
   traversal_order.push_back(parent_edge);
 }
 
-} // namespace opossum
+}  // namespace opossum

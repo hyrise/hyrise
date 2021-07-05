@@ -228,26 +228,26 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
 // }
 
 TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
-// We are expecting the build function to transform the following LQP:
-//            |><|
-//           A.a=B.a
-//           /    \
+  // We are expecting the build function to transform the following LQP:
+  //            |><|
+  //           A.a=B.a
+  //           /    \
 //         /        \
 //       /            \
 //     A              |><|
-//                   B.b=C.b
-//                   /    \
+  //                   B.b=C.b
+  //                   /    \
 //                 /        \
 //               /            \
 //             B                C
-// to the following graph:
-//                     B=0
-//                   /    \
+  // to the following graph:
+  //                     B=0
+  //                   /    \
 //         B.b=C.b /        \ A.a=B.a
-//               /            \
+  //               /            \
 //            C=1              A=2
-// vertices: [B,C,A]
-// edges: [({0,1}, B.b=C.b), ({0,2}, A.a=B.a)]
+  // vertices: [B,C,A]
+  // edges: [({0,1}, B.b=C.b), ({0,2}, A.a=B.a)]
 
   const auto stored_table_node_a = StoredTableNode::make("int_float2");
   const auto stored_table_node_b = StoredTableNode::make("int_float2_sorted");
@@ -260,16 +260,19 @@ TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
   b_b = stored_table_node_b->get_column("b");
   c_b = stored_table_node_c->get_column("b");
 
-  const auto join_node_b_c = JoinNode::make(JoinMode::Inner, equals_(b_b,c_b), stored_table_node_b, stored_table_node_c);
-  const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a,b_a), stored_table_node_a, join_node_b_c);
+  const auto join_node_b_c =
+      JoinNode::make(JoinMode::Inner, equals_(b_b, c_b), stored_table_node_b, stored_table_node_c);
+  const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a, b_a), stored_table_node_a, join_node_b_c);
   auto graph = DipsPruningGraph{};
   graph.build_graph(input_lqp);
 
-  std::vector<std::shared_ptr<StoredTableNode>> vertices { stored_table_node_b,  stored_table_node_c, stored_table_node_a};
-  auto expected_edge_vertex_set_b_c = std::set<size_t>{0,1};
-  auto expected_edge_predicate_b_c = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node_b_c->join_predicates()[0]);
-  auto expected_edge_vertex_set_a_b= std::set<size_t>{2,0};
-  auto expected_edge_predicate_a_b = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_lqp->join_predicates()[0]);
+  std::vector<std::shared_ptr<StoredTableNode>> vertices{stored_table_node_b, stored_table_node_c, stored_table_node_a};
+  auto expected_edge_vertex_set_b_c = std::set<size_t>{0, 1};
+  auto expected_edge_predicate_b_c =
+      std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node_b_c->join_predicates()[0]);
+  auto expected_edge_vertex_set_a_b = std::set<size_t>{2, 0};
+  auto expected_edge_predicate_a_b =
+      std::dynamic_pointer_cast<BinaryPredicateExpression>(input_lqp->join_predicates()[0]);
 
   EXPECT_EQ(graph.vertices[0], vertices[0]);
   EXPECT_EQ(graph.vertices[1], vertices[1]);
@@ -285,9 +288,9 @@ TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
 
 TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
   auto graph = DipsPruningGraph{};
-  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2,3}, nullptr};
+  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2, 3}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_d);
@@ -297,9 +300,9 @@ TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
 
 TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNoTree) {
   auto graph = DipsPruningGraph{};
-  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2,1}, nullptr};
+  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2, 1}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_b);
@@ -308,18 +311,18 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNoTree) {
 }
 
 TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
-// We are traversing the following tree:
-//             0
-//           /    \
+  // We are traversing the following tree:
+  //             0
+  //           /    \
 //          1      2
-//        /    \      \
+  //        /    \      \
 //       3      4      5
   auto graph = DipsPruningGraph{};
-  auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1,3}, nullptr};
-  auto edge_1_4 = DipsPruningGraphEdge{std::set<size_t>{1,4}, nullptr};
-  auto edge_2_5 = DipsPruningGraphEdge{std::set<size_t>{2,5}, nullptr};
+  auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1, 3}, nullptr};
+  auto edge_1_4 = DipsPruningGraphEdge{std::set<size_t>{1, 4}, nullptr};
+  auto edge_2_5 = DipsPruningGraphEdge{std::set<size_t>{2, 5}, nullptr};
   graph.edges.push_back(edge_0_1);
   graph.edges.push_back(edge_0_2);
   graph.edges.push_back(edge_1_3);
