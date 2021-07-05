@@ -19,10 +19,10 @@
 
 namespace opossum {
 struct DipsPruningGraph {
-  friend class DipsPruningRuleTest_BuildJoinGraph_Test;
-  friend class DipsPruningRuleTest_JoinGraphIsTree_Test;
-  friend class DipsPruningRuleTest_DipsJoinGraphIsNoTree_Test;
-  friend class DipsPruningRuleTest_DipsJoinGraphTraversal_Test;
+  friend class DipsPruningGraphTest_BuildJoinGraph_Test;
+  friend class DipsPruningGraphTest_JoinGraphIsTree_Test;
+  friend class DipsPruningGraphTest_DipsJoinGraphIsNoTree_Test;
+  friend class DipsPruningGraphTest_DipsJoinGraphTraversal_Test;
 
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node);
   std::vector<DipsPruningGraphEdge> top_down_traversal();
