@@ -25,7 +25,7 @@
 
 namespace opossum {
 
-void DipsPruningRule::_visit_edge(Graph::JoinGraphEdge& edge) const {
+void DipsPruningRule::_visit_edge(DipsPruningGraph::JoinGraphEdge& edge) const {
   for (const auto& predicate : edge.predicates) {
     auto left_operand = predicate->left_operand();
     auto right_operand = predicate->right_operand();
@@ -141,7 +141,7 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
 // is connecting the current node with its parent node. Inside the algorithm we check which chunks can be pruned in
 // both the join tables.
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto graph = Graph{};
+  auto graph = DipsPruningGraph{};
   graph.build_graph(lqp_root);
   if (graph.empty()) {
     return;

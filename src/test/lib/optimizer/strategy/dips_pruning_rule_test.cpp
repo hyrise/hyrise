@@ -19,6 +19,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/get_table.hpp"
+#include "optimizer/strategy/dips_pruning_graph.hpp"
 #include "optimizer/strategy/dips_pruning_rule.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
@@ -261,7 +262,7 @@ TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
 
   const auto join_node_b_c = JoinNode::make(JoinMode::Inner, equals_(b_b,c_b), stored_table_node_b, stored_table_node_c);
   const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a,b_a), stored_table_node_a, join_node_b_c);
-  auto graph = Graph{};
+  auto graph = DipsPruningGraph{};
   graph.build_graph(input_lqp);
 
   std::vector<std::shared_ptr<StoredTableNode>> vertices { stored_table_node_b,  stored_table_node_c, stored_table_node_a};
@@ -283,10 +284,10 @@ TEST_F(DipsPruningRuleTest, BuildJoinGraph) {
 }
 
 TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
-  auto graph = Graph{};
-  auto edge_a_b = Graph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = Graph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_d = Graph::JoinGraphEdge{std::set<size_t>{2,3}, nullptr};
+  auto graph = DipsPruningGraph{};
+  auto edge_a_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_a_c = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_c_d = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,3}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_d);
@@ -295,10 +296,10 @@ TEST_F(DipsPruningRuleTest, JoinGraphIsTree) {
 }
 
 TEST_F(DipsPruningRuleTest, DipsJoinGraphIsNoTree) {
-  auto graph = Graph{};
-  auto edge_a_b = Graph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_a_c = Graph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_c_b = Graph::JoinGraphEdge{std::set<size_t>{2,1}, nullptr};
+  auto graph = DipsPruningGraph{};
+  auto edge_a_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_a_c = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_c_b = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,1}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_b);
@@ -313,12 +314,12 @@ TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
 //          1      2
 //        /    \      \
 //       3      4      5
-  auto graph = Graph{};
-  auto edge_0_1 = Graph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
-  auto edge_0_2 = Graph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
-  auto edge_1_3 = Graph::JoinGraphEdge{std::set<size_t>{1,3}, nullptr};
-  auto edge_1_4 = Graph::JoinGraphEdge{std::set<size_t>{1,4}, nullptr};
-  auto edge_2_5 = Graph::JoinGraphEdge{std::set<size_t>{2,5}, nullptr};
+  auto graph = DipsPruningGraph{};
+  auto edge_0_1 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,1}, nullptr};
+  auto edge_0_2 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{0,2}, nullptr};
+  auto edge_1_3 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{1,3}, nullptr};
+  auto edge_1_4 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{1,4}, nullptr};
+  auto edge_2_5 = DipsPruningGraph::JoinGraphEdge{std::set<size_t>{2,5}, nullptr};
   graph.edges.push_back(edge_0_1);
   graph.edges.push_back(edge_0_2);
   graph.edges.push_back(edge_1_3);
