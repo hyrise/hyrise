@@ -25,38 +25,37 @@
 
 namespace opossum {
 
-void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
-  for (const auto& predicate : edge.predicates) {
-    auto left_operand = predicate->left_operand();
-    auto right_operand = predicate->right_operand();
+// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
+//   stream << "==== Vertices ====" << std::endl;
+//   if (join_graph.nodes.empty()) {
+//     stream << "<none>" << std::endl;
+//   } else {
+//     for (const auto& node : join_graph.nodes) {
+//       stream << node->table_node->description() << std::endl;
+//       stream << "      ==== Adress ====" << std::endl;
+//       stream << "          " << node << std::endl;
+//       stream << "      ==== Parent ====" << std::endl;
+//       stream << "          " << node->parent << std::endl;
+//       stream << "      ==== Children ====" << std::endl;
+//       for (const auto& child : node->children) {
+//         stream << "          " << child << std::endl;
+//       }
 
-    auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-    auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
-
-    Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
-
-    auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
-    auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
-
-    Assert(l && r, "Expected StoredTableNode");
-
-    std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
-    std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
-
-    if (!left_stored_table_node || !right_stored_table_node) {
-      return;
-    }
-
-    // LEFT -> RIGHT
-    _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
-                  right_lqp->original_column_id);
-
-    // RIGHT -> LEFT
-    _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
-                  left_lqp->original_column_id);
-  }
-}
-
+//       stream << "      ==== Edges ====" << std::endl;
+//       for (const auto& edge : node->edges) {
+//         stream << "      " << edge->partner_node->table_node->description() << std::endl;
+//         stream << "            ==== Predicates ====" << std::endl;
+//         for (const auto& predicate : edge->predicates) {
+//           stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
+//                  << std::endl;
+//         }
+//       }
+//     }
+//   }
+//
+//   return stream;
+// }
+  
 void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                                             const std::set<ChunkID>& pruned_chunk_ids) {
   const auto& already_pruned_chunk_ids = table_node->pruned_chunk_ids();
@@ -71,21 +70,44 @@ void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNod
   }
 }
 
-void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                                    std::shared_ptr<StoredTableNode> join_partner_table_node,
-                                    ColumnID join_partner_column_id) {
-  auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+template <typename COLUMN_TYPE>
+bool DipsPruningRule::_range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
+                                       std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
+  return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
+           ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
+}
 
-  resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
+// We can only prune a chunk if no ranges of it are overlapping with any ranges in the chunks of the join table. To
+// check this we are iterating over every chunk and its ranges and comparing it with all ranges from the partner
+// table. If there is one case where the ranges intersect we skip the pruning of the chunk.
+template <typename COLUMN_TYPE>
+std::set<ChunkID> DipsPruningRule::_calculate_pruned_chunks(
+    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
+    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) {
+  /* Calculate the chunks ids of the partner table which can be pruned (based on base_chunk_ranges) */
+  std::set<ChunkID> pruned_chunk_ids;
 
-    // TODO(somebody): check if pointers would be more efficient
-    auto base_ranges = _get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
-    auto partner_ranges =
-        _get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);
-    auto pruned_chunks = _calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
-    _extend_pruned_chunks(join_partner_table_node, pruned_chunks);
-  });
+  for (auto const& [partner_chunk_id, partner_ranges] : partner_chunk_ranges) {
+    bool can_be_pruned = true;
+
+    for (auto partner_range : partner_ranges) {
+      if (!can_be_pruned) break;
+      for (auto const& [base_chunk_id, base_ranges] : base_chunk_ranges) {
+        if (!can_be_pruned) break;
+        for (auto base_range : base_ranges) {
+          if (_range_intersect<COLUMN_TYPE>(partner_range, base_range)) {
+            can_be_pruned = false;
+            break;
+          }
+        }
+      }
+    }
+    if (can_be_pruned) {
+      pruned_chunk_ids.insert(partner_chunk_id);
+    }
+  }
+
+  return pruned_chunk_ids;
 }
 
 // The algorithm works as follows:
@@ -147,76 +169,54 @@ std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> DipsPruningR
   return ranges;
 }
 
-template <typename COLUMN_TYPE>
-bool DipsPruningRule::_range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
-                                       std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
-  return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
-           ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
+void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
+                                    std::shared_ptr<StoredTableNode> join_partner_table_node,
+                                    ColumnID join_partner_column_id) {
+  auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+
+  resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    // TODO(somebody): check if pointers would be more efficient
+    auto base_ranges = _get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
+    auto partner_ranges =
+        _get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);
+    auto pruned_chunks = _calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
+    _extend_pruned_chunks(join_partner_table_node, pruned_chunks);
+  });
 }
 
-// We can only prune a chunk if no ranges of it are overlapping with any ranges in the chunks of the join table. To
-// check this we are iterating over every chunk and its ranges and comparing it with all ranges from the partner
-// table. If there is one case where the ranges intersect we skip the pruning of the chunk.
-template <typename COLUMN_TYPE>
-std::set<ChunkID> DipsPruningRule::_calculate_pruned_chunks(
-    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
-    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) {
-  /* Calculate the chunks ids of the partner table which can be pruned (based on base_chunk_ranges) */
-  std::set<ChunkID> pruned_chunk_ids;
+void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
+  for (const auto& predicate : edge.predicates) {
+    auto left_operand = predicate->left_operand();
+    auto right_operand = predicate->right_operand();
 
-  for (auto const& [partner_chunk_id, partner_ranges] : partner_chunk_ranges) {
-    bool can_be_pruned = true;
+    auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+    auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
 
-    for (auto partner_range : partner_ranges) {
-      if (!can_be_pruned) break;
-      for (auto const& [base_chunk_id, base_ranges] : base_chunk_ranges) {
-        if (!can_be_pruned) break;
-        for (auto base_range : base_ranges) {
-          if (_range_intersect<COLUMN_TYPE>(partner_range, base_range)) {
-            can_be_pruned = false;
-            break;
-          }
-        }
-      }
+    Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
+
+    auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+    auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
+
+    Assert(l && r, "Expected StoredTableNode");
+
+    std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+    std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
+
+    if (!left_stored_table_node || !right_stored_table_node) {
+      return;
     }
-    if (can_be_pruned) {
-      pruned_chunk_ids.insert(partner_chunk_id);
-    }
+
+    // LEFT -> RIGHT
+    _dips_pruning(left_stored_table_node, left_lqp->original_column_id, right_stored_table_node,
+                  right_lqp->original_column_id);
+
+    // RIGHT -> LEFT
+    _dips_pruning(right_stored_table_node, right_lqp->original_column_id, left_stored_table_node,
+                  left_lqp->original_column_id);
   }
-
-  return pruned_chunk_ids;
 }
-
-// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
-//   stream << "==== Vertices ====" << std::endl;
-//   if (join_graph.nodes.empty()) {
-//     stream << "<none>" << std::endl;
-//   } else {
-//     for (const auto& node : join_graph.nodes) {
-//       stream << node->table_node->description() << std::endl;
-//       stream << "      ==== Adress ====" << std::endl;
-//       stream << "          " << node << std::endl;
-//       stream << "      ==== Parent ====" << std::endl;
-//       stream << "          " << node->parent << std::endl;
-//       stream << "      ==== Children ====" << std::endl;
-//       for (const auto& child : node->children) {
-//         stream << "          " << child << std::endl;
-//       }
-
-//       stream << "      ==== Edges ====" << std::endl;
-//       for (const auto& edge : node->edges) {
-//         stream << "      " << edge->partner_node->table_node->description() << std::endl;
-//         stream << "            ==== Predicates ====" << std::endl;
-//         for (const auto& predicate : edge->predicates) {
-//           stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
-//                  << std::endl;
-//         }
-//       }
-//     }
-//   }
-//
-//   return stream;
-// }
 
 /**
 *  First we are building a tree that represents the joins between the tables and its predicates. The nodes are the join
@@ -242,7 +242,7 @@ std::set<ChunkID> DipsPruningRule::_calculate_pruned_chunks(
 *  both the join tables.
 */
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   graph.build_graph(lqp_root);
   if (graph.empty()) {
     return;
@@ -257,6 +257,7 @@ void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Ab
     }
   } else {
     // Assumption: Hyrise handles cycles itself
+    PerformanceWarning("Could not apply the data-induced predicates rule because a cycle was detected inside the LQP.");
   }
 }
 

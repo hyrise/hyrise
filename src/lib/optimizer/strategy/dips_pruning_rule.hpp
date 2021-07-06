@@ -40,19 +40,9 @@ class AbstractLQPNode;
 class DipsPruningRule : public AbstractRule {
  protected:
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-
-  static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                            std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
-
-  void _visit_edge(DipsPruningGraphEdge& edge) const;
 
   static void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                                     const std::set<ChunkID>& pruned_chunk_ids);
-
-  template <typename COLUMN_TYPE>
-  static std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
-      const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id);
 
   template <typename COLUMN_TYPE>
   static bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
@@ -65,6 +55,17 @@ class DipsPruningRule : public AbstractRule {
   static std::set<ChunkID> _calculate_pruned_chunks(
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges);
+
+  template <typename COLUMN_TYPE>
+  static std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
+      const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id);
+
+  static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
+                            std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
+
+   void _visit_edge(DipsPruningGraphEdge& edge) const;
+
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

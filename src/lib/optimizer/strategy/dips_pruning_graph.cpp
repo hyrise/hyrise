@@ -1,6 +1,28 @@
 #include "dips_pruning_graph.hpp"
 
 namespace opossum {
+
+std::vector<DipsPruningGraphEdge> DipsPruningGraph::top_down_traversal() {
+  std::vector<DipsPruningGraphEdge> traversal_order{};
+  std::set<size_t> visited{};
+  _top_down_traversal_visit(0, traversal_order, visited);
+  return traversal_order;
+}
+
+std::vector<DipsPruningGraphEdge> DipsPruningGraph::bottom_up_traversal() {
+  std::vector<DipsPruningGraphEdge> traversal_order{};
+  std::set<size_t> visited{};
+  _bottom_up_traversal_visit(0, traversal_order, visited);
+  return traversal_order;
+}
+
+bool DipsPruningGraph::is_tree() {
+  std::set<size_t> visited{};
+  return _is_tree_visit(0, 0, visited);
+}
+
+bool DipsPruningGraph::empty() { return vertices.size() == 0; }
+
 // To be able to push dips through joins we first need to construct a graph on which we can execute the main algorithm.
 //  We are doing this by recursively traversing over the LQP graph. In every visit of a node the following steps are
 // executed:
@@ -71,26 +93,6 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
   }
 }
 
-std::vector<DipsPruningGraphEdge> DipsPruningGraph::top_down_traversal() {
-  std::vector<DipsPruningGraphEdge> traversal_order{};
-  std::set<size_t> visited{};
-  _top_down_traversal_visit(0, traversal_order, visited);
-  return traversal_order;
-}
-
-std::vector<DipsPruningGraphEdge> DipsPruningGraph::bottom_up_traversal() {
-  std::vector<DipsPruningGraphEdge> traversal_order{};
-  std::set<size_t> visited{};
-  _bottom_up_traversal_visit(0, traversal_order, visited);
-  return traversal_order;
-}
-
-bool DipsPruningGraph::is_tree() {
-  std::set<size_t> visited{};
-  return _is_tree_visit(0, 0, visited);
-}
-
-bool DipsPruningGraph::empty() { return vertices.size() == 0; }
 
 size_t DipsPruningGraph::_get_vertex(std::shared_ptr<StoredTableNode> table_node) {
   auto it = std::find(vertices.begin(), vertices.end(), table_node);

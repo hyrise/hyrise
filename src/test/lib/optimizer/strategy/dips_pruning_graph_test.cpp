@@ -30,8 +30,10 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 class DipsPruningGraphTest : public StrategyBaseTest {
- protected:
+ public:
   void SetUp() override {
+    supported_join_types = std::vector<JoinMode>{JoinMode::Inner, JoinMode::Semi};
+
     auto& storage_manager = Hyrise::get().storage_manager;
 
     auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
@@ -46,10 +48,11 @@ class DipsPruningGraphTest : public StrategyBaseTest {
     ChunkEncoder::encode_all_chunks(int_float2_sorted_mixed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted_mixed", int_float2_sorted_mixed_table);
   }
+  std::vector<JoinMode> supported_join_types;
 };
 
 TEST_F(DipsPruningGraphTest, DipsJoinGraphIsEmpty) {
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   EXPECT_TRUE(graph.empty());
 }
 
@@ -90,7 +93,7 @@ TEST_F(DipsPruningGraphTest, BuildJoinGraph) {
   const auto join_node_b_c =
       JoinNode::make(JoinMode::Inner, equals_(b_b, c_b), stored_table_node_b, stored_table_node_c);
   const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a, b_a), stored_table_node_a, join_node_b_c);
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   graph.build_graph(input_lqp);
 
   std::vector<std::shared_ptr<StoredTableNode>> vertices{stored_table_node_b, stored_table_node_c, stored_table_node_a};
@@ -114,7 +117,7 @@ TEST_F(DipsPruningGraphTest, BuildJoinGraph) {
 }
 
 TEST_F(DipsPruningGraphTest, JoinGraphIsTree) {
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
   auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
   auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2, 3}, nullptr};
@@ -126,7 +129,7 @@ TEST_F(DipsPruningGraphTest, JoinGraphIsTree) {
 }
 
 TEST_F(DipsPruningGraphTest, DipsJoinGraphIsNoTree) {
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
   auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
   auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2, 1}, nullptr};
@@ -146,7 +149,7 @@ TEST_F(DipsPruningGraphTest, DipsJoinGraphTraversal) {
   *        /    \      \
   *       3      4      5
   */
-  auto graph = DipsPruningGraph{};
+  auto graph = DipsPruningGraph{supported_join_types};
   auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
   auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
   auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1, 3}, nullptr};
