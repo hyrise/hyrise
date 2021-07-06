@@ -37,8 +37,8 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "http://www.dropbox.com/s/fgju7cifpehqlww/imdb.zip?dl=1"
-FILE_NAME = "imdb.zip"
+LOCATION = "https://www.dropbox.com/s/45y07uh4chjy8ie/imdb_data.zip?dl=1"
+FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
     "aka_title",
@@ -107,7 +107,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "d36c7f62d71a3efff155e12779c6ee74":
+if hash_dl != "42e3d3c39879b12635343f49f33f807c":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
