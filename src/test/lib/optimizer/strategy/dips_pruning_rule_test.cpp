@@ -195,61 +195,41 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
 }
 
 // NOLINTS introduced because of line length when commented out
-// TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
-//   // [table1 <-> table2 <-> table3] cycle free structure
-//   std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("int_float2");
-//   std::shared_ptr<StoredTableNode> table2 = std::make_shared<StoredTableNode>("int_float2_sorted");
-//   std::shared_ptr<StoredTableNode> table3 = std::make_shared<StoredTableNode>("int_float2_sorted_mixed");
+TEST_F(DipsPruningRuleTest, ApplyPruning) {
+  auto table_a = std::make_shared<StoredTableNode>("int_float2");
+  auto table_b = std::make_shared<StoredTableNode>("int_float2_sorted");
+  auto table_c = std::make_shared<StoredTableNode>("int_float2_sorted_mixed");
 
-//   std::vector<ChunkID> table1_pruned_chunk_ids{};
-//   std::vector<ChunkID> table2_pruned_chunk_ids{ChunkID{0}};
-//   std::vector<ChunkID> table3_pruned_chunk_ids{};
+  std::vector<ChunkID> table_a_pruned_chunk_ids{};
+  std::vector<ChunkID> table_b_pruned_chunk_ids{ChunkID{0}};
+  std::vector<ChunkID> table_c_pruned_chunk_ids{};
 
-//   table1->set_pruned_chunk_ids(std::vector<ChunkID>(table1_pruned_chunk_ids.begin(), table1_pruned_chunk_ids.end())); // NOLINT
-//   table2->set_pruned_chunk_ids(std::vector<ChunkID>(table2_pruned_chunk_ids.begin(), table2_pruned_chunk_ids.end())); // NOLINT
-//   table3->set_pruned_chunk_ids(std::vector<ChunkID>(table3_pruned_chunk_ids.begin(), table3_pruned_chunk_ids.end())); // NOLINT
+  table_a->set_pruned_chunk_ids(
+      std::vector<ChunkID>(table_a_pruned_chunk_ids.begin(), table_a_pruned_chunk_ids.end()));  // NOLINT
+  table_b->set_pruned_chunk_ids(
+      std::vector<ChunkID>(table_b_pruned_chunk_ids.begin(), table_b_pruned_chunk_ids.end()));  // NOLINT
+  table_c->set_pruned_chunk_ids(
+      std::vector<ChunkID>(table_c_pruned_chunk_ids.begin(), table_c_pruned_chunk_ids.end()));  // NOLINT
 
-//   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();  // build dips join graph
+  std::shared_ptr<LQPColumnExpression> a_a, b_a, b_b, c_b;
 
-//   std::shared_ptr<DipsJoinGraphNode> table1_node = join_graph->get_node_for_table(table1);
-//   std::shared_ptr<DipsJoinGraphNode> table2_node = join_graph->get_node_for_table(table2);
-//   std::shared_ptr<DipsJoinGraphNode> table3_node = join_graph->get_node_for_table(table3);
+  a_a = table_a->get_column("a");
+  b_a = table_b->get_column("a");
+  b_b = table_b->get_column("b");
+  c_b = table_c->get_column("b");
 
-//   std::shared_ptr<DipsJoinGraphEdge> table1_to_table2_edge =
-//       table1_node->get_edge_for_table(table2_node);  // set int_float2 JOIN int_float2_sorted ON a=a
-//   std::shared_ptr<DipsJoinGraphEdge> table2_to_table1_edge = table2_node->get_edge_for_table(table1_node);
+  const auto join_node_b_c = JoinNode::make(JoinMode::Inner, equals_(b_b, c_b), table_b, table_c);
+  const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(a_a, b_a), table_a, join_node_b_c);
 
-//   table1_to_table2_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0}))); // NOLINT
-//   table2_to_table1_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0}))); // NOLINT
+  rule->_apply_to_plan_without_subqueries(input_lqp);
 
-//   std::shared_ptr<DipsJoinGraphEdge> table2_to_table3_edge =
-//       table2_node->get_edge_for_table(table3_node);  // set int_float2 JOIN int_float2_sorted ON b=b
-//   std::shared_ptr<DipsJoinGraphEdge> table3_to_table2_edge = table3_node->get_edge_for_table(table2_node);
-//   table2_to_table3_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1}))); // NOLINT
-//   table3_to_table2_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1}))); // NOLINT
+  std::vector<ChunkID> expected_table_a_pruned_ids{ChunkID{1}};
+  std::vector<ChunkID> expected_table_b_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  std::vector<ChunkID> expected_table_c_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
 
-//   EXPECT_TRUE(join_graph->is_tree());
-
-//   join_graph->set_root(table1_node);  // prune based on dips
-//   _rule->_bottom_up_dip_traversal(table1_node);
-
-//   std::vector<ChunkID> expected_table1_pruned_ids{ChunkID{1}};
-//   std::vector<ChunkID> expected_table2_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
-//   std::vector<ChunkID> expected_table3_pruned_ids{ChunkID{0}};
-
-//   EXPECT_EQ(table1->pruned_chunk_ids(), expected_table1_pruned_ids);
-//   EXPECT_EQ(table2->pruned_chunk_ids(), expected_table2_pruned_ids);
-//   EXPECT_EQ(table3->pruned_chunk_ids(), expected_table3_pruned_ids);
-
-//   _rule->_top_down_dip_traversal(table1_node);
-
-//   expected_table1_pruned_ids = std::vector<ChunkID>{ChunkID{1}};
-//   expected_table2_pruned_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}, ChunkID{3}};
-//   expected_table3_pruned_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}, ChunkID{3}};
-
-//   EXPECT_EQ(table1->pruned_chunk_ids(), expected_table1_pruned_ids);
-//   EXPECT_EQ(table2->pruned_chunk_ids(), expected_table2_pruned_ids);
-//   EXPECT_EQ(table3->pruned_chunk_ids(), expected_table3_pruned_ids);
-// }
+  EXPECT_EQ(table_a->pruned_chunk_ids(), expected_table_a_pruned_ids);
+  EXPECT_EQ(table_b->pruned_chunk_ids(), expected_table_b_pruned_ids);
+  EXPECT_EQ(table_c->pruned_chunk_ids(), expected_table_c_pruned_ids);
+}
 
 }  // namespace opossum

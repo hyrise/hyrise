@@ -41,6 +41,7 @@ class DipsPruningRule : public AbstractRule {
   friend class DipsPruningRuleTest_RangeIntersectionTest_Test;
   friend class DipsPruningRuleTest_CalculatePrunedChunks_Test;
   friend class DipsPruningRuleTest_ApplyPruningSimple_Test;
+  friend class DipsPruningRuleTest_ApplyPruning_Test;
 
  protected:
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
