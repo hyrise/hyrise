@@ -244,7 +244,25 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 template <typename T>
 std::shared_ptr<FSSTSegment<T>> BinaryParser::_import_fsst_segment(std::ifstream& file, ChunkOffset row_count) {
-  return nullptr;
+  // Read compressed values
+  const auto compressed_value_size = _read_value<uint32_t>(file);
+  pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
+
+  // Read compressed offsets
+  const auto compressed_offsets_size = _read_value<uint32_t>(file);
+  pmr_vector<unsigned long> compressed_offsets(_read_values<unsigned long>(file, compressed_offsets_size));
+
+  const auto null_values_size = _read_value<uint32_t>(file);
+  std::optional<pmr_vector<bool>> null_values;
+  if (null_values_size != 0) {
+    null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
+  } else {
+    null_values = std::nullopt;
+  }
+
+  fsst_decoder_t decoder = _read_value<fsst_decoder_t>(file);
+
+  return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values, decoder);
 }
 
 template <typename T>

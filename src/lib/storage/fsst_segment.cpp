@@ -49,11 +49,12 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
   _compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
   // create symbol table
   fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
-  size_t number_compressed_strings =
-      fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
-                    _compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
 
-  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
+  //  size_t number_compressed_strings = TODO(anyone): avoid error about unused variable in release mode
+  fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
+                _compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
+
+  //  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
 
   _compressed_offsets[0] = 0;
   unsigned long aggregated_offset_sum = 0;
@@ -65,6 +66,7 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_ve
 
   _compressed_values.resize(aggregated_offset_sum);
   _decoder = fsst_decoder(encoder);
+
   fsst_destroy(encoder);
 }
 
@@ -160,6 +162,27 @@ template <typename T>
 std::optional<CompressedVectorType> FSSTSegment<T>::compressed_vector_type() const {
   // TODO add real values
   return std::nullopt;
+}
+
+template <typename T>
+const fsst_decoder_t& FSSTSegment<T>::decoder() const {
+  // TODO: check if arrays are copied
+  return _decoder;
+}
+
+template <typename T>
+const pmr_vector<unsigned char>& FSSTSegment<T>::compressed_values() const {
+  return _compressed_values;
+}
+
+template <typename T>
+const pmr_vector<unsigned long>& FSSTSegment<T>::compressed_offsets() const {
+  return _compressed_offsets;
+}
+
+template <typename T>
+const std::optional<pmr_vector<bool>>& FSSTSegment<T>::null_values() const {
+  return _null_values;
 }
 
 // EXPLICITLY_INSTANTIATE_DATA_TYPES(FSSTSegment); TODO (anyone): do we need this?

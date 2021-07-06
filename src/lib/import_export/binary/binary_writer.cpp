@@ -279,7 +279,31 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream){}
+void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream){
+  export_value(ofstream, EncodingType::FSST);
+
+  // Write compressed_values size
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size()));
+  // Write compressed_values
+  export_values(ofstream, fsst_segment.compressed_values());
+
+  // Write compressed_offsets size
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_offsets().size()));
+  // Write compressed_offsets
+  export_values(ofstream, fsst_segment.compressed_offsets());
+
+  if (fsst_segment.null_values()) {
+    // Write NULL value size
+    export_value(ofstream, static_cast<uint32_t>(fsst_segment.null_values()->size()));
+    // Write NULL values
+    export_values(ofstream, *fsst_segment.null_values());
+  } else {
+    // No NULL values
+    export_value(ofstream, uint32_t{0});
+  }
+
+  export_value(ofstream, fsst_segment.decoder());
+}
 
 
 template <typename T>

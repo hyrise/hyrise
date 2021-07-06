@@ -50,6 +50,12 @@ class FSSTSegment : public AbstractEncodedSegment {
   EncodingType encoding_type() const final;
   std::optional<CompressedVectorType> compressed_vector_type() const final;
 
+  const fsst_decoder_t& decoder() const;
+
+  const pmr_vector<unsigned char>& compressed_values() const;
+  const pmr_vector<unsigned long>& compressed_offsets() const;
+  const std::optional<pmr_vector<bool>>& null_values() const;
+
   /**@}*/
 
  private:
