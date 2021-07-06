@@ -116,7 +116,7 @@ print("- Downloaded file is valid.")
 print("- Unzipping the file...")
 
 try:
-    zip = zipfile.ZipFile("imdb.zip", "r")
+    zip = zipfile.ZipFile(FILE_NAME, "r")
     zip.extractall(table_dir)
     zip.close()
 except Exception:
