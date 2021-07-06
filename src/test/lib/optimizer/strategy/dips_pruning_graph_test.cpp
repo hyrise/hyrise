@@ -54,27 +54,28 @@ TEST_F(DipsPruningGraphTest, DipsJoinGraphIsEmpty) {
 }
 
 TEST_F(DipsPruningGraphTest, BuildJoinGraph) {
-  // We are expecting the build function to transform the following LQP:
-  //            |><|
-  //           A.a=B.a
-  //           /    \
-  //         /        \
-  //       /            \
-  //     A              |><|
-  //                   B.b=C.b
-  //                   /    \
-  //                 /        \
-  //               /            \
-  //             B                C
-  // to the following graph:
-  //                     B=0
-  //                   /    \
-  //         B.b=C.b /        \ A.a=B.a
-  //               /            \
-  //            C=1              A=2
-  // vertices: [B,C,A]
-  // edges: [({0,1}, B.b=C.b), ({0,2}, A.a=B.a)]
-
+  /**
+  * We are expecting the build function to transform the following LQP:
+  *            |><|
+  *           A.a=B.a
+  *           /    \
+  *         /        \
+  *       /            \
+  *     A              |><|
+  *                   B.b=C.b
+  *                   /    \
+  *                 /        \
+  *               /            \
+  *             B                C
+  * to the following graph:
+  *                     B=0
+  *                   /    \
+  *         B.b=C.b /        \ A.a=B.a
+  *               /            \
+  *            C=1              A=2
+  * vertices: [B,C,A]
+  * edges: [({0,1}, B.b=C.b), ({0,2}, A.a=B.a)]
+  */
   const auto stored_table_node_a = StoredTableNode::make("int_float2");
   const auto stored_table_node_b = StoredTableNode::make("int_float2_sorted");
   const auto stored_table_node_c = StoredTableNode::make("int_float2_sorted_mixed");
@@ -137,12 +138,14 @@ TEST_F(DipsPruningGraphTest, DipsJoinGraphIsNoTree) {
 }
 
 TEST_F(DipsPruningGraphTest, DipsJoinGraphTraversal) {
-  // We are traversing the following tree:
-  //             0
-  //           /    \
-//          1      2
-  //        /    \      \
-//       3      4      5
+  /**
+  * We are traversing the following tree:
+  *             0
+  *           /    \
+  *          1      2
+  *        /    \      \
+  *       3      4      5
+  */
   auto graph = DipsPruningGraph{};
   auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
   auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};

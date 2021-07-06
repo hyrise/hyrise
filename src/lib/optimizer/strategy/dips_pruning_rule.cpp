@@ -218,27 +218,29 @@ std::set<ChunkID> DipsPruningRule::_calculate_pruned_chunks(
 //   return stream;
 // }
 
-// First we are building a tree that represents the joins between the tables and its predicates. The nodes are the join
-// tables and inside the edges are the join predicates. For example the following join procedure:
-//            |><|
-//           /    \
-// A.a=C.d /        \ A.a=C.d
-//       /            \
-//     A              |><|
-//                   /    \
-//         B.b=C.d /        \ B.b=C.d
-//               /            \
-//             B                C
-// will result in the following graph:
-//                     C
-//                   /    \
-//         B.b=C.d /        \ A.a=C.d
-//               /            \
-//             B                A
-// After that the basic procedure is to traverse the tree button up and then top down. In every visit we are running
-// the dip pruning algorithm for the current node. The algorithm uses the predicates which are saved in the edge that
-// is connecting the current node with its parent node. Inside the algorithm we check which chunks can be pruned in
-// both the join tables.
+/**
+*  First we are building a tree that represents the joins between the tables and its predicates. The nodes are the join
+*  tables and inside the edges are the join predicates. For example the following join procedure:
+*             |><|
+*            /    \
+*  A.a=C.d /        \ A.a=C.d
+*        /            \
+*      A              |><|
+*                    /    \
+*          B.b=C.d /        \ B.b=C.d
+*                /            \
+*              B                C
+*  will result in the following graph:
+*                      C
+*                    /    \
+*          B.b=C.d /        \ A.a=C.d
+*                /            \
+*              B                A
+*  After that the basic procedure is to traverse the tree button up and then top down. In every visit we are running
+*  the dip pruning algorithm for the current node. The algorithm uses the predicates which are saved in the edge that
+*  is connecting the current node with its parent node. Inside the algorithm we check which chunks can be pruned in
+*  both the join tables.
+*/
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto graph = DipsPruningGraph{};
   graph.build_graph(lqp_root);
