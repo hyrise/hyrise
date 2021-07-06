@@ -24,8 +24,7 @@ struct DipsPruningGraph {
   friend class DipsPruningGraphTest_DipsJoinGraphIsNoTree_Test;
   friend class DipsPruningGraphTest_DipsJoinGraphTraversal_Test;
 
-  explicit DipsPruningGraph(std::vector<JoinMode> supported_join_types)
-      : supported_join_types(supported_join_types) {}
+  explicit DipsPruningGraph(std::vector<JoinMode> supported_join_types) : supported_join_types(supported_join_types) {}
 
   std::vector<DipsPruningGraphEdge> top_down_traversal();
   std::vector<DipsPruningGraphEdge> bottom_up_traversal();

@@ -63,9 +63,9 @@ class DipsPruningRule : public AbstractRule {
   static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                             std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
 
-   void _visit_edge(DipsPruningGraphEdge& edge) const;
+  void _visit_edge(DipsPruningGraphEdge& edge) const;
 
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace opossum

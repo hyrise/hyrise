@@ -55,7 +55,7 @@ namespace opossum {
 //
 //   return stream;
 // }
-  
+
 void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                                             const std::set<ChunkID>& pruned_chunk_ids) {
   const auto& already_pruned_chunk_ids = table_node->pruned_chunk_ids();

@@ -93,7 +93,6 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
   }
 }
 
-
 size_t DipsPruningGraph::_get_vertex(std::shared_ptr<StoredTableNode> table_node) {
   auto it = std::find(vertices.begin(), vertices.end(), table_node);
   if (it != vertices.end()) {
