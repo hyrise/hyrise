@@ -3,6 +3,7 @@
 #include <set>
 #include <vector>
 
+#include "dips_pruning_graph_edge.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -13,7 +14,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "dips_pruning_graph_edge.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
