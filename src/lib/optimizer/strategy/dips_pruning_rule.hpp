@@ -63,36 +63,33 @@ class DipsPruningRule : public AbstractRule {
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }
 
+  template <typename COLUMN_TYPE>
+  bool _range_prunable(std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
+                        std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) const {
+      for (auto join_range : join_ranges) {
+        for (auto const& [_, ranges] : chunk_ranges) {
+          for (auto range : ranges) {
+            if (_range_intersect<COLUMN_TYPE>(join_range, range)) return false;
+          }
+        }
+      }
+      return true;
+  }
+
   // We can only prune a chunk if no ranges of it are overlapping with any ranges in the chunks of the join table. To
   // check this we are iterating over every chunk and its ranges and comparing it with all ranges from the partner
   // table. If there is one case where the ranges intersect we skip the pruning of the chunk.
   template <typename COLUMN_TYPE>
   std::set<ChunkID> _calculate_pruned_chunks(
-      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> base_chunk_ranges,
-      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> partner_chunk_ranges) const {
-    /* Calculate the chunks ids of the partner table which can be pruned (based on base_chunk_ranges) */
+      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
+      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> join_chunk_ranges) const {
+
     std::set<ChunkID> pruned_chunk_ids;
-
-    for (auto const& [partner_chunk_id, partner_ranges] : partner_chunk_ranges) {
-      bool can_be_pruned = true;
-
-      for (auto partner_range : partner_ranges) {
-        if (!can_be_pruned) break;
-        for (auto const& [base_chunk_id, base_ranges] : base_chunk_ranges) {
-          if (!can_be_pruned) break;
-          for (auto base_range : base_ranges) {
-            if (_range_intersect<COLUMN_TYPE>(partner_range, base_range)) {
-              can_be_pruned = false;
-              break;
-            }
-          }
-        }
-      }
-      if (can_be_pruned) {
-        pruned_chunk_ids.insert(partner_chunk_id);
+    for (auto const& [join_chunk_id, join_ranges] : join_chunk_ranges) {
+      if (_range_prunable(chunk_ranges, join_ranges)) {
+        pruned_chunk_ids.insert(join_chunk_id);
       }
     }
-
     return pruned_chunk_ids;
   }
 
