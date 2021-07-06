@@ -65,15 +65,15 @@ class DipsPruningRule : public AbstractRule {
 
   template <typename COLUMN_TYPE>
   bool _range_prunable(std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
-                        std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) const {
-      for (auto join_range : join_ranges) {
-        for (auto const& [_, ranges] : chunk_ranges) {
-          for (auto range : ranges) {
-            if (_range_intersect<COLUMN_TYPE>(join_range, range)) return false;
-          }
+                       std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) const {
+    for (auto join_range : join_ranges) {
+      for (auto const& [_, ranges] : chunk_ranges) {
+        for (auto range : ranges) {
+          if (_range_intersect<COLUMN_TYPE>(join_range, range)) return false;
         }
       }
-      return true;
+    }
+    return true;
   }
 
   // We can only prune a chunk if no ranges of it are overlapping with any ranges in the chunks of the join table. To
@@ -83,7 +83,6 @@ class DipsPruningRule : public AbstractRule {
   std::set<ChunkID> _calculate_pruned_chunks(
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
       std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> join_chunk_ranges) const {
-
     std::set<ChunkID> pruned_chunk_ids;
     for (auto const& [join_chunk_id, join_ranges] : join_chunk_ranges) {
       if (_range_prunable(chunk_ranges, join_ranges)) {
@@ -103,10 +102,13 @@ class DipsPruningRule : public AbstractRule {
   template <typename COLUMN_TYPE>
   std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
       const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) const {
-    // For every non pruned chunk, we are saving the respective ranges.
-    std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> ranges;
+    using Range = std::pair<COLUMN_TYPE, COLUMN_TYPE>;
+    using RangeList = std::vector<Range>;
 
-    auto pruned_chunks_ids = table_node->pruned_chunk_ids();  // const std::vector<ChunkID>&
+    // For every non pruned chunk, we are saving the respective ranges.
+    std::map<ChunkID, RangeList> ranges;
+
+    auto pruned_chunks_ids = table_node->pruned_chunk_ids();
     auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
@@ -118,33 +120,21 @@ class DipsPruningRule : public AbstractRule {
         Assert(segment_statistics, "expected AttributeStatistics");
 
         if constexpr (std::is_arithmetic_v<COLUMN_TYPE>) {
-          if (segment_statistics->range_filter) {  // false if all values in the chunk are NULL
-            ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
-                chunk_index, segment_statistics->range_filter->ranges));
+          if (segment_statistics->range_filter) {
+            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, segment_statistics->range_filter->ranges));
+          } else if (segment_statistics->dips_min_max_filter) {
+            auto min = segment_statistics->dips_min_max_filter->min;
+            auto max = segment_statistics->dips_min_max_filter->max;
+            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
           } else {
-            if (segment_statistics->dips_min_max_filter) {
-              ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
-                  chunk_index,
-                  std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>({std::pair<COLUMN_TYPE, COLUMN_TYPE>(
-                      segment_statistics->dips_min_max_filter->min, segment_statistics->dips_min_max_filter->max)})));
-            } else {
-              ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
-                  chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>()));
-              // Note: if we don't do it, we assume, the chunk has been already pruned -> error
-              continue;
-            }
-
-            // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
-            DebugAssert(!segment_statistics->min_max_filter,
-                        "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
+            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList()));
+            // Note: if we don't do it, we assume, the chunk has been already pruned -> error
+            continue;
           }
-        }
-
-        // We should  not use insert. Instead we should manually check if there is already an entry.
-        if (segment_statistics->min_max_filter) {
-          ranges.insert(std::pair<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>>(
-              chunk_index, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>({std::pair<COLUMN_TYPE, COLUMN_TYPE>(
-                               segment_statistics->min_max_filter->min, segment_statistics->min_max_filter->max)})));
+        } else if (segment_statistics->min_max_filter) {
+          auto min = segment_statistics->dips_min_max_filter->min;
+          auto max = segment_statistics->dips_min_max_filter->max;
+          ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
         }
       }
     }
