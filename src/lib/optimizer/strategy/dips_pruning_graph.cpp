@@ -5,20 +5,20 @@ namespace opossum {
 std::vector<DipsPruningGraphEdge> DipsPruningGraph::top_down_traversal() {
   std::vector<DipsPruningGraphEdge> traversal_order{};
   std::set<size_t> visited{};
-  _top_down_traversal_visit(0, traversal_order, visited);
+  _top_down_traversal_visit(ROOT_VERTEX, traversal_order, visited);
   return traversal_order;
 }
 
 std::vector<DipsPruningGraphEdge> DipsPruningGraph::bottom_up_traversal() {
   std::vector<DipsPruningGraphEdge> traversal_order{};
   std::set<size_t> visited{};
-  _bottom_up_traversal_visit(0, traversal_order, visited);
+  _bottom_up_traversal_visit(ROOT_VERTEX, traversal_order, visited);
   return traversal_order;
 }
 
 bool DipsPruningGraph::is_tree() {
   std::set<size_t> visited{};
-  return _is_tree_visit(0, 0, visited);
+  return _is_tree_visit(ROOT_VERTEX, ROOT_VERTEX, visited);
 }
 
 bool DipsPruningGraph::empty() { return vertices.size() == 0; }
@@ -152,7 +152,7 @@ void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node,
                                                   std::set<size_t>& visited) {
   visited.insert(current_node);
   // TODO(anyone): Fix Hacky solution
-  auto parent_edge = edges[0];
+  auto parent_edge = edges[ROOT_VERTEX];
   for (auto& edge : edges) {
     if (edge.connects_vertex(current_node)) {
       auto neighbour = edge.neighbour(current_node);
@@ -163,7 +163,8 @@ void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node,
       _bottom_up_traversal_visit(neighbour, traversal_order, visited);
     }
   }
-  traversal_order.push_back(parent_edge);
+  // The root should not push an edge.
+  if (current_node != ROOT_VERTEX) traversal_order.push_back(parent_edge);
 }
 
 }  // namespace opossum
