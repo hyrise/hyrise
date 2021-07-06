@@ -132,8 +132,8 @@ class DipsPruningRule : public AbstractRule {
             continue;
           }
         } else if (segment_statistics->min_max_filter) {
-          auto min = segment_statistics->dips_min_max_filter->min;
-          auto max = segment_statistics->dips_min_max_filter->max;
+          auto min = segment_statistics->min_max_filter->min;
+          auto max = segment_statistics->min_max_filter->max;
           ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
         }
       }
