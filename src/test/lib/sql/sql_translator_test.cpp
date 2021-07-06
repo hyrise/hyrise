@@ -2411,6 +2411,24 @@ TEST_F(SQLTranslatorTest, CreateTable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, CreateTableTypeConversions) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "CREATE TABLE a_table (a_decimal DECIMAL(5,2), a_real REAL, a_varchar_varying CHARACTER VARYING(10),"
+      "a_date DATE, a_time TIME, a_datetime DATETIME)");
+
+  const auto column_definitions = TableColumnDefinitions{{"a_decimal", DataType::Float, false},
+                                                         {"a_real", DataType::Float, false},
+                                                         {"a_varchar_varying", DataType::String, false},
+                                                         {"a_date", DataType::String, false},
+                                                         {"a_time", DataType::String, false},
+                                                         {"a_datetime", DataType::String, false}};
+
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "CREATE TABLE IF NOT EXISTS a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string "
