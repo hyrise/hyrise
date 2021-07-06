@@ -13,7 +13,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-// #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "dips_pruning_graph_edge.hpp"
 #include "resolve_type.hpp"
 
