@@ -37,7 +37,7 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "https://www.dropbox.com/s/45y07uh4chjy8ie/imdb_data.zip?dl=1"
+LOCATION = "https://www.dropbox.com/s/lyo2rnbo2jkl54w/imdb_data.zip?dl=1"
 FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
@@ -107,7 +107,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "42e3d3c39879b12635343f49f33f807c":
+if hash_dl != "8769841f04fdf2b0692a257018b4017c":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
@@ -116,7 +116,7 @@ print("- Downloaded file is valid.")
 print("- Unzipping the file...")
 
 try:
-    zip = zipfile.ZipFile("imdb.zip", "r")
+    zip = zipfile.ZipFile(FILE_NAME, "r")
     zip.extractall(table_dir)
     zip.close()
 except Exception:
