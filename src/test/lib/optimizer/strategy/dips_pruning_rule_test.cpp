@@ -220,6 +220,7 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_pruned_ids_left);
 }
 
+// NOLINTS introduced because of line length when commented out
 // TEST_F(DipsPruningRuleTest, DipsJoinGraphTraversal) {
 //   // [table1 <-> table2 <-> table3] cycle free structure
 //   std::shared_ptr<StoredTableNode> table1 = std::make_shared<StoredTableNode>("int_float2");
@@ -230,9 +231,9 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
 //   std::vector<ChunkID> table2_pruned_chunk_ids{ChunkID{0}};
 //   std::vector<ChunkID> table3_pruned_chunk_ids{};
 
-//   table1->set_pruned_chunk_ids(std::vector<ChunkID>(table1_pruned_chunk_ids.begin(), table1_pruned_chunk_ids.end()));
-//   table2->set_pruned_chunk_ids(std::vector<ChunkID>(table2_pruned_chunk_ids.begin(), table2_pruned_chunk_ids.end()));
-//   table3->set_pruned_chunk_ids(std::vector<ChunkID>(table3_pruned_chunk_ids.begin(), table3_pruned_chunk_ids.end()));
+//   table1->set_pruned_chunk_ids(std::vector<ChunkID>(table1_pruned_chunk_ids.begin(), table1_pruned_chunk_ids.end())); // NOLINT
+//   table2->set_pruned_chunk_ids(std::vector<ChunkID>(table2_pruned_chunk_ids.begin(), table2_pruned_chunk_ids.end())); // NOLINT
+//   table3->set_pruned_chunk_ids(std::vector<ChunkID>(table3_pruned_chunk_ids.begin(), table3_pruned_chunk_ids.end())); // NOLINT
 
 //   std::shared_ptr<DipsJoinGraph> join_graph = std::make_shared<DipsJoinGraph>();  // build dips join graph
 
@@ -244,14 +245,14 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
 //       table1_node->get_edge_for_table(table2_node);  // set int_float2 JOIN int_float2_sorted ON a=a
 //   std::shared_ptr<DipsJoinGraphEdge> table2_to_table1_edge = table2_node->get_edge_for_table(table1_node);
 
-//   table1_to_table2_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0})));
-//   table2_to_table1_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0})));
+//   table1_to_table2_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0}))); // NOLINT
+//   table2_to_table1_edge->append_predicate(equals_(lqp_column_(table1, ColumnID{0}), lqp_column_(table2, ColumnID{0}))); // NOLINT
 
 //   std::shared_ptr<DipsJoinGraphEdge> table2_to_table3_edge =
 //       table2_node->get_edge_for_table(table3_node);  // set int_float2 JOIN int_float2_sorted ON b=b
 //   std::shared_ptr<DipsJoinGraphEdge> table3_to_table2_edge = table3_node->get_edge_for_table(table2_node);
-//   table2_to_table3_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1})));
-//   table3_to_table2_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1})));
+//   table2_to_table3_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1}))); // NOLINT
+//   table3_to_table2_edge->append_predicate(equals_(lqp_column_(table2, ColumnID{1}), lqp_column_(table3, ColumnID{1}))); // NOLINT
 
 //   EXPECT_TRUE(join_graph->is_tree());
 

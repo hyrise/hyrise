@@ -150,7 +150,7 @@ void DipsPruningGraph::_bottom_up_traversal_visit(size_t current_node,
                                                   std::vector<DipsPruningGraphEdge>& traversal_order,
                                                   std::set<size_t>& visited) {
   visited.insert(current_node);
-  // TODO: Fix Hacky solution
+  // TODO(anyone): Fix Hacky solution
   auto parent_edge = edges[0];
   for (auto& edge : edges) {
     if (edge.connects_vertex(current_node)) {
