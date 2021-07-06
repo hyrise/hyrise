@@ -96,24 +96,18 @@ TEST_F(DipsPruningGraphTest, BuildJoinGraph) {
   auto graph = DipsPruningGraph{supported_join_types};
   graph.build_graph(input_lqp);
 
-  std::vector<std::shared_ptr<StoredTableNode>> vertices{stored_table_node_b, stored_table_node_c, stored_table_node_a};
-  auto expected_edge_vertex_set_b_c = std::set<size_t>{0, 1};
-  auto expected_edge_predicate_b_c =
-      std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node_b_c->join_predicates()[0]);
-  auto expected_edge_vertex_set_a_b = std::set<size_t>{2, 0};
-  auto expected_edge_predicate_a_b =
-      std::dynamic_pointer_cast<BinaryPredicateExpression>(input_lqp->join_predicates()[0]);
+  const std::vector<std::shared_ptr<StoredTableNode>> vertices{stored_table_node_b, stored_table_node_c,
+                                                               stored_table_node_a};
+  const auto expected_edge_b_c =
+      DipsPruningGraphEdge{std::set<size_t>{0, 1},
+                           std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node_b_c->join_predicates()[0])};
+  const auto expected_edge_a_b = DipsPruningGraphEdge{
+      std::set<size_t>{2, 0}, std::dynamic_pointer_cast<BinaryPredicateExpression>(input_lqp->join_predicates()[0])};
 
-  EXPECT_EQ(graph.vertices[0], vertices[0]);
-  EXPECT_EQ(graph.vertices[1], vertices[1]);
-  EXPECT_EQ(graph.vertices[2], vertices[2]);
+  const std::vector<DipsPruningGraphEdge> expected_edges{expected_edge_b_c, expected_edge_a_b};
 
-  // We only have one predicate per edge in this test scenario.
-  EXPECT_EQ(graph.edges[0].vertex_set, expected_edge_vertex_set_b_c);
-  EXPECT_EQ(graph.edges[0].predicates[0], expected_edge_predicate_b_c);
-
-  EXPECT_EQ(graph.edges[1].vertex_set, expected_edge_vertex_set_a_b);
-  EXPECT_EQ(graph.edges[1].predicates[0], expected_edge_predicate_a_b);
+  EXPECT_EQ(graph.vertices, vertices);
+  EXPECT_EQ(graph.edges, expected_edges);
 }
 
 TEST_F(DipsPruningGraphTest, JoinGraphIsTree) {
@@ -163,19 +157,17 @@ TEST_F(DipsPruningGraphTest, DipsJoinGraphTraversal) {
 
   auto top_down_result = graph.top_down_traversal();
 
-  EXPECT_EQ(top_down_result[0].vertex_set, edge_0_1.vertex_set);
-  EXPECT_EQ(top_down_result[1].vertex_set, edge_1_3.vertex_set);
-  EXPECT_EQ(top_down_result[2].vertex_set, edge_1_4.vertex_set);
-  EXPECT_EQ(top_down_result[3].vertex_set, edge_0_2.vertex_set);
-  EXPECT_EQ(top_down_result[4].vertex_set, edge_2_5.vertex_set);
+  const std::vector<DipsPruningGraphEdge> expected_edges_top_down_traversal{edge_0_1, edge_1_3, edge_1_4, edge_0_2,
+                                                                            edge_2_5};
+
+  EXPECT_EQ(top_down_result, expected_edges_top_down_traversal);
 
   auto bottom_up_result = graph.bottom_up_traversal();
 
-  EXPECT_EQ(bottom_up_result[0].vertex_set, edge_1_3.vertex_set);
-  EXPECT_EQ(bottom_up_result[1].vertex_set, edge_1_4.vertex_set);
-  EXPECT_EQ(bottom_up_result[2].vertex_set, edge_0_1.vertex_set);
-  EXPECT_EQ(bottom_up_result[3].vertex_set, edge_2_5.vertex_set);
-  EXPECT_EQ(bottom_up_result[4].vertex_set, edge_0_2.vertex_set);
+  const std::vector<DipsPruningGraphEdge> expected_edges_bottom_up_traversal{edge_1_3, edge_1_4, edge_0_1, edge_2_5,
+                                                                             edge_0_2};
+
+  EXPECT_EQ(bottom_up_result, expected_edges_bottom_up_traversal);
 }
 
 }  // namespace opossum

@@ -14,6 +14,10 @@ struct DipsPruningGraphEdge {
     predicates.push_back(predicate);
   }
 
+  bool operator==(const DipsPruningGraphEdge& edge_to_compare) const {
+    return (vertex_set == edge_to_compare.vertex_set && predicates == edge_to_compare.predicates);
+  }
+
   void append_predicate(std::shared_ptr<BinaryPredicateExpression> predicate) {
     // TODO(somebody): remove search when implementation "visit single node in LQP only once" is done
     if (std::find(predicates.begin(), predicates.end(), predicate) == predicates.end()) {

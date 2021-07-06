@@ -18,43 +18,9 @@
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 
-// #include "hyrise.hpp"
-// #include <fstream>
-
 // TODO(Alex): Add comment which describes the basic idea of dips on an example with two tables.
 
 namespace opossum {
-
-// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph& join_graph) {
-//   stream << "==== Vertices ====" << std::endl;
-//   if (join_graph.nodes.empty()) {
-//     stream << "<none>" << std::endl;
-//   } else {
-//     for (const auto& node : join_graph.nodes) {
-//       stream << node->table_node->description() << std::endl;
-//       stream << "      ==== Adress ====" << std::endl;
-//       stream << "          " << node << std::endl;
-//       stream << "      ==== Parent ====" << std::endl;
-//       stream << "          " << node->parent << std::endl;
-//       stream << "      ==== Children ====" << std::endl;
-//       for (const auto& child : node->children) {
-//         stream << "          " << child << std::endl;
-//       }
-
-//       stream << "      ==== Edges ====" << std::endl;
-//       for (const auto& edge : node->edges) {
-//         stream << "      " << edge->partner_node->table_node->description() << std::endl;
-//         stream << "            ==== Predicates ====" << std::endl;
-//         for (const auto& predicate : edge->predicates) {
-//           stream << "            " << predicate->description(AbstractExpression::DescriptionMode::ColumnName)
-//                  << std::endl;
-//         }
-//       }
-//     }
-//   }
-//
-//   return stream;
-// }
 
 void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                                             const std::set<ChunkID>& pruned_chunk_ids) const {
