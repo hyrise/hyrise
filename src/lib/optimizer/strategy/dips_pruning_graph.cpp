@@ -23,18 +23,16 @@ bool DipsPruningGraph::is_tree() {
 
 bool DipsPruningGraph::empty() { return vertices.empty(); }
 
-// To be able to push dips through joins we first need to construct a graph on which we can execute the main algorithm.
-//  We are doing this by recursively traversing over the LQP graph. In every visit of a node the following steps are
-// executed:
+// We are construct  the graph by recursively traversing over the LQP graph. In every visit of a node the following
+// steps are executed:
 // 1. Check that the currently visited node is a join node.
 // 2. Get the join predicates
 // 3. Check that the left and right operands are LQPColumnExpression.
 // 4. Get each of the associated StoredTableNode of the left and right expressions.
-// 5. Add both of the storage nodes to the graph (if they are not in it) and connect them with edges (if they are not
-// connected).
-// 6. Add the predicates to the associated edges.
+// 5. Add both of the storage nodes to the graph and connect them with an edge. The edge consists out of both vertices
+//    and its predicates.
 void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node) {
-  // Why do we exit in this cases ?
+
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
   }
@@ -42,23 +40,21 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
   if (node->left_input()) build_graph(node->left_input());
   if (node->right_input()) build_graph(node->right_input());
 
-  // This rule only supports the inner and semi join
-  if (node->type != LQPNodeType::Join) return; 
-  if (std::find(supported_join_types.begin(), supported_join_types.end(),
-                static_cast<JoinNode&>(*node).join_mode) == supported_join_types.end()) {
+  if (node->type != LQPNodeType::Join) return;
+  if (std::find(supported_join_types.begin(), supported_join_types.end(), static_cast<JoinNode&>(*node).join_mode) ==
+      supported_join_types.end()) {
     return;
   }
   const auto& join_node = static_cast<JoinNode&>(*node);
   const auto& join_predicates = join_node.join_predicates();
 
   for (const auto& predicate : join_predicates) {
-    // Why do we need to cast the predicates to binary predicate expressions?
     std::shared_ptr<BinaryPredicateExpression> binary_predicate =
         std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
 
     Assert(binary_predicate, "Expected BinaryPredicateExpression!");
 
-    // We are only interested in equal predicate conditions (The dibs rule is only working with equal predicates)
+    // We are only interested in equal predicate conditions (The dip rule is only working with equal predicates)
     if (binary_predicate->predicate_condition != PredicateCondition::Equals) {
       continue;
     }
@@ -82,7 +78,6 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
     std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
     std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
 
-    // access join graph nodes (every storage table note is represented inside the join graph)
     auto left_join_graph_node = _get_vertex(left_stored_table_node);
     auto right_join_graph_node = _get_vertex(right_stored_table_node);
 

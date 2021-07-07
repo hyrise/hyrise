@@ -18,8 +18,6 @@
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 
-// TODO(Alex): Add comment which describes the basic idea of dips on an example with two tables.
-
 namespace opossum {
 
 void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,

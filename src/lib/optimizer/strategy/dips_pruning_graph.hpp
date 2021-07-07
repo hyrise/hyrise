@@ -17,6 +17,10 @@
 #include "resolve_type.hpp"
 
 namespace opossum {
+
+// This graph is a data structure that represents a tree on which the dip algorithm can be executed. The graph can be
+// build from an LQP. The nodes of it are representing the join tables and the edges are representing the predicates.
+
 struct DipsPruningGraph {
   friend class DipsPruningGraphTest_BuildJoinGraph_Test;
   friend class DipsPruningGraphTest_JoinGraphIsTree_Test;
@@ -27,19 +31,33 @@ struct DipsPruningGraph {
 
   explicit DipsPruningGraph(std::vector<JoinMode> supported_join_types) : supported_join_types(supported_join_types) {}
 
+  // Traverses the tree via depth-first search and returns the visited edges in top-down order of the graph.
   std::vector<DipsPruningGraphEdge> top_down_traversal();
+
+  // Traverses the tree via depth-first search and returns the visited edges in bottom-up order of the graph.
   std::vector<DipsPruningGraphEdge> bottom_up_traversal();
+
   bool is_tree();
   bool empty();
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node);
 
  private:
+  // Each table node gets a number assigned. This number is the index of the vertices vector. If the table node exists
+  // in the graph its number is returned. If not it will be added to the graph. 
   size_t _get_vertex(std::shared_ptr<StoredTableNode>& table_node);
+
+  // Returns a set of two vertices that can be connected and checks if the vertices exists inside the graph.
   std::set<size_t> _get_vertex_set(size_t noda_a, size_t noda_b);
+
+  // Checks if there is already an edge that is connecting the vertices inside the vertex set. If so it will only
+  // append the predicate to the edge. If not it will add a new edge to the graph with the predicates. 
   void _add_edge(std::set<size_t>& vertex_set, std::shared_ptr<BinaryPredicateExpression>& predicate);
+
   bool _is_tree_visit(size_t current_node, size_t parrent, std::set<size_t>& visited);
+
   void _top_down_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order,
                                  std::set<size_t>& visited);
+
   void _bottom_up_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order,
                                   std::set<size_t>& visited);
 
