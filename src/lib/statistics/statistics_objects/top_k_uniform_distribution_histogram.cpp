@@ -69,6 +69,12 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
     }
   }
 
+  //print top k values
+
+  for(auto i = 0u; i < K; i++) {
+        std::cout << "value: " << top_k_names[i] << " with count: " << top_k_counts[i] <<std::endl;
+      }
+
   // Remove Top K values from value distribution
   for (auto i = 0u; i < K; i++) {
     auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[i], top_k_counts[i]));
@@ -116,13 +122,11 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      std::cout << "compare value " << *value << std::endl;
       GenericHistogramBuilder<T> builder{1, AbstractHistogram<T>::domain()};
       bool is_top_k_value = false; 
       for (auto i = 0u; i < _top_k_names.size(); i++) {
         if(_top_k_names[i] == value) {
           is_top_k_value = true;
-          std::cout << "is in top k" << std::endl;
           builder.add_bin(*value, *value, _top_k_counts[i], 1);
           break;
         }
@@ -151,17 +155,14 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
 
       if (top_k_index != _top_k_names.size()) {
         // Value in Top-K Values
-        
-        new_top_k_names.erase(_top_k_names.begin() + top_k_index);
-        new_top_k_counts.erase(_top_k_counts.begin() + top_k_index);
-
+        new_top_k_names.erase(new_top_k_names.begin() + top_k_index);
+        new_top_k_counts.erase(new_top_k_counts.begin() + top_k_index);
 
       } else {
         // Value not in Top-K Values
-
         new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-
       }
+
       return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
     }
     case PredicateCondition::LessThanEquals:
