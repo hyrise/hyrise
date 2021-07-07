@@ -267,6 +267,8 @@ void DictionarySharingTask::do_segment_sharing(std::optional<std::ofstream> csv_
             }
           }
 
+          potential_new_shared_dictionary->shrink_to_fit();
+
           const auto current_segment_info =
               SegmentChunkColumn<ColumnDataType>{current_dictionary_segment, chunk, column_id};
           if (current_jaccard_index >= jaccard_index_threshold) {
