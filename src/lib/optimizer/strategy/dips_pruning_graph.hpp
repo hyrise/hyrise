@@ -43,14 +43,14 @@ struct DipsPruningGraph {
 
  private:
   // Each table node gets a number assigned. This number is the index of the vertices vector. If the table node exists
-  // in the graph its number is returned. If not it will be added to the graph. 
+  // in the graph its number is returned. If not it will be added to the graph.
   size_t _get_vertex(std::shared_ptr<StoredTableNode>& table_node);
 
   // Returns a set of two vertices that can be connected and checks if the vertices exists inside the graph.
   std::set<size_t> _get_vertex_set(size_t noda_a, size_t noda_b);
 
   // Checks if there is already an edge that is connecting the vertices inside the vertex set. If so it will only
-  // append the predicate to the edge. If not it will add a new edge to the graph with the predicates. 
+  // append the predicate to the edge. If not it will add a new edge to the graph with the predicates.
   void _add_edge(std::set<size_t>& vertex_set, std::shared_ptr<BinaryPredicateExpression>& predicate);
 
   bool _is_tree_visit(size_t current_node, size_t parrent, std::set<size_t>& visited);

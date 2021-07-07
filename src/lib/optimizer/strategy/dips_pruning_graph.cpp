@@ -32,7 +32,6 @@ bool DipsPruningGraph::empty() { return vertices.empty(); }
 // 5. Add both of the storage nodes to the graph and connect them with an edge. The edge consists out of both vertices
 //    and its predicates.
 void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node) {
-
   if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Intersect || node->type == LQPNodeType::Except) {
     return;
   }
