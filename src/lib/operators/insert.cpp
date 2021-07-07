@@ -211,7 +211,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
                                            target_chunk_offset, num_rows_current_iteration);
 
-          // TODO(Alexander-Dubrawski): Is there a cleaner way than a dynamic pointer cast ?
           auto segment_statisitcs = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
               target_chunk_statistic.value()[static_cast<size_t>(column_id)]);
           std::shared_ptr<AttributeStatistics<ColumnDataType>> new_segment_statistics =
