@@ -90,14 +90,13 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
   const std::set<EncodingType> COLUMN_ENCODING_TYPES = {EncodingType::Dictionary};
   const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
       ColumnDataDistribution::make_uniform_config(0.0, 300'000.0)};
-  const std::set<ChunkOffset> CHUNK_SIZES = {config->chunk_size};
+  const std::set<ChunkOffset> CHUNK_SIZES = {config->chunk_size, ChunkOffset{1'500'000}};
   std::set<int> ROW_COUNTS = {100'000, 6'000'000};
   if (scale_factor == 10.0) {
     ROW_COUNTS.emplace(60'000'000);
   }
   const auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
       TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS, scale_factor});
-
   std::cout << " - Generating tables" << std::endl;
   auto table_generator = CalibrationTableGenerator(table_config);
   auto tables = table_generator.generate();
@@ -136,6 +135,7 @@ void execute_calibration(const std::string& data_path, const std::shared_ptr<Ben
     pqp->set_transaction_context_recursively(transaction_context);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    pqp->clear_output();
 
     // Export PQP directly after execution
     feature_exporter.export_to_csv(pqp);

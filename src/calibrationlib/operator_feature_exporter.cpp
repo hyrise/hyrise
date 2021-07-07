@@ -302,11 +302,11 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
     left_column_type = left_table_column_information.column_type;
     if (left_table_name != "" &&
         _data_arrives_ordered(op->left_input(), std::string{left_table_name}, std::string{left_column_name})) {
-      const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
-      auto wrapper = std::make_shared<TableWrapper>(table);
-      wrapper->execute();
-      left_column_sorted =
-          _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{left_column_name}));
+      //const auto& table = Hyrise::get().storage_manager.get_table(std::string{left_table_name});
+      //auto wrapper = std::make_shared<TableWrapper>(table);
+      //wrapper->execute();
+      left_column_sorted = "May";
+      // _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{left_column_name}));
     } else {
       left_column_sorted = "No";
     }
@@ -323,11 +323,11 @@ void OperatorFeatureExporter::_export_join(const std::shared_ptr<const AbstractJ
 
     if (right_table_name != "" &&
         _data_arrives_ordered(op->right_input(), std::string{right_table_name}, std::string{right_column_name})) {
-      const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
-      auto wrapper = std::make_shared<TableWrapper>(table);
-      wrapper->execute();
-      right_column_sorted =
-          _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{right_column_name}));
+      //const auto& table = Hyrise::get().storage_manager.get_table(std::string{right_table_name});
+      //auto wrapper = std::make_shared<TableWrapper>(table);
+      //wrapper->execute();
+      right_column_sorted = "May";
+      // _check_column_sorted(wrapper->performance_data, table->column_id_by_name(std::string{right_column_name}));
     } else {
       right_column_sorted = "No";
     }
@@ -459,7 +459,7 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
   const auto node = op->lqp_node;
   const auto predicate_node = std::static_pointer_cast<const PredicateNode>(node);
   const auto predicate = predicate_node->predicate();
-  const pmr_string input_sorted = _find_input_sorted(op->left_input()->performance_data, op->predicate());
+  //const pmr_string input_sorted = _find_input_sorted(op->left_input()->performance_data, op->predicate());
   pmr_string predicate_str{};
 
   if (const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate)) {
@@ -479,6 +479,13 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
       const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
       const auto& table_column_information = _table_column_information(node, column_expression);
       const auto data_type = pmr_string{magic_enum::enum_name(column_expression->data_type())};
+
+      pmr_string input_sorted{"No"};
+      const auto table_name = table_column_information.table_name;
+      const auto column_name = table_column_information.column_name;
+      if (table_name != "" && _data_arrives_ordered(op->left_input(), std::string{table_name}, std::string{column_name})) {
+        input_sorted = "May";
+      }
       const auto output_row = std::vector<AllTypeVariant>{operator_info.name,
                                                           operator_info.left_input_rows,
                                                           operator_info.left_input_columns,
@@ -488,8 +495,8 @@ void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const Tab
                                                           operator_info.estimated_cardinality,
                                                           operator_info.walltime,
                                                           table_column_information.column_type,
-                                                          table_column_information.table_name,
-                                                          table_column_information.column_name,
+                                                          table_name,
+                                                          column_name,
                                                           implementation,
                                                           input_sorted,
                                                           _current_query_hash,

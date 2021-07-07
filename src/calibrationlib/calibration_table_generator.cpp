@@ -262,6 +262,7 @@ std::shared_ptr<const CalibrationTableWrapper> CalibrationTableGenerator::_gener
   const auto sorted_table_name = original_table->get_name() + "_sorted";
   const auto table = original_table->get_table();
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
   std::unordered_map<ChunkID, Segments> segments;
   ChunkEncodingSpec chunk_encoding_spec;

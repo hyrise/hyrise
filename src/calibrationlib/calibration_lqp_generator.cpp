@@ -42,12 +42,14 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
 void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables,
                                              const float scale_factor) {
   const auto table_size = static_cast<size_t>(scale_factor * 6'000'000);
-  const auto table_suffix = std::to_string(table_size);
+  const auto table_suffix = "65535_" + std::to_string(table_size);
   for (const auto& table : tables) {
     if (table->get_name().find(table_suffix) != std::string::npos) {
+      if (table->get_name().find("1500000") == std::string::npos) {
       for (const auto& other_table : tables) {
         _generate_joins(table, other_table);
       }
+    }
     }
   }
 }
@@ -55,7 +57,7 @@ void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const C
 void CalibrationLQPGenerator::_generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& left,
                                               const std::shared_ptr<const CalibrationTableWrapper>& right) {
   // we want steps of one chunk for the probe side
-  const auto probe_selectivity_resolution = left->get_table()->chunk_count();
+  const auto probe_selectivity_resolution = std::min(left->get_table()->chunk_count(), ChunkID{10});
   constexpr uint32_t build_selectivity_resolution = 5;
   const auto left_stored_table_node = StoredTableNode::make(left->get_name());
   const auto right_stored_table_node = StoredTableNode::make(right->get_name());
