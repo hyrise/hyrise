@@ -43,7 +43,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
           const auto histogram =
-              EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
+              TopKUniformDistributionHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
 
           if (histogram) {
             output_column_statistics->set_statistics_object(histogram);
