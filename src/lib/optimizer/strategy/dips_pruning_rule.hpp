@@ -35,8 +35,6 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-// std::ostream& operator<<(std::ostream& stream, const DipsJoinGraph join_graph);
-
 class DipsPruningRule : public AbstractRule {
   friend class DipsPruningRuleTest_RangeIntersectionTest_Test;
   friend class DipsPruningRuleTest_CalculatePrunedChunks_Test;
@@ -44,7 +42,8 @@ class DipsPruningRule : public AbstractRule {
   friend class DipsPruningRuleTest_ApplyPruning_Test;
 
  protected:
-  std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};  // extend if needed
+  // Currently only the inner and semi joins are supported.
+  std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};
 
   void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
                              const std::set<ChunkID>& pruned_chunk_ids) const;
@@ -112,30 +111,29 @@ class DipsPruningRule : public AbstractRule {
     auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
-      if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) == pruned_chunks_ids.end()) {
-        auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
-        const auto segment_statistics =
-            std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
+      if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) != pruned_chunks_ids.end()) continue;
+      auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
+      const auto segment_statistics =
+          std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
 
-        Assert(segment_statistics, "expected AttributeStatistics");
+      Assert(segment_statistics, "expected AttributeStatistics");
 
-        if constexpr (std::is_arithmetic_v<COLUMN_TYPE>) {
-          if (segment_statistics->range_filter) {
-            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, segment_statistics->range_filter->ranges));
-          } else if (segment_statistics->dips_min_max_filter) {
-            auto min = segment_statistics->dips_min_max_filter->min;
-            auto max = segment_statistics->dips_min_max_filter->max;
-            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
-          } else {
-            ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList()));
-            // Note: if we don't do it, we assume, the chunk has been already pruned -> error
-            continue;
-          }
-        } else if (segment_statistics->min_max_filter) {
-          auto min = segment_statistics->min_max_filter->min;
-          auto max = segment_statistics->min_max_filter->max;
+      if constexpr (std::is_arithmetic_v<COLUMN_TYPE>) {
+        if (segment_statistics->range_filter) {
+          ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, segment_statistics->range_filter->ranges));
+        } else if (segment_statistics->dips_min_max_filter) {
+          auto min = segment_statistics->dips_min_max_filter->min;
+          auto max = segment_statistics->dips_min_max_filter->max;
           ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
+        } else {
+          ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList()));
+          // Note: if we don't do it, we assume, the chunk has been already pruned -> error
+          continue;
         }
+      } else if (segment_statistics->min_max_filter) {
+        auto min = segment_statistics->min_max_filter->min;
+        auto max = segment_statistics->min_max_filter->max;
+        ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
       }
     }
 

@@ -34,9 +34,9 @@ struct DipsPruningGraph {
   void build_graph(const std::shared_ptr<AbstractLQPNode>& node);
 
  private:
-  size_t _get_vertex(std::shared_ptr<StoredTableNode> table_node);
+  size_t _get_vertex(std::shared_ptr<StoredTableNode>& table_node);
   std::set<size_t> _get_vertex_set(size_t noda_a, size_t noda_b);
-  void _add_edge(std::set<size_t> vertex_set, std::shared_ptr<BinaryPredicateExpression> predicate);
+  void _add_edge(std::set<size_t>& vertex_set, std::shared_ptr<BinaryPredicateExpression>& predicate);
   bool _is_tree_visit(size_t current_node, size_t parrent, std::set<size_t>& visited);
   void _top_down_traversal_visit(size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order,
                                  std::set<size_t>& visited);
