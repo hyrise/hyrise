@@ -33,6 +33,28 @@
 
 namespace opossum {
 
+// The basic idea of the dip (Data-Induced Predicates) pruning rule is to use the pruning information of which chunks
+// can be skipped of one table in a join and use it to determine more skippable chunks on the other table. For example,
+// if we have two join tables A and B:
+// 1. Based on statistics objects, we can identify chunks of table A that do not satisfy the query predicates (for
+//    example a selection) and can be skipped.
+// 2. Based on this information we can create dips on the join columns of table B.
+// 3. We can skip all chunks in table B where the dips are not satisfied.
+/**  
+*                                  |><|
+*                           A.att_1 = B.att_1
+*                                 /    \
+*                               /        \
+*                             /            \
+*                            A               B (selection) att_2 > 15
+*                        att_1  att_3       att_1  att_2
+*      | - - >  chunk 0 |  0  |  a  |      |  0  |  10  | <- can be pruned
+*      | - - >  chunk 1 |  0  |  b  |      |  1  |  50  |       |
+*      |        chunk 2 |  1  |  c  |      |  3  |  90  |       |
+*      |                                                        |
+*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+*     since all chunks where att_1 with value 0 will have no match
+*/
 class AbstractLQPNode;
 
 class DipsPruningRule : public AbstractRule {
@@ -92,12 +114,11 @@ class DipsPruningRule : public AbstractRule {
   }
 
   // The algorithm works as follows:
-  // 1. Get all chunk ids that are already pruned.
-  // 2. Iterate overall not pruned chunks of the table.
-  // 3. Get the segment statistic.
-  // 4. Get the range statistic (for example: [(10, 400), (5000, 6000), ...]). If no range statistic exists use the
+  // 1. Iterate overall not pruned chunks of the table.
+  // 2. Get the segment statistic.
+  // 3. Get the range statistic (for example: [(10, 400), (5000, 6000), ...]). If no range statistic exists use the
   //    min-max value instead.
-  // 5. Return all ranges for the respective chunks.
+  // 4. Return all ranges for the respective chunks.
   template <typename COLUMN_TYPE>
   std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> _get_not_pruned_range_statistics(
       const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id) const {
@@ -111,7 +132,8 @@ class DipsPruningRule : public AbstractRule {
     auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
-      if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) != pruned_chunks_ids.end()) continue;
+      if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) != pruned_chunks_ids.end())
+        continue;
       auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
       const auto segment_statistics =
           std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
