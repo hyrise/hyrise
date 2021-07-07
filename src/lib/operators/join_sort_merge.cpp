@@ -28,11 +28,35 @@ namespace opossum {
 //    - Bloom filters
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
-  return (config.predicate_condition != PredicateCondition::NotEquals || config.join_mode == JoinMode::Inner) &&
-         config.left_data_type == config.right_data_type && config.join_mode != JoinMode::Semi &&
-         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
-}
+  if (config.left_data_type != config.right_data_type) {
+    return false;
+  }
 
+  // The sort-merge join supports inner joins for all predicate conditions and multiple predicates. Cross joins are not
+  // supported. Semi and anti implemented for equi (also multi predicate) are supported.
+  // To keep the code simple and maintainable, we discarded the non-equal predicate support for semi/anti joins. In
+  // case they become of relevance at a later point in time (note, both cannot be instantiated via SQL but are added by
+  // the query optimizer of Hyrise), please have look at the PR #2367 and the commits e3164e5 and ae491ef.
+  // All other joins are supported if the predicate condition is not equals.
+  switch (config.join_mode) {
+    case JoinMode::Inner:
+      return true;
+    case JoinMode::Cross:
+      return false;
+    case JoinMode::Semi:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
+      if (config.predicate_condition == PredicateCondition::Equals) {
+        return true;
+      }
+      return false;
+    default:
+      if (config.predicate_condition != PredicateCondition::NotEquals) {
+        return true;
+      }
+      return false;
+  }
+}
 
 // The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 // join_sort_merge.hpp. This is how the join works:
@@ -188,7 +212,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
+    void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) const {
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -225,6 +249,180 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Represents the result of a value comparison.
   enum class CompareResult { Less, Greater, Equal };
+
+  // In the case of the anti-join, we need to check that there is no combination where all predicates are satisfied. In
+  // the case of the semi-join, we need to check that there is at least one combination where all predicates are
+  // satisfied.
+  void _emit_multipredicate_semi_anti_null_as_false(size_t output_cluster, TableRange left_range,
+                                                    TableRange right_range,
+                                                    MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      auto match = false;
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          match = true;
+          return;
+        }
+      });
+      if ((match && _mode == JoinMode::Semi) || (!match && _mode == JoinMode::AntiNullAsFalse)) {
+        _emit_left_only(output_cluster, left_row_id);
+      }
+    });
+  }
+
+  // In the case of the anti null as true join, we need to make sure that there is no match between the rows of the
+  // left range and the NULL rows from the right table where all predicates are satisfied. In some cases, we also need
+  // to check that there is no match with the rows from the right range. That is for example the case if the right and
+  // left range have the same value because than there still can be a match for the current row where all predicates
+  // are satisfied. If that is the case check_right_range should be set.
+  void _emit_multipredicate_anti_null_as_true(size_t output_cluster, TableRange left_range, TableRange right_range,
+                                              bool check_right_run,
+                                              MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      auto match = false;
+      for (const auto& right_row_id : _null_rows_right) {
+        if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          match = true;
+          break;
+        }
+      }
+      if (!match) {
+        if (check_right_run) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+            if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+              match = true;
+              return;
+            }
+          });
+        }
+      }
+      if (!match) _emit_left_only(output_cluster, left_row_id);
+    });
+  }
+
+  /**
+  * Performs the join for the left run of a specified cluster.
+  * A run is a series of rows in a cluster with the same value.
+  **/
+  void _join_runs_anti_null_as_false(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                                     std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                     const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        // (Please read first the comment for the _join_cluster function) If the predicate condition is equal, we only
+        // want to emit rows with values where we know that there is no match in the right table. That is the case if
+        // the comparison result is less. A comparison result of "less" means there is no match. The reason is the
+        // following:
+        // | (1) -> [5] | [5] <- |
+        // |        [6] | [7]    |
+        // | ------------------- |
+        // | (2)    [5] | [5]    |
+        // |    -> [6] | [7] <-  |
+        // If the comparison result was equal in the step before, it means that the right and the left pointer were
+        // moved. Since the runs are sorted we can be sure that there is no equal value on the right side for the
+        // left value.
+        // | (1) -> [4] | [7] <- |
+        // |        [6] |        |
+        // | ------------------- |
+        // | (2)   [4] | [7] <-  |
+        // |    -> [6] |         |
+        // If the comparison value in the last run was less, that means that only the left pointer was moved. If the
+        // left value is still smaller we can be sure that there can not be an equal value on the right side.
+        // | (1) -> [6] | [3] <- |
+        // |            | [7]    |
+        // | ------------------- |
+        // | (2) -> [6] | [3]    |
+        // |            | [7] <- |
+        // If the comparison result was greater, it means that only the right pointer was moved. If the result is less
+        // that means that there can not be an equal value, since then the right pointer would be pointing to it.
+        // We know that if we find no equal math for a row the join condition with the multiple predicates will be
+        // in any case false:  False AND ... . So we do not need to check in this case if the multiple predicates are
+        // satisfied or not.
+        if (compare_result == CompareResult::Less) {
+          _emit_left_range_only(cluster_id, left_run);
+        }
+        // If the Anti join has multiple predicates we also need to check the equal cases since the primary equal
+        // predicate could match but the multiple predicates might not. That means that we need to emit the row, if
+        // there is no combination where the multiple predicates are satisfied, because of as a result of that the
+        // predicate expression is always false.
+        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
+          _emit_multipredicate_semi_anti_null_as_false(cluster_id, left_run, right_run,
+                                                       *multi_predicate_join_evaluator);
+        }
+        break;
+      case PredicateCondition::NotEquals:
+      case PredicateCondition::GreaterThan:
+      case PredicateCondition::GreaterThanEquals:
+      case PredicateCondition::LessThan:
+      case PredicateCondition::LessThanEquals:
+        throw std::logic_error("Unsupported predicate condition");
+      default:
+        throw std::logic_error("Unknown predicate condition");
+    }
+  }
+
+  void _join_runs_anti_null_as_true(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                                    std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                                    const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        if (compare_result == CompareResult::Less && !multi_predicate_join_evaluator) {
+          _emit_left_range_only(cluster_id, left_run);
+        }
+        if (compare_result == CompareResult::Less && multi_predicate_join_evaluator) {
+          // We do not need to consider the right run since there is no equal match and so the multi predicate
+          // condition is always false.
+          auto check_right_run = false;
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, check_right_run,
+                                                 *multi_predicate_join_evaluator);
+        }
+        if (compare_result == CompareResult::Equal && multi_predicate_join_evaluator) {
+          // We need to consider the right run as well. We want to make sure there is no match where the multi
+          // predicate condition is True. Since the first equal predicate is True we need to check if all other
+          // predicates are true or not.
+          auto check_right_run = true;
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_run, right_run, check_right_run,
+                                                 *multi_predicate_join_evaluator);
+        }
+        break;
+      case PredicateCondition::NotEquals:
+      case PredicateCondition::GreaterThan:
+      case PredicateCondition::GreaterThanEquals:
+      case PredicateCondition::LessThan:
+      case PredicateCondition::LessThanEquals:
+        throw std::logic_error("Unsupported predicate condition");
+      default:
+        throw std::logic_error("Unknown predicate condition");
+    }
+  }
+
+  void _join_runs_semi(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                       std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator,
+                       const size_t cluster_id) {
+    switch (_primary_predicate_condition) {
+      case PredicateCondition::Equals:
+        if (compare_result == CompareResult::Equal) {
+          // In the case of Semi equals all rows that have an equal match on the right table need to be checked that
+          // there is at least one match where all multiple predicates are satisfied.
+          if (multi_predicate_join_evaluator) {
+            _emit_multipredicate_semi_anti_null_as_false(cluster_id, left_run, right_run,
+                                                         *multi_predicate_join_evaluator);
+          } else {
+            // If there are no equal predicates a single equal match is sufficient.
+            _emit_left_range_only(cluster_id, left_run);
+          }
+        }
+        break;
+      case PredicateCondition::NotEquals:
+      case PredicateCondition::GreaterThan:
+      case PredicateCondition::GreaterThanEquals:
+      case PredicateCondition::LessThan:
+      case PredicateCondition::LessThanEquals:
+        throw std::logic_error("Unsupported predicate condition");
+      default:
+        throw std::logic_error("Unknown predicate condition");
+    }
+  }
 
   // Performs the join for two runs of a specified cluster.
   // A run is a series of rows in a cluster with the same value.
@@ -289,7 +487,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       default:
-        throw std::logic_error("Unknown PredicateCondition");
+        throw std::logic_error("Unknown predicate condition");
     }
   }
 
@@ -297,6 +495,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
     _output_pos_lists_left[output_cluster].push_back(left_row_id);
     _output_pos_lists_right[output_cluster].push_back(right_row_id);
+  }
+
+  // Is only used for anti and semi joins.
+  void _emit_left_only(size_t output_cluster, RowID left_row_id) {
+    _output_pos_lists_left[output_cluster].push_back(left_row_id);
   }
 
   // Emits all the combinations of row ids from the left table range and the right table range to the join output
@@ -416,7 +619,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
-      std::set<RowID> matched_right_row_ids;
+      RowHashSet matched_right_row_ids;
 
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
@@ -433,7 +636,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       });
       // add null value combinations for right row ids that have no match.
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        // right_row_ids_with_match has no key `right_row_id`
         if (matched_right_row_ids.count(right_row_id) == 0) {
           _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
         }
@@ -463,6 +665,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   void _emit_left_primary_null_combinations(size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
+  }
+
+  void _emit_left_range_only(size_t output_cluster, TableRange left_range) {
+    left_range.for_every_row_id(_sorted_left_table,
+                                [&](RowID left_row_id) { _emit_left_only(output_cluster, left_row_id); });
   }
 
   // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
@@ -517,6 +724,35 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   // This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
+  // The main logic of the algorithm is the following:
+  // The values of the left and right join columns are grouped into runs (rows of a run have the same value). The
+  // values of the runs are compared and then we determine if we advanced the right run, left run, or both runs. If the
+  // comparison result is equal, we advance both runs. If it is less, we advance the left one. If it is greater, we
+  // advance the right one (the arrows are representing the runs (entries with the same value) we are currently
+  // looking at):
+  //  Compare result equal:   | After advancing both runs:
+  //         a  | b           |         a  | b
+  //       -----|----         |       -----|----
+  //     -> [2] | [2] <-      |        [2] | [2]
+  //        [3] | [4]         |     -> [3] | [4] <-
+  //        [6] | [7]         |        [6] | [7]
+  //
+  // Compare result less:     | After advancing left run:
+  //        a  | b            |         a  | b
+  //        ---|---           |       -----|----
+  //    -> [3] | [4] <-       |        [3] | [4] <-
+  //       [6] | [5]          |     -> [6] | [5]
+  //       [7] | [9]          |        [7] | [9]
+  //
+  // compare result greater:  | After advancing right run:
+  //        a  | b            |         a  | b
+  //        ---|---           |       -----|----
+  //    -> [6] | [4] <-       |     -> [6] | [4]
+  //       [7] | [5]          |        [7] | [5] <-
+  //       [8] | [9]          |        [8] | [9]
+  // We can then use in every step the comparison information to join the combinations. For example if we have the
+  // equal comparison and an equal join, we now that we emit the cross product between the rows from the left and right
+  // and run.
   void _join_cluster(const size_t cluster_id,
                      std::optional<MultiPredicateJoinEvaluator>& multi_predicate_join_evaluator) {
     const auto& left_cluster = _sorted_left_table[cluster_id];
@@ -539,7 +775,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       TableRange left_run(cluster_id, left_run_start, left_run_end);
       TableRange right_run(cluster_id, right_run_start, right_run_end);
-      _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+
+      switch (_mode) {
+        case JoinMode::AntiNullAsFalse:
+          _join_runs_anti_null_as_false(left_run, right_run, compare_result, multi_predicate_join_evaluator,
+                                        cluster_id);
+          break;
+        case JoinMode::AntiNullAsTrue:
+          _join_runs_anti_null_as_true(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          break;
+        case JoinMode::Semi:
+          _join_runs_semi(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+          break;
+        default:
+          _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
+      }
 
       // Advance to the next run on the smaller side or both if equal
       switch (compare_result) {
@@ -568,10 +818,29 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
     const auto right_rest = TableRange(cluster_id, right_run_start, right_size);
     const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
+
     if (left_run_start < left_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
+      if (_mode == JoinMode::AntiNullAsFalse) {
+        // We know that there are no matches for the rest of the left runs. Because of the radix clustering, we know
+        // that here can also be no match inside the other clusters, because if there would be it would be in this
+        //  cluster.
+        _emit_left_range_only(cluster_id, left_rest);
+      } else if (_mode == JoinMode::AntiNullAsTrue) {
+        if (multi_predicate_join_evaluator) {
+          _emit_multipredicate_anti_null_as_true(cluster_id, left_rest, right_rest, false,
+                                                 *multi_predicate_join_evaluator);
+        } else {
+          _emit_left_range_only(cluster_id, left_rest);
+        }
+      } else if (_mode != JoinMode::Semi) {
+        _join_runs(left_rest, right_rest, CompareResult::Less, multi_predicate_join_evaluator, cluster_id);
+      }
     } else if (right_run_start < right_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
+      // We know that there is no match between the left runs and the rest of the right runs. In the case of Anti/Semi
+      // we do not need to emit any rows anymore, since we already worked off all left runs.
+      if (_mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse && _mode != JoinMode::Semi) {
+        _join_runs(left_rest, right_rest, CompareResult::Greater, multi_predicate_join_evaluator, cluster_id);
+      }
     }
   }
 
@@ -714,7 +983,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-
   // Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
   // This method adds those rows from the left table to the output that do not find a join partner.
   // The outer join for the equality operator is handled in _join_runs instead.
@@ -785,6 +1053,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Performs the join on all clusters in parallel.
   void _perform_join() {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+
     _left_row_ids_emitted_per_chunk.resize(_cluster_count);
     _right_row_ids_emitted_per_chunk.resize(_cluster_count);
 
@@ -795,7 +1064,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _output_pos_lists_right[cluster_id] = RowIDPosList{};
 
       // Avoid empty jobs for inner equi joins
-      if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) &&
+          _primary_predicate_condition == PredicateCondition::Equals) {
         if (_sorted_left_table[cluster_id].empty() || _sorted_right_table[cluster_id].empty()) {
           continue;
         }
@@ -805,6 +1075,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       _right_row_ids_emitted_per_chunk[cluster_id] = RowHashSet{};
 
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
+
       const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
@@ -813,7 +1084,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                  *_sort_merge_join.right_input()->get_output(), _mode,
                                                  _secondary_join_predicates);
         }
-
         this->_join_cluster(cluster_id, multi_predicate_join_evaluator);
       };
 
@@ -833,7 +1103,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       for (auto& set : _left_row_ids_emitted_per_chunk) {
         _left_row_ids_emitted.merge(set);
       }
-
       _left_outer_non_equi_join();
     }
     if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
@@ -845,14 +1114,72 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
+  bool _check_if_table_contains_null(const Table& table) {
+    const auto& table_column_definition =
+        table.column_definitions()[_sort_merge_join._primary_predicate.column_ids.second];
+    // If the column is not nullable, it means that there can't be a null value inside the column. As a result we don't
+    // need to look for one.
+    if (!table_column_definition.nullable) return false;
+
+    const auto chunk_count = table.chunk_count();
+    auto has_null = false;
+
+    for (auto cluster_id = ChunkID{0}; cluster_id < chunk_count; ++cluster_id) {
+      const auto& chunk = table.get_chunk(cluster_id);
+      const auto& segment = chunk->get_segment(_sort_merge_join._primary_predicate.column_ids.second);
+      segment_iterate<T>(*segment, [&](const auto& position) {
+        if (position.is_null()) {
+          has_null = true;
+          return;
+        }
+      });
+      if (has_null) return true;
+    }
+    return false;
+  }
+
  public:
   std::shared_ptr<const Table> _on_execute() override {
-    const auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
-    const auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
-    auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
-        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
-        include_null_left, include_null_right, _cluster_count, _performance);
+    // In some certain semi and anti join cases, we do not need to execute the sort-merge join algorithm. These can be
+    // determined before the merge.
+    // The case for the semi-join is:
+    // - The right table is empty. We can return an empty left table.
+    // The case for the anti null as false join is:
+    // - The right table is empty. We can return the left input table.
+    // The cases for the anti null as false join are:
+    // - The right table is empty. We can return the left input table.
+    // - If there is only one join predicate and the right table contains a null value in the join column, we can
+    //   return an empty left table.
+    if (_mode == JoinMode::Semi && _sort_merge_join.right_input_table()->empty()) {
+      return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
+    } else if (_mode == JoinMode::AntiNullAsFalse && _sort_merge_join.right_input_table()->empty()) {
+      return _sort_merge_join.left_input_table();
+    } else if (_mode == JoinMode::AntiNullAsTrue) {
+      if (_sort_merge_join.right_input_table()->empty()) return _sort_merge_join.left_input_table();
+      if (_secondary_join_predicates.empty()) {
+        auto right_side_has_null = _check_if_table_contains_null(*(_sort_merge_join.right_input_table()));
+        if (right_side_has_null) {
+          return Table::create_dummy_table(_sort_merge_join.left_input_table()->column_definitions());
+        }
+      }
+    }
+
+    auto sort_clusters = _primary_predicate_condition != PredicateCondition::Equals;
+    if (_mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue) {
+      // We always need to sort the table for the equal Anti case. Because we are interested in values that do not have
+      // a match.
+      sort_clusters = true;
+    }
+
+    const auto include_null_left =
+        (_mode == JoinMode::Left || _mode == JoinMode::FullOuter || _mode == JoinMode::AntiNullAsFalse ||
+         (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()));
+    const auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter ||
+                                     _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue);
+    auto radix_clusterer =
+        RadixClusterSort<T>(_sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
+                            _sort_merge_join._primary_predicate.column_ids, sort_clusters, include_null_left,
+                            include_null_right, _cluster_count, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -866,7 +1193,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     _perform_join();
 
-    if (include_null_left || include_null_right) {
+    if ((include_null_left || include_null_right) && _mode != JoinMode::AntiNullAsTrue) {
       auto null_output_left = RowIDPosList();
       auto null_output_right = RowIDPosList();
 
@@ -878,7 +1205,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           null_output_left.push_back(row_id_left);
         }
       }
-      if (include_null_right) {
+      if (include_null_right && _mode != JoinMode::AntiNullAsFalse) {
         null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
         null_output_right.reserve(_null_rows_right.size());
         for (const auto& row_id_right : _null_rows_right) {
@@ -893,6 +1220,44 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _output_pos_lists_right.push_back(std::move(null_output_right));
       }
     }
+
+    if (_mode == JoinMode::AntiNullAsTrue && !_secondary_join_predicates.empty()) {
+      // If the join mode is anti null as true with secondary predicates, we need to check for every left null row that:
+      // 1. There is no match with one of the right null rows where all predicates are satisfied.
+      // 2. There is no match with one of the right rows (not null) where all predicates are satisfied.
+      // We need to check the two cases because if  NULL AND X AND Y ... is for every combination False, we need
+      // to emit the row.
+      auto null_output_left = RowIDPosList();
+      null_output_left.reserve(_null_rows_left.size());
+      MultiPredicateJoinEvaluator multi_predicate_join_evaluator(*_sort_merge_join._left_input->get_output(),
+                                                                 *_sort_merge_join.right_input()->get_output(), _mode,
+                                                                 _secondary_join_predicates);
+      const auto right_range = TablePosition(0, 0).to(_end_of_table(_sorted_right_table));
+      for (const auto& row_id_left : _null_rows_left) {
+        auto match = false;
+        for (const auto& row_id_right : _null_rows_right) {
+          if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+            match = true;
+            break;
+          }
+        }
+        if (!match) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID row_id_right) {
+            if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id_left, row_id_right)) {
+              match = true;
+              return;
+            }
+          });
+        }
+        if (!match) {
+          null_output_left.push_back(row_id_left);
+        }
+      }
+      if (!null_output_left.empty()) {
+        _output_pos_lists_left.push_back(std::move(null_output_left));
+        _output_pos_lists_right.push_back(RowIDPosList());
+      }
+    }
     _performance.set_step_runtime(OperatorSteps::Merging, timer.lap());
 
     const auto create_left_side_pos_lists_by_segment = (_left_input_table->type() == TableType::References);
@@ -902,10 +1267,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // the hash join, we do not (for now) merge small partitions to keep the sorted chunk guarantees, which could be
     // exploited by subsequent operators.
     constexpr auto ALLOW_PARTITION_MERGE = false;
+    auto output_column_order = OutputColumnOrder::LeftFirstRightSecond;
+    if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+      output_column_order = OutputColumnOrder::LeftOnly;
+    }
     auto output_chunks =
         write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
                             create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                            OutputColumnOrder::LeftFirstRightSecond, ALLOW_PARTITION_MERGE);
+                            output_column_order, ALLOW_PARTITION_MERGE);
 
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
@@ -925,7 +1294,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
 
     if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
-        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+        _mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) {
       // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
       // non-equal predicates.
       result_table->set_value_clustered_by({left_join_column, right_join_column});

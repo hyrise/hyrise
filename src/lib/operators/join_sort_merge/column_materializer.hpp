@@ -69,7 +69,6 @@ class ColumnMaterializer {
       const auto& chunk = input->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
       const auto chunk_size = chunk->size();
-
       const auto samples_to_write = std::min(SAMPLES_PER_CHUNK, chunk_size);
       subsamples.push_back(Subsample<T>(samples_to_write));
 
