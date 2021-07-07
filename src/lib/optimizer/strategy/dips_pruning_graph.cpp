@@ -45,7 +45,7 @@ void DipsPruningGraph::build_graph(const std::shared_ptr<AbstractLQPNode>& node)
   // This rule only supports the inner and semi join
   if (node->type == LQPNodeType::Join) {
     if (std::find(supported_join_types.begin(), supported_join_types.end(),
-                  std::dynamic_pointer_cast<JoinNode>(node)->join_mode) == supported_join_types.end()) {
+                  static_cast<JoinNode&>(*node).join_mode) == supported_join_types.end()) {
       return;
     }
     const auto& join_node = static_cast<JoinNode&>(*node);
