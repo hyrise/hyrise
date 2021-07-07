@@ -60,6 +60,11 @@ BinID GenericHistogram<T>::bin_count() const {
 }
 
 template <typename T>
+BinID GenericHistogram<T>::bin_for_value(const T& value) const {
+  return _bin_for_value(value);
+}
+
+template <typename T>
 BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
   const auto it = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), it));
@@ -69,6 +74,11 @@ BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
   }
 
   return index;
+}
+
+template <typename T>
+BinID GenericHistogram<T>::next_bin_for_value(const T& value) const {
+  return _next_bin_for_value(value);
 }
 
 template <typename T>

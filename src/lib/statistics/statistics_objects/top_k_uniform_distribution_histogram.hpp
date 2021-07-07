@@ -23,7 +23,7 @@ class TopKUniformDistributionHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  TopKUniformDistributionHistogram(std::shared_ptr<EqualDistinctCountHistogram<T>> histogram, std::vector<T>&& top_k_names, 
+  TopKUniformDistributionHistogram(std::shared_ptr<GenericHistogram<T>> histogram, std::vector<T>&& top_k_names, 
     std::vector<HistogramCountType>&& top_k_counts, const HistogramDomain<T>& domain = {});
 
   /**

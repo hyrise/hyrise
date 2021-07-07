@@ -46,6 +46,9 @@ class GenericHistogram : public AbstractHistogram<T> {
 
   bool operator==(const GenericHistogram<T>& rhs) const;
 
+  BinID bin_for_value(const T& value) const;
+  BinID next_bin_for_value(const T& value) const;
+
  protected:
   BinID _bin_for_value(const T& value) const override;
 
