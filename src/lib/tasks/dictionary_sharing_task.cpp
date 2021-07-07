@@ -28,8 +28,13 @@ struct SegmentChunkColumn {
 };
 
 struct Memory_Usage_Stats {
-  int64_t previous = 0l;
-  int64_t current = 0l;
+
+  Memory_Usage_Stats() {}
+
+  Memory_Usage_Stats(long init_previous, long init_current) : previous(static_cast<double>(init_previous)), current(static_cast<double>(init_current)) {}
+
+  double previous = 0.0;
+  double current = 0.0;
 };
 
 struct Segment_Memory_Usage_Stats {
@@ -108,8 +113,10 @@ Segment_Memory_Usage_Stats apply_shared_dictionary_to_segments(
       new_attribute_vector_memory_usage - previous_attribute_vector_memory_usage;
   const auto dictionary_memory_usage_diff = new_dictionary_memory_usage - previous_dictionary_memory_usage;
 
-  const auto attribute_vector_relative_memory_diff = new_attribute_vector_memory_usage * 100.0 / previous_attribute_vector_memory_usage;
-  const auto dictionary_relative_memory_diff = new_dictionary_memory_usage * 100.0 / previous_dictionary_memory_usage;
+  const auto attribute_vector_relative_memory_diff = static_cast<double>(new_attribute_vector_memory_usage) * 100.0 / static_cast<double>(previous_attribute_vector_memory_usage);
+  const auto dictionary_relative_memory_diff = static_cast<double>(new_dictionary_memory_usage) * 100.0 / static_cast<double>(previous_dictionary_memory_usage);
+
+  Assert(dictionary_memory_usage_diff <= 0, "Dictionary grew in size, this should not happen.");
 
   std::cout << "Merged " << segment_chunk_columns.size()
           << " dictionaries for column "
@@ -131,7 +138,7 @@ Segment_Memory_Usage_Stats apply_shared_dictionary_to_segments(
   };
 }
 
-double calc_jaccard_index(size_t union_size, size_t intersection_size) { return intersection_size * 1.0 / union_size; }
+double calc_jaccard_index(size_t union_size, size_t intersection_size) { return static_cast<double>(intersection_size) / static_cast<double>(union_size); }
 
 template <typename T>
 void log_jaccard_index(const double jaccard_index, const std::string& table_name, const std::string& column_name,
@@ -162,7 +169,7 @@ void DictionarySharingTask::do_segment_sharing(std::optional<std::ofstream> csv_
 
   // Calculate jaccard index for each column in each table
   // The jaccard index is calculated between a dictionary segment and its preceding dictionary segment
-  for (const auto table_name : table_names) {
+  for (const auto& table_name : table_names) {
     const auto table = sm.get_table(table_name);
     // BinaryWriter::write(*table, table_path + table_name + ".bin");
     const auto column_count = table->column_count();
