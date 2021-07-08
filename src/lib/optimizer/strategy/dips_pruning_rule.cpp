@@ -57,7 +57,7 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
   });
 }
 
-void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
+void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) {
   for (const auto& predicate : edge.predicates) {
     const auto left_operand = predicate->left_operand();
     const auto right_operand = predicate->right_operand();
