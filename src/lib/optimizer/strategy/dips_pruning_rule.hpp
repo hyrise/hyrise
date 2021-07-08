@@ -71,10 +71,10 @@ class DipsPruningRule : public AbstractRule {
   std::vector<JoinMode> supported_join_types{JoinMode::Inner, JoinMode::Semi};
 
   static void _extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
-                             const std::set<ChunkID>& pruned_chunk_ids);
+                                    const std::set<ChunkID>& pruned_chunk_ids);
 
   static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                     std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
+                            std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
 
   void _visit_edge(DipsPruningGraphEdge& edge) const;
 
@@ -82,14 +82,14 @@ class DipsPruningRule : public AbstractRule {
 
   template <typename COLUMN_TYPE>
   static bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
-                        std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
+                               std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
     return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }
 
   template <typename COLUMN_TYPE>
   static bool _range_prunable(std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
-                       std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) {
+                              std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) {
     for (auto join_range : join_ranges) {
       for (auto const& [_, ranges] : chunk_ranges) {
         for (auto range : ranges) {
