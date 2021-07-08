@@ -163,7 +163,8 @@ class TableWrapper;
 // Defining the base fixture class
 class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) {
+  void SetUp(::benchmark::State& state) override {
+
     auto& storage_manager = Hyrise::get().storage_manager;
 
     // Generate tables
@@ -231,7 +232,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State&) {}
+  void TearDown(::benchmark::State&) override {}
 
   inline static bool _data_generated = false;
 
@@ -241,7 +242,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
 // benchmarks
 ///////////////////////////////
 
-BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_Keven_MultiColumnIndexScan)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto order_by_column = ORDER_COLUMNS[state.range(0)];
@@ -300,6 +301,7 @@ static void MultiIndexCustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-BENCHMARK_REGISTER_F(PingDataMultiIndexBenchmarkFixture, BM_Keven_MultiColumnIndexScan)->Apply(MultiIndexCustomArguments);
+
+BENCHMARK_REGISTER_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)->Apply(MultiIndexCustomArguments);
 
 }  // namespace opossum
