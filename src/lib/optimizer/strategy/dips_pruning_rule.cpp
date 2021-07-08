@@ -43,7 +43,7 @@ void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNod
 void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                                     const std::shared_ptr<StoredTableNode> join_partner_table_node,
                                     ColumnID join_partner_column_id) {
-  auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
   resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -59,21 +59,21 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
 
 void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
   for (const auto& predicate : edge.predicates) {
-    auto left_operand = predicate->left_operand();
-    auto right_operand = predicate->right_operand();
+    const auto left_operand = predicate->left_operand();
+    const auto right_operand = predicate->right_operand();
 
-    auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
-    auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
+    const auto left_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(left_operand);
+    const auto right_lqp = std::dynamic_pointer_cast<LQPColumnExpression>(right_operand);
 
     Assert(left_lqp && right_lqp, "Expected LQPColumnExpression!");
 
-    auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
-    auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
+    const auto l = std::dynamic_pointer_cast<const StoredTableNode>(left_lqp->original_node.lock());
+    const auto r = std::dynamic_pointer_cast<const StoredTableNode>(right_lqp->original_node.lock());
 
     Assert(l && r, "Expected StoredTableNode");
 
-    std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
-    std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
+    const std::shared_ptr<StoredTableNode> left_stored_table_node = std::const_pointer_cast<StoredTableNode>(l);
+    const std::shared_ptr<StoredTableNode> right_stored_table_node = std::const_pointer_cast<StoredTableNode>(r);
 
     if (!left_stored_table_node || !right_stored_table_node) {
       return;

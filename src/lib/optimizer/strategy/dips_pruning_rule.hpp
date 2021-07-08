@@ -74,7 +74,7 @@ class DipsPruningRule : public AbstractRule {
                                     const std::set<ChunkID>& pruned_chunk_ids);
 
   static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                            std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
+                            const std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
 
   void _visit_edge(DipsPruningGraphEdge& edge) const;
 
@@ -131,13 +131,13 @@ class DipsPruningRule : public AbstractRule {
     // For every non pruned chunk, we are saving the respective ranges.
     std::map<ChunkID, RangeList> ranges;
 
-    auto pruned_chunks_ids = table_node->pruned_chunk_ids();
-    auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+    const auto pruned_chunks_ids = table_node->pruned_chunk_ids();
+    const auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
       if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) != pruned_chunks_ids.end())
         continue;
-      auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
+      const auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
       const auto segment_statistics =
           std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
 
