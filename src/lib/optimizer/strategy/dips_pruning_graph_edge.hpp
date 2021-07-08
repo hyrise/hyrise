@@ -9,7 +9,8 @@ namespace opossum {
 
 struct DipsPruningGraphEdge {
  public:
-  explicit DipsPruningGraphEdge(const std::set<size_t> init_vertex_set, const std::shared_ptr<BinaryPredicateExpression> predicate)
+  explicit DipsPruningGraphEdge(const std::set<size_t> init_vertex_set,
+                                const std::shared_ptr<BinaryPredicateExpression> predicate)
       : vertex_set(init_vertex_set) {
     predicates.push_back(predicate);
   }

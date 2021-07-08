@@ -184,7 +184,7 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(lqp_column_(stored_table_node_1, ColumnID{0}),
                                                                   lqp_column_(stored_table_node_2, ColumnID{0})));
 
-  join_node->set_left_input(stored_table_node_2); 
+  join_node->set_left_input(stored_table_node_2);
   join_node->set_right_input(stored_table_node_1);
 
   StrategyBaseTest::apply_rule(rule, join_node);

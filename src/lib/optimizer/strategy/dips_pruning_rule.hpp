@@ -74,7 +74,8 @@ class DipsPruningRule : public AbstractRule {
                                     const std::set<ChunkID>& pruned_chunk_ids);
 
   static void _dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                            const std::shared_ptr<StoredTableNode> join_partner_table_node, ColumnID join_partner_column_id);
+                            const std::shared_ptr<StoredTableNode> join_partner_table_node,
+                            ColumnID join_partner_column_id);
 
   void _visit_edge(DipsPruningGraphEdge& edge) const;
 

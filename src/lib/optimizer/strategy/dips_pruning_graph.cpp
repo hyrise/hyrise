@@ -100,7 +100,8 @@ std::set<size_t> DipsPruningGraph::_get_vertex_set(const size_t noda_a, const si
   return std::set<size_t>{noda_a, noda_b};
 }
 
-void DipsPruningGraph::_add_edge(const std::set<size_t>& vertex_set, const std::shared_ptr<BinaryPredicateExpression>& predicate) {
+void DipsPruningGraph::_add_edge(const std::set<size_t>& vertex_set,
+                                 const std::shared_ptr<BinaryPredicateExpression>& predicate) {
   for (auto& edge : edges) {
     if (vertex_set == edge.vertex_set) {
       edge.append_predicate(predicate);

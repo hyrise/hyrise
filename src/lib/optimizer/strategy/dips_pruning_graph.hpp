@@ -56,7 +56,7 @@ struct DipsPruningGraph {
   bool _is_tree_visit(const size_t current_node, const size_t parrent, std::set<size_t>& visited);
 
   void _top_down_traversal_visit(const size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order,
-                                std::set<size_t>& visited);
+                                 std::set<size_t>& visited);
 
   void _bottom_up_traversal_visit(const size_t current_node, std::vector<DipsPruningGraphEdge>& traversal_order,
                                   std::set<size_t>& visited);
