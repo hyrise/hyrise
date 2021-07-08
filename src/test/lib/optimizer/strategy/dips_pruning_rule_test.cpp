@@ -34,15 +34,15 @@ class DipsPruningRuleTest : public StrategyBaseTest {
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
+    const auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2", int_float2_table);
 
-    auto int_float2_sorted_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
+    const auto int_float2_sorted_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_sorted_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted", int_float2_sorted_table);
 
-    auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
+    const auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_sorted_mixed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted_mixed", int_float2_sorted_mixed_table);
 
@@ -142,17 +142,17 @@ TEST_F(DipsPruningRuleTest, RangeIntersectionTest) {
 }
 
 TEST_F(DipsPruningRuleTest, CalculatePrunedChunks) {
-  std::map<ChunkID, std::vector<std::pair<int32_t, int32_t>>> base_ranges{
+  const std::map<ChunkID, std::vector<std::pair<int32_t, int32_t>>> base_ranges{
       {ChunkID{0}, std::vector{std::pair<int32_t, int32_t>(1, 5)}},
       {ChunkID{1}, std::vector{std::pair<int32_t, int32_t>(8, 10)}},
       {ChunkID{2}, std::vector{std::pair<int32_t, int32_t>(10, 12)}}};
-  std::map<ChunkID, std::vector<std::pair<int32_t, int32_t>>> partner_ranges{
+  const std::map<ChunkID, std::vector<std::pair<int32_t, int32_t>>> partner_ranges{
       {ChunkID{0}, std::vector{std::pair<int32_t, int32_t>(6, 7)}},  // raus
       {ChunkID{1}, std::vector{std::pair<int32_t, int32_t>(9, 11)}},
       {ChunkID{2}, std::vector{std::pair<int32_t, int32_t>(12, 16)}}};
 
-  auto pruned_chunks = rule->_calculate_pruned_chunks<int32_t>(base_ranges, partner_ranges);
-  std::set<ChunkID> expected_pruned_chunk_ids{ChunkID{0}};
+  const auto pruned_chunks = rule->_calculate_pruned_chunks<int32_t>(base_ranges, partner_ranges);
+  const std::set<ChunkID> expected_pruned_chunk_ids{ChunkID{0}};
 
   EXPECT_EQ(pruned_chunks.size(), 1);
   EXPECT_TRUE((pruned_chunks == expected_pruned_chunk_ids));
@@ -160,19 +160,19 @@ TEST_F(DipsPruningRuleTest, CalculatePrunedChunks) {
 
 TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   // LEFT -> RIGHT
-  auto stored_table_node_1 = std::make_shared<StoredTableNode>("int_float2_sorted");
-  auto stored_table_node_2 = std::make_shared<StoredTableNode>("int_float2");
+  const auto stored_table_node_1 = std::make_shared<StoredTableNode>("int_float2_sorted");
+  const auto stored_table_node_2 = std::make_shared<StoredTableNode>("int_float2");
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(lqp_column_(stored_table_node_2, ColumnID{0}),
                                                                        lqp_column_(stored_table_node_1, ColumnID{0})));
   join_node->set_left_input(stored_table_node_1);
   join_node->set_right_input(stored_table_node_2);
 
-  std::vector<ChunkID> pruned_chunk_ids{ChunkID{1}};
+  const std::vector<ChunkID> pruned_chunk_ids{ChunkID{1}};
   stored_table_node_2->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
 
   StrategyBaseTest::apply_rule(rule, join_node);
 
-  std::vector<ChunkID> expected_pruned_ids_right{ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  const std::vector<ChunkID> expected_pruned_ids_right{ChunkID{0}, ChunkID{2}, ChunkID{3}};
 
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_pruned_ids_right);
 
@@ -184,25 +184,25 @@ TEST_F(DipsPruningRuleTest, ApplyPruningSimple) {
   join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(lqp_column_(stored_table_node_1, ColumnID{0}),
                                                                   lqp_column_(stored_table_node_2, ColumnID{0})));
 
-  join_node->set_left_input(stored_table_node_2);
+  join_node->set_left_input(stored_table_node_2); 
   join_node->set_right_input(stored_table_node_1);
 
   StrategyBaseTest::apply_rule(rule, join_node);
 
-  std::vector<ChunkID> expected_pruned_ids_left{ChunkID{1}};
+  const std::vector<ChunkID> expected_pruned_ids_left{ChunkID{1}};
 
   EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_pruned_ids_left);
 }
 
 // NOLINTS introduced because of line length when commented out
 TEST_F(DipsPruningRuleTest, ApplyPruning) {
-  auto table_a = std::make_shared<StoredTableNode>("int_float2");
-  auto table_b = std::make_shared<StoredTableNode>("int_float2_sorted");
-  auto table_c = std::make_shared<StoredTableNode>("int_float2_sorted_mixed");
+  const auto table_a = std::make_shared<StoredTableNode>("int_float2");
+  const auto table_b = std::make_shared<StoredTableNode>("int_float2_sorted");
+  const auto table_c = std::make_shared<StoredTableNode>("int_float2_sorted_mixed");
 
-  std::vector<ChunkID> table_a_pruned_chunk_ids{};
-  std::vector<ChunkID> table_b_pruned_chunk_ids{ChunkID{0}};
-  std::vector<ChunkID> table_c_pruned_chunk_ids{};
+  const std::vector<ChunkID> table_a_pruned_chunk_ids{};
+  const std::vector<ChunkID> table_b_pruned_chunk_ids{ChunkID{0}};
+  const std::vector<ChunkID> table_c_pruned_chunk_ids{};
 
   table_a->set_pruned_chunk_ids(
       std::vector<ChunkID>(table_a_pruned_chunk_ids.begin(), table_a_pruned_chunk_ids.end()));  // NOLINT
@@ -223,9 +223,9 @@ TEST_F(DipsPruningRuleTest, ApplyPruning) {
 
   rule->_apply_to_plan_without_subqueries(input_lqp);
 
-  std::vector<ChunkID> expected_table_a_pruned_ids{ChunkID{1}};
-  std::vector<ChunkID> expected_table_b_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
-  std::vector<ChunkID> expected_table_c_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  const std::vector<ChunkID> expected_table_a_pruned_ids{ChunkID{1}};
+  const std::vector<ChunkID> expected_table_b_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
+  const std::vector<ChunkID> expected_table_c_pruned_ids{ChunkID{0}, ChunkID{2}, ChunkID{3}};
 
   EXPECT_EQ(table_a->pruned_chunk_ids(), expected_table_a_pruned_ids);
   EXPECT_EQ(table_b->pruned_chunk_ids(), expected_table_b_pruned_ids);

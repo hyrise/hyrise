@@ -36,15 +36,15 @@ class DipsPruningGraphTest : public StrategyBaseTest {
 
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
+    const auto int_float2_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2", int_float2_table);
 
-    auto int_float2_sorted_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
+    const auto int_float2_sorted_table = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_sorted_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted", int_float2_sorted_table);
 
-    auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
+    const auto int_float2_sorted_mixed_table = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2u);
     ChunkEncoder::encode_all_chunks(int_float2_sorted_mixed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float2_sorted_mixed", int_float2_sorted_mixed_table);
   }
@@ -112,9 +112,9 @@ TEST_F(DipsPruningGraphTest, BuildJoinGraph) {
 
 TEST_F(DipsPruningGraphTest, JoinGraphIsTree) {
   auto graph = DipsPruningGraph{supported_join_types};
-  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
-  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
-  auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2, 3}, nullptr};
+  const auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  const auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  const auto edge_c_d = DipsPruningGraphEdge{std::set<size_t>{2, 3}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_d);
@@ -124,9 +124,9 @@ TEST_F(DipsPruningGraphTest, JoinGraphIsTree) {
 
 TEST_F(DipsPruningGraphTest, DipsJoinGraphIsNoTree) {
   auto graph = DipsPruningGraph{supported_join_types};
-  auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
-  auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
-  auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2, 1}, nullptr};
+  const auto edge_a_b = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  const auto edge_a_c = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  const auto edge_c_b = DipsPruningGraphEdge{std::set<size_t>{2, 1}, nullptr};
   graph.edges.push_back(edge_a_b);
   graph.edges.push_back(edge_a_c);
   graph.edges.push_back(edge_c_b);
@@ -144,25 +144,25 @@ TEST_F(DipsPruningGraphTest, DipsJoinGraphTraversal) {
   *       3      4      5
   */
   auto graph = DipsPruningGraph{supported_join_types};
-  auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
-  auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
-  auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1, 3}, nullptr};
-  auto edge_1_4 = DipsPruningGraphEdge{std::set<size_t>{1, 4}, nullptr};
-  auto edge_2_5 = DipsPruningGraphEdge{std::set<size_t>{2, 5}, nullptr};
+  const auto edge_0_1 = DipsPruningGraphEdge{std::set<size_t>{0, 1}, nullptr};
+  const auto edge_0_2 = DipsPruningGraphEdge{std::set<size_t>{0, 2}, nullptr};
+  const auto edge_1_3 = DipsPruningGraphEdge{std::set<size_t>{1, 3}, nullptr};
+  const auto edge_1_4 = DipsPruningGraphEdge{std::set<size_t>{1, 4}, nullptr};
+  const auto edge_2_5 = DipsPruningGraphEdge{std::set<size_t>{2, 5}, nullptr};
   graph.edges.push_back(edge_0_1);
   graph.edges.push_back(edge_0_2);
   graph.edges.push_back(edge_1_3);
   graph.edges.push_back(edge_1_4);
   graph.edges.push_back(edge_2_5);
 
-  auto top_down_result = graph.top_down_traversal();
+  const auto top_down_result = graph.top_down_traversal();
 
   const std::vector<DipsPruningGraphEdge> expected_edges_top_down_traversal{edge_0_1, edge_1_3, edge_1_4, edge_0_2,
                                                                             edge_2_5};
 
   EXPECT_EQ(top_down_result, expected_edges_top_down_traversal);
 
-  auto bottom_up_result = graph.bottom_up_traversal();
+  const auto bottom_up_result = graph.bottom_up_traversal();
 
   const std::vector<DipsPruningGraphEdge> expected_edges_bottom_up_traversal{edge_1_3, edge_1_4, edge_0_1, edge_2_5,
                                                                              edge_0_2};
