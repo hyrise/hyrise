@@ -91,9 +91,9 @@ class DipsPruningRule : public AbstractRule {
   template <typename COLUMN_TYPE>
   static bool _range_prunable(const std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
                               const std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) {
-    for (const auto join_range : join_ranges) {
+    for (const auto& join_range : join_ranges) {
       for (const auto& [_, ranges] : chunk_ranges) {
-        for (const auto range : ranges) {
+        for (const auto& range : ranges) {
           if (_range_intersect<COLUMN_TYPE>(join_range, range)) return false;
         }
       }
