@@ -41,7 +41,7 @@ void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNod
 }
 
 void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
-                                    std::shared_ptr<StoredTableNode> join_partner_table_node,
+                                    const std::shared_ptr<StoredTableNode> join_partner_table_node,
                                     ColumnID join_partner_column_id) {
   auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
@@ -49,10 +49,10 @@ void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode>
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // TODO(somebody): check if pointers would be more efficient
-    auto base_ranges = _get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
-    auto partner_ranges =
+    const auto base_ranges = _get_not_pruned_range_statistics<ColumnDataType>(table_node, column_id);
+    const auto partner_ranges =
         _get_not_pruned_range_statistics<ColumnDataType>(join_partner_table_node, join_partner_column_id);
-    auto pruned_chunks = _calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
+    const auto pruned_chunks = _calculate_pruned_chunks<ColumnDataType>(base_ranges, partner_ranges);
     _extend_pruned_chunks(join_partner_table_node, pruned_chunks);
   });
 }

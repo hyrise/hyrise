@@ -81,18 +81,18 @@ class DipsPruningRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
   template <typename COLUMN_TYPE>
-  static bool _range_intersect(std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
-                               std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
+  static bool _range_intersect(const std::pair<COLUMN_TYPE, COLUMN_TYPE> range_a,
+                               const std::pair<COLUMN_TYPE, COLUMN_TYPE> range_b) {
     return !(((range_a.first < range_b.first) && (range_a.second < range_b.first)) ||
              ((range_a.first > range_b.second) && (range_a.second > range_b.second)));
   }
 
   template <typename COLUMN_TYPE>
-  static bool _range_prunable(std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
-                              std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) {
-    for (auto join_range : join_ranges) {
-      for (auto const& [_, ranges] : chunk_ranges) {
-        for (auto range : ranges) {
+  static bool _range_prunable(const std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
+                              const std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>> join_ranges) {
+    for (const auto join_range : join_ranges) {
+      for (const auto& [_, ranges] : chunk_ranges) {
+        for (const auto range : ranges) {
           if (_range_intersect<COLUMN_TYPE>(join_range, range)) return false;
         }
       }
@@ -105,10 +105,10 @@ class DipsPruningRule : public AbstractRule {
   // table. If there is one case where the ranges intersect we skip the pruning of the chunk.
   template <typename COLUMN_TYPE>
   static std::set<ChunkID> _calculate_pruned_chunks(
-      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
-      std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> join_chunk_ranges) {
+      const std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> chunk_ranges,
+      const std::map<ChunkID, std::vector<std::pair<COLUMN_TYPE, COLUMN_TYPE>>> join_chunk_ranges) {
     std::set<ChunkID> pruned_chunk_ids;
-    for (auto const& [join_chunk_id, join_ranges] : join_chunk_ranges) {
+    for (const auto& [join_chunk_id, join_ranges] : join_chunk_ranges) {
       if (_range_prunable(chunk_ranges, join_ranges)) {
         pruned_chunk_ids.insert(join_chunk_id);
       }
@@ -147,8 +147,8 @@ class DipsPruningRule : public AbstractRule {
         if (segment_statistics->range_filter) {
           ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, segment_statistics->range_filter->ranges));
         } else if (segment_statistics->dips_min_max_filter) {
-          auto min = segment_statistics->dips_min_max_filter->min;
-          auto max = segment_statistics->dips_min_max_filter->max;
+          const auto min = segment_statistics->dips_min_max_filter->min;
+          const auto max = segment_statistics->dips_min_max_filter->max;
           ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
         } else {
           ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList()));
@@ -156,8 +156,8 @@ class DipsPruningRule : public AbstractRule {
           continue;
         }
       } else if (segment_statistics->min_max_filter) {
-        auto min = segment_statistics->min_max_filter->min;
-        auto max = segment_statistics->min_max_filter->max;
+        const auto min = segment_statistics->min_max_filter->min;
+        const auto max = segment_statistics->min_max_filter->max;
         ranges.insert(std::pair<ChunkID, RangeList>(chunk_index, RangeList({Range(min, max)})));
       }
     }
