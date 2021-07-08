@@ -1,5 +1,6 @@
+#include <string>
+
 #include "dips_pruning_rule.hpp"
-#include <iostream>
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -20,8 +21,13 @@
 
 namespace opossum {
 
+std::string DipsPruningRule::name() const {
+  static const auto name = std::string{"DipsPruningRule"};
+  return name;
+}
+
 void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNode>& table_node,
-                                            const std::set<ChunkID>& pruned_chunk_ids) const {
+                                            const std::set<ChunkID>& pruned_chunk_ids) {
   const auto& already_pruned_chunk_ids = table_node->pruned_chunk_ids();
 
   if (!already_pruned_chunk_ids.empty()) {
@@ -36,7 +42,7 @@ void DipsPruningRule::_extend_pruned_chunks(const std::shared_ptr<StoredTableNod
 
 void DipsPruningRule::_dips_pruning(const std::shared_ptr<const StoredTableNode> table_node, ColumnID column_id,
                                     std::shared_ptr<StoredTableNode> join_partner_table_node,
-                                    ColumnID join_partner_column_id) const {
+                                    ColumnID join_partner_column_id) {
   auto table = Hyrise::get().storage_manager.get_table(table_node->table_name);
 
   resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
