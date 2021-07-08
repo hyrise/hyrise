@@ -41,19 +41,19 @@ namespace opossum {
 // 2. Based on this information we can create dips on the join columns of table B.
 // 3. We can skip all chunks in table B where the dips are not satisfied.
 /**  
-*                                  |><|
-*                           A.att_1 = B.att_1
-*                                 /    \
-*                               /        \
-*                             /            \
-*                            A               B (selection) att_2 > 15
-*                        att_1  att_3       att_1  att_2
-*      | - - >  chunk 0 |  0  |  a  |      |  0  |  10  | <- can be pruned
-*      | - - >  chunk 1 |  0  |  b  |      |  1  |  50  |       |
-*      |        chunk 2 |  1  |  c  |      |  3  |  90  |       |
-*      |                                                        |
-*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-*     since all chunks where att_1 with value 0 will have no match
+*                                                         |><|
+*                                        |- - - -  A.att_1 = B.att_1 - - -|
+*                                        |                                |
+*                                        |                                |
+*                                        |                                |
+*                                        A                                B (selection) att_2 > 15
+*                               att_1        att_3             att_1           att_2
+*      | - - >  chunk 0 | min:10 , max: 20 |  a  |      |  min:0 , max: 40   |  10  | <- can be pruned
+*      | - - >  chunk 1 | min:0 , max: 30  |  b  |      |  min:50 , max: 60  |  50  |       |
+*      |        chunk 2 | min:50 , max: 60 |  c  |      |  min:70 , max: 80  |  90  |       |
+*      |                                                                                    |
+*      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+*     since all chunks where the value of att_1 lies in the range of [0, 40] will have no match
 */
 class AbstractLQPNode;
 

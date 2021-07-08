@@ -108,9 +108,9 @@ void DipsPruningRule::_visit_edge(DipsPruningGraphEdge& edge) const {
 *                /            \
 *              B                A
 *  After that, the basic procedure is to traverse the tree button up and then top-down. In every visit, we are running
-*  the dip pruning algorithm for the current node. The algorithm uses the predicates which are saved in the edge that
-*  is connecting the current node with its parent node. Inside the algorithm, we check which chunks can be pruned in
-*  both the join tables.
+*  the dip pruning algorithm for the current edge. The algorithm uses the predicates which are saved in the edge that
+*  is connecting two nodes that are representing the join tables. Inside the algorithm, we check which chunks can be
+*  pruned in both the join tables.
 */
 void DipsPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto graph = DipsPruningGraph{supported_join_types};
