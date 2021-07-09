@@ -53,14 +53,23 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
     return nullptr;
   }
 
+  // If the column holds less than K distinct values use the distinct count as K instead
+
+  // if (value_distribution.size() < K) K = value_distribution.size();
+
   // Get the first top k values and save them into vectors
   std::vector<T> top_k_names(K);
   std::vector<HistogramCountType> top_k_counts(K);
 
-  // Sort values by occurence count
+  // Sort values by occurrence count
   auto sorted_count_values = value_distribution;
   std::sort(sorted_count_values.begin(), sorted_count_values.end(),
             [&](const auto& l, const auto& r) { return l.second > r.second; });
+
+  // Sort k values with highest occurrence count lexicographically.
+  // We later use this for more performant range predicate evaluation.
+  std::sort(sorted_count_values.begin(), sorted_count_values.begin() + K,
+            [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   if (!sorted_count_values.empty()) {
     for(auto i = 0u; i < K; i++) {
@@ -71,9 +80,9 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
 
   //print top k values
 
-  for(auto i = 0u; i < K; i++) {
-        std::cout << "value: " << top_k_names[i] << " with count: " << top_k_counts[i] <<std::endl;
-      }
+  // for(auto i = 0u; i < K; i++) {
+  //       std::cout << "value: " << top_k_names[i] << " with count: " << top_k_counts[i] <<std::endl;
+  // }
 
   // Remove Top K values from value distribution
   for (auto i = 0u; i < K; i++) {
@@ -165,10 +174,95 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
 
       return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
     }
-    case PredicateCondition::LessThanEquals:
-    case PredicateCondition::LessThan:
-    case PredicateCondition::GreaterThan:
-    case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::LessThanEquals: {
+      // To evaluate a LessThanEquals condition we find the top-k and histogram values that fullfill the condition
+
+      // Top-K Values
+      //TODO: is copy necessary?
+      auto new_top_k_names = _top_k_names;
+      auto new_top_k_counts = _top_k_counts;
+
+      auto upper_bound = std::upper_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
+      new_top_k_names.erase(upper_bound, new_top_k_names.end());
+      new_top_k_counts.resize(new_top_k_names.size());
+
+      //print new top k values
+      std::cout << "New top k values after applying PredicateCondition::LessThanEquals" << std::endl;
+      for(auto i = 0u; i < new_top_k_names.size(); i++) {
+        std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
+      }
+
+      // Histogram Values
+      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
+
+      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
+    }
+    case PredicateCondition::LessThan: {
+      // Top-K Values
+      auto new_top_k_names = _top_k_names;
+      auto new_top_k_counts = _top_k_counts;
+
+      auto lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
+      new_top_k_names.erase(lower_bound, new_top_k_names.end());
+      new_top_k_counts.resize(new_top_k_names.size());
+
+      //print new top k values
+      std::cout << "New top k values after applying PredicateCondition::LessThan" << std::endl;
+      for(auto i = 0u; i < new_top_k_names.size(); i++) {
+        std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
+      }
+
+      // Histogram Values
+      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
+
+      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
+    }
+    case PredicateCondition::GreaterThan: {
+      // Top-K Values
+      auto new_top_k_names = _top_k_names;
+      auto new_top_k_counts = _top_k_counts;
+
+      auto upper_bound = std::upper_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
+
+      const auto previous_top_k_names_size = new_top_k_names.size();
+      new_top_k_names.erase(new_top_k_names.begin(), upper_bound);
+      const auto num_deleted_top_k_values = previous_top_k_names_size - new_top_k_names.size();
+      new_top_k_counts.erase(new_top_k_counts.begin(), new_top_k_counts.begin() + num_deleted_top_k_values);
+
+      //print new top k values
+      std::cout << "New top k values after applying PredicateCondition::GreaterThan" << std::endl;
+      for(auto i = 0u; i < new_top_k_names.size(); i++) {
+        std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
+      }
+
+      // Histogram Values
+      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
+
+      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
+    }
+    case PredicateCondition::GreaterThanEquals: {
+      // Top-K Values
+      auto new_top_k_names = _top_k_names;
+      auto new_top_k_counts = _top_k_counts;
+
+      auto lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
+
+      const auto previous_top_k_names_size = new_top_k_names.size();
+      new_top_k_names.erase(new_top_k_names.begin(), lower_bound);
+      const auto num_deleted_top_k_values = previous_top_k_names_size - new_top_k_names.size();
+      new_top_k_counts.erase(new_top_k_counts.begin(), new_top_k_counts.begin() + num_deleted_top_k_values);
+
+      //print new top k values
+      std::cout << "New top k values after applying PredicateCondition::GreaterThanEquals" << std::endl;
+      for(auto i = 0u; i < new_top_k_names.size(); i++) {
+        std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
+      }
+
+      // Histogram Values
+      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
+
+      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
+    }
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
