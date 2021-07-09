@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-const uint16_t K = 100;
+uint16_t TOP_K = 100;
 
 class Table;
 
