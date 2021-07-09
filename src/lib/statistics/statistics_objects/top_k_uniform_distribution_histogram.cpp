@@ -291,6 +291,22 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
   Fail("Invalid enum value");
 }
 
+template <typename T>
+std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::scaled(const Selectivity selectivity) const {
+  Assert(!std::isnan(selectivity), "Selectivity should not be NaN");
+
+  // As we have no better information we assume that the occurrences of top-k values are scaled uniformly.
+  auto scaled_top_k_names = _top_k_names;
+  auto scaled_top_k_counts = _top_k_counts;
+  std::transform(_top_k_counts.begin(), _top_k_counts.end(), scaled_top_k_counts.begin(),
+                   [&selectivity](HistogramCountType count) -> HistogramCountType { return count * selectivity; });
+
+  // Scale histogram values
+  auto scaled_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->scaled(selectivity));
+
+  return std::make_shared<TopKUniformDistributionHistogram<T>>(scaled_histogram, std::move(scaled_top_k_names), std::move(scaled_top_k_counts));
+}
+
 
 template <typename T>
 std::string TopKUniformDistributionHistogram<T>::name() const {
