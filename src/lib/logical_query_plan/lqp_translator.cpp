@@ -12,6 +12,8 @@
 #include "alias_node.hpp"
 #include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
+#include "create_index_node.hpp"
+#include "drop_index_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"
 #include "delete_node.hpp"
@@ -47,6 +49,8 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_index.hpp"
+#include "operators/maintenance/drop_index.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
@@ -143,6 +147,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
+    case LQPNodeType::CreateIndex:        return _translate_create_index_node(node);
+    case LQPNodeType::DropIndex:        return _translate_drop_index_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
     case LQPNodeType::Import:             return _translate_import_node(node);
@@ -503,6 +509,24 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
   return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto create_index_node = std::dynamic_pointer_cast<CreateIndexNode>(node);
+  const auto input_node = create_index_node->left_input();
+
+  return std::make_shared<CreateIndex>(create_index_node->index_name, create_index_node->column_ids,  create_index_node->if_not_exists, translate_node(input_node));
+
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto drop_index_node = std::dynamic_pointer_cast<DropIndexNode>(node);
+  const auto input_node = drop_index_node->left_input();
+
+  return std::make_shared<DropIndex>(drop_index_node->index_name, translate_node(input_node));
+
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

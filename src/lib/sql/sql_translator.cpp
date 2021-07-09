@@ -36,6 +36,8 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -1251,6 +1253,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView:
       return _translate_create_view(create_statement);
+    case hsql::CreateType::kCreateIndex:
+      return _translate_create_index(create_statement);
     case hsql::CreateType::kCreateTable:
       return _translate_create_table(create_statement);
     case hsql::CreateType::kCreateTableFromTbl:
@@ -1285,6 +1289,50 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
                               create_statement.ifNotExists);
 }
 
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hsql::CreateStatement& create_statement) {
+
+  Assert(Hyrise::get().storage_manager.has_table(create_statement.tableName), "table not existent");
+
+  auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  std::string column_name_string;
+
+  for (auto column_name : *(create_statement.indexColumns)) {
+    auto column_id = target_table->column_id_by_name(column_name);
+    column_name_string += "_";
+    column_name_string += column_name;
+    if(column_id != INVALID_COLUMN_ID) {
+      column_ids->emplace_back(column_id);
+    } else {
+      FailInput("Column " + std::string(column_name) +
+                " does not exist on table " + std::string(create_statement.tableName) +
+                "." );
+    }
+  }
+
+  auto input_node = StoredTableNode::make(create_statement.tableName);
+
+  std::string index_name;
+  if(create_statement.indexName) {
+    index_name = create_statement.indexName;
+  } else {
+    index_name = create_statement.tableName + column_name_string;
+  }
+
+  return CreateIndexNode::make(index_name, create_statement.ifNotExists, column_ids, input_node);
+
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
+
+  Assert(Hyrise::get().storage_manager.has_table(drop_statement.name), "table not existent");
+  auto table = Hyrise::get().storage_manager.get_table(drop_statement.name);
+  auto input_node = StoredTableNode::make(drop_statement.name);
+
+  return DropIndexNode::make(drop_statement.index_name, input_node);
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
@@ -1308,6 +1356,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::LONG:
           column_definition.data_type = DataType::Long;
           break;
+        case hsql::DataType::DECIMAL:
+          std::cout << "WARNING: Implicitly converting DECIMAL to FLOAT";
+          [[fallthrough]];
+        case hsql::DataType::REAL:
+          std::cout << "WARNING: Implicitly converting REAL to FLOAT";
+          [[fallthrough]];
         case hsql::DataType::FLOAT:
           column_definition.data_type = DataType::Float;
           break;
@@ -1316,13 +1370,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           break;
         case hsql::DataType::CHAR:
         case hsql::DataType::VARCHAR:
+        case hsql::DataType::VARCHAR_VARYING:
+          std::cout << "WARNING: Implicitly converting VARCHAR_VARYING to STRING";
+          [[fallthrough]];
         case hsql::DataType::TEXT:
+        case hsql::DataType::DATE:
+        case hsql::DataType::DATETIME:
+        case hsql::DataType::TIME:
+          // Naive parsing of different data types into string.
           // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
           column_definition.data_type = DataType::String;
           break;
-        case hsql::DataType::DATE:
-        case hsql::DataType::DATETIME:
-          Fail("Date(time) types are not supported yet");
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
@@ -1372,6 +1430,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
       return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropSchema:
     case hsql::DropType::kDropIndex:
+      return _translate_drop_index(drop_statement);
     case hsql::DropType::kDropPreparedStatement:
       FailInput("This DROP type is not implemented yet");
   }

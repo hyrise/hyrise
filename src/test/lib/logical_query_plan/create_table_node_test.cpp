@@ -28,7 +28,6 @@ TEST_F(CreateTableNodeTest, Description) {
   auto create_table_node_2 = CreateTableNode::make("some_table", true, input_node);
   EXPECT_EQ(create_table_node_2->description(), "[CreateTable] IfNotExists Name: 'some_table'");
 }
-
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
 
 TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {

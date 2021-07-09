@@ -65,6 +65,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
     case LQPNodeType::DropView:
+    case LQPNodeType::DropIndex:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
     case LQPNodeType::Import:
@@ -177,6 +178,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     // No pruning of the input columns for these nodes as they need them all.
     case LQPNodeType::CreateTable:
+    case LQPNodeType::CreateIndex:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
     case LQPNodeType::Export:

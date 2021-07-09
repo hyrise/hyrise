@@ -12,6 +12,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -2264,6 +2265,48 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, CreateIndex) {
+  const auto query = "CREATE INDEX my_index ON int_int_int (a, b);";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->emplace_back(ColumnID{0});
+  column_ids->emplace_back(ColumnID{1});
+
+  const auto expected_lqp = CreateIndexNode::make("my_index", false, column_ids, stored_table_node_int_int_int);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateIndexIfNotExist) {
+  const auto query = "CREATE INDEX my_index IF NOT EXISTS ON int_int_int (a, b);";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->emplace_back(ColumnID{0});
+  column_ids->emplace_back(ColumnID{1});
+
+  const auto expected_lqp = CreateIndexNode::make("my_index", true, column_ids, stored_table_node_int_int_int);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
+  const auto query = "CREATE INDEX ON int_int_int (a, b);";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->emplace_back(ColumnID{0});
+  column_ids->emplace_back(ColumnID{1});
+
+  const auto expected_lqp = CreateIndexNode::make("int_int_int_a_b", false, column_ids, stored_table_node_int_int_int);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, CreateView) {
   const auto query = "CREATE VIEW my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
   const auto [result_node, translation_info] = sql_to_lqp_helper(query);
@@ -2361,6 +2404,24 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                                                          {"a_float", DataType::Float, false},
                                                          {"a_double", DataType::Double, true},
                                                          {"a_string", DataType::String, false}};
+
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateTableTypeConversions) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "CREATE TABLE a_table (a_decimal DECIMAL(5,2), a_real REAL, a_varchar_varying CHARACTER VARYING(10),"
+      "a_date DATE, a_time TIME, a_datetime DATETIME)");
+
+  const auto column_definitions = TableColumnDefinitions{{"a_decimal", DataType::Float, false},
+                                                         {"a_real", DataType::Float, false},
+                                                         {"a_varchar_varying", DataType::String, false},
+                                                         {"a_date", DataType::String, false},
+                                                         {"a_time", DataType::String, false},
+                                                         {"a_datetime", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
