@@ -26,8 +26,7 @@ std::shared_ptr<Table> MetaIndexesTable::_on_generate() const {
       for (auto col_id : index.column_ids) {
         column_names += " " + table->column_name(col_id);
       }
-      // TODO: convert index.type to string instead of using "GroupKeyIndex"
-      output_table->append({pmr_string{index.name}, "GroupKeyIndex",
+      output_table->append({pmr_string{index.name}, static_cast<pmr_string>(segment_index_type_to_string(index.type)),
                             static_cast<pmr_string>(table_name),
                             static_cast<pmr_string>(column_names),
                             });

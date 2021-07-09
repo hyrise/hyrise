@@ -485,6 +485,7 @@ set(
     storage/index/index_statistics.cpp
     storage/index/index_statistics.hpp
     storage/index/segment_index_type.hpp
+    storage/index/segment_index_type.cpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp

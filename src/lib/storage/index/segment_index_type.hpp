@@ -12,6 +12,8 @@ namespace hana = boost::hana;
 
 enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree };
 
+std::string segment_index_type_to_string(SegmentIndexType type);
+
 class GroupKeyIndex;
 class CompositeGroupKeyIndex;
 class AdaptiveRadixTreeIndex;
