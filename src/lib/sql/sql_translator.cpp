@@ -1382,8 +1382,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           Fail("UNKNOWN data type cannot be handled here");
       }
 
+
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
+
+      if (parser_column_definition->constraintType != ) {
+        switch (parser_column_definition->constraintType) {
+          case hsql::ConstraintType::PRIMARY_KEY:
+            column_definition.constraint = KeyConstraintType::PRIMARY_KEY;
+          case hsql::ConstraintType::UNIQUE:
+            column_definition.constraint = KeyConstraintType::UNIQUE;
+        }
+      }
     }
 
     auto table = Table::create_dummy_table(column_definitions);
@@ -1392,14 +1402,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     for (auto tableKeyConstraint : *create_statement.tableKeyConstraints) {
       std::unordered_set<ColumnID> column_ids;
       switch (tableKeyConstraint->type) {
-        case hsql::KeyType::PRIMARY_KEY:
+        case hsql::ConstraintType::PRIMARY_KEY:
           for(auto name : *tableKeyConstraint->columnNames) {
             auto column_id = table->column_id_by_name(std::basic_string<char>{name});
                 column_ids.insert(column_id);
           }
           tableKeyConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
           break;
-        case hsql::KeyType::UNIQUE:
+        case hsql::ConstraintType::UNIQUE:
           for(auto name : *tableKeyConstraint->columnNames) {
             auto column_id = table->column_id_by_name(std::basic_string<char>{name});
             column_ids.insert(column_id);
