@@ -55,11 +55,11 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
 
   // If the column holds less than K distinct values use the distinct count as TOP_K instead
 
-  if (value_distribution.size() < TOP_K) TOP_K = value_distribution.size();
+  auto k = std::min(TOP_K_DEFAULT, value_distribution.size());
 
   // Get the first top k values and save them into vectors
-  std::vector<T> top_k_names(TOP_K);
-  std::vector<HistogramCountType> top_k_counts(TOP_K);
+  std::vector<T> top_k_names(k);
+  std::vector<HistogramCountType> top_k_counts(k);
 
   // Sort values by occurrence count
   auto sorted_count_values = value_distribution;
@@ -68,11 +68,11 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
 
   // Sort TOP_K values with highest occurrence count lexicographically.
   // We later use this for more performant range predicate evaluation.
-  std::sort(sorted_count_values.begin(), sorted_count_values.begin() + TOP_K,
+  std::sort(sorted_count_values.begin(), sorted_count_values.begin() + k,
             [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   if (!sorted_count_values.empty()) {
-    for(auto i = 0u; i < TOP_K; i++) {
+    for(auto i = 0u; i < k; i++) {
       top_k_names[i] = sorted_count_values[i].first;
       top_k_counts[i] = sorted_count_values[i].second;
     }
@@ -85,7 +85,7 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
   // }
 
   // Remove TOP_K values from value distribution
-  for (auto i = 0u; i < TOP_K; i++) {
+  for (auto i = 0u; i < k; i++) {
     auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[i], top_k_counts[i]));
     value_distribution.erase(it, value_distribution.end());
   }

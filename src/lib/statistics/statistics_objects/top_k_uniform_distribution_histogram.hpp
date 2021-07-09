@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-uint16_t TOP_K = 100;
+const size_t TOP_K_DEFAULT = 100;
 
 class Table;
 
