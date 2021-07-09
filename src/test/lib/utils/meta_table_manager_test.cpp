@@ -16,6 +16,7 @@
 #include "utils/meta_tables/meta_system_information_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
+#include "utils/meta_tables/meta_indexes_table.hpp"
 
 namespace opossum {
 
@@ -36,7 +37,8 @@ class MetaTableManagerTest : public BaseTest {
             std::make_shared<MetaSettingsTable>(),
             std::make_shared<MetaLogTable>(),
             std::make_shared<MetaSystemInformationTable>(),
-            std::make_shared<MetaSystemUtilizationTable>()};
+            std::make_shared<MetaSystemUtilizationTable>(),
+            std::make_shared<MetaIndexesTable>()};
   }
 
   static MetaTableNames meta_table_names() {

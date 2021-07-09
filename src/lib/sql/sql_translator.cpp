@@ -1357,10 +1357,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           break;
         case hsql::DataType::DECIMAL:
           std::cout << "WARNING: Implicitly converting DECIMAL to FLOAT";
-          [[fallthrough]];
+          column_definition.data_type = DataType::Float;
+          break;
         case hsql::DataType::REAL:
           std::cout << "WARNING: Implicitly converting REAL to FLOAT";
-          [[fallthrough]];
+          column_definition.data_type = DataType::Float;
+          break;
         case hsql::DataType::FLOAT:
           column_definition.data_type = DataType::Float;
           break;
@@ -1371,7 +1373,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::VARCHAR:
         case hsql::DataType::VARCHAR_VARYING:
           std::cout << "WARNING: Implicitly converting VARCHAR_VARYING to STRING";
-          [[fallthrough]];
+          __TBB_fallthrough;
         case hsql::DataType::TEXT:
         case hsql::DataType::DATE:
         case hsql::DataType::DATETIME:

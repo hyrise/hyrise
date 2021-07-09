@@ -606,6 +606,8 @@ set(
     utils/meta_tables/meta_segments_table.cpp
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_indexes_table.cpp
+    utils/meta_tables/meta_indexes_table.hpp
     utils/meta_tables/meta_settings_table.hpp
     utils/meta_tables/meta_system_information_table.cpp
     utils/meta_tables/meta_system_information_table.hpp

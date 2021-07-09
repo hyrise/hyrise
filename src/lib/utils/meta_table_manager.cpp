@@ -1,6 +1,7 @@
 #include "meta_table_manager.hpp"
 
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
+#include "utils/meta_tables/meta_indexes_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
@@ -25,7 +26,8 @@ MetaTableManager::MetaTableManager() {
                                                                        std::make_shared<MetaPluginsTable>(),
                                                                        std::make_shared<MetaSettingsTable>(),
                                                                        std::make_shared<MetaSystemInformationTable>(),
-                                                                       std::make_shared<MetaSystemUtilizationTable>()};
+                                                                       std::make_shared<MetaSystemUtilizationTable>(),
+                                                                       std::make_shared<MetaIndexesTable>()};
 
   _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {
