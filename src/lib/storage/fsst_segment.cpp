@@ -15,15 +15,9 @@
 
 namespace opossum {
 
-//template <typename T>
-//FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
-//    : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
-//
-//
-//}
-
 template <typename T>
-FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values, std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
+FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
+                            std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
                             std::optional<pmr_vector<bool>>& null_values, fsst_decoder_t& decoder)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
       _compressed_values{std::move(compressed_values)},
@@ -51,13 +45,12 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
     }
   }
 
-//  auto decompressed_offsets;
   auto offset_decompressor = _compressed_offsets->create_base_decompressor();
 
   auto compressed_length = offset_decompressor->get(chunk_offset + 1) - offset_decompressor->get(chunk_offset);
   auto compressed_pointer = const_cast<unsigned char*>(
       _compressed_values.data() +
-          offset_decompressor->get(chunk_offset));  //Note: we use const_cast in order to use fsst_decompress
+      offset_decompressor->get(chunk_offset));  //Note: we use const_cast in order to use fsst_decompress
 
   size_t output_size = compressed_length * 8;  // TODO (anyone): is this correct?
 
@@ -115,7 +108,7 @@ EncodingType FSSTSegment<T>::encoding_type() const {
 
 template <typename T>
 std::optional<CompressedVectorType> FSSTSegment<T>::compressed_vector_type() const {
-    return _compressed_offsets->type();
+  return _compressed_offsets->type();
 }
 
 template <typename T>

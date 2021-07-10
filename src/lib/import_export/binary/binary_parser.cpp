@@ -171,7 +171,7 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
     case EncodingType::FSST:
       if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FSST>,
                                                 hana::type_c<ColumnDataType>)) {
-          return _import_fsst_segment(file, row_count);
+        return _import_fsst_segment(file, row_count);
       } else {
         Fail("Unsupported data type for FSST encoding");
       }
@@ -247,7 +247,8 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
 }
 
-std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file, ChunkOffset row_count) {
+std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file,
+                                                                            ChunkOffset row_count) {
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
 
   // Read compressed values
@@ -255,9 +256,9 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
 
   // Read compressed offsets
-//  const auto compressed_offsets_size = _read_value<uint32_t>(file);
+  //  const auto compressed_offsets_size = _read_value<uint32_t>(file);
   auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
-//  BaseCompressedVector compressed_offsets(_read_values<unsigned long>(file, compressed_offsets_size));
+  //  BaseCompressedVector compressed_offsets(_read_values<unsigned long>(file, compressed_offsets_size));
 
   const auto null_values_size = _read_value<uint32_t>(file);
   std::optional<pmr_vector<bool>> null_values;

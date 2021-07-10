@@ -279,7 +279,8 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream){
+void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FSST);
 
   // Write vector compression id
@@ -287,16 +288,15 @@ void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool colum
   export_value(ofstream, compressed_vector_type_id);
 
   // Write compressed_values size
-  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size())); //TODO: check if necessary
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size()));  //TODO: check if necessary
   // Write compressed_values
   export_values(ofstream, fsst_segment.compressed_values());
 
   // Write compressed_offsets size
-//  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_offsets()->size()));
+  //  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_offsets()->size()));
   // Write compressed_offsets
-//  export_values(ofstream, fsst_segment.compressed_offsets());
-  _export_compressed_vector(ofstream, *fsst_segment.compressed_vector_type(),
-                            *fsst_segment.compressed_offsets());
+  //  export_values(ofstream, fsst_segment.compressed_offsets());
+  _export_compressed_vector(ofstream, *fsst_segment.compressed_vector_type(), *fsst_segment.compressed_offsets());
 
   if (fsst_segment.null_values()) {
     // Write NULL value size
@@ -310,7 +310,6 @@ void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool colum
 
   export_value(ofstream, fsst_segment.decoder());
 }
-
 
 template <typename T>
 void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {

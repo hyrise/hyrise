@@ -125,9 +125,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     }
 
     // vector compression
-
     auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
-
 
     return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values_optional, decoder);
   }

@@ -21,8 +21,8 @@ template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
   //  explicit FSSTSegment();     // TODO: remove
-//  FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values);
-  FSSTSegment(pmr_vector<unsigned char>& compressed_values, std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
+  FSSTSegment(pmr_vector<unsigned char>& compressed_values,
+              std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
               std::optional<pmr_vector<bool>>& null_values, fsst_decoder_t& decoder);
 
   /**
