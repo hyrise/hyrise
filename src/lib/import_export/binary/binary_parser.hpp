@@ -89,8 +89,7 @@ class BinaryParser {
   template <typename T>
   static std::shared_ptr<LZ4Segment<T>> _import_lz4_segment(std::ifstream& file, ChunkOffset row_count);
 
-  template <typename T>
-  static std::shared_ptr<FSSTSegment<T>> _import_fsst_segment(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<FSSTSegment<pmr_string>> _import_fsst_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given compressed_vector_type_id.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(

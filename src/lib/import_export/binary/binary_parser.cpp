@@ -164,12 +164,17 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       } else {
-        Fail("Unsupported data type for FOR encoding");
+        Fail("Unsupported data type for FSST encoding");
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
     case EncodingType::FSST:
-      return _import_fsst_segment<ColumnDataType>(file, row_count);
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FSST>,
+                                                hana::type_c<ColumnDataType>)) {
+          return _import_fsst_segment(file, row_count);
+      } else {
+        Fail("Unsupported data type for FSST encoding");
+      }
   }
 
   Fail("Invalid EncodingType");
@@ -242,8 +247,7 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
 }
 
-template <typename T>
-std::shared_ptr<FSSTSegment<T>> BinaryParser::_import_fsst_segment(std::ifstream& file, ChunkOffset row_count) {
+std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file, ChunkOffset row_count) {
   // Read compressed values
   const auto compressed_value_size = _read_value<uint32_t>(file);
   pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
@@ -262,7 +266,7 @@ std::shared_ptr<FSSTSegment<T>> BinaryParser::_import_fsst_segment(std::ifstream
 
   fsst_decoder_t decoder = _read_value<fsst_decoder_t>(file);
 
-  return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values, decoder);
+  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, compressed_offsets, null_values, decoder);
 }
 
 template <typename T>
