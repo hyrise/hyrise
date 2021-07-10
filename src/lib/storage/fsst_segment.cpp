@@ -23,7 +23,7 @@ namespace opossum {
 //}
 
 template <typename T>
-FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values, pmr_vector<unsigned long>& compressed_offsets,
+FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values, std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
                             std::optional<pmr_vector<bool>>& null_values, fsst_decoder_t& decoder)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
       _compressed_values{std::move(compressed_values)},
@@ -51,10 +51,13 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
     }
   }
 
-  auto compressed_length = _compressed_offsets[chunk_offset + 1] - _compressed_offsets[chunk_offset];
+//  auto decompressed_offsets;
+  auto offset_decompressor = _compressed_offsets->create_base_decompressor();
+
+  auto compressed_length = offset_decompressor->get(chunk_offset + 1) - offset_decompressor->get(chunk_offset);
   auto compressed_pointer = const_cast<unsigned char*>(
       _compressed_values.data() +
-      _compressed_offsets[chunk_offset]);  //Note: we use const_cast in order to use fsst_decompress
+          offset_decompressor->get(chunk_offset));  //Note: we use const_cast in order to use fsst_decompress
 
   size_t output_size = compressed_length * 8;  // TODO (anyone): is this correct?
 
@@ -72,7 +75,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 
 template <typename T>
 ChunkOffset FSSTSegment<T>::size() const {
-  return static_cast<ChunkOffset>(_compressed_offsets.size() - 1);
+  return static_cast<ChunkOffset>(_compressed_offsets->size() - 1);
 }
 
 template <typename T>
@@ -80,7 +83,7 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
   auto new_null_values =
       _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
   auto new_compressed_values = pmr_vector<unsigned char>{_compressed_values, alloc};
-  auto new_compressed_offsets = pmr_vector<unsigned long>{_compressed_offsets, alloc};
+  auto new_compressed_offsets = _compressed_offsets->copy_using_allocator(alloc);
 
   fsst_decoder_t new_decoder = _decoder;
 
@@ -95,7 +98,7 @@ size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
   // enum class MemoryUsageCalculationMode { Sampled, Full };
 
   auto compressed_values_size = _compressed_values.size() * sizeof(unsigned char);
-  auto compressed_offsets_size = _compressed_offsets.size() * sizeof(unsigned long);
+  auto compressed_offsets_size = _compressed_offsets->data_size();
 
   auto null_value_size = (_null_values.has_value() ? _null_values.value().size() * sizeof(bool) : size_t{0}) +
                          sizeof(std::optional<pmr_vector<bool>>);
@@ -112,8 +115,7 @@ EncodingType FSSTSegment<T>::encoding_type() const {
 
 template <typename T>
 std::optional<CompressedVectorType> FSSTSegment<T>::compressed_vector_type() const {
-  // TODO add real values
-  return std::nullopt;
+    return _compressed_offsets->type();
 }
 
 template <typename T>
@@ -128,7 +130,7 @@ const pmr_vector<unsigned char>& FSSTSegment<T>::compressed_values() const {
 }
 
 template <typename T>
-const pmr_vector<unsigned long>& FSSTSegment<T>::compressed_offsets() const {
+const std::unique_ptr<const BaseCompressedVector>& FSSTSegment<T>::compressed_offsets() const {
   return _compressed_offsets;
 }
 

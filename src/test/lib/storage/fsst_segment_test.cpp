@@ -62,12 +62,12 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
-  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2429);
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2401);
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
-  for(const auto& value: values) {
+  for (const auto& value : values) {
     vs_str->append(value);
   }
   auto segment = compress(vs_str, DataType::String);
@@ -91,7 +91,7 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
 
   ASSERT_EQ(copied_segment->size(), values.size());
   for (size_t index = 0; index < values.size(); ++index) {
-    ASSERT_EQ(std::optional{values[index]}, copied_segment->get_typed_value(index) );
+    ASSERT_EQ(std::optional{values[index]}, copied_segment->get_typed_value(index));
   }
 }
 
@@ -109,8 +109,8 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
   pmr_vector<bool> expected_null_values = {false, false, true};
 
-  for(size_t index = 0; index < values.size(); ++index){
-    vs_str->append((expected_null_values[index])? NULL_VALUE : values[index]);
+  for (size_t index = 0; index < values.size(); ++index) {
+    vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
   auto segment = compress(vs_str, DataType::String);
@@ -138,8 +138,8 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
   pmr_vector<bool> expected_null_values = {false, false, true};
 
-  for(size_t index = 0; index < values.size(); ++index){
-    vs_str->append((expected_null_values[index])? NULL_VALUE : values[index]);
+  for (size_t index = 0; index < values.size(); ++index) {
+    vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
   auto segment = compress(vs_str, DataType::String);
