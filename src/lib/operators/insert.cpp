@@ -179,7 +179,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
 
-    auto target_chunk_statistic = target_chunk->pruning_statistics();
+    auto target_chunk_statistic = target_chunk->pruning_statistics_modifiable();
 
     // If the chunk has no statistics, we need to add the attribute statistics for every segment.
     if (!target_chunk_statistic.has_value()) {
@@ -233,7 +233,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       target_chunk_range_remaining_rows -= num_rows_current_iteration;
     }
 
-    target_chunk->set_pruning_statistics(target_chunk_statistic);
+    // target_chunk->set_pruning_statistics(target_chunk_statistic);
   }
 
   return nullptr;

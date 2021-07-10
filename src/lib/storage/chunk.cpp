@@ -206,7 +206,11 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
+std::optional<ChunkPruningStatistics> Chunk::pruning_statistics() const { return _pruning_statistics; }
+
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics_modifiable() const {
+  return _pruning_statistics;
+}
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   // Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");

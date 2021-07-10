@@ -133,7 +133,8 @@ class Chunk : private Noncopyable {
    * To perform Chunk pruning, a Chunk can be associated with statistics.
    * @{
    */
-  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
+  std::optional<ChunkPruningStatistics> pruning_statistics() const;
+  const std::optional<ChunkPruningStatistics>& pruning_statistics_modifiable() const;
   void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
   /** @} */
 

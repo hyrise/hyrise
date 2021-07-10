@@ -138,7 +138,9 @@ class DipsPruningRule : public AbstractRule {
     for (ChunkID chunk_index = ChunkID{0}; chunk_index < table->chunk_count(); ++chunk_index) {
       if (std::find(pruned_chunks_ids.begin(), pruned_chunks_ids.end(), chunk_index) != pruned_chunks_ids.end())
         continue;
-      const auto chunk_statistic = (*table->get_chunk(chunk_index)->pruning_statistics())[column_id];
+      const auto pruning_statistics = table->get_chunk(chunk_index)->pruning_statistics();
+      if (!pruning_statistics) continue;
+      const auto chunk_statistic = (*pruning_statistics)[column_id];
       const auto segment_statistics =
           std::dynamic_pointer_cast<const AttributeStatistics<COLUMN_TYPE>>(chunk_statistic);
 
