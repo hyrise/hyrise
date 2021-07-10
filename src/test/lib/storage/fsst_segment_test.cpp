@@ -48,11 +48,9 @@ std::shared_ptr<FSSTSegment<T>> compress(std::shared_ptr<ValueSegment<T>> segmen
 }
 
 TEST_F(StorageFSSTSegmentTest, CreateEmptyFSSTSegmentTest) {
-  pmr_vector<pmr_string> values;
-  pmr_vector<bool> null_values;
-  FSSTSegment<pmr_string> segment(values, null_values);
+  auto segment = compress(vs_str, DataType::String);
 
-  ASSERT_EQ(segment.size(), 0);
+  ASSERT_EQ(segment->size(), 0);
   //  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 0); TODO(anyone): check memory consumption
 }
 
@@ -64,20 +62,17 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
-  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2429); // TODO(anyone): check memory consumption
-}
-
-TEST_F(StorageFSSTSegmentTest, CreateFSSTSegmentTest) {
-  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
-  pmr_vector<bool> null_values = {false};
-  FSSTSegment<pmr_string> segment(values, null_values);
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2429);
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
-  FSSTSegment<pmr_string> segment(values, std::nullopt);
+  for(const auto& value: values) {
+    vs_str->append(value);
+  }
+  auto segment = compress(vs_str, DataType::String);
 
-  std::optional<pmr_string> value = segment.get_typed_value(ChunkOffset{2});
+  std::optional<pmr_string> value = segment->get_typed_value(ChunkOffset{2});
   ASSERT_EQ(values[2], value.value());
 }
 
@@ -96,27 +91,32 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
 
   ASSERT_EQ(copied_segment->size(), values.size());
   for (size_t index = 0; index < values.size(); ++index) {
-    ASSERT_EQ(copied_segment->get_typed_value(index), std::optional{values[index]});
+    ASSERT_EQ(std::optional{values[index]}, copied_segment->get_typed_value(index) );
   }
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
-  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
-  pmr_vector<bool> null_values = {false, false, true};
-  FSSTSegment<pmr_string> segment(values, std::optional(null_values));
+  vs_str->append("Moritz");
+  vs_str->append("ChrisChr");
+  vs_str->append(NULL_VALUE);
+  auto segment = compress(vs_str, DataType::String);
 
-  std::optional<pmr_string> value = segment.get_typed_value(ChunkOffset{2});
+  std::optional<pmr_string> value = segment->get_typed_value(ChunkOffset{2});
   ASSERT_EQ(std::nullopt, value);
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
-  pmr_vector<bool> null_values = {false, false, true};
-  FSSTSegment<pmr_string> segment(values, std::optional(null_values));
+  pmr_vector<bool> expected_null_values = {false, false, true};
 
+  for(size_t index = 0; index < values.size(); ++index){
+    vs_str->append((expected_null_values[index])? NULL_VALUE : values[index]);
+  }
+
+  auto segment = compress(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
-  auto segment_iterable = FSSTSegmentIterable(segment);
+  auto segment_iterable = FSSTSegmentIterable(*segment);
 
   segment_iterable._on_with_iterators([&collected_values](auto it, auto end) {
     while (it != end) {
@@ -127,21 +127,25 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
 
   for (size_t index = 0; index < values.size(); ++index) {
     auto segment_position = collected_values.at(index);
-    ASSERT_EQ(segment_position.is_null(), null_values.at(index));
-    if (!null_values.at(index)) {
-      ASSERT_EQ(segment_position.value(), values.at(index));
+    ASSERT_EQ(expected_null_values.at(index), segment_position.is_null());
+    if (!expected_null_values.at(index)) {
+      ASSERT_EQ(values.at(index), segment_position.value());
     }
   }
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
   pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
-  pmr_vector<bool> null_values = {false, false, true};
-  FSSTSegment<pmr_string> segment(values, std::optional(null_values));
+  pmr_vector<bool> expected_null_values = {false, false, true};
 
+  for(size_t index = 0; index < values.size(); ++index){
+    vs_str->append((expected_null_values[index])? NULL_VALUE : values[index]);
+  }
+
+  auto segment = compress(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
-  auto segment_iterable = FSSTSegmentIterable(segment);
+  auto segment_iterable = FSSTSegmentIterable(*segment);
 
   const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
@@ -160,9 +164,9 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
     auto real_chunk_offset = position.chunk_offset;
     auto segment_position = collected_values.at(index);
 
-    ASSERT_EQ(segment_position.is_null(), null_values.at(real_chunk_offset));
-    if (!null_values.at(real_chunk_offset)) {
-      ASSERT_EQ(segment_position.value(), values.at(real_chunk_offset));
+    ASSERT_EQ(expected_null_values.at(real_chunk_offset), segment_position.is_null());
+    if (!expected_null_values.at(real_chunk_offset)) {
+      ASSERT_EQ(values.at(real_chunk_offset), segment_position.value());
     }
   }
 }

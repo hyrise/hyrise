@@ -15,60 +15,12 @@
 
 namespace opossum {
 
-template <typename T>
-FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
-    : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
-  if (values.size() == 0) {
-    _compressed_offsets.resize(1);
-    _null_values = std::nullopt;
-    return;
-  }
-
-  // our temporary data structure keeping char pointer and their length
-  std::vector<unsigned long> row_lengths;
-  std::vector<unsigned char*> row_pointers;
-  row_lengths.reserve(values.size());
-  row_pointers.reserve(values.size());
-
-  // needed for compression
-  pmr_vector<unsigned long> compressed_value_lengths;
-  pmr_vector<unsigned char*> compressed_value_pointers;
-  compressed_value_lengths.resize(values.size());
-  compressed_value_pointers.resize(values.size());
-
-  _compressed_offsets.resize(values.size() + 1);
-
-  unsigned total_length = 0;
-
-  for (pmr_string& value : values) {
-    total_length += value.size();
-    row_lengths.push_back(value.size());
-    row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
-  }
-
-  _compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
-  // create symbol table
-  fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
-
-  //  size_t number_compressed_strings = TODO(anyone): avoid error about unused variable in release mode
-  fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), _compressed_values.size(),
-                _compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
-
-  //  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
-
-  _compressed_offsets[0] = 0;
-  unsigned long aggregated_offset_sum = 0;
-  size_t compressed_values_size = compressed_value_lengths.size();
-  for (size_t index{1}; index <= compressed_values_size; ++index) {
-    aggregated_offset_sum += compressed_value_lengths[index - 1];
-    _compressed_offsets[index] = aggregated_offset_sum;
-  }
-
-  _compressed_values.resize(aggregated_offset_sum);
-  _decoder = fsst_decoder(encoder);
-
-  fsst_destroy(encoder);
-}
+//template <typename T>
+//FSSTSegment<T>::FSSTSegment(pmr_vector<pmr_string>& values, std::optional<pmr_vector<bool>> null_values)
+//    : AbstractEncodedSegment{data_type_from_type<pmr_string>()}, _null_values{null_values} {
+//
+//
+//}
 
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values, pmr_vector<unsigned long>& compressed_offsets,

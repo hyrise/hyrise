@@ -64,21 +64,68 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     values.shrink_to_fit();
     null_values.shrink_to_fit();
 
-    if (has_null_values) {
-      return std::make_shared<FSSTSegment<T>>(values, std::make_optional(null_values));
-    } else {
-      return std::make_shared<FSSTSegment<T>>(values, std::nullopt);
+    pmr_vector<unsigned long> compressed_offsets;
+    pmr_vector<unsigned char> compressed_values;
+    std::optional<pmr_vector<bool>> null_values_optional = std::nullopt;
+    fsst_decoder_t decoder;
+
+    if (values.size() == 0) {
+      compressed_offsets.resize(1);
+      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values_optional, decoder);
     }
 
-    //TODO (anyone): add parameters to create empty Segment
+    // our temporary data structure keeping char pointer and their length
+    std::vector<unsigned long> row_lengths;
+    std::vector<unsigned char*> row_pointers;
+    row_lengths.reserve(values.size());
+    row_pointers.reserve(values.size());
+
+    // needed for compression
+    pmr_vector<unsigned long> compressed_value_lengths;
+    pmr_vector<unsigned char*> compressed_value_pointers;
+    compressed_value_lengths.resize(values.size());
+    compressed_value_pointers.resize(values.size());
+
+    compressed_offsets.resize(values.size() + 1);
+
+    unsigned total_length = 0;
+
+    for (pmr_string& value : values) {
+      total_length += value.size();
+      row_lengths.push_back(value.size());
+      row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
+    }
+
+    compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
+    // create symbol table
+    fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
+
+    //  size_t number_compressed_strings = TODO(anyone): avoid error about unused variable in release mode
+    fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), compressed_values.size(),
+                  compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
+
+    //  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
+
+    compressed_offsets[0] = 0;
+    unsigned long aggregated_offset_sum = 0;
+    size_t compressed_values_size = compressed_value_lengths.size();
+    for (size_t index{1}; index <= compressed_values_size; ++index) {
+      aggregated_offset_sum += compressed_value_lengths[index - 1];
+      compressed_offsets[index] = aggregated_offset_sum;
+    }
+
+    compressed_values.resize(aggregated_offset_sum);
+    decoder = fsst_decoder(encoder);
+
+    fsst_destroy(encoder);
+
+     if(has_null_values){
+       null_values_optional = std::make_optional(null_values);
+     }
+
+    return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values_optional, decoder);
   }
 
-  //  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
-  //                                                     const PolymorphicAllocator<pmr_string>& allocator) {
-  //
-  //    //TODO (anyone): add parameters to create empty Segment
-  //    return nullptr;
-  //  }
 };
 
 }  // namespace opossum
