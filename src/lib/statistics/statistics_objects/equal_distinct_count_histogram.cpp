@@ -230,40 +230,312 @@ HistogramCountType combineDistinctCounts<float>(float bin_min, float bin_max, Hi
 template <>
 std::shared_ptr<EqualDistinctCountHistogram<pmr_string>> EqualDistinctCountHistogram<pmr_string>::merge(
     const std::vector<std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>>& histograms,
-    BinID bin_count_target) { return histograms[0];}
+    BinID bin_count_target, bool use_hlls) { return histograms[0];}
 
 #define STRING(X) #X
 #define print(X) std::cout << STRING(X) << " ";
 #define println(X) std::cout << STRING(X) << " " << std::endl;
 #define show(X) std::cout << STRING(X) << " = " << X << " ";
 #define showln(X) std::cout << STRING(X) << " = " << X << std::endl;
+#define TIMEIT(X, Y) begin = std::chrono::steady_clock::now(); X; end = std::chrono::steady_clock::now(); std::cout << Y << ": Time difference = \t" << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
-template <typename T>
-std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::merge(
-    const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
-    BinID bin_count_target) {
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
-  // if constexpr (std::is_same_v<T, pmr_string>) {
-  //   Fail("Cannot split_at_bin_bounds() on string histogram");
-  // }
+
+template<typename T> 
+const std::vector<T> & EqualDistinctCountHistogram<T>::bin_minima() const { return _bin_minima; }
+template<typename T> 
+const std::vector<T> & EqualDistinctCountHistogram<T>::bin_maxima() const { return _bin_maxima; }
+
+template<>
+std::pair<std::vector<pmr_string>, std::vector<pmr_string>> EqualDistinctCountHistogram<pmr_string>::_merge_splitted_bounds(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>>& histograms) 
+{
+  return std::make_pair(std::vector<pmr_string>(), std::vector<pmr_string>());
+}
+template<typename T>
+std::pair<std::vector<T>, std::vector<T>> EqualDistinctCountHistogram<T>::_merge_splitted_bounds(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms) {
   auto global_min = histograms[0]->bin_minimum(0);
   auto global_max = histograms[0]->bin_maximum(histograms[0]->bin_count()-1);
   for (const auto& hist : histograms) {
     global_min = std::min(global_min, hist->bin_minimum(0));
     global_max = std::max(global_max, hist->bin_maximum(hist->bin_count()-1));
   }
+
   std::shared_ptr<AbstractHistogram<T>> split_helper_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(std::vector<T>{global_min}, std::vector<T>{global_max}, std::vector<HistogramCountType>{1}, HistogramCountType{1}, 0);
   for (const auto& hist : histograms) {
     split_helper_histogram = split_helper_histogram->split_at_bin_bounds(hist->bin_bounds());
   }
-  const auto& splitted_bounds = split_helper_histogram->bin_bounds();
-  auto splitted_bounds_minima = std::vector<T>();
-  auto splitted_bounds_maxima = std::vector<T>();
-  for (const auto& bounds : splitted_bounds) {
-    splitted_bounds_minima.push_back(bounds.first);
-    splitted_bounds_maxima.push_back(bounds.second);
+  const auto split_interval_bounds = split_helper_histogram->bin_bounds();
+  auto split_interval_minima = std::vector<T>(split_interval_bounds.size());
+  auto split_interval_maxima = std::vector<T>(split_interval_bounds.size());
+  
+  auto split_interval_count = split_interval_bounds.size();
+  for (auto i = 0u; i < split_interval_count; i++) {
+    split_interval_minima[i] = split_interval_bounds[i].first;
+    split_interval_maxima[i] = split_interval_bounds[i].second;
   }
 
+  return std::make_pair(split_interval_minima, split_interval_maxima);
+}
+template<>
+HistogramCountType EqualDistinctCountHistogram<pmr_string>::_estimate_interval_overlap_with_hlls(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>>& involved_histograms,
+  const pmr_string interval_start, const pmr_string interval_end)
+{
+  return 0.0;
+}
+
+template<typename T>
+HistogramCountType EqualDistinctCountHistogram<T>::_estimate_interval_overlap_with_hlls(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& involved_histograms,
+  const T interval_start, const T interval_end)
+{
+  auto overlap_estimate = HistogramCountType{0};
+  for (auto h1 = 0u; h1 < involved_histograms.size(); h1++) {
+    const auto hist_1 = involved_histograms[h1];
+    const auto& hist_1_bin_minima = hist_1->bin_minima();
+    const auto& hist_1_bin_maxima = hist_1->bin_maxima();
+
+    const auto hist_1_first_bin_in_interval = hist_1->_bin_for_value(interval_start);
+    const auto hist_1_last_bin_in_interval = hist_1->_bin_for_value(interval_end);
+
+    for (auto h2 = h1+1; h2 < involved_histograms.size(); h2++) {
+      const auto hist_2 = involved_histograms[h2];
+      const auto& hist_2_bin_minima = hist_2->bin_minima();
+      const auto& hist_2_bin_maxima = hist_2->bin_maxima();
+
+      // const auto hist_2_first_bin_in_interval = hist_2->_bin_for_value(interval_start);
+      // const auto hist_2_last_bin_in_interval = hist_2->_bin_for_value(interval_end);
+
+      // Check for each pair of bins from the two histograms in this intersection if they intersect. 
+      // If they do, use HLLs to compute how many distinct elements they have in common.
+      // TODO: To make this more efficient (not quadratic in number of bins in intersection), use something like
+      /*
+        for (hist_1_bin : hist 1 bins in interval) {
+          a = hist_2_first_bin_that_might_overlap_with_hist_1_bin
+          b = hist_2_last_bin_that_might_overlap_with_hist_1_bin
+          for (hist_2_bin : range(a,b)) {
+            check intersection
+          }
+        }
+      */
+      for (auto i = hist_1_first_bin_in_interval; i <= hist_1_last_bin_in_interval; i++) {
+        const auto hist_1_bin_min = hist_1_bin_minima[i];
+        const auto hist_1_bin_max = hist_1_bin_maxima[i];
+
+        auto hist_2_first_bin_overlapping_with_hist_1_bin = hist_2->_bin_for_value(std::max(hist_1_bin_min, interval_start));
+        auto hist_2_last_bin_overlapping_with_hist_1_bin = hist_2->_bin_for_value(std::min(hist_1_bin_max, interval_end));
+        for (auto j = hist_2_first_bin_overlapping_with_hist_1_bin; j <= hist_2_last_bin_overlapping_with_hist_1_bin; j++) {
+          const auto hist_2_bin_min = hist_2_bin_minima[j];
+          const auto hist_2_bin_max = hist_2_bin_maxima[j];
+
+          // I think we never continue here, we should look into this.
+          if ((hist_1_bin_max < interval_start) || (hist_1_bin_min > interval_end) ||
+              (hist_2_bin_max < interval_start) || (hist_2_bin_min > interval_end)) {
+            DebugAssert(false, "We have a bin that is not inside the interval at all, why???");
+            continue;
+          }
+
+          auto intersection_length = std::min(hist_1_bin_max, hist_2_bin_max) - std::max(hist_1_bin_min, hist_2_bin_min);
+          if (intersection_length < 0) {
+            DebugAssert(false, "We selected them so that they must intersect, right???");
+            continue;
+          };
+          
+          const auto hist_1_hll = hist_1->_bin_hlls[i];
+          const auto hist_2_hll = hist_2->_bin_hlls[j];
+          const auto hll_stat = HyperLogLog::getJointStatistic(hist_1_hll, hist_2_hll);
+          const auto equal_counts = hll_stat.getEqualCounts();
+          auto estimated_overlap_of_whole_bins = HistogramCountType(std::accumulate(equal_counts.begin() + 1, equal_counts.end(), 0)); 
+
+          const auto intersection_within_interval_min = std::max(std::max(hist_1_bin_min, hist_2_bin_min), interval_start);
+          const auto intersection_within_interval_max = std::min(std::min(hist_1_bin_max, hist_2_bin_max), interval_end);
+          const auto intersection_length_within_interval = intersection_within_interval_max - intersection_within_interval_min;
+          if (intersection_length_within_interval < 0) {
+            continue;
+          }
+          auto ratio_of_intersection_in_bin = 1.0;
+          // If intersection_length == 0, we have two bins with the same single value, thus all their values overlap.
+          if (intersection_length != 0.0) {
+             ratio_of_intersection_in_bin = intersection_length_within_interval / intersection_length;
+          }
+          /*
+          mi        1                 7                   ma    10                           40
+                    #####################################|#######                      
+                                      ###################|####################################
+                                      ###################|#######
+                                              A              B            Intersection length = A+B = C
+
+          A / (A+B);
+
+          bin_intersection = how much is in the intersection of the two bins * how much of that is in (interval_start, interval_end)
+                          = how much is in the intersection of the two bins * how much of that is in A
+
+          */
+          auto bin_intersection_count = estimated_overlap_of_whole_bins * ratio_of_intersection_in_bin;
+          overlap_estimate += bin_intersection_count;
+        }
+      }
+    }
+  }
+
+  return overlap_estimate;
+}
+
+
+template <>
+std::tuple<pmr_string, pmr_string, HistogramCountType> EqualDistinctCountHistogram<pmr_string>::_create_one_bin(
+  typename std::vector<pmr_string>::iterator& interval_minima_begin, typename std::vector<pmr_string>::iterator& interval_minima_end,
+  typename std::vector<pmr_string>::iterator& interval_maxima_begin, typename std::vector<pmr_string>::iterator& interval_maxima_end,
+  typename std::vector<HistogramCountType>::iterator& interval_heights_begin, typename std::vector<HistogramCountType>::iterator& interval_heights_end,
+  typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_begin, typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end,
+  const int distinct_count_target,
+  const HistogramDomain<pmr_string> domain,
+  const bool is_last_bin
+) { return std::tuple{pmr_string(), pmr_string(), 0.0}; }
+
+template <typename T>
+std::tuple<T, T, HistogramCountType> EqualDistinctCountHistogram<T>::_create_one_bin(
+  typename std::vector<T>::iterator& interval_minima_begin, typename std::vector<T>::iterator& interval_minima_end,
+  typename std::vector<T>::iterator& interval_maxima_begin, typename std::vector<T>::iterator& interval_maxima_end,
+  typename std::vector<HistogramCountType>::iterator& interval_heights_begin, typename std::vector<HistogramCountType>::iterator& interval_heights_end,
+  typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_begin, typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end,
+  const int distinct_count_target,
+  const HistogramDomain<T> domain,
+  const bool is_last_bin // We will probably need to be less precise for the last one and just stuff everything in there...
+) {
+  auto remainingIntervalCount = std::distance(interval_minima_begin, interval_minima_end);
+  DebugAssert(remainingIntervalCount == std::distance(interval_maxima_begin, interval_maxima_end), "All interval vectors need to have the same size.");
+  DebugAssert(remainingIntervalCount == std::distance(interval_heights_begin, interval_heights_end), "All interval vectors need to have the same size.");
+  DebugAssert(remainingIntervalCount == std::distance(interval_distinct_counts_begin, interval_distinct_counts_end), "All interval vectors need to have the same size.");
+
+  DebugAssert(remainingIntervalCount > 0, "RemainingIntervalCount has to be greater than zero.");
+  auto bin_start = *interval_minima_begin;
+  auto bin_end = bin_start;
+  auto bin_height = HistogramCountType{0};
+  auto bin_distinct_count = HistogramCountType{0};
+  for(auto i = 0u; i < remainingIntervalCount; i++, interval_minima_begin++, interval_maxima_begin++, interval_heights_begin++, interval_distinct_counts_begin++) {
+    const auto interval_height = *interval_heights_begin;
+    const auto interval_distinct_count = *interval_distinct_counts_begin;
+    const auto interval_start = *interval_minima_begin;
+    const auto interval_end = *interval_maxima_begin;
+    
+    const auto remaining_distinct_count_to_fill_bin = distinct_count_target - bin_distinct_count;
+    const bool is_splittable_interval = (interval_start != interval_end);
+    if ((remaining_distinct_count_to_fill_bin > interval_distinct_count) || is_last_bin) {
+      bin_end = interval_end;
+      bin_height += interval_height;
+      bin_distinct_count += interval_distinct_count;
+    }
+    else if (remaining_distinct_count_to_fill_bin == interval_distinct_count || !is_splittable_interval) {
+      bin_end = interval_end;
+      bin_height += interval_height;
+      bin_distinct_count += interval_distinct_count;
+
+      interval_minima_begin++;
+      interval_maxima_begin++;
+      interval_heights_begin++;
+      interval_distinct_counts_begin++;
+      break;
+    }
+    else { //Only a fraction of the interval fits into the new bin
+      const auto interval_fraction_for_bin = remaining_distinct_count_to_fill_bin / interval_distinct_count;
+      bin_end = static_cast<T>(interval_start + (interval_end - interval_start) * interval_fraction_for_bin); // Might be somewhat wrong for integers, but we just have to accept it.
+      bin_height += interval_height * interval_fraction_for_bin;
+      bin_distinct_count += interval_distinct_count * interval_fraction_for_bin;
+
+      const auto new_interval_start = domain.next_value_clamped(bin_end);
+      const auto new_interval_height = interval_height - (interval_height * interval_fraction_for_bin);
+      const auto new_interval_distinct_count = interval_distinct_count - (interval_distinct_count * interval_fraction_for_bin);
+      *interval_minima_begin = new_interval_start;
+      *interval_heights_begin = new_interval_height;
+      *interval_distinct_counts_begin = new_interval_distinct_count;
+      break;
+    }
+  }
+  
+  return std::make_tuple(bin_start, bin_end, bin_height);
+}
+
+template <>
+std::shared_ptr<EqualDistinctCountHistogram<pmr_string>> EqualDistinctCountHistogram<pmr_string>::_balance_bins(
+      std::vector<HistogramCountType>& interval_distinct_counts,
+      std::vector<HistogramCountType>& interval_heights,
+      std::vector<pmr_string>& interval_minima,
+      std::vector<pmr_string>& interval_maxima,
+      const int distinct_count_per_bin_target,
+      const BinID bin_count,
+      const BinID bin_count_with_extra_value,
+      const HistogramDomain<pmr_string> domain) { return std::make_shared<EqualDistinctCountHistogram<pmr_string>>(); }
+
+
+template <typename T>
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::_balance_bins(
+      std::vector<HistogramCountType>& interval_distinct_counts,
+      std::vector<HistogramCountType>& interval_heights,
+      std::vector<T>& interval_minima,
+      std::vector<T>& interval_maxima,
+      const int distinct_count_per_bin_target,
+      const BinID bin_count,
+      const BinID bin_count_with_extra_value,
+      const HistogramDomain<T> domain) {
+        //Rename bin_minima/maxima to interval_minima/maxima?
+  auto merged_histogram_bin_heights = std::vector<HistogramCountType>();
+  auto merged_histogram_bin_minima = std::vector<T>();
+  auto merged_histogram_bin_maxima = std::vector<T>();
+  merged_histogram_bin_heights.reserve(bin_count);
+  merged_histogram_bin_minima.reserve(bin_count);
+  merged_histogram_bin_maxima.reserve(bin_count);
+
+  auto interval_minima_begin = interval_minima.begin();
+  auto interval_minima_end = interval_minima.end();
+  auto interval_maxima_begin = interval_maxima.begin();
+  auto interval_maxima_end = interval_maxima.end();
+  auto interval_heights_begin = interval_heights.begin();
+  auto interval_heights_end = interval_heights.end();
+  auto interval_distinct_counts_begin = interval_distinct_counts.begin();
+  auto interval_distinct_counts_end = interval_distinct_counts.end();
+
+  for (auto i = 0u; i < bin_count; i++) {
+    auto bin_distinct_count_target = distinct_count_per_bin_target;
+    if (i < bin_count_with_extra_value) {
+      bin_distinct_count_target++;
+    }
+    auto is_last_bin = (bin_count - 1) == i;
+    auto [bin_start, bin_end, bin_height] = _create_one_bin(
+      interval_minima_begin, interval_minima_end,
+      interval_maxima_begin, interval_maxima_end,
+      interval_heights_begin,  interval_heights_end,
+      interval_distinct_counts_begin, interval_distinct_counts_end,
+      bin_distinct_count_target,
+      domain,
+      is_last_bin
+    );
+    merged_histogram_bin_minima.push_back(bin_start);
+    merged_histogram_bin_maxima.push_back(bin_end);
+    merged_histogram_bin_heights.push_back(bin_height);
+  }
+
+  auto merged_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(
+      std::move(merged_histogram_bin_minima), std::move(merged_histogram_bin_maxima),
+      std::move(merged_histogram_bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin_target),
+      bin_count_with_extra_value, domain);
+  return merged_histogram;
+}
+
+template <typename T>
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::merge(
+    const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
+    const BinID max_bin_count, bool use_hlls) {
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // if constexpr (std::is_same_v<T, pmr_string>) {
+  //   Fail("Cannot split_at_bin_bounds() on string histogram");
+  // }
+  Assert(max_bin_count > 0, "max_bin_count must be greater than zero");
+  std::chrono::steady_clock::time_point begin;
+  std::chrono::steady_clock::time_point end;
+  TIMEIT(
+  auto splitted_bounds = _merge_splitted_bounds(histograms);
+  , "\t_merge_splitted_bounds")
+  auto splitted_bounds_minima = splitted_bounds.first;
+  auto splitted_bounds_maxima = splitted_bounds.second;
+  
   auto distinct_counts = std::vector<HistogramCountType>();
   auto bin_heights = std::vector<HistogramCountType>();
   auto bin_minima = std::vector<T>();
@@ -271,21 +543,24 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto kept_previous_split_bin = false;
 
   std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>> involved_histograms;
-  for (auto s = 0u; s < splitted_bounds.size(); s++) {
-    const auto& bin_bound = splitted_bounds[s];
-    const auto bin_min = bin_bound.first;
-    const auto bin_max = bin_bound.second;
-    involved_histograms.clear();
+  const auto split_interval_count = splitted_bounds_minima.size();
+  TIMEIT(
+  for (auto s = 0u; s < split_interval_count; s++) {
+    const auto interval_start = splitted_bounds_minima[s];
+    const auto interval_end = splitted_bounds_maxima[s];
     auto combined_cardinality = HistogramCountType{0.0};
     auto combined_distinct_count = HistogramCountType{0.0};
-
     auto total_exclusive_cardinality = HistogramCountType{0.0};
+
+    involved_histograms.clear();
+
     for (const auto& hist : histograms) {
-      const auto estimate = hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
-      const auto exclusive_estimate = hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenExclusive, bin_min, bin_max);
-      total_exclusive_cardinality += exclusive_estimate.first;
+      const auto estimate = hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, interval_start, interval_end);
+      const auto exclusive_estimate = hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenExclusive, interval_start, interval_end);
       const auto cardinality = estimate.first;
       const auto distinct_count = estimate.second;
+
+      total_exclusive_cardinality += exclusive_estimate.first;
 
       if (cardinality > 0.0) {
         involved_histograms.push_back(hist);
@@ -293,202 +568,51 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
         combined_distinct_count += distinct_count;
       }
     }
-    if ((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) && (bin_min != bin_max)) {
+    if ((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) && (interval_start != interval_end)) {
       kept_previous_split_bin = false;
       continue;
     }
-    bin_minima.push_back(bin_min);
-    bin_maxima.push_back(bin_max);
+    bin_minima.push_back(interval_start);
+    bin_maxima.push_back(interval_end);
     kept_previous_split_bin = true;
-    /*
-    ---- --- ---- ----- -- ---------------------
-      -------------------------  --- -- ----------
-    */
 
-    for (auto h1 = 0u; h1 < involved_histograms.size(); h1++) {    
-      const auto hist_1 = involved_histograms[h1];
-      const auto bounds_1 = hist_1->bin_bounds();
-      
-      const auto hist_1_first_bin = hist_1->_bin_for_value(bin_min);
-      const auto hist_1_last_bin = hist_1->_bin_for_value(bin_max);
-      for (auto h2 = h1+1; h2 < involved_histograms.size(); h2++) {
-        const auto hist_2 = involved_histograms[h2];
-        const auto bounds_2 = hist_2->bin_bounds();
-
-        const auto hist_2_first_bin = hist_2->_bin_for_value(bin_min);
-        const auto hist_2_last_bin = hist_2->_bin_for_value(bin_max);
-
-        for (auto i = hist_1_first_bin; i <= hist_1_last_bin; i++) {
-          const auto bin_bounds_1 = bounds_1[i];
-          for (auto j = hist_2_first_bin; j <= hist_2_last_bin; j++) {
-            const auto bin_bounds_2 = bounds_2[j];
-            if ((bin_bounds_1.second < bin_min) || (bin_bounds_1.first > bin_max)) {
-              continue;
-            }
-            if ((bin_bounds_2.second < bin_min) || (bin_bounds_2.first > bin_max)) {
-              continue;
-            }
-            auto intersection_length = -1.0; // There can be intersections of size 0, i.e. if both bins are the same bin with only one value.
-            if (bin_bounds_1.first <= bin_bounds_2.first && bin_bounds_1.second >= bin_bounds_2.first){
-              //b1     ###################?????????????
-              //b2            #####################
-              intersection_length = std::min(bin_bounds_1.second, bin_bounds_2.second) - bin_bounds_2.first;
-            }
-            else if (bin_bounds_1.first <= bin_bounds_2.second && bin_bounds_1.second >= bin_bounds_2.second) {
-              //b1      ???????????????###################
-              //b2            #####################
-              intersection_length = std::min(bin_bounds_1.second, bin_bounds_2.second) - bin_bounds_1.first;
-            }
-            else if (bin_bounds_1.first >= bin_bounds_2.first && bin_bounds_1.second <= bin_bounds_2.second) {
-              //b1                  ##########
-              //b2            #####################
-              intersection_length = bin_bounds_1.second - bin_bounds_1.first;
-            }
-            if (intersection_length > -1.0) {
-              const auto intersection_min = std::max(bin_bounds_1.first, bin_bounds_2.first);
-              const auto intersection_max = std::min(bin_bounds_1.second, bin_bounds_2.second);
-              const auto hll1 = hist_1->_bin_hlls[i];
-              const auto hll2 = hist_2->_bin_hlls[j];
-              const auto stat = HyperLogLog::getJointStatistic(hll1, hll2);
-              const auto equal_counts = stat.getEqualCounts();
-              auto bin_intersection_count = HistogramCountType(std::accumulate(equal_counts.begin() +1, equal_counts.end(), 0)); 
-              const auto intersection_length_in_bin = (float)(intersection_max - intersection_min);
-              auto ratio_of_intersection_in_bin = intersection_length_in_bin / intersection_length;
-              if (intersection_length == 0.0) {
-                ratio_of_intersection_in_bin = intersection_length_in_bin;
-                if (intersection_length_in_bin == 0.0) {
-                  ratio_of_intersection_in_bin = 1.0; //because 0/0 = 1, obviously.¯\_(ツ)_/¯
-                }
-              }
-
-              //Kind of wrong if we have 0.3-0.4 and 0.4-0.7...
-              /*
-              mi        1                 7                   ma    10                           40
-                        #####################################|#######                      
-                                          ###################|####################################
-                                          ###################|#######
-                                                  A              B            Intersection length = A+B = C
-
-              A / (A+B);
-
-              bin_intersection = how much is in the intersection of the two bins * how much of that is in (bin_min, bin_max)
-                               = how much is in the intersection of the two bins * how much of that is in A
-
-              */
-              bin_intersection_count = bin_intersection_count * ratio_of_intersection_in_bin;
-              combined_distinct_count -= bin_intersection_count; 
-            }
-          }
-        }
-      }
+    if (use_hlls) {
+      // Backup 2
+      combined_distinct_count -= _estimate_interval_overlap_with_hlls(involved_histograms, interval_start, interval_end);
     }
-    if (combined_distinct_count < 1.0) {
-      combined_distinct_count = 1.0; //Assumes that all input bins of histograms have a distinct_count >= 1.0.
+    else if (typeid(T) != typeid(float) && combined_distinct_count > (interval_end - interval_start + 1)) {
+      combined_distinct_count = interval_end - interval_start + 1;
     }
+
+    if (combined_distinct_count < 1.0 || interval_start == interval_end) {
+      // Assumes that all input bins of histograms have a distinct_count >= 1.0.
+      // interval_start == interval_end -> distinct_count must be exactly 1
+      combined_distinct_count = 1.0;
+    }
+
     distinct_counts.push_back(combined_distinct_count);
     bin_heights.push_back(combined_cardinality);
   }
+  , "\testimating_interval_counts");
+  const auto total_distinct_count = HistogramCountType{std::accumulate(distinct_counts.begin(), distinct_counts.end(), HistogramCountType{0.0})};
 
-  const auto bin_count = distinct_counts.size();
-  auto total_distinct_count = HistogramCountType{0};
-  // First, we need to estimate the total_distinct_count of both histograms combined.
-  for (auto i = BinID{0}; i < bin_count; i++) {
-    total_distinct_count += distinct_counts[i];
-  }
+  // When the total_distinct_count cannot be rounded properly or the elements cannot be distributed equally, we allow the last bin to deviate in distinct_count.
+  const auto bin_count = std::min(static_cast<BinID>(std::round(total_distinct_count)), max_bin_count);
+  const auto distinct_count_per_bin_target = static_cast<int>(std::round(total_distinct_count)) / bin_count;
 
-  auto distinct_count_per_bin_target = static_cast<int>(std::round(total_distinct_count)) / bin_count_target;
-  // If bin_count_target is larger than necessary, decrease it.
-  if (distinct_count_per_bin_target == 0) {
-    distinct_count_per_bin_target = 1;
-    bin_count_target = std::round(total_distinct_count);
-  }
   // number of bins that will get an extra distinct value to avoid smaller last bin
   const auto bin_count_with_extra_value =
-      BinID{static_cast<int>(std::round(total_distinct_count)) - distinct_count_per_bin_target * bin_count_target};
-  auto merged_histogram_bin_heights = std::vector<HistogramCountType>();
-  auto merged_histogram_bin_minima = std::vector<T>();
-  auto merged_histogram_bin_maxima = std::vector<T>();
-  auto current_bin_distinct_count = HistogramCountType{0.0};
-  auto current_bin_height = HistogramCountType{0.0};
-  auto current_bin_start = bin_minima[0];
-  auto current_bin_count = BinID{0};
-  auto domain = histograms[0]->domain();
-  for (auto i = BinID{0}; i < bin_count;) {
-    // std::cout << "Merging unlimited for loop " << i << "; bin_count = " << bin_count << "; current_start = " << current_bin_start << std::endl;
-    // auto defacto_bin_start = std::max(current_bin_start, splitted_bounds_minima[i]);
-    const auto cardinality = bin_heights[i];
-    // showln(i);showln(bin_count);
-    // showln(current_bin_count); showln(bin_count_target);
-    auto distinct_count = distinct_counts[i];
-    if (current_bin_start > bin_minima[i]) {
-      auto bin_length = bin_maxima[i] - bin_minima[i];
-      if (bin_length > 0) {
-        auto remaining_ratio_of_bin = (bin_maxima[i] - current_bin_start) / bin_length;
-        distinct_count *= remaining_ratio_of_bin;
-      }
-    }
-    auto current_bin_distinct_count_target = distinct_count_per_bin_target;
-    if (current_bin_count < bin_count_with_extra_value) {
-      current_bin_distinct_count_target++;
-    }
-    if ((current_bin_distinct_count + distinct_count < current_bin_distinct_count_target) && (i != bin_count - 1)) {
-      current_bin_distinct_count += distinct_count;
-      current_bin_height += cardinality;
-      i++;
-    } else {
-      const auto remaining_distinct_count_to_fill = current_bin_distinct_count_target - current_bin_distinct_count;
-      // std::cout << "remaining_distinct_count_to_fill = " << remaining_distinct_count_to_fill << std::endl;
-      // std::cout << "distinct_count = " << distinct_count << std::endl;
-      const auto bin_split_ratio = std::min(remaining_distinct_count_to_fill / distinct_count, 1.0f);
-      // std::cout << "bin_split_ratio = " << bin_split_ratio << std::endl;
-      const auto split_bin_maximum =
-          std::max(current_bin_start, bin_minima[i]) +
-          bin_lerp(bin_maxima[i], std::max(current_bin_start, bin_minima[i]), bin_split_ratio);
-      // const auto split_bin_maximum =
-      //     bin_minima[i] +
-      //     bin_lerp(bin_maxima[i], bin_minima[i], bin_split_ratio);
-      // showln(split_bin_maximum);
-      // showln(current_bin_start);
-      // showln(bin_maxima[i]);
-      // showln(bin_minima[i]);
-      // showln(current_bin_distinct_count_target);
-      
-      current_bin_height += cardinality * bin_split_ratio;
-      current_bin_distinct_count = current_bin_distinct_count_target;
-      merged_histogram_bin_minima.push_back(current_bin_start);
-      merged_histogram_bin_maxima.push_back(split_bin_maximum);
-      merged_histogram_bin_heights.push_back(current_bin_height);
-      if (split_bin_maximum != bin_maxima[i]) {
-        current_bin_start = domain.next_value_clamped(split_bin_maximum);
-      } else if (i != bin_count - 1) {
-        current_bin_start = bin_minima[i + 1];
-      } else {
-        // This is the last bin and split_bin_maximum = bin_maxima[i] -> we are done now.
-        //split_bin_maximum = combined_bin_maxima[i] && i == bin_count-1
-        i++;
-        // current_bin_start = combined_histogram_bin_maxima[i];
-      }
+      BinID{static_cast<int>(std::round(total_distinct_count)) - distinct_count_per_bin_target * bin_count};
+  const auto domain = histograms[0]->domain();
 
-      current_bin_count++;
-      current_bin_height = 0;
-      current_bin_distinct_count = 0;
-
-      if ((bin_split_ratio == 1.0) || (current_bin_count == bin_count_target)) {
-        i++;
-      }
-    }
-  }
-  // for(BinID i = BinID{0}; i < combined_histogram_bin_minima.size(); i++) {
-  //   std::cout << "combined Bin("<< combined_histogram_bin_minima[i] << ", " << combined_histogram_bin_maxima[i] << "), ";
-  // }
-  // for(BinID i = BinID{0}; i < merged_histogram_bin_minima.size(); i++) {
-  //   std::cout << "Bin("<< merged_histogram_bin_minima[i] << ", " << merged_histogram_bin_maxima[i] << "), ";
-  // }
-  // std::cout << std::endl;
-  auto merged_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(
-      std::move(merged_histogram_bin_minima), std::move(merged_histogram_bin_maxima),
-      std::move(merged_histogram_bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin_target),
-      bin_count_with_extra_value, domain);
+  // showln(distinct_count_per_bin_target);
+  // showln(bin_count);
+  // showln(total_distinct_count);
+  // showln(bin_count_with_extra_value);
+  // showln(distinct_counts.size());
+  TIMEIT(auto merged_histogram = _balance_bins(distinct_counts, bin_heights, bin_minima, bin_maxima, distinct_count_per_bin_target, bin_count, bin_count_with_extra_value, domain);
+  , "\t_balance_bins"
+  );
   return merged_histogram;
 }
 
@@ -507,6 +631,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   if (!histogram_2) return histogram_1;
 
   //Please make sure that the input histograms are valid and non empty.
+
   const auto splitted_histogram_1 = histogram_1->split_at_bin_bounds(histogram_2->bin_bounds());
   const auto splitted_histogram_1_bins = splitted_histogram_1->bin_bounds();
   auto splitted_histogram_1_it = splitted_histogram_1_bins.begin();
@@ -568,6 +693,10 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   // number of bins that will get an extra distinct value to avoid smaller last bin
   const auto bin_count_with_extra_value =
       BinID{static_cast<int>(std::round(total_distinct_count)) - distinct_count_per_bin_target * bin_count_target};
+  // showln(bin_count_with_extra_value);
+  // showln(bin_count_target);
+  // showln(distinct_count_per_bin_target);
+  // showln(total_distinct_count);
   auto merged_histogram_bin_heights = std::vector<HistogramCountType>();
   auto merged_histogram_bin_minima = std::vector<T>();
   auto merged_histogram_bin_maxima = std::vector<T>();
@@ -577,9 +706,10 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto current_bin_start = combined_histogram_bin_minima[0];
   auto current_bin_count = BinID{0};
   auto domain = histogram_1->domain();
-  
+  auto debug_distinct_count = 0.0;
+
   for (auto i = BinID{0}; i < bin_count;) {
-    // std::cout << "Merging unlimited for loop " << i << "; bin_count = " << bin_count << "; current_start = " << current_bin_start << std::endl;
+  //  std::cout << "Merging unlimited for loop " << i << "; bin_count = " << bin_count << "; current_start = " << current_bin_start << std::endl;
     auto defacto_bin_start = std::max(current_bin_start, combined_histogram_bin_minima[i]);
     const auto estimate_1 = splitted_histogram_1->estimate_cardinality_and_distinct_count(
         PredicateCondition::BetweenInclusive, defacto_bin_start, combined_histogram_bin_maxima[i]);
@@ -589,36 +719,50 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     auto distinct_count =
         combineDistinctCounts(combined_histogram_bin_minima[i], combined_histogram_bin_maxima[i], cardinality,
                               estimate_1.second, estimate_2.second);
+                          
     if (current_bin_start > combined_histogram_bin_minima[i]) {
-      auto bin_length = combined_histogram_bin_maxima[i] - combined_histogram_bin_minima[i];
+      showln(distinct_count);
+      println("Actual distinct_count is wrong, correcting it");
+      auto bin_length = static_cast<HistogramCountType>(combined_histogram_bin_maxima[i] - combined_histogram_bin_minima[i]);
       if (bin_length > 0) {
-        auto remaining_ratio_of_bin = (combined_histogram_bin_maxima[i] - current_bin_start) / bin_length;
+        auto remaining_ratio_of_bin = static_cast<HistogramCountType>(combined_histogram_bin_maxima[i] - current_bin_start) / bin_length;
+        showln(remaining_ratio_of_bin);
         distinct_count *= remaining_ratio_of_bin;
       }
     }
     auto current_bin_distinct_count_target = distinct_count_per_bin_target;
-
+    showln(i); showln(bin_count); showln(current_bin_count); showln(current_bin_distinct_count); showln(distinct_count);
+    showln(combined_histogram_bin_minima[i]);
+    showln(combined_histogram_bin_maxima[i]);
     if (current_bin_count < bin_count_with_extra_value) {
       current_bin_distinct_count_target++;
     }
     if ((current_bin_distinct_count + distinct_count < current_bin_distinct_count_target) && (i != bin_count - 1)) {
+      println("There's still place for it in the last one.");
       current_bin_distinct_count += distinct_count;
       current_bin_height += cardinality;
       i++;
     } else {
+      println("Finishing a bin");
       const auto remaining_distinct_count_to_fill = current_bin_distinct_count_target - current_bin_distinct_count;
-      // std::cout << "remaining_distinct_count_to_fill = " << remaining_distinct_count_to_fill << std::endl;
-      // std::cout << "distinct_count = " << distinct_count << std::endl;
+      std::cout << "remaining_distinct_count_to_fill = " << remaining_distinct_count_to_fill << std::endl;
+      std::cout << "distinct_count = " << distinct_count << std::endl;
       const auto bin_split_ratio = std::min(remaining_distinct_count_to_fill / distinct_count, 1.0f);
-      // std::cout << "bin_split_ratio = " << bin_split_ratio << std::endl;
+      std::cout << "bin_split_ratio = " << bin_split_ratio << std::endl;
+      showln(current_bin_distinct_count);
+      showln(current_bin_start);
       const auto split_bin_maximum =
           std::max(current_bin_start, combined_histogram_bin_minima[i]) +
           bin_lerp(combined_histogram_bin_maxima[i], std::max(current_bin_start, combined_histogram_bin_minima[i]), bin_split_ratio);
+
       // const auto split_bin_maximum =
       //     combined_histogram_bin_minima[i] +
       //     bin_lerp(combined_histogram_bin_maxima[i], combined_histogram_bin_minima[i], bin_split_ratio);
       // std::cout <<"i=" << i<< " split_bin_maximum " << split_bin_maximum << std::endl;
       current_bin_height += cardinality * bin_split_ratio;
+
+      debug_distinct_count += distinct_count * bin_split_ratio;
+
       current_bin_distinct_count = current_bin_distinct_count_target;
       merged_histogram_bin_minima.push_back(current_bin_start);
       merged_histogram_bin_maxima.push_back(split_bin_maximum);
@@ -650,7 +794,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   //   std::cout << "Bin("<< merged_histogram_bin_minima[i] << ", " << merged_histogram_bin_maxima[i] << "), ";
   // }
   // std::cout << std::endl;
-
+  showln(current_bin_count);
+  showln(debug_distinct_count);
   auto merged_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(merged_histogram_bin_minima), std::move(merged_histogram_bin_maxima),
       std::move(merged_histogram_bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin_target),

@@ -71,7 +71,7 @@ int main() {
 
   std::chrono::steady_clock::time_point begin;
   std::chrono::steady_clock::time_point end;
-  for (auto table_name : {"orders", "part", "supplier", "partsupp", "customer", "nation", "region"}) {
+  for (auto table_name : {"partsupp","orders", "part", "supplier", "customer", "nation", "region"}) {
     auto column = ColumnID{0};
     println();println(); println("##########################"); showln(table_name);
 
@@ -86,6 +86,7 @@ int main() {
       if (column_type == DataType::String) {column++; continue;};
       println();
       showln(column); showln(column_type);
+      // if (column == 1)
       resolve_data_type(column_type, [&](auto type) {
         using ColumnType = typename decltype(type)::type;
 
@@ -100,6 +101,9 @@ int main() {
         TIMEIT(
           const auto merged_hist = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
         , "merge_all_histograms_with_hlls");
+        TIMEIT(
+          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count, false);
+        , "merge_all_histograms_without_hlls");
         TIMEIT(
           const auto full_hist = EqualDistinctCountHistogram<ColumnType>::from_column(*table, column, histogram_bin_count);
         , "creating_the_full_histogram");
@@ -125,6 +129,7 @@ int main() {
 
         auto full_hist_error = 0.0;
         auto merged_hist_error = 0.0;
+        auto merged_hist_wo_hlls_error = 0.0;
         // auto merged_row_error = 0.0;
         // auto merged_pyramid_error = 0.0;
         for (auto entry : map) {
@@ -132,6 +137,8 @@ int main() {
           auto count = entry.second;
           auto estimate = full_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
           full_hist_error += std::abs(estimate - count);
+          auto merged_wo_hlls_estimate = merged_hist_wo_hlls->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
+          merged_hist_wo_hlls_error += std::abs(merged_wo_hlls_estimate - count);
           auto merged_estimate = merged_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
           merged_hist_error += std::abs(merged_estimate - count);
           // auto merged_row_estimate = row_merged_histogram->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
@@ -141,6 +148,7 @@ int main() {
         }
         show(full_hist_error);
         show(merged_hist_error);
+        show(merged_hist_wo_hlls_error);
         // show(merged_row_error);
         // show(merged_pyramid_error);
         show(full_hist->bin_count()); show(merged_hist->bin_count());
