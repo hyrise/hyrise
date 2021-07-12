@@ -317,7 +317,6 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  DebugAssert(value, "pruned() cannot be called with NULL");
 
   // for now, we don't prune the top_k values
   auto pruned_top_k_names = _top_k_names;
