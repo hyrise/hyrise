@@ -8,7 +8,7 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+//#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
@@ -47,9 +47,11 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
-    }
+    Fail("Removed ART");
+
+    //for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+     // chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
+    //}
   }
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);

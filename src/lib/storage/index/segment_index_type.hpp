@@ -10,20 +10,26 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree };
+// TODO(Keven) ... begründen
+// Due to the usage of pmr_vector within the GroupKeyIndex, 
+// waren zu faul alles glatt zu ziehen. nur GruopKey angepasst. anderen wären aber relative einfach ... aber fließarbeit
+enum class SegmentIndexType : uint8_t { Invalid, GroupKey,
+	                                // CompositeGroupKey, AdaptiveRadixTree, BTree
+				      };
 
 class GroupKeyIndex;
-class CompositeGroupKeyIndex;
-class AdaptiveRadixTreeIndex;
-class BTreeIndex;
+//class CompositeGroupKeyIndex;
+//class AdaptiveRadixTreeIndex;
+//class BTreeIndex;
 
 namespace detail {
 
 constexpr auto segment_index_map =
-    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey),
+    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey)//,
+		   /*
                    hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey),
                    hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, SegmentIndexType::AdaptiveRadixTree),
-                   hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree));
+                   hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree) */);
 
 }  // namespace detail
 

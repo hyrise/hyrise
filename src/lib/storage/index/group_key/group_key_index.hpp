@@ -68,6 +68,9 @@ class GroupKeyIndex : public AbstractIndex {
   GroupKeyIndex(GroupKeyIndex&&) = default;
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
+  explicit GroupKeyIndex(const std::shared_ptr<const BaseDictionarySegment>& segment_to_index,
+ 			     pmr_vector<ChunkOffset> value_start_offsets,
+  			     pmr_vector<ChunkOffset> positions);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
@@ -87,11 +90,13 @@ class GroupKeyIndex : public AbstractIndex {
 
   std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
 
+  std::shared_ptr<AbstractIndex> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+
   size_t _memory_consumption() const final;
 
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
-  std::vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
-  std::vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
+  pmr_vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
+  pmr_vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
 };
 }  // namespace opossum

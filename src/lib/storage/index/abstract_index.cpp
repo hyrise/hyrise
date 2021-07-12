@@ -3,9 +3,9 @@
 #include <memory>
 #include <vector>
 
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
+//#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+//#include "storage/index/b_tree/b_tree_index.hpp"
+//#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
@@ -15,12 +15,14 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
   switch (type) {
     case SegmentIndexType::GroupKey:
       return GroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
+    /*
     case SegmentIndexType::CompositeGroupKey:
       return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::AdaptiveRadixTree:
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
+    */
     case SegmentIndexType::Invalid:
       Fail("SegmentIndexType is invalid.");
   }

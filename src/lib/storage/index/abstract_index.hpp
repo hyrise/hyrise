@@ -38,7 +38,7 @@ class AbstractIndex : private Noncopyable {
 
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
-  using Iterator = std::vector<ChunkOffset>::const_iterator;
+  using Iterator = pmr_vector<ChunkOffset>::const_iterator;
 
   /**
    * Predicts the memory consumption in bytes of creating an index with the specific index implementation <type>
@@ -158,7 +158,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
-  std::vector<ChunkOffset> _null_positions;
+  pmr_vector<ChunkOffset> _null_positions;
 
  private:
   const SegmentIndexType _type;

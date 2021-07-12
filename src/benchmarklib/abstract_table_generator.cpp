@@ -6,7 +6,7 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
+//#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"
@@ -295,9 +295,9 @@ void AbstractTableGenerator::generate_and_store() {
 
         if (column_ids.size() == 1) {
           table->create_index<GroupKeyIndex>(column_ids);
-        } else {
-          table->create_index<CompositeGroupKeyIndex>(column_ids);
-        }
+        }// else {
+          //table->create_index<CompositeGroupKeyIndex>(column_ids);
+        //}
 
         std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
       }

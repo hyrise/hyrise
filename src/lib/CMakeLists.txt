@@ -457,7 +457,7 @@ set(
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
     storage/index/abstract_index.cpp
     storage/index/abstract_index.hpp
-    storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
+#[[ storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
@@ -467,6 +467,7 @@ set(
     storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
+]]
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
     storage/index/group_key/variable_length_key.cpp

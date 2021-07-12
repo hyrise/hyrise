@@ -32,7 +32,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   //    Therefore we have `unique_values_count` ValueIDs (NULL-value-id is not included)
   //    for which we want to count the occurrences.
   auto value_histogram =
-      std::vector<ChunkOffset>(_indexed_segment->unique_values_count() + 1u /*to mark the ending position */, 0u);
+      pmr_vector<ChunkOffset>(_indexed_segment->unique_values_count() + 1u /*to mark the ending position */, 0u);
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
@@ -53,8 +53,8 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   const auto non_null_count = _indexed_segment->size() - null_count;
 
   // 3) Set the _positions and _null_positions
-  _positions = std::vector<ChunkOffset>(non_null_count);
-  _null_positions = std::vector<ChunkOffset>(null_count);
+  _positions = pmr_vector<ChunkOffset>(non_null_count);
+  _null_positions = pmr_vector<ChunkOffset>(null_count);
 
   // 4) Create start offsets for the positions in _value_start_offsets
   _value_start_offsets = std::move(value_histogram);
@@ -62,7 +62,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
 
   // 5) Create the positions
   // 5a) Copy _value_start_offsets to use the copy as a write counter
-  auto value_write_offsets = std::vector<ChunkOffset>(_value_start_offsets);
+  auto value_write_offsets = pmr_vector<ChunkOffset>(_value_start_offsets);
 
   // 5b) Iterate over the attribute vector to obtain the write-offsets and
   //     to finally insert the positions
@@ -85,6 +85,14 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
       value_write_offsets[value_id]++;
     }
   });
+}
+
+GroupKeyIndex::GroupKeyIndex(const std::shared_ptr<const BaseDictionarySegment>& segment_to_index,
+ 			     pmr_vector<ChunkOffset> value_start_offsets,
+  			     pmr_vector<ChunkOffset> positions)
+    : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
+      _indexed_segment(segment_to_index), _value_start_offsets(std::move(value_start_offsets)), _positions(std::move(positions)) {
+  std::cout << "Called copy constructor." << std::endl;
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
@@ -130,6 +138,17 @@ GroupKeyIndex::Iterator GroupKeyIndex::_get_positions_iterator_at(ValueID value_
 
 std::vector<std::shared_ptr<const AbstractSegment>> GroupKeyIndex::_get_indexed_segments() const {
   return {_indexed_segment};
+}
+
+std::shared_ptr<AbstractIndex> GroupKeyIndex::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
+  // TODO: migrate null_positions
+  auto new_value_start_offsets = pmr_vector<ChunkOffset>(_value_start_offsets, alloc);
+  auto new_positions = pmr_vector<ChunkOffset>(_positions, alloc);
+
+  auto copy = std::make_shared<GroupKeyIndex>(_indexed_segment, std::move(new_value_start_offsets), std::move(new_positions));
+
+  return copy;
 }
 
 size_t GroupKeyIndex::_memory_consumption() const {
