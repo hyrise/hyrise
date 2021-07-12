@@ -35,6 +35,12 @@ TopKUniformDistributionHistogram<T>::TopKUniformDistributionHistogram(std::share
   std::vector<T>&& top_k_names, std::vector<HistogramCountType>&& top_k_counts, const HistogramDomain<T>& domain)
     : AbstractHistogram<T>(domain), _histogram(histogram), _top_k_names(top_k_names), _top_k_counts(top_k_counts) {
 
+  // TODO: moved to sliced method
+  if (_histogram == nullptr) {
+    GenericHistogramBuilder<T> builder{0, AbstractHistogram<T>::domain()};
+    _histogram = builder.build();
+  }
+
   const auto histogram_total_count = _histogram->total_count();
   const auto top_k_total_count = std::accumulate(_top_k_counts.cbegin(), _top_k_counts.cend(), HistogramCountType{0});
   _total_count = histogram_total_count + top_k_total_count;
