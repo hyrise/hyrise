@@ -28,7 +28,20 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
+add_plugin(NAME hyriseDependencyMiningPlugin SRCS
+    dependency_mining_plugin.cpp
+    dependency_mining_plugin.hpp
+    dependency_mining/pqp_analyzer.cpp
+    dependency_mining/pqp_analyzer.hpp
+    dependency_mining/util.hpp
+    dependency_mining/dependency_validator.cpp
+    dependency_mining/dependency_validator.hpp
+)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 

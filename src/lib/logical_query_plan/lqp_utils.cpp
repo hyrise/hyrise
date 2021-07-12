@@ -514,7 +514,6 @@ void remove_invalid_ods(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   // Remove invalid or unnecessary FDs
   ods.erase(std::remove_if(ods.begin(), ods.end(),
                            [&lqp, &output_expressions_set](auto& od) {
-
                              /**
                               * Remove FDs with determinant expressions that are
                               *  a) not part of the node's output expressions

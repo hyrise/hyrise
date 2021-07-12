@@ -378,7 +378,6 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   }
 }
 
-
 const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {

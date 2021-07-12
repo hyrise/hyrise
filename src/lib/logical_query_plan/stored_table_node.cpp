@@ -135,8 +135,10 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
     const auto& dependent_column_ids = table_order_constraint.dependents();
     if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
                     [&determinant_column_ids, &dependent_column_ids](const auto& pruned_column_id) {
-                      return std::find(determinant_column_ids.begin(), determinant_column_ids.end(), pruned_column_id) != determinant_column_ids.end() ||
-                      std::find(dependent_column_ids.begin(), dependent_column_ids.end(), pruned_column_id) != dependent_column_ids.end();
+                      return std::find(determinant_column_ids.begin(), determinant_column_ids.end(),
+                                       pruned_column_id) != determinant_column_ids.end() ||
+                             std::find(dependent_column_ids.begin(), dependent_column_ids.end(), pruned_column_id) !=
+                                 dependent_column_ids.end();
                     })) {
       continue;
     }
@@ -150,28 +152,28 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
 
     for (const auto determinant_column_id : determinant_column_ids) {
       for (const auto& output_expression : output_ex) {
-      const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-      if (!column_expression || *column_expression->original_node.lock() != *this) {
-        std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
-        continue;
+        const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+        if (!column_expression || *column_expression->original_node.lock() != *this) {
+          std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
+          continue;
+        }
+        if (determinant_column_id == column_expression->original_column_id) {
+          determinant_expressions.emplace_back(column_expression);
+        }
       }
-      if (determinant_column_id == column_expression->original_column_id) {
-       determinant_expressions.emplace_back(column_expression);
-      }
-     }
     }
 
     for (const auto dependent_column_id : dependent_column_ids) {
       for (const auto& output_expression : output_ex) {
-      const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-      if (!column_expression || *column_expression->original_node.lock() != *this) {
-        std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
-        continue;
+        const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+        if (!column_expression || *column_expression->original_node.lock() != *this) {
+          std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
+          continue;
+        }
+        if (dependent_column_id == column_expression->original_column_id) {
+          dependent_expressions.emplace_back(column_expression);
+        }
       }
-      if (dependent_column_id == column_expression->original_column_id) {
-       dependent_expressions.emplace_back(column_expression);
-      }
-     }
     }
 
     // Create OrderDependency

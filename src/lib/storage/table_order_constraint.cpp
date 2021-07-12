@@ -2,8 +2,11 @@
 
 namespace opossum {
 
-TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID> init_determinants, std::vector<ColumnID> init_dependents)
-    : AbstractTableConstraint({}), _determinants(std::move(init_determinants)), _dependents(std::move(init_dependents)) {}
+TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID> init_determinants,
+                                           std::vector<ColumnID> init_dependents)
+    : AbstractTableConstraint({}),
+      _determinants(std::move(init_determinants)),
+      _dependents(std::move(init_dependents)) {}
 
 const std::vector<ColumnID>& TableOrderConstraint::determinants() const { return _determinants; }
 const std::vector<ColumnID>& TableOrderConstraint::dependents() const { return _dependents; }

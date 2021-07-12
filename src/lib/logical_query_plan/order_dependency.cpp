@@ -4,8 +4,7 @@
 
 namespace opossum {
 
-OrderDependency::OrderDependency(ExpressionList init_determinants,
-                                 ExpressionList init_dependents)
+OrderDependency::OrderDependency(ExpressionList init_determinants, ExpressionList init_dependents)
     : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "OrderDependency cannot be empty");
 }
@@ -19,13 +18,13 @@ bool OrderDependency::operator==(const OrderDependency& other) const {
 
   const auto num_determinants = determinants.size();
   // Compare determinants
-  for(auto it = size_t{0}; it < num_determinants; ++it) {
+  for (auto it = size_t{0}; it < num_determinants; ++it) {
     if (determinants[it] != other.determinants[it]) return false;
   }
 
   const auto num_dependents = dependents.size();
   // Compare determinants
-  for(auto it = size_t{0}; it < num_dependents; ++it) {
+  for (auto it = size_t{0}; it < num_dependents; ++it) {
     if (dependents[it] != other.dependents[it]) return false;
   }
 
@@ -116,7 +115,7 @@ std::vector<OrderDependency> deflate_ods(const std::vector<OrderDependency>& ods
 }
 
 std::vector<OrderDependency> union_ods(const std::vector<OrderDependency>& ods_a,
-                                            const std::vector<OrderDependency>& ods_b) {
+                                       const std::vector<OrderDependency>& ods_b) {
   return {};
   /*if constexpr (HYRISE_DEBUG) {
     auto fds_a_set = std::unordered_set<OrderDependency>(fds_a.begin(), fds_a.end());
@@ -137,7 +136,7 @@ std::vector<OrderDependency> union_ods(const std::vector<OrderDependency>& ods_a
 }
 
 std::vector<OrderDependency> intersect_ods(const std::vector<OrderDependency>& ods_a,
-                                                const std::vector<OrderDependency>& ods_b) {
+                                           const std::vector<OrderDependency>& ods_b) {
   return {};
   /*if (fds_a.empty() || fds_b.empty()) return {};
 
@@ -160,8 +159,6 @@ std::vector<OrderDependency> intersect_ods(const std::vector<OrderDependency>& o
 
 namespace std {
 
-size_t hash<opossum::OrderDependency>::operator()(const opossum::OrderDependency& od) const {
-  return od.hash();
-}
+size_t hash<opossum::OrderDependency>::operator()(const opossum::OrderDependency& od) const { return od.hash(); }
 
 }  // namespace std

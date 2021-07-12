@@ -14,14 +14,12 @@ class TableOrderConstraint final : public AbstractTableConstraint {
   const std::vector<ColumnID>& determinants() const;
   const std::vector<ColumnID>& dependents() const;
 
-
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
 
  private:
   std::vector<ColumnID> _determinants;
   std::vector<ColumnID> _dependents;
-
 };
 
 using TableOrderConstraints = std::vector<TableOrderConstraint>;

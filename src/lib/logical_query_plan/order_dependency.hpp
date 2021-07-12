@@ -42,13 +42,13 @@ std::vector<OrderDependency> deflate_ods(const std::vector<OrderDependency>& ods
  *         expressions are merged into single objects by merging their dependent expressions.
  */
 std::vector<OrderDependency> union_fds(const std::vector<OrderDependency>& ods_a,
-                                            const std::vector<OrderDependency>& ods_b);
+                                       const std::vector<OrderDependency>& ods_b);
 
 /**
  * @return Returns FDs that are included in both of the given vectors.
  */
 std::vector<OrderDependency> intersect_fds(const std::vector<OrderDependency>& ods_a,
-                                                const std::vector<OrderDependency>& ods_b);
+                                           const std::vector<OrderDependency>& ods_b);
 
 /**
  * Future Work: Transitive FDs

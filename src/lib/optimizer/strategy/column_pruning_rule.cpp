@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -11,8 +10,9 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -20,7 +20,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
+#include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -234,10 +234,11 @@ void recursively_gather_required_expressions(
   }
 }
 
-
 // Expect discarded input to be the right one
 // only allow child plans containing one scan, storedtable, validate
-void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet equals_predicate_expressions_left, ExpressionUnorderedSet equals_predicate_expressions_right) {
+void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
+                              ExpressionUnorderedSet equals_predicate_expressions_left,
+                              ExpressionUnorderedSet equals_predicate_expressions_right) {
   std::shared_ptr<AbstractLQPNode> scan;
   bool abort = false;
 
@@ -247,8 +248,9 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
   }
 
   // find previous scan
-  visit_lqp(join->right_input(), [&](auto node){
-    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable && node->type != LQPNodeType::Validate) {
+  visit_lqp(join->right_input(), [&](auto node) {
+    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable &&
+        node->type != LQPNodeType::Validate) {
       abort = true;
       return LQPVisitation::DoNotVisitInputs;
     }
@@ -319,7 +321,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
                 const auto sub_root_pqp = LQPTranslator{}.translate_node(optimized_sub);
                 // std::cout << "        execute sub pqp" << std::endl;
                 sub_root_pqp->never_clear_output();
-                const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+                const auto transaction_context =
+                    Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
                 sub_root_pqp->set_transaction_context_recursively(transaction_context);
                 const auto tasks = OperatorTask::make_tasks_from_operator(sub_root_pqp);
                 Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
@@ -328,7 +331,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
                 // std::cout << "        sub pqp: " << tab->row_count() << " rows" << std::endl;
 
                 const auto target_column_type = tab->column_definitions().at(target_column_id).data_type;
-                resolve_data_type(target_column_type, [&](auto type){
+                resolve_data_type(target_column_type, [&](auto type) {
                   using ColumnDataType = typename decltype(type)::type;
                   const auto num_chunks = tab->chunk_count();
                   ColumnDataType min_val{};
@@ -340,7 +343,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
                       continue;
                     }
                     const auto segment = chunk->get_segment(target_column_id);
-                    segment_iterate<ColumnDataType>(*segment, [&](const auto& pos){
+                    segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
                       const auto current_value = pos.value();
                       if (!is_init) {
                         min_val = current_value;
@@ -354,7 +357,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
                   }
                   // std::cout << "        bounds: " << min_val << "    " << max_val << std::endl;
                   auto scan_column_expression = *(equals_predicate_expressions_left.begin());
-                  auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                  auto predicate_node =
+                      PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
                   lqp_replace_node(join, predicate_node);
                   // std::cout << "        replaced successfully" << std::endl;
                   executed = true;
@@ -371,9 +375,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionU
     default:
       return;
   }
-
 }
-
 
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
