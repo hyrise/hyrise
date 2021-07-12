@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -11,6 +12,7 @@
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -18,6 +20,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
+#include "scheduler/operator_task.hpp"
+#include "storage/segment_iterate.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -229,6 +234,147 @@ void recursively_gather_required_expressions(
   }
 }
 
+
+// Expect discarded input to be the right one
+// only allow child plans containing one scan, storedtable, validate
+void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet equals_predicate_expressions_left, ExpressionUnorderedSet equals_predicate_expressions_right) {
+  std::shared_ptr<AbstractLQPNode> scan;
+  bool abort = false;
+
+  if (join->right_input()->order_dependencies().empty()) {
+    // std::cout << "        no ods" << std::endl;
+    return;
+  }
+
+  // find previous scan
+  visit_lqp(join->right_input(), [&](auto node){
+    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable && node->type != LQPNodeType::Validate) {
+      abort = true;
+      return LQPVisitation::DoNotVisitInputs;
+    }
+
+    if (node->type == LQPNodeType::Predicate) {
+      if (scan) {
+        abort = true;
+        return LQPVisitation::DoNotVisitInputs;
+      }
+      scan = node;
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  if (abort || !scan) {
+    // std::cout << "        aborted / no scan" << std::endl;
+    return;
+  }
+
+  // if order dependency between join and scan column, rewrite
+  const auto order_dependencies = scan->order_dependencies();
+  const auto join_expression = *(equals_predicate_expressions_right.begin());
+  const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
+  const auto target_column_id = join_column_expression->original_column_id;
+  const auto casted_scan = static_pointer_cast<PredicateNode>(scan);
+  const auto scan_predicate = casted_scan->predicate();
+  // AbstractExpression new_scan_predicate;
+
+  switch (scan_predicate->type) {
+    case ExpressionType::Value: {
+      // TO DO: execute subplan, get result, build new scan with other column in result as predicate
+      // PRUNING --> sonst scan ggf langsamer
+      // --> column only scan + key; chunks: chunk pruning rule
+      // std::cout << "      value expression" << std::endl;
+    } break;
+    case ExpressionType::Predicate: {
+      // TO DO: execute subplan, get result, search min/max, build new scan
+      // PRUNING
+      // std::cout << "      predicate expression" << std::endl;
+      const auto pred_expr = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
+      if (is_between_predicate_condition(pred_expr->predicate_condition)) {
+        // std::cout << "        between predicate expression" << std::endl;
+        bool executed = false;
+        visit_expression(scan_predicate, [&](auto expression) {
+          if (expression->type == ExpressionType::LQPColumn) {
+            Assert(!executed, "Did not expect mutiple scan columns");
+            // std::cout << "        got scan column" << std::endl;
+            //std::cout << "        scanex " << *expression << std::endl;
+            //std::cout << "        joinex " << *join_expression << std::endl;
+            for (const auto& od : order_dependencies) {
+              // skip larger ODs
+              if (od.determinants.size() != 1 || od.dependents.size() != 1) {
+                continue;
+              }
+              //std::cout << "        OD-det " << *od.determinants[0] << std::endl;
+              //std::cout << "        OD-dep " << *od.dependents[0] << std::endl;
+              if (*od.determinants[0] == *expression || *od.dependents[0] == *join_expression) {
+                // std::cout << "        OD matches" << std::endl;
+
+                const auto sub = join->right_input();
+                join->set_right_input(nullptr);
+                sub->clear_outputs();
+                auto chunk_pruning_rule = ChunkPruningRule{};
+                const auto sub_root = LogicalPlanRootNode::make(std::move(sub));
+                chunk_pruning_rule.apply_to_plan(sub_root);
+                auto optimized_sub = sub_root->left_input();
+                sub_root->set_left_input(nullptr);
+                const auto sub_root_pqp = LQPTranslator{}.translate_node(optimized_sub);
+                // std::cout << "        execute sub pqp" << std::endl;
+                sub_root_pqp->never_clear_output();
+                const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+                sub_root_pqp->set_transaction_context_recursively(transaction_context);
+                const auto tasks = OperatorTask::make_tasks_from_operator(sub_root_pqp);
+                Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+                // std::cout << "        sub pqp output" << std::endl;
+                const auto tab = sub_root_pqp->get_output();
+                // std::cout << "        sub pqp: " << tab->row_count() << " rows" << std::endl;
+
+                const auto target_column_type = tab->column_definitions().at(target_column_id).data_type;
+                resolve_data_type(target_column_type, [&](auto type){
+                  using ColumnDataType = typename decltype(type)::type;
+                  const auto num_chunks = tab->chunk_count();
+                  ColumnDataType min_val{};
+                  ColumnDataType max_val{};
+                  bool is_init = false;
+                  for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+                    const auto chunk = tab->get_chunk(chunk_id);
+                    if (!chunk) {
+                      continue;
+                    }
+                    const auto segment = chunk->get_segment(target_column_id);
+                    segment_iterate<ColumnDataType>(*segment, [&](const auto& pos){
+                      const auto current_value = pos.value();
+                      if (!is_init) {
+                        min_val = current_value;
+                        max_val = current_value;
+                        is_init = true;
+                      } else {
+                        min_val = std::min(min_val, current_value);
+                        max_val = std::max(max_val, current_value);
+                      }
+                    });
+                  }
+                  // std::cout << "        bounds: " << min_val << "    " << max_val << std::endl;
+                  auto scan_column_expression = *(equals_predicate_expressions_left.begin());
+                  auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                  lqp_replace_node(join, predicate_node);
+                  // std::cout << "        replaced successfully" << std::endl;
+                  executed = true;
+                  return ExpressionVisitation::VisitArguments;
+                });
+              }
+            }
+            return ExpressionVisitation::VisitArguments;
+          }
+          return ExpressionVisitation::VisitArguments;
+        });
+      }
+    } break;
+    default:
+      return;
+  }
+
+}
+
+
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
@@ -253,6 +399,7 @@ void try_join_to_semi_rewrite(
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
 
   // Early out, if we need output expressions from both input tables.
+  // TO DO: can rewrite later expression on other table
   if (left_input_is_used && right_input_is_used) return;
 
   /**
@@ -298,61 +445,51 @@ void try_join_to_semi_rewrite(
   }
 
   if (equals_predicate_expressions_left.size() == 1 && equals_predicate_expressions_right.size() == 1) {
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right);
-  }
-
-}
-
-// Expect discarded input to be the right one
-// only allow child plans containing one scan, storedtable, validate
-void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join, const ExpressionUnorderedSet& equals_predicate_expressions_right) {
-  std::shared_ptr<AbstractLQPNode> scan;
-  bool abort = false;
-
-  // find previous scan
-  visit_pqp(join->right_input(), [&](auto node){
-    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable && node_type != LQPNodeType::Validate) {
-      abort = true;
-      return PQPVisitation::DoNotVisitInputs;
+    /*const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(*equals_predicate_expressions_left.begin());
+    const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(*equals_predicate_expressions_right.begin());
+    if (!left_column_expression) {
+      std::cout << "    left no column expression" << std::endl;
     }
-
-    if (node->type == LQPNodeType::Predicate) {
-      if (scan) {
-        abort = true;
-        return PQPVisitation::DoNotVisitInputs;
+    if (!left_column_expression) {
+      std::cout << "    right no column expression" << std::endl;
+    }
+    if (left_column_expression) {
+      std::string column_name{};
+      std::string table_name{};
+      const auto orig_node = left_column_expression->original_node.lock();
+      if (orig_node->type == LQPNodeType::StoredTable) {
+        const auto stored_table_node = static_pointer_cast<const StoredTableNode>(orig_node);
+        const auto original_column_id = left_column_expression->original_column_id;
+        table_name = stored_table_node->table_name;
+        if (Hyrise::get().storage_manager.has_table(table_name)) {
+          const auto original_table = Hyrise::get().storage_manager.get_table(table_name);
+          if (original_column_id != INVALID_COLUMN_ID) {
+            column_name = original_table->column_name(original_column_id);
+          }
+        }
       }
-      scan = node;
+      std::cout << "    left: " << table_name << "." << column_name << std::endl;
     }
-    return PQPVisitation::VisitInputs;
-  });
-
-  if (abort || !scan) {
-    return;
-  }
-
-  // if order dependency between join and scan column, rewrite
-  const auto order_dependencies = scan->order_dependencies();
-  auto join_column_expression = equals_predicate_expressions_right[0];
-  const auto casted_scan = static_pointer_cast<PredicateNode>(scan);
-  const auto scan_predicate = casted_scan->predicate();
-  AbstractExpression new_scan_predicate;
-  for (const auto& od : order_dependencies) {
-    // skip larger ODs
-    if (od.determinants.size() != 1 || od.dependents.size() != 1) {
-      continue;
+    if (right_column_expression) {
+      std::string column_name{};
+      std::string table_name{};
+      const auto orig_node = right_column_expression->original_node.lock();
+      if (orig_node->type == LQPNodeType::StoredTable) {
+        const auto stored_table_node = static_pointer_cast<const StoredTableNode>(orig_node);
+        const auto original_column_id = right_column_expression->original_column_id;
+        table_name = stored_table_node->table_name;
+        if (Hyrise::get().storage_manager.has_table(table_name)) {
+          const auto original_table = Hyrise::get().storage_manager.get_table(table_name);
+          if (original_column_id != INVALID_COLUMN_ID) {
+            column_name = original_table->column_name(original_column_id);
+          }
+        }
+      }
+      std::cout << "    right: " << table_name << "." << column_name << std::endl;
     }
-    switch (scan_predicate->type) {
-      case ExpressionType::Value: {
-        // TO DO: execute subplan, get result, build new scan with other column in result as predicate
-        // PRUNING --> sonst scan ggf langsamer
-      } break;
-      case ExpressionType::Between: {
-        // TO DO: execute subplan, get result, search min/max, build new scan
-        // PRUNING
-      } break;
-      default: return;
+    std::cout << "      try rewrite" << std::endl;*/
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right);
   }
-
 }
 
 void prune_projection_node(

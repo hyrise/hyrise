@@ -77,6 +77,17 @@ int main(int argc, char* argv[]) {
 
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
                                                             std::move(table_generator), context);
+
+  if (Hyrise::get().storage_manager.has_table("date_dim")) {
+    const auto& date_dim_table = Hyrise::get().storage_manager.get_table("date_dim");
+    date_dim_table->add_soft_order_constraint({{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
+    date_dim_table->add_soft_order_constraint({{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
+    std::cout << "added order constraint date_dim: d_date_sk <-> d_date" << std::endl;
+  } else {
+    std::cout << "NO date_dim TABLE!!!" << std::endl;
+  }
+
+
   Hyrise::get().benchmark_runner = benchmark_runner;
   benchmark_runner->run();
 }

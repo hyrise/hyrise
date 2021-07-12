@@ -363,12 +363,13 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   for (const auto& column_id : table_order_constraint.determinants()) {
     Assert(column_id < column_count(), "ColumnID out of range");
     // OCs require non-nullable columns
-    Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+    // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
   }
   for (const auto& column_id : table_order_constraint.dependents()) {
     Assert(column_id < column_count(), "ColumnID out of range");
     // OCs require non-nullable columns
-    Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+    // SKIP, TPC_DS's date_dim.d_date is nullable (stupid!)
+    // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
   }
 
   {

@@ -302,8 +302,8 @@ set(
     optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/dependent_group_by_reduction_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
-    optimizer/strategy/dependent_join_rewrite_rule.cpp
-    optimizer/strategy/dependent_join_rewrite_rule.hpp
+    # optimizer/strategy/dependent_join_rewrite_rule.cpp
+    # optimizer/strategy/dependent_join_rewrite_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/in_expression_rewrite_rule.cpp
