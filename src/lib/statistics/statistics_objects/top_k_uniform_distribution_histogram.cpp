@@ -313,6 +313,20 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
   return std::make_shared<TopKUniformDistributionHistogram<T>>(scaled_histogram, std::move(scaled_top_k_names), std::move(scaled_top_k_counts));
 }
 
+template <typename T>
+std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::pruned(
+    const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
+  DebugAssert(value, "pruned() cannot be called with NULL");
+
+  // for now, we don't prune the top_k values
+  auto pruned_top_k_names = _top_k_names;
+  auto pruned_top_k_counts = _top_k_counts;
+
+  auto pruned_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->pruned(num_values_pruned, predicate_condition, variant_value, variant_value2));
+  return std::make_shared<TopKUniformDistributionHistogram<T>>(pruned_histogram, std::move(pruned_top_k_names), std::move(pruned_top_k_counts));
+}
+
 
 template <typename T>
 std::string TopKUniformDistributionHistogram<T>::name() const {
