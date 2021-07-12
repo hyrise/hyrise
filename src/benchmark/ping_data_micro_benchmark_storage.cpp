@@ -32,7 +32,7 @@ using namespace opossum;
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/10mio/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/10mio/index_meta_data_int_index.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-constexpr auto STORAGE = "/mnt/intel_ssd750"
+constexpr auto STORAGE = "/mnt/samsung_ssd850"
 
 // table and compression settings
 ///////////////////////////////
@@ -172,7 +172,7 @@ namespace opossum {
 class TableWrapper;
 
 // Defining the base fixture class
-class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
+class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
     auto& storage_manager = Hyrise::get().storage_manager;
@@ -267,7 +267,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 // benchmarks
 ///////////////////////////////
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_OrderingLessThanEqualsPerformance)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_OrderingLessThanEqualsPerformance)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
@@ -354,7 +354,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_OrderingLessT
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_IndexScan)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_IndexScan)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length. 2");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length. 3");
@@ -401,7 +401,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_IndexScan)(be
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenPerformance)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenPerformance)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto order_by_column = ORDER_COLUMNS[state.range(0)];
@@ -439,7 +439,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenPerfor
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenIndexScan)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenIndexScan)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto order_by_column = ORDER_COLUMNS[state.range(0)];
@@ -511,9 +511,9 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_IndexScan)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenIndexScan)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_IndexScan)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataStorageMicroBenchmarkFixture, BM_STORAGE_Keven_BetweenIndexScan)->Apply(CustomArguments);
 
 }  // namespace opossum
