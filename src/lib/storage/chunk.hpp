@@ -121,6 +121,9 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractIndex>& index);
 
+  // replaces the current index with the passed index
+  void replace_index(const std::shared_ptr<AbstractIndex>& index, const std::shared_ptr<AbstractIndex>& new_index);
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   bool references_exactly_one_table() const;

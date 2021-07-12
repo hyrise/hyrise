@@ -138,6 +138,15 @@ void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
   _indexes.erase(it);
 }
 
+  void Chunk::replace_index(const std::shared_ptr<AbstractIndex>& index, const std::shared_ptr<AbstractIndex>& new_index) {
+  //remove current index
+  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
+  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
+  _indexes.erase(it);
+
+  _indexes.emplace_back(new_index);
+}
+
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
