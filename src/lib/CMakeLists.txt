@@ -121,6 +121,8 @@ set(
     logical_query_plan/delete_node.hpp
     logical_query_plan/drop_table_node.cpp
     logical_query_plan/drop_table_node.hpp
+    logical_query_plan/alter_drop_column_node.cpp
+    logical_query_plan/alter_drop_column_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp

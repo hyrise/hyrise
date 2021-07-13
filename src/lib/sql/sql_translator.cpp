@@ -1408,6 +1408,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
   Fail("Invalid enum value");
 }
 
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_alter(const hsql::AlterStatement& alter_statement) {
+  switch (alter_statement.type) {
+    case hsql::AlterType::kAlterDropColumn:
+      return AlterDropColumnNode::make(alter_statement.name, alter_statement.column_name);
+  }
+  Fail("Invalid enum value");
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parse(prepare_statement.query, &parse_result);
