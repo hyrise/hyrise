@@ -15,11 +15,12 @@ enum class DependencyType { Order, Functional, UniqueColumns, Inclusion };
 struct DependencyCandidate {
   DependencyCandidate() = default;
   DependencyCandidate(const std::vector<TableColumnID>& init_determinants,
-                      const std::vector<TableColumnID>& init_dependents, const size_t init_priority = 0)
-      : determinants(init_determinants), dependents(init_dependents), priority(init_priority) {}
+                      const std::vector<TableColumnID>& init_dependents, const DependencyType init_type, const size_t init_priority = 0)
+      : determinants(init_determinants), dependents(init_dependents), type(init_type), priority(init_priority) {}
 
   std::vector<TableColumnID> determinants;
   std::vector<TableColumnID> dependents;
+  DependencyType type;
   size_t priority;
   // tell tbb's concurrent_prioroty_queue which parameter should be used for ranking
   bool operator<(const DependencyCandidate& other) const { return priority < other.priority; }

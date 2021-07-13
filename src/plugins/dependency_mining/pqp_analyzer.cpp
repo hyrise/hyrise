@@ -82,8 +82,8 @@ void PQPAnalyzer::run() {
     });
   }
   if (_queue) {
-    _queue->emplace(std::vector<TableColumnID>{}, std::vector<TableColumnID>{}, 1);
-    _queue->emplace(std::vector<TableColumnID>{}, std::vector<TableColumnID>{}, 2);
+    _queue->emplace(std::vector<TableColumnID>{}, std::vector<TableColumnID>{}, DependencyType::Order, 1);
+    _queue->emplace(std::vector<TableColumnID>{}, std::vector<TableColumnID>{}, DependencyType::Inclusion, 2);
   }
 }
 
