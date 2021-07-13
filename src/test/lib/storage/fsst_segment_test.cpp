@@ -62,7 +62,7 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
-  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2401);
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2473);
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
@@ -72,8 +72,10 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   }
   auto segment = compress(vs_str, DataType::String);
 
-  std::optional<pmr_string> value = segment->get_typed_value(ChunkOffset{2});
-  ASSERT_EQ(values[2], value.value());
+  for(size_t index = 0; index < values.size(); ++index){
+    std::optional<pmr_string> value = segment->get_typed_value(static_cast<ChunkOffset>(index));
+    ASSERT_EQ(value.value(), values[index]);
+  }
 }
 
 TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {

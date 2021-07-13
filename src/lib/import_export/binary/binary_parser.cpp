@@ -260,6 +260,9 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
   //  BaseCompressedVector compressed_offsets(_read_values<unsigned long>(file, compressed_offsets_size));
 
+  const auto reference_offsets_size = _read_value<uint32_t>(file);
+  pmr_vector<uint64_t> reference_offsets(_read_values<uint64_t>(file, reference_offsets_size));
+
   const auto null_values_size = _read_value<uint32_t>(file);
   std::optional<pmr_vector<bool>> null_values;
   if (null_values_size != 0) {
@@ -268,9 +271,10 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
     null_values = std::nullopt;
   }
 
+  const auto number_elements_per_reference_bucket = _read_value<uint64_t>(file);
   fsst_decoder_t decoder = _read_value<fsst_decoder_t>(file);
 
-  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, null_values, decoder);
+  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, reference_offsets, null_values, number_elements_per_reference_bucket, decoder);
 }
 
 template <typename T>

@@ -69,10 +69,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     std::optional<pmr_vector<bool>> null_values_optional = std::nullopt;
     fsst_decoder_t decoder;
 
+    uint8_t reference_offsets_size = 8;
+    pmr_vector<uint64_t> reference_offsets(reference_offsets_size);
+
     if (values.size() == 0) {
       offsets.resize(1);
       auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
-      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values_optional, decoder);
+      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets, null_values_optional, 0 ,decoder);
     }
 
     // our temporary data structure keeping char pointer and their length
@@ -107,18 +110,34 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     //  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
 
-    offsets[0] = 0;
-    unsigned long aggregated_offset_sum = 0;
+
+    decoder = fsst_decoder(encoder);
+    fsst_destroy(encoder);
+
+
+    uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(std::ceil(static_cast<double>(offsets.size()) / static_cast<double>(reference_offsets_size + 1)));
     size_t compressed_values_size = compressed_value_lengths.size();
+
+    // Calculate global offset based on compressed value lengths
+    offsets[0] = 0;
+    uint64_t aggregated_offset_sum = 0;
     for (size_t index{1}; index <= compressed_values_size; ++index) {
       aggregated_offset_sum += compressed_value_lengths[index - 1];
       offsets[index] = aggregated_offset_sum;
     }
-
     compressed_values.resize(aggregated_offset_sum);
-    decoder = fsst_decoder(encoder);
 
-    fsst_destroy(encoder);
+    // Calculate start offset of each reference bucket
+    for (size_t index = 0; index < reference_offsets_size; ++index) {
+      reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
+    }
+
+    // Shift global offsets by reference offsets
+    for (size_t index{n_elements_in_reference_bucket}; index <= compressed_values_size; ++index) {
+      auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
+      auto reference_offset = reference_offsets[reference_offset_index];
+      offsets[index] = offsets[index] - reference_offset;
+    }
 
     if (has_null_values) {
       null_values_optional = std::make_optional(null_values);
@@ -127,7 +146,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // vector compression
     auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
 
-    return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, null_values_optional, decoder);
+    return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets, null_values_optional, n_elements_in_reference_bucket, decoder);
   }
 };
 

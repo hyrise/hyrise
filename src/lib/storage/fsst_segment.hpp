@@ -23,9 +23,10 @@ class FSSTSegment : public AbstractEncodedSegment {
   //  explicit FSSTSegment();     // TODO: remove
   FSSTSegment(pmr_vector<unsigned char>& compressed_values,
               std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
-              std::optional<pmr_vector<bool>>& null_values, fsst_decoder_t& decoder);
+              pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
+              uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
 
-  /**
+      /**
    * @defgroup AbstractSegment interface
    * @{
    */
@@ -39,6 +40,8 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
+
+  uint64_t get_offset(const ChunkOffset chunk_offset) const;
 
   /**@}*/
 
@@ -55,13 +58,17 @@ class FSSTSegment : public AbstractEncodedSegment {
   const pmr_vector<unsigned char>& compressed_values() const;
   const std::unique_ptr<const BaseCompressedVector>& compressed_offsets() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
+  uint64_t number_elements_per_reference_bucket() const;
+  const pmr_vector<uint64_t>& reference_offsets() const;
 
   /**@}*/
 
  private:
   pmr_vector<unsigned char> _compressed_values;
   std::unique_ptr<const BaseCompressedVector> _compressed_offsets;
+  pmr_vector<uint64_t> _reference_offsets;
   std::optional<pmr_vector<bool>> _null_values;
+  uint64_t _number_elements_per_reference_bucket;
 
   mutable fsst_decoder_t _decoder;
 };
