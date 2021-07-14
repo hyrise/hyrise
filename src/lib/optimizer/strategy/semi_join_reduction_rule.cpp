@@ -139,8 +139,8 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
       }
 
       // On the left side we must not create semi join reductions for anti joins as those rely on the very existence of
-      // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
-      // would simply duplicate the original join.
+      // non-matching values on the right side.
+      // We also reduce semi joins, if beneficial.
       if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
           join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
         reduce_if_beneficial(LQPInputSide::Left);
