@@ -345,6 +345,8 @@ void AbstractTableGenerator::generate_and_store() {
         for (const auto& index_column : index_columns) {
           std::cout << "-  Creating table index on " << table_name << " [ ";
           std::cout << index_column << " ";
+          std::cout << "with chunk size" << " ";
+          std::cout << chunk_ids.size() << " ";
           std::cout << "] " << std::flush;
 
           Timer per_table_index_timer;

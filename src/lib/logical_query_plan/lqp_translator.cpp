@@ -348,13 +348,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   const auto& primary_join_predicate = join_predicates.front();
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
-/*
+
   const auto& left_input_type = join_node->left_input()->type;
   const auto& right_input_type = join_node->right_input()->type;
-*/
+
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
-/*
+
 
   auto left_table_type = TableType::References;
   auto right_table_type = TableType::References;
@@ -380,7 +380,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
                                        primary_join_predicate, std::move(secondary_join_predicates), *index_side);
   }
-*/
+
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
 
