@@ -54,6 +54,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   JoinMode join_mode;
 
+  bool is_rewritten = false;
+
  protected:
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param

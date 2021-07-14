@@ -290,10 +290,12 @@ void try_join_to_semi_rewrite(
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
+    join_node->is_rewritten = true;
   }
   if (!right_input_is_used &&
       join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
+    join_node->is_rewritten = true;
   }*/
 }
 
