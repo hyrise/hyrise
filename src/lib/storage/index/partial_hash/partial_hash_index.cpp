@@ -20,6 +20,12 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
           _impl =
               std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id, _null_positions);
         });
+  } else {
+    /**
+     * Because 'chunks_to_index' is empty, we cannot determine the data type of the column and therefore construct
+     * an empty Impl. When chunks are added to this index, it is swapped out again
+     */
+    _impl = std::make_shared<EmptyPartialHashIndexImpl>();
   }
 }
 

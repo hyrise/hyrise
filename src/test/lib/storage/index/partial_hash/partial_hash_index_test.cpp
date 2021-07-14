@@ -43,7 +43,7 @@ class PartialHashIndexTest : public BaseTest {
 
     index = std::make_shared<PartialHashIndex>(chunks_to_index , ColumnID{0});
 
-    index_map = &(index->_map);
+    index_map = &(std::dynamic_pointer_cast<PartialHashIndexImpl<pmr_string>>(index->_impl)->_map);
   }
 
   pmr_vector<pmr_string> values1;
@@ -54,10 +54,10 @@ class PartialHashIndexTest : public BaseTest {
   std::shared_ptr<PartialHashIndex> index = nullptr;
 
   /**
-   * Use pointers to inner data structures of BTreeIndex in order to bypass the
+   * Use pointers to inner data structures of PartialHashIndex in order to bypass the
    * private scope. Since the variable is set in setup() references are not possible.
    */
-  tsl::robin_map<AllTypeVariant, std::vector<RowID>>* index_map = nullptr;
+  tsl::robin_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 
 };
 
@@ -141,7 +141,7 @@ TEST_F(PartialHashIndexTest, EqualsValue) {
 }
 
 TEST_F(PartialHashIndexTest, EqualsValueNotFound) {
-  auto value = 42;
+  auto value = "invalid";
   auto [begin, end] = index->equals(value);
 
   EXPECT_EQ(end, begin);
