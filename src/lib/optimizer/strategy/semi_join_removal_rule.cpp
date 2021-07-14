@@ -4,9 +4,9 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
+#include "expression/is_null_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "expression/is_null_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -74,7 +74,6 @@ std::string SemiJoinRemovalRule::name() const {
 }
 
 void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-
   /**
    * Approach:
    *  1. Find semi join reduction node and the corresponding original join node.
@@ -156,7 +155,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (semi_join_is_left_input || semi_join_is_right_input) {
         // Check whether the semi join reduction predicate matches one of the predicates of the upper join
         if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
-                             [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
+                        [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
           is_corresponding_join = true;
         }
       }

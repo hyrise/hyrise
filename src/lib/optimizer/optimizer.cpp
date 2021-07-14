@@ -102,8 +102,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
 
-  // TODO(Julian) Benchmark after enabling this rule... 18a is reduced to ~600ms runtime 
- // optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+  // TODO(Julian) Benchmark after enabling this rule... 18a is reduced to ~600ms runtime
+  // optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   return optimizer;
 }
