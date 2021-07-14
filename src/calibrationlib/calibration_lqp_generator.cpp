@@ -45,11 +45,11 @@ void CalibrationLQPGenerator::generate_joins(std::vector<std::shared_ptr<const C
   const auto table_suffix = "65535_" + std::to_string(table_size);
   for (const auto& table : tables) {
     if (table->get_name().find(table_suffix) != std::string::npos) {
-      if (table->get_name().find("1500000") == std::string::npos) {
       for (const auto& other_table : tables) {
-        _generate_joins(table, other_table);
+        if (other_table->get_name().find("1500000") == std::string::npos) {
+          _generate_joins(table, other_table);
+        }
       }
-    }
     }
   }
 }
