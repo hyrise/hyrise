@@ -74,10 +74,13 @@ std::string SemiJoinRemovalRule::name() const {
 }
 
 void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  // Approach: Find a semi reduction node and the corresponding original join node and check whether the cardinality is
-  // reduced between the semi join reduction and the original join. If it is not, the semi join reduction is likely not
-  // helpful and should be removed.
 
+  /**
+   * Approach:
+   *  1. Find semi join reduction node and the corresponding original join node.
+   *  2. Check whether there are expensive operators between the original join and the semi join reduction node and
+   *     track removal candidates.
+   */
   Assert(lqp_root->type == LQPNodeType::Root, "SemiJoinRemovalRule needs root to hold onto");
 
   // In some cases, semi joins are added on both sides of the join (e.g., TPC-H Q17). In the LQPTranslator, these will
