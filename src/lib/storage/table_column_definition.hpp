@@ -9,7 +9,7 @@ namespace opossum {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, const KeyConstraintType init_constraint);
+  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, const KeyConstraintType init_constraint = KeyConstraintType::NOT_SET);
 
   bool operator==(const TableColumnDefinition& rhs) const;
   size_t hash() const;

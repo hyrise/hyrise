@@ -1385,13 +1385,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
 
-      if (parser_column_definition->constraintType != ) {
+
         switch (parser_column_definition->constraintType) {
           case hsql::ConstraintType::PRIMARY_KEY:
             column_definition.constraint = KeyConstraintType::PRIMARY_KEY;
+            break;
           case hsql::ConstraintType::UNIQUE:
             column_definition.constraint = KeyConstraintType::UNIQUE;
-        }
+            break;
+          case hsql::ConstraintType::NOT_SET:
+          default:
+            column_definition.constraint = KeyConstraintType::NOT_SET;
+            break;
       }
     }
 
