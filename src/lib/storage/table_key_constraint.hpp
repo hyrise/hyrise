@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
+enum class KeyConstraintType { PRIMARY_KEY, UNIQUE, NOT_SET };
 
 /**
  * Container class to define uniqueness constraints for tables.
