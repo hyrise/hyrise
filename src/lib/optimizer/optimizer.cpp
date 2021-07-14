@@ -51,7 +51,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
   // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
   // (FDs) used by the DependentGroupByReductionRule.
-  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  //optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
