@@ -18,7 +18,7 @@ class AbstractTableIndex : public AbstractIndex<RowID> {
  */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
-  AbstractTableIndex() = delete;
+  //AbstractTableIndex() = delete;
   explicit AbstractTableIndex(const IndexType type);
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
@@ -26,6 +26,9 @@ class AbstractTableIndex : public AbstractIndex<RowID> {
   std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const;
 
   bool is_index_for(const ColumnID column_id) const;
+
+  //TODO(pi): change
+  virtual void change_indexed_column(const ColumnID column_id) = 0;
 
   std::set<ChunkID> get_indexed_chunk_ids() const;
 

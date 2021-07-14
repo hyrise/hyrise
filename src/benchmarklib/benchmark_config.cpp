@@ -4,6 +4,7 @@ namespace opossum {
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                                  const EncodingConfig& init_encoding_config, const bool init_indexes,
+                                 const bool init_table_indexes,
                                  const int64_t init_max_runs, const Duration& init_max_duration,
                                  const Duration& init_warmup_duration,
                                  const std::optional<std::string>& init_output_file_path,
@@ -14,6 +15,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       chunk_size(init_chunk_size),
       encoding_config(init_encoding_config),
       indexes(init_indexes),
+      table_indexes(init_table_indexes),
       max_runs(init_max_runs),
       max_duration(init_max_duration),
       warmup_duration(init_warmup_duration),

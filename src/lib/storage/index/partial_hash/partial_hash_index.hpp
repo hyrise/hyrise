@@ -27,7 +27,7 @@ class PartialHashIndex : public AbstractTableIndex {
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
 
-
+  void change_indexed_column(const ColumnID column_id) override;
 
 
  protected:

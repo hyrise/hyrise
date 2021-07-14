@@ -7,6 +7,7 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterate.hpp"
@@ -322,6 +323,43 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Creating indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
   } else {
     std::cout << "- No indexes created as --indexes was not specified or set to false" << std::endl;
+  }
+
+  /**
+   * Create table indexes if requested by the user
+   */
+  if (_benchmark_config->table_indexes) {
+    std::cout << "- Creating table indexes" << std::endl;
+    const auto& indexes_by_table = _indexes_by_table();
+    if (indexes_by_table.empty()) {
+      std::cout << "-  No indexes defined by benchmark" << std::endl;
+    }
+    for (const auto& [table_name, indexes] : indexes_by_table) {
+      const auto& table = table_info_by_name[table_name].table;
+
+      auto chunk_ids = std::vector<ChunkID>{};
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        chunk_ids.emplace_back(chunk_id);
+      }
+      for (const auto& index_columns : indexes) {
+        for (const auto& index_column : index_columns) {
+          std::cout << "-  Creating table index on " << table_name << " [ ";
+          std::cout << index_column << " ";
+          std::cout << "] " << std::flush;
+
+          Timer per_table_index_timer;
+          table->create_table_index<PartialHashIndex>(table->column_id_by_name(index_column), chunk_ids);
+
+          std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
+          std::cout << "(" << table->column_id_by_name(index_column) << ")" << std::endl;
+        }
+      }
+
+    }
+    //metrics.index_duration = timer.lap(); //TODO(pi)
+    std::cout << "- Creating table indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
+  } else {
+    std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
   }
 }
 

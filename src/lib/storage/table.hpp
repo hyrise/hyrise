@@ -36,10 +36,12 @@ class Table : private Noncopyable {
   // segments (TableType::References). The attribute target_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No,
+        pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
+        std::vector<std::shared_ptr<Chunk>>&& chunks,
+        const UseMvcc use_mvcc = UseMvcc::No, pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
 
   /**
    * @defgroup Getter and convenience functions for the column definitions
@@ -227,6 +229,7 @@ class Table : private Noncopyable {
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
 
+  pmr_vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes() const { return _table_indexes; }
   std::vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes(const ColumnID column_id) const;
 
   /**

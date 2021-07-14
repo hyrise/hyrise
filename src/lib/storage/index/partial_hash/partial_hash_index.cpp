@@ -20,6 +20,8 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
                         // ToDo(pi) check all have same data type by taking first and comapring rest
                         //ToDo(pi) set null positions
                         for (const auto& chunk : chunks_to_index) {
+                          if (_indexed_chunk_ids.contains(chunk.first)) continue;
+
                           _indexed_chunk_ids.insert(chunk.first);
                           auto indexed_segment = chunk.second->get_segment(column_id);
                           segment_iterate<ColumnDataType>(*indexed_segment, [&](const auto& position) {
@@ -39,6 +41,11 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
                       });
   }
 }
+
+void PartialHashIndex::change_indexed_column(const ColumnID column_id) {
+  _column_id = column_id;
+}
+
 
 //ToDO(pi) change index (add) chunks later after creation
 
