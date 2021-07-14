@@ -379,7 +379,7 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
   auto predicate_contains_correlated_subquery = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
     if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-        subquery_expression && !subquery_expression->arguments.empty()) {
+        subquery_expression && subquery_expression->is_correlated()) {
       predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
     } else {

@@ -46,11 +46,12 @@ const std::string& JoinHash::name() const {
 }
 
 std::string JoinHash::description(DescriptionMode description_mode) const {
-  std::ostringstream stream;
-  stream << AbstractJoinOperator::description(description_mode);
-  stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
+  std::ostringstream ss;
+  ss << AbstractJoinOperator::description(description_mode);
+  ss << (description_mode == DescriptionMode::SingleLine ? " " : "\n");
+  ss << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
 
-  return stream.str();
+  return ss.str();
 }
 
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
