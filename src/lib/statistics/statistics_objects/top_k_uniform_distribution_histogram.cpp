@@ -33,7 +33,7 @@ namespace opossum {
 template <typename T>
 TopKUniformDistributionHistogram<T>::TopKUniformDistributionHistogram(std::shared_ptr<GenericHistogram<T>> histogram, 
   std::vector<T>&& top_k_names, std::vector<HistogramCountType>&& top_k_counts, const HistogramDomain<T>& domain)
-    : AbstractHistogram<T>(domain), _histogram(histogram), _top_k_names(top_k_names), _top_k_counts(top_k_counts) {
+    : AbstractHistogram<T>(domain), _histogram(histogram), _top_k_names(std::move(top_k_names)), _top_k_counts(std::move(top_k_counts)) {
 
   // TODO: moved to sliced method
   if (_histogram == nullptr) {
@@ -61,7 +61,7 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
 
   // If the column holds less than K distinct values use the distinct count as TOP_K instead
 
-  auto k = std::min(TOP_K_DEFAULT, value_distribution.size());
+  const auto k = std::min(TOP_K_DEFAULT, value_distribution.size());
 
   // Get the first top k values and save them into vectors
   std::vector<T> top_k_names(k);
@@ -138,40 +138,35 @@ std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::s
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
       GenericHistogramBuilder<T> builder{1, AbstractHistogram<T>::domain()};
-      bool is_top_k_value = false; 
-      for (auto i = 0u; i < _top_k_names.size(); i++) {
-        if(_top_k_names[i] == value) {
-          is_top_k_value = true;
-          builder.add_bin(*value, *value, _top_k_counts[i], 1);
-          break;
-        }
-      }
-      if(!is_top_k_value) {
+
+      auto value_lower_bound = std::lower_bound(_top_k_names.begin(), _top_k_names.end(), value);
+      auto value_upper_bound = std::upper_bound(_top_k_names.begin(), _top_k_names.end(), value);
+
+      if (value_lower_bound != value_upper_bound) {
+        // Value in Top-K Values
+        builder.add_bin(*value, *value, _top_k_counts[value_lower_bound - _top_k_names.begin()], 1);
+      } else {
         builder.add_bin(*value, *value,
-                        static_cast<HistogramCountType>(AbstractHistogram<T>::estimate_cardinality(PredicateCondition::Equals, variant_value)),
-                        1);
+                static_cast<HistogramCountType>(AbstractHistogram<T>::estimate_cardinality(PredicateCondition::Equals, variant_value)),
+                1);
       }
       return builder.build();
     }
     case PredicateCondition::NotEquals: {
       // Check if value in top-k values
-      auto top_k_index = _top_k_names.size();
-      
-      for (auto i = 0u; i < _top_k_names.size(); i++) {
-        if(_top_k_names[i] == value) {
-          top_k_index = i;
-          break;
-        }
-      }
 
       auto new_top_k_names = _top_k_names;
       auto new_top_k_counts = _top_k_counts;
       auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->clone());
 
-      if (top_k_index != _top_k_names.size()) {
+      auto value_lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
+      auto value_upper_bound = std::upper_bound(_top_k_names.begin(), _top_k_names.end(), value);
+
+      if (value_lower_bound != value_upper_bound) {
         // Value in Top-K Values
-        new_top_k_names.erase(new_top_k_names.begin() + top_k_index);
-        new_top_k_counts.erase(new_top_k_counts.begin() + top_k_index);
+        const auto value_index = value_lower_bound - new_top_k_names.begin();
+        new_top_k_names.erase(value_lower_bound);
+        new_top_k_counts.erase(new_top_k_counts.begin() + value_index);
 
       } else {
         // Value not in Top-K Values
