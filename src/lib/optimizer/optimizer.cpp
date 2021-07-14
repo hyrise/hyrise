@@ -90,6 +90,12 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
+  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
+
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
   // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
   // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
   // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
@@ -99,8 +105,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
-
-  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
 
   return optimizer;
 }
