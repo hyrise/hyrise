@@ -53,6 +53,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     Hyrise::get().set_scheduler(scheduler);
   }
 
+
   _table_generator->generate_and_store();
 
   _benchmark_item_runner->on_tables_loaded();
@@ -532,6 +533,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"indexes", config.indexes},
+      {"table_indexes", config.table_indexes},
       {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},

@@ -482,6 +482,8 @@ set(
     storage/index/index_statistics.hpp
     storage/index/partial_hash/partial_hash_index.cpp
     storage/index/partial_hash/partial_hash_index.hpp
+    storage/index/partial_hash/partial_hash_index_impl.cpp
+    storage/index/partial_hash/partial_hash_index_impl.hpp
     storage/index/partial_index_statistics.cpp
     storage/index/partial_index_statistics.hpp
     storage/index/segment_index_type.hpp

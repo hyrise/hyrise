@@ -23,7 +23,8 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"binary_caching_duration", metrics.binary_caching_duration.count()},
           {"sort_duration", metrics.sort_duration.count()},
           {"store_duration", metrics.store_duration.count()},
-          {"index_duration", metrics.index_duration.count()}};
+          {"index_duration", metrics.index_duration.count()},
+          {"table_index_duration", metrics.table_index_duration.count()}};
 }
 
 BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table) : table(init_table) {}
@@ -338,7 +339,7 @@ void AbstractTableGenerator::generate_and_store() {
       const auto& table = table_info_by_name[table_name].table;
 
       auto chunk_ids = std::vector<ChunkID>{};
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) { //TODO(pi): revert
         chunk_ids.emplace_back(chunk_id);
       }
       for (const auto& index_columns : indexes) {
@@ -358,8 +359,8 @@ void AbstractTableGenerator::generate_and_store() {
       }
 
     }
-    //metrics.index_duration = timer.lap(); //TODO(pi)
-    std::cout << "- Creating table indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
+    metrics.table_index_duration = timer.lap();
+    std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
   } else {
     std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
   }

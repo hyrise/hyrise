@@ -27,9 +27,6 @@ class AbstractTableIndex : public AbstractIndex<RowID> {
 
   bool is_index_for(const ColumnID column_id) const;
 
-  //TODO(pi): change
-  virtual void change_indexed_column(const ColumnID column_id) = 0;
-
   std::set<ChunkID> get_indexed_chunk_ids() const;
 
  protected:

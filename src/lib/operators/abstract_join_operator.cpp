@@ -88,21 +88,11 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
 
   TableColumnDefinitions output_column_definitions;
 
-  pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes;
-
-  ColumnID new_column_id = ColumnID{0};
   // Preparing output table by adding segments from left table
   for (ColumnID column_id{0}; column_id < left_in_table->column_count(); ++column_id) {
     const auto nullable = (left_may_produce_null || left_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(left_in_table->column_name(column_id),
                                            left_in_table->column_data_type(column_id), nullable);
-    auto column_table_indexes = left_in_table->get_table_indexes(column_id);
-    for(auto &column_table_index : column_table_indexes) {
-      auto new_column_table_index(column_table_index);
-      new_column_table_index->change_indexed_column(new_column_id);
-      table_indexes.emplace_back(new_column_table_index);
-    }
-    new_column_id++;
   }
 
   // Preparing output table by adding segments from right table
@@ -111,17 +101,10 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
       const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
       output_column_definitions.emplace_back(right_in_table->column_name(column_id),
                                              right_in_table->column_data_type(column_id), nullable);
-      auto column_table_indexes = right_in_table->get_table_indexes(column_id);
-      for(auto &column_table_index : column_table_indexes) {
-        auto new_column_table_index(column_table_index);
-        new_column_table_index->change_indexed_column(new_column_id);
-        table_indexes.emplace_back(new_column_table_index);
-      }
-      new_column_id++;
     }
   }
 
-  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks), UseMvcc::No, table_indexes);
+  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks), UseMvcc::No);
 }
 
 }  // namespace opossum
