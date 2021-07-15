@@ -30,11 +30,12 @@ class DDLStatementTest : public BaseTest {
   // Tables modified during test case
   std::shared_ptr<Table> _table_a;
 
-  const std::string _create_index = "CREATE INDEX myindex ON table_a (a)";
+  const std::string _create_index_single_column = "CREATE INDEX myindex ON table_a (a)";
+  const std::string _create_index_multi_column = "CREATE INDEX myindex ON table_a (a, b)";
 };
 
 TEST_F(DDLStatementTest, CreateIndex) {
-  auto sql_pipeline = SQLPipelineBuilder{_create_index}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -42,6 +43,30 @@ TEST_F(DDLStatementTest, CreateIndex) {
   auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
+
+  auto actual_index = targeted_table->indexes_statistics().at(0);
+
+  EXPECT_TRUE(actual_index.name == "myindex");
+  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+
+  auto chunk_count = targeted_table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = targeted_table->get_chunk(id);
+    auto actual_indices = current_chunk->get_indexes(*column_ids);
+    EXPECT_TRUE(actual_indices.size() == 1);
+  }
+}
+
+TEST_F(DDLStatementTest, MultiColumn) {
+  auto sql_pipeline = SQLPipelineBuilder{_create_index_multi_column}.create_pipeline();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->emplace_back(ColumnID{0});
+  column_ids->emplace_back(ColumnID{1});
 
   auto actual_index = targeted_table->indexes_statistics().at(0);
 

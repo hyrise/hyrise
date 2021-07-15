@@ -7,6 +7,7 @@
 #include "operators/insert.hpp"
 #include "storage/table.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "utils/assert.hpp"
 
 
@@ -70,7 +71,13 @@ std::shared_ptr<const Table> CreateIndex::_on_execute(std::shared_ptr<Transactio
     _check_if_index_already_exists(index_name, table_to_be_indexed);
   }
 
-  table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
+  // group key index only works with a single column
+  if(column_ids->size() == 1) {
+    table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
+  } else {
+    table_to_be_indexed->create_index<CompositeGroupKeyIndex>(*column_ids, index_name);
+  }
+
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 

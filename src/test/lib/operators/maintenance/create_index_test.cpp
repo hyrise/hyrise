@@ -81,6 +81,32 @@ TEST_F(CreateIndexTest, ExecuteWithIfNotExists) {
   another_context->rollback(RollbackReason::Conflict);
 }
 
+TEST_F(CreateIndexTest, ExecuteMultipleColumns) {
+  ChunkEncoder::encode_all_chunks(test_table);
+
+  // overwrite and extend setup method to enable multiple columns
+  column_ids->emplace_back(test_table->column_id_by_name("a"));
+  create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
+
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  create_index->set_transaction_context(context);
+
+  create_index->execute();
+  context->commit();
+
+  auto actual_index = test_table->indexes_statistics().at(0);
+
+  EXPECT_EQ(actual_index.name, index_name);
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
+
+  auto chunk_count = test_table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = test_table->get_chunk(id);
+    auto applied_indices = current_chunk->get_indexes(*column_ids);
+    EXPECT_TRUE(applied_indices.size() == 1);
+  }
+}
+
 TEST_F(CreateIndexTest, ExecuteWithIfNotExistsWithoutName) {}
   // TODO implement test case
 }  // namespace opossum
