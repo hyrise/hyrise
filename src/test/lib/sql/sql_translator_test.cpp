@@ -2274,7 +2274,7 @@ TEST_F(SQLTranslatorTest, CreateIndex) {
   column_ids->emplace_back(ColumnID{0});
   column_ids->emplace_back(ColumnID{1});
 
-  const auto expected_lqp = CreateIndexNode::make("my_index", false, column_ids, stored_table_node_int_int_int);
+  const auto expected_lqp = CreateIndexNode::make("my_index", false, "int_int_int", column_ids);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2288,7 +2288,7 @@ TEST_F(SQLTranslatorTest, CreateIndexIfNotExist) {
   column_ids->emplace_back(ColumnID{0});
   column_ids->emplace_back(ColumnID{1});
 
-  const auto expected_lqp = CreateIndexNode::make("my_index", true, column_ids, stored_table_node_int_int_int);
+  const auto expected_lqp = CreateIndexNode::make("my_index", true, "int_int_int", column_ids);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2302,7 +2302,7 @@ TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
   column_ids->emplace_back(ColumnID{0});
   column_ids->emplace_back(ColumnID{1});
 
-  const auto expected_lqp = CreateIndexNode::make("int_int_int_a_b", false, column_ids, stored_table_node_int_int_int);
+  const auto expected_lqp = CreateIndexNode::make("int_int_int_a_b", false, "int_int_int", column_ids);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

@@ -206,8 +206,10 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       switch (node->type) {
         case LQPNodeType::CreatePreparedPlan:
         case LQPNodeType::CreateView:
+        case LQPNodeType::CreateIndex:
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
+        case LQPNodeType::DropIndex:
         case LQPNodeType::DropTable:
         case LQPNodeType::Import:
         case LQPNodeType::StaticTable:
@@ -219,8 +221,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Aggregate:
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
-        case LQPNodeType::CreateIndex:
-        case LQPNodeType::DropIndex:
         case LQPNodeType::Delete:
         case LQPNodeType::Export:
         case LQPNodeType::Insert:

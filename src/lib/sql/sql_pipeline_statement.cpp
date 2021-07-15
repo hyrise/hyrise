@@ -317,7 +317,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
                 _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
                 reinterpret_cast<uintptr_t>(this));
 
-  auto table = Hyrise::get().storage_manager.get_table("mytable");
   return {SQLPipelineStatus::Success, _result_table};
 }
 

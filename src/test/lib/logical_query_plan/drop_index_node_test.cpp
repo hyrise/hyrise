@@ -30,17 +30,17 @@ class DropIndexNodeTest : public BaseTest {
  public:
   void SetUp() override {
     test_table = load_table("resources/test_data/tbl/string_int_index.tbl", 3);
-    Hyrise::get().storage_manager.add_table("t_a", test_table);
+    Hyrise::get().storage_manager.add_table(test_table_name, test_table);
     table_node = std::make_shared<StoredTableNode>("t_a");
     column_ids->emplace_back(ColumnID{static_cast<ColumnID>(test_table->column_id_by_name("b"))});
 
     dummy_table_wrapper = std::make_shared<TableWrapper>(test_table);
     dummy_table_wrapper->execute();
 
-    create_index = std::make_shared<CreateIndex>("some_index", column_ids, true, dummy_table_wrapper);
+    create_index = std::make_shared<CreateIndex>("some_index", true, test_table_name, column_ids);
 
-    auto compression_task_0 = std::make_shared<ChunkCompressionTask>("t_a", ChunkID{0});
-    auto compression_task_1 = std::make_shared<ChunkCompressionTask>("t_a", ChunkID{1});
+    auto compression_task_0 = std::make_shared<ChunkCompressionTask>(test_table_name, ChunkID{0});
+    auto compression_task_1 = std::make_shared<ChunkCompressionTask>(test_table_name, ChunkID{1});
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression_task_0, compression_task_1});
 
@@ -59,6 +59,7 @@ class DropIndexNodeTest : public BaseTest {
   std::shared_ptr<TableWrapper> dummy_table_wrapper;
   std::shared_ptr<std::vector<ColumnID>> column_ids = std::make_shared<std::vector<ColumnID>>();
   std::shared_ptr<Table> test_table;
+  std::string test_table_name = "t_a";
 
 };
 

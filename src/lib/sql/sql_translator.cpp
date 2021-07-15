@@ -1311,8 +1311,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
     }
   }
 
-  auto input_node = StoredTableNode::make(create_statement.tableName);
-
   std::string index_name;
   if(create_statement.indexName) {
     index_name = create_statement.indexName;
@@ -1320,8 +1318,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
     index_name = create_statement.tableName + column_name_string;
   }
 
-  return CreateIndexNode::make(index_name, create_statement.ifNotExists, column_ids, input_node);
-
+  return CreateIndexNode::make(index_name, create_statement.ifNotExists, create_statement.tableName, column_ids);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {

@@ -24,15 +24,13 @@ class CreateIndexTest : public BaseTest {
  public:
   void SetUp() override {
     test_table = load_table("resources/test_data/tbl/string_int_index.tbl", 3);
-    Hyrise::get().storage_manager.add_table("TestTable", test_table);
-    dummy_table_wrapper = std::make_shared<TableWrapper>(test_table);
-    dummy_table_wrapper->execute();
+    Hyrise::get().storage_manager.add_table(table_name, test_table);
+
     column_ids->emplace_back(ColumnID{static_cast<ColumnID>(test_table->column_id_by_name("b"))});
 
-    create_index = std::make_shared<CreateIndex>(index_name, column_ids, true, dummy_table_wrapper);
+    create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
   }
 
-  std::shared_ptr<TableWrapper> dummy_table_wrapper;
   std::shared_ptr<Table> test_table;
   std::shared_ptr<CreateIndex> create_index;
   std::string index_name = "TestIndex";
@@ -62,7 +60,7 @@ TEST_F(CreateIndexTest, Execute) {
 }
 
 TEST_F(CreateIndexTest, TableExists) {
-  create_index = std::make_shared<CreateIndex>(index_name, column_ids, true, dummy_table_wrapper);
+  create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_index->set_transaction_context(context);
@@ -86,7 +84,7 @@ TEST_F(CreateIndexTest, ExecuteWithIfNotExists) {
   auto another_dummy_table_wrapper = std::make_shared<TableWrapper>(test_table);
   another_dummy_table_wrapper->execute();
 
-  auto another_index = std::make_shared<CreateIndex>(index_name, column_ids, true, another_dummy_table_wrapper);
+  auto another_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
   const auto another_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   another_index->set_transaction_context(another_context);

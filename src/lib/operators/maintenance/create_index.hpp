@@ -10,16 +10,17 @@ namespace opossum {
 class CreateIndex : public AbstractReadWriteOperator {
  public:
   CreateIndex(const std::string& init_index_name,
-              const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
               const bool init_if_not_exists,
-              const std::shared_ptr<const AbstractOperator>& input_operator);
+              const std::string& init_table_name,
+              const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
   const std::string index_name;
-  const std::shared_ptr<const std::vector<ColumnID>> column_ids;
   const bool if_not_exists;
+  const std::string table_name;
+  const std::shared_ptr<const std::vector<ColumnID>> column_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
