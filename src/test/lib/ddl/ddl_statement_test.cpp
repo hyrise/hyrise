@@ -47,6 +47,13 @@ TEST_F(DDLStatementTest, CreateIndex) {
 
   EXPECT_TRUE(actual_index.name == "myindex");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
+
+  auto chunk_count = targeted_table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = targeted_table->get_chunk(id);
+    auto applied_indices = current_chunk->get_indexes(*column_ids);
+    EXPECT_TRUE(applied_indices.size() == 1);
+  }
 }
 
 }
