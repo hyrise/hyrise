@@ -1,3 +1,11 @@
+// Include before Fail() is defined
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Woverflow"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wattributes"
+#pragma GCC diagnostic pop
+
 #include <fstream>
 
 #include "micro_benchmark_basic_fixture.hpp"
@@ -32,9 +40,6 @@ using namespace opossum;
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/10mio/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/10mio/index_meta_data_int_index.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-
-static auto global_umap_resource = new UmapMemoryResource("global");
-(void) global_umap_resource;
 
 // table and compression settings
 ///////////////////////////////
@@ -154,17 +159,6 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     if (chunk_encoding_spec) {
       ChunkEncoder::encode_chunk(added_chunk, immutable_sorted_table->column_data_types(), *chunk_encoding_spec);
     }
-	
-    // use umap
-    for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
-      const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
-
-      auto allocator = PolymorphicAllocator<void>{};
-      allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
-
-      const auto migrated_segment = segment->copy_using_allocator(allocator);
-      sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
-    }
   }
 
   return sorted_table;
@@ -192,6 +186,10 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     // Generate tables
     if (!_data_generated) {
+
+      // umap resource 
+      static auto global_umap_resource = new UmapMemoryResource("global");
+      (void) global_umap_resource;
 
       // file for table stats
       std::ofstream segment_meta_data_csv_file(SEGMENT_META_DATA_FILE);
@@ -222,6 +220,19 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
             ChunkEncoder::encode_all_chunks(new_table, chunk_encoding_spec);
           } else {
             new_table = sort_table_chunk_wise(loaded_table, order_by_column, CHUNK_SIZE, chunk_encoding_spec);
+          }
+
+          // use umap
+          for (auto chunk_id = ChunkID{0}; chunk_id < new_table->chunk_count(); ++chunk_id) {
+            for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
+              const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+
+              auto allocator = PolymorphicAllocator<void>{};
+              allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
+
+              const auto migrated_segment = segment->copy_using_allocator(allocator);
+              sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+            }
           }
 
           storage_manager.add_table(new_table_name, new_table);
