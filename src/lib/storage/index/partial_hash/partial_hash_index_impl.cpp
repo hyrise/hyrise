@@ -5,7 +5,7 @@ namespace opossum {
 
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
-    const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id, std::vector<RowID>&null_positions)
+    const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
     : BasePartialHashIndexImpl(), _column_id(column_id) {
   // ToDo(pi) check all have same data type by taking first and comparing rest
   // ToDo(pi) set null positions
@@ -17,16 +17,17 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
       auto row_id = RowID{chunk.first, position.chunk_offset()};
       if (position.is_null()) {
-        null_positions.emplace_back(row_id);
+        if (!_null_values.contains(true)) {
+          _null_values[true] = std::vector<RowID>();  // ToDo(pi) size
+        }
+        _null_values[true].push_back(row_id);
       } else {
         if (!_map.contains(position.value())) {
           _map[position.value()] = std::vector<RowID>();  // ToDo(pi) size
         }
         _map[position.value()].push_back(row_id);
-        _row_ids.push_back(row_id);  //TODO(pi) Rethink concept
       }
     });
-    _indexed_segments.push_back(indexed_segment);
   }
 }
 
@@ -34,29 +35,36 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 
 // ToDo(pi) return from cbegin to cend instead of map vectors
 template <typename DataType>
-std::pair<typename PartialHashIndexImpl<DataType>::Iterator, typename PartialHashIndexImpl<DataType>::Iterator> PartialHashIndexImpl<DataType>::equals(
-    const AllTypeVariant& value) const {
-  auto result = _map.find(get<DataType>(value));
-  if (result == _map.end()) {
+std::pair<typename PartialHashIndexImpl<DataType>::Iterator, typename PartialHashIndexImpl<DataType>::Iterator>
+PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
+  auto begin = _map.find(boost::get<DataType>(value));
+  if (begin == _map.end()) {
     auto end_iter = cend();
     return std::make_pair(end_iter, end_iter);
   }
-  return std::make_pair(result->second.begin(), result->second.end());
+  auto end = begin;
+  return std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(begin)),
+                        Iterator(std::make_shared<TableIndexIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return _row_ids.begin();
+  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return _row_ids.end();
+  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cend()));
 }
 
 template <typename DataType>
-std::vector<std::shared_ptr<const AbstractSegment>> PartialHashIndexImpl<DataType>::get_indexed_segments() const {
-  return _indexed_segments;
+typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
+  return Iterator(std::make_shared<TableIndexIterator<bool>>(_null_values.cbegin()));
+}
+
+template <typename DataType>
+typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
+  return Iterator(std::make_shared<TableIndexIterator<bool>>(_null_values.cend()));
 }
 
 template <typename DataType>
@@ -75,6 +83,5 @@ std::set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const 
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(PartialHashIndexImpl);
-
 
 }  // namespace opossum

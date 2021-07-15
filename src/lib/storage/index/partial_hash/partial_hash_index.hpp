@@ -2,9 +2,8 @@
 
 #include <utility>
 
-#include <storage/index/abstract_table_index.hpp>
-
 #include "partial_hash_index_impl.hpp"
+#include "storage/index/abstract_table_index.hpp"
 
 namespace opossum {
 
@@ -14,8 +13,6 @@ class PartialHashIndex : public AbstractTableIndex {
   friend PartialHashIndexTest;
 
  public:
-  using Iterator = std::vector<RowID>::const_iterator;
-
   /**
  * Predicts the memory consumption in bytes of creating this index.
  * See AbstractIndex::estimate_memory_consumption()
@@ -30,7 +27,8 @@ class PartialHashIndex : public AbstractTableIndex {
  protected:
   Iterator _cbegin() const override;
   Iterator _cend() const override;
-  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
+  Iterator _null_cbegin() const override;
+  Iterator _null_cend() const override;
   size_t _memory_consumption() const override;
 
   std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const override;

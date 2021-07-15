@@ -2,18 +2,15 @@
 
 namespace opossum {
 
-AbstractTableIndex::AbstractTableIndex(const IndexType type) : AbstractIndex<RowID>(type) {}
+AbstractTableIndex::AbstractTableIndex(const IndexType type) : _type(type) {}
 
-std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator> AbstractTableIndex::equals(const AllTypeVariant& value) const {
+std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator> AbstractTableIndex::equals(
+    const AllTypeVariant& value) const {
   return _equals(value);
 }
 
-bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
-  return _is_index_for(column_id);
-}
+bool AbstractTableIndex::is_index_for(const ColumnID column_id) const { return _is_index_for(column_id); }
 
-std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
-  return _get_indexed_chunk_ids();
-}
+std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const { return _get_indexed_chunk_ids(); }
 
 }  // namespace opossum

@@ -41,7 +41,7 @@ class PartialHashIndexTest : public BaseTest {
     chunks_to_index.push_back(std::make_pair(ChunkID{0}, table->get_chunk(ChunkID{0})));
     chunks_to_index.push_back(std::make_pair(ChunkID{1}, table->get_chunk(ChunkID{1})));
 
-    index = std::make_shared<PartialHashIndex>(chunks_to_index , ColumnID{0});
+    index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
     index_map = &(std::dynamic_pointer_cast<PartialHashIndexImpl<pmr_string>>(index->_impl)->_map);
   }
@@ -58,12 +58,9 @@ class PartialHashIndexTest : public BaseTest {
    * private scope. Since the variable is set in setup() references are not possible.
    */
   tsl::robin_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
-
 };
 
-TEST_F(PartialHashIndexTest, Type) {
-  EXPECT_EQ(index->type(), IndexType::PartialHash);
-}
+TEST_F(PartialHashIndexTest, Type) { EXPECT_EQ(index->type(), IndexType::PartialHash); }
 
 TEST_F(PartialHashIndexTest, MapInitialization) {
   EXPECT_EQ(index_map->size(), 10);
@@ -107,37 +104,59 @@ TEST_F(PartialHashIndexTest, NullValues) {
   auto begin = index->null_cbegin();
   auto end = index->null_cend();
 
-  EXPECT_EQ(end - begin, 2);
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{2}}));
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{1}, ChunkOffset{4}}));
-  EXPECT_EQ(begin, end);
+  std::multiset<RowID> expected = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{4}}};
+  std::multiset<RowID> actual = {};
+
+  int size = 0;
+  while (begin != end) {
+    actual.insert(*begin);
+    ++begin;
+    ++size;
+  }
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(size, 2);
 }
 
 TEST_F(PartialHashIndexTest, Values) {
   auto begin = index->cbegin();
   auto end = index->cend();
 
-  EXPECT_EQ(end - begin, 14);
-  for(uint32_t chunk_id = 0; chunk_id < 2;chunk_id++) {
-    for (uint32_t chunk_offset = 0; chunk_offset < 8; chunk_offset++) {
-      if((chunk_id == 0 && chunk_offset == 2) || (chunk_id == 1 && chunk_offset == 4)){
-        continue;
-      }
-      EXPECT_EQ(*(begin++), (RowID{ChunkID{chunk_id}, ChunkOffset{chunk_offset}}));
-    }
+  std::multiset<RowID> expected = {
+      RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}},
+      RowID{ChunkID{0}, ChunkOffset{4}}, RowID{ChunkID{0}, ChunkOffset{5}}, RowID{ChunkID{0}, ChunkOffset{6}},
+      RowID{ChunkID{0}, ChunkOffset{7}}, RowID{ChunkID{1}, ChunkOffset{0}}, RowID{ChunkID{1}, ChunkOffset{1}},
+      RowID{ChunkID{1}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{3}}, RowID{ChunkID{1}, ChunkOffset{5}},
+      RowID{ChunkID{1}, ChunkOffset{6}}, RowID{ChunkID{1}, ChunkOffset{7}}};
+  std::multiset<RowID> actual = {};
+
+  int size = 0;
+  while (begin != end) {
+    actual.insert(*begin);
+    ++begin;
+    ++size;
   }
-  EXPECT_EQ(begin, end);
+
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(size, 14);
 }
 
 TEST_F(PartialHashIndexTest, EqualsValue) {
   auto value = "delta";
   auto [begin, end] = index->equals(value);
 
-  EXPECT_EQ(end - begin, 3);
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{1}}));
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{0}, ChunkOffset{3}}));
-  EXPECT_EQ(*(begin++), (RowID{ChunkID{1}, ChunkOffset{1}}));
-  EXPECT_EQ(begin, end);
+  std::multiset<RowID> expected = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}},
+                                   RowID{ChunkID{1}, ChunkOffset{1}}};
+  std::multiset<RowID> actual = {};
+
+  int size = 0;
+  while (begin != end) {
+    actual.insert(*begin);
+    ++begin;
+    ++size;
+  }
+
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(size, 3);
 }
 
 TEST_F(PartialHashIndexTest, EqualsValueNotFound) {

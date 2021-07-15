@@ -13,19 +13,18 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
                                    const ColumnID column_id)
     : AbstractTableIndex{get_index_type_of<PartialHashIndex>()} {
   if (!chunks_to_index.empty()) {
-    resolve_data_type(
-        chunks_to_index.front().second->get_segment(column_id)->data_type(), [&](const auto column_data_type) {
-          using ColumnDataType = typename decltype(column_data_type)::type;
+    resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(),
+                      [&](const auto column_data_type) {
+                        using ColumnDataType = typename decltype(column_data_type)::type;
 
-          _impl =
-              std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id, _null_positions);
-        });
+                        _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id);
+                      });
   } else {
     /**
      * Because 'chunks_to_index' is empty, we cannot determine the data type of the column and therefore construct
      * an empty Impl. When chunks are added to this index, it is swapped out again
      */
-    _impl = std::make_shared<EmptyPartialHashIndexImpl>();
+    _impl = std::make_shared<BasePartialHashIndexImpl>();
   }
 }
 
@@ -38,18 +37,14 @@ PartialHashIndex::Iterator PartialHashIndex::_cbegin() const { return _impl->cbe
 
 PartialHashIndex::Iterator PartialHashIndex::_cend() const { return _impl->cend(); }
 
-std::vector<std::shared_ptr<const AbstractSegment>> PartialHashIndex::_get_indexed_segments() const {
-  return _impl->get_indexed_segments();
-}
+PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const { return _impl->null_cbegin(); }
+
+PartialHashIndex::Iterator PartialHashIndex::_null_cend() const { return _impl->null_cend(); }
 
 size_t PartialHashIndex::_memory_consumption() const { return 0; }
 
-bool PartialHashIndex::_is_index_for(const ColumnID column_id) const {
-  return _impl->is_index_for(column_id);
-};
+bool PartialHashIndex::_is_index_for(const ColumnID column_id) const { return _impl->is_index_for(column_id); }
 
-std::set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const {
-  return _impl->get_indexed_chunk_ids();
-};
+std::set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const { return _impl->get_indexed_chunk_ids(); }
 
 }  // namespace opossum
