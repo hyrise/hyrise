@@ -32,7 +32,9 @@ using namespace opossum;
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/10mio/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/10mio/index_meta_data_int_index.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-constexpr auto STORAGE = "/mnt/samsung_ssd850";
+
+static auto global_umap_resource = new UmapMemoryResource("global");
+(void) global_umap_resource;
 
 // table and compression settings
 ///////////////////////////////
@@ -154,11 +156,12 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     }
 	
     // use umap
-    auto resource = new UmapMemoryResource(STORAGE);
-    auto allocator = PolymorphicAllocator<void>{resource};
-
     for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
       const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+
+      auto allocator = PolymorphicAllocator<void>{};
+      allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
+
       const auto migrated_segment = segment->copy_using_allocator(allocator);
       sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
     }
@@ -244,9 +247,9 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
               for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
                 const auto& index = new_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
 
-                // using umap to migrate index
-                auto resource = new UmapMemoryResource(STORAGE);
-                auto allocator = PolymorphicAllocator<void>{resource};
+                // use umap
+                auto allocator = PolymorphicAllocator<void>{};
+                allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
 
                 const auto  migrated_index = index->copy_using_allocator(allocator);
                 new_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
