@@ -25,16 +25,12 @@ class DropIndexTest: public BaseTest {
  public:
   void SetUp() override {
     test_table = load_table("resources/test_data/tbl/string_int_index.tbl", 3);
+    ChunkEncoder::encode_all_chunks(test_table);
     Hyrise::get().storage_manager.add_table(table_name, test_table);
 
     column_ids->emplace_back(ColumnID{static_cast<ColumnID>(test_table->column_id_by_name("b"))});
 
     create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
-
-    auto compression_task_0 = std::make_shared<ChunkCompressionTask>(table_name, ChunkID{0});
-    auto compression_task_1 = std::make_shared<ChunkCompressionTask>(table_name, ChunkID{1});
-
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression_task_0, compression_task_1});
 
     const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     create_index->set_transaction_context(context);
