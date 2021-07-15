@@ -1,20 +1,10 @@
-
 #include <memory>
-
 #include "base_test.hpp"
 #include "utils/assert.hpp"
-
 #include "concurrency/transaction_context.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
-#include "operators/get_table.hpp"
 #include "operators/maintenance/create_index.hpp"
-#include "operators/projection.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/validate.hpp"
 #include "storage/table.hpp"
-#include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {
 
@@ -48,13 +38,22 @@ TEST_F(CreateIndexTest, Execute) {
   create_index->execute();
   context->commit();
 
+
   auto actual_index = test_table->indexes_statistics().at(0);
 
-  EXPECT_TRUE(actual_index.name == index_name);
-  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+  EXPECT_EQ(actual_index.name, index_name);
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
+
+  auto chunk_count = test_table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = test_table->get_chunk(id);
+    auto applied_indices = current_chunk->get_indexes(*column_ids);
+    EXPECT_TRUE(applied_indices.size() == 1);
+  }
 }
 
 TEST_F(CreateIndexTest, TableExists) {
+  // TODO: is this test really doing what we think it does?
   create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
