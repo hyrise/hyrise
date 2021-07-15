@@ -211,6 +211,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
         case LQPNodeType::DropTable:
+        case LQPNodeType::AlterDropColumn:
         case LQPNodeType::Import:
         case LQPNodeType::StaticTable:
         case LQPNodeType::StoredTable:
