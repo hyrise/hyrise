@@ -23,11 +23,8 @@ class DDLStatementTest : public BaseTest {
 
     // We reload table_a every time since it is modified during the test case.
     _table_a = load_table("resources/test_data/tbl/int_float_create_index_test.tbl", 2);
+    ChunkEncoder::encode_all_chunks(_table_a);
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
-    auto compression_task_0 = std::make_shared<ChunkCompressionTask>("table_a", ChunkID{0});
-    auto compression_task_1 = std::make_shared<ChunkCompressionTask>("table_a", ChunkID{1});
-
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression_task_0, compression_task_1});
   }
 
   // Tables modified during test case
