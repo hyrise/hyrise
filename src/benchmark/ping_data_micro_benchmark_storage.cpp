@@ -224,14 +224,14 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
           // use umap
           for (auto chunk_id = ChunkID{0}; chunk_id < new_table->chunk_count(); ++chunk_id) {
-            for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
-              const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+            for (auto column_id = ColumnID{0}; column_id < new_table->column_count(); ++column_id) {
+              const auto& segment = new_table->get_chunk(chunk_id)->get_segment(column_id);
 
-              auto allocator = PolymorphicAllocator<void>{};
-              allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
+              auto resource = global_umap_resource;
+              auto allocator = PolymorphicAllocator<void>{resource};
 
               const auto migrated_segment = segment->copy_using_allocator(allocator);
-              sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+              new_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
             }
           }
 
@@ -259,8 +259,8 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
                 const auto& index = new_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
 
                 // use umap
-                auto allocator = PolymorphicAllocator<void>{};
-                allocator = PolymorphicAllocator<void>{&UmapMemoryResource::get()};
+                auto resource = global_umap_resource;
+            	auto allocator = PolymorphicAllocator<void>{resource};
 
                 const auto  migrated_index = index->copy_using_allocator(allocator);
                 new_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
