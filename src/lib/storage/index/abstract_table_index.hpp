@@ -5,6 +5,12 @@
 
 namespace opossum {
 
+/**
+ * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
+ * virtual properties is meant to represent the iterator of an empty collection. Therefore it shall not be dereferenced
+ * (like and end-iterator), increments do not make a change, and equality comparisons with other instances of this class
+ * always result in true.
+ */
 class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, const RowID> {
  public:
   virtual ~BaseTableIndexIterator() = default;
@@ -13,14 +19,24 @@ class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, c
   virtual BaseTableIndexIterator& operator++() { return *this; }
   virtual bool operator==(const BaseTableIndexIterator& other) const { return true; }
   virtual bool operator!=(const BaseTableIndexIterator& other) const { return false; }
+
+  virtual std::shared_ptr<BaseTableIndexIterator> clone() const {
+    return std::make_shared<BaseTableIndexIterator>(*this);
+  }
 };
 
+/**
+ * Forward iterator that iterates over a tsl::robin_map which maps a DataType to a vector of RowIDs. The iteration
+ * process is as if the map would have been flattened and then been iterated.
+ *
+ * @tparam DataType The key type of the underlying map.
+ */
 template <typename DataType>
 class TableIndexIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tsl::robin_map<DataType, std::vector<RowID>>::const_iterator;
 
-  TableIndexIterator(MapIteratorType begin) : _map_iterator(begin), _vector_index(0) {}
+  TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
 
   reference operator*() const override { return _map_iterator->second[_vector_index]; }
 
@@ -42,14 +58,32 @@ class TableIndexIterator : public BaseTableIndexIterator {
     return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
   }
 
+  std::shared_ptr<BaseTableIndexIterator> clone() const override {
+    return std::make_shared<TableIndexIterator<DataType>>(*this);
+  }
+
  private:
   MapIteratorType _map_iterator;
   size_t _vector_index;
 };
 
+/**
+ * Wrapper class that implements an iterator interface and holds a pointer to a BaseTableIndexIterator. This wrapper is
+ * required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
+ * codebase. It also provides copy construction and assignment facilities to easily duplicate other IteratorWrappers
+ * including their underlying iterators. This is especially important, because the iterator type is a forward iterator
+ * instead of a random access iterator, so if an iterator instance has to be retained before a manipulating call e.g.
+ * when calling it on std::distance, a copy has to be made beforehand.
+ */
 class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const RowID> {
  public:
   IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& ptr) : _impl(std::move(ptr)) {}
+
+  IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
+  IteratorWrapper& operator=(const IteratorWrapper& other) {
+    _impl = other._impl->clone();
+    return *this;
+  }
 
   reference operator*() const { return _impl->operator*(); }
   IteratorWrapper& operator++() {
@@ -66,6 +100,7 @@ class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const Ro
 class AbstractTableIndex : private Noncopyable {
  public:
   using Iterator = IteratorWrapper;
+  using IteratorPair = std::pair<Iterator, Iterator>;
 
   /**
  * Predicts the memory consumption in bytes of creating this index.
@@ -80,7 +115,9 @@ class AbstractTableIndex : private Noncopyable {
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
 
-  std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const;
+  IteratorPair equals(const AllTypeVariant& value) const;
+
+  std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const;
 
   Iterator cbegin() const { return _cbegin(); }
 
@@ -110,7 +147,8 @@ class AbstractTableIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual Iterator _null_cbegin() const = 0;
   virtual Iterator _null_cend() const = 0;
-  virtual std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const = 0;
+  virtual IteratorPair _equals(const AllTypeVariant& value) const = 0;
+  virtual std::pair<IteratorPair, IteratorPair> _not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual size_t _memory_consumption() const = 0;

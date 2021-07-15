@@ -18,6 +18,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
  public:
   using Iterator = AbstractTableIndex::Iterator;
+  using IteratorPair = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
   virtual ~BasePartialHashIndexImpl() = default;
 
@@ -27,9 +28,13 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual Iterator null_cend() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
   virtual size_t memory_consumption() const { return 0; }
 
-  virtual std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const {
+  virtual IteratorPair equals(const AllTypeVariant& value) const {
     return std::make_pair(Iterator(std::make_shared<BaseTableIndexIterator>()),
                           Iterator(std::make_shared<BaseTableIndexIterator>()));
+  }
+
+  virtual std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const {
+    return std::make_pair(equals(value), equals(value));
   }
 
   virtual bool is_index_for(const ColumnID column_id) const { return false; }
@@ -50,7 +55,8 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   Iterator null_cend() const override;
   size_t memory_consumption() const override;
 
-  std::pair<Iterator, Iterator> equals(const AllTypeVariant& value) const override;
+  IteratorPair equals(const AllTypeVariant& value) const override;
+  std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const override;
 
   bool is_index_for(const ColumnID column_id) const override;
   // returns sorted array

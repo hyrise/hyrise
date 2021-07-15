@@ -31,7 +31,8 @@ class PartialHashIndex : public AbstractTableIndex {
   Iterator _null_cend() const override;
   size_t _memory_consumption() const override;
 
-  std::pair<Iterator, Iterator> _equals(const AllTypeVariant& value) const override;
+  IteratorPair _equals(const AllTypeVariant& value) const override;
+  std::pair<IteratorPair, IteratorPair> _not_equals(const AllTypeVariant& value) const override;
 
   bool _is_index_for(const ColumnID column_id) const override;
   // returns sorted array

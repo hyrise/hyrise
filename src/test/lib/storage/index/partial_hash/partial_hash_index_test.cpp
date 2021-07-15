@@ -62,6 +62,32 @@ class PartialHashIndexTest : public BaseTest {
 
 TEST_F(PartialHashIndexTest, Type) { EXPECT_EQ(index->type(), IndexType::PartialHash); }
 
+TEST_F(PartialHashIndexTest, IndexCoverage) {
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{0}, ChunkID{1}}));
+
+  EXPECT_TRUE(index->is_index_for(ColumnID{0}));
+  EXPECT_FALSE(index->is_index_for(ColumnID{1}));
+}
+
+TEST_F(PartialHashIndexTest, EmptyInitialization) {
+  auto empty_index = PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0});
+
+  EXPECT_EQ(empty_index.cbegin(), empty_index.cend());
+  EXPECT_EQ(empty_index.null_cbegin(), empty_index.null_cend());
+
+  EXPECT_EQ(empty_index.equals("any").first, empty_index.cend());
+  EXPECT_EQ(empty_index.equals("any").second, empty_index.cend());
+
+  EXPECT_EQ(empty_index.get_indexed_chunk_ids().size(), 0);
+
+  EXPECT_FALSE(empty_index.is_index_for(ColumnID{0}));
+  EXPECT_FALSE(empty_index.is_index_for(ColumnID{1}));
+
+  EXPECT_THROW(*empty_index.cbegin(), std::logic_error);
+  EXPECT_TRUE(empty_index.cbegin().operator==(empty_index.cbegin()));
+  EXPECT_FALSE(empty_index.cbegin().operator!=(empty_index.cbegin()));
+}
+
 TEST_F(PartialHashIndexTest, MapInitialization) {
   EXPECT_EQ(index_map->size(), 10);
 
@@ -98,6 +124,19 @@ TEST_F(PartialHashIndexTest, MapInitialization) {
 
   EXPECT_EQ(index_map->at("clock").size(), 1);
   EXPECT_EQ(index_map->at("clock")[0], (RowID{ChunkID{1}, ChunkOffset{6}}));
+}
+
+TEST_F(PartialHashIndexTest, Iterators) {
+  auto begin = index->cbegin();
+  auto end = index->cend();
+
+  auto begin_copy = begin;
+  EXPECT_EQ(begin_copy, begin);
+  ++begin_copy;
+  EXPECT_NE(begin_copy, begin);
+
+  EXPECT_EQ(std::distance(begin, end), 14);
+  EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
 }
 
 TEST_F(PartialHashIndexTest, NullValues) {
@@ -165,6 +204,46 @@ TEST_F(PartialHashIndexTest, EqualsValueNotFound) {
 
   EXPECT_EQ(end, begin);
   EXPECT_EQ(end, index->cend());
+}
+
+TEST_F(PartialHashIndexTest, NotEqualsValue) {
+  auto value = "delta";
+  auto pair = index->not_equals(value);
+  auto [begin1, end1] = pair.first;
+  auto [begin2, end2] = pair.second;
+
+  std::multiset<RowID> expected = {
+      RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{4}}, RowID{ChunkID{0}, ChunkOffset{5}},
+      RowID{ChunkID{0}, ChunkOffset{6}}, RowID{ChunkID{0}, ChunkOffset{7}}, RowID{ChunkID{1}, ChunkOffset{0}},
+      RowID{ChunkID{1}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{3}}, RowID{ChunkID{1}, ChunkOffset{5}},
+      RowID{ChunkID{1}, ChunkOffset{6}}, RowID{ChunkID{1}, ChunkOffset{7}}};
+  std::multiset<RowID> actual = {};
+
+  int size = 0;
+  while (begin1 != end1) {
+    actual.insert(*begin1);
+    ++begin1;
+    ++size;
+  }
+  while (begin2 != end2) {
+    actual.insert(*begin2);
+    ++begin2;
+    ++size;
+  }
+
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(size, 11);
+}
+
+TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
+  auto value = "invalid";
+  auto pair = index->not_equals(value);
+  auto [begin1, end1] = pair.first;
+  auto [begin2, end2] = pair.second;
+
+  EXPECT_EQ(begin1, index->cbegin());
+  EXPECT_EQ(end1, begin2);
+  EXPECT_EQ(end2, index->cend());
 }
 
 /*TEST_F(PartialHashIndexTest, IndexProbes) {

@@ -28,9 +28,14 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   }
 }
 
-std::pair<PartialHashIndex::Iterator, PartialHashIndex::Iterator> PartialHashIndex::_equals(
+PartialHashIndex::IteratorPair PartialHashIndex::_equals(
     const AllTypeVariant& value) const {
   return _impl->equals(value);
+}
+
+std::pair<PartialHashIndex::IteratorPair, PartialHashIndex::IteratorPair> PartialHashIndex::_not_equals(
+    const AllTypeVariant& value) const {
+  return _impl->not_equals(value);
 }
 
 PartialHashIndex::Iterator PartialHashIndex::_cbegin() const { return _impl->cbegin(); }

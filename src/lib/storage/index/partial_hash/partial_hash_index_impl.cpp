@@ -35,8 +35,7 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 
 // ToDo(pi) return from cbegin to cend instead of map vectors
 template <typename DataType>
-std::pair<typename PartialHashIndexImpl<DataType>::Iterator, typename PartialHashIndexImpl<DataType>::Iterator>
-PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
+PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
   auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
     auto end_iter = cend();
@@ -45,6 +44,19 @@ PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
   auto end = begin;
   return std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(begin)),
                         Iterator(std::make_shared<TableIndexIterator<DataType>>(++end)));
+}
+
+template <typename DataType>
+std::pair<typename PartialHashIndexImpl<DataType>::IteratorPair, typename PartialHashIndexImpl<DataType>::IteratorPair>
+PartialHashIndexImpl<DataType>::not_equals(const AllTypeVariant& value) const {
+  auto eq_begin = _map.find(boost::get<DataType>(value));
+  auto eq_end = eq_begin;
+  if (eq_begin != _map.cend()) {
+    ++eq_end;
+  }
+  // (cbegin -> eq_begin) + (eq_end -> cend)
+  return std::make_pair(std::make_pair(cbegin(), Iterator(std::make_shared<TableIndexIterator<DataType>>(eq_begin))),
+                        std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(eq_end)), cend()));
 }
 
 template <typename DataType>

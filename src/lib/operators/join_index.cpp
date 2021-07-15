@@ -235,11 +235,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           indexed_chunk_ids_iterator++;
           continue;
         } else {
-          if(indexed_chunk_ids.find(index_side_chunk_id) == indexed_chunk_ids.end()) {
             _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                   secondary_predicate_evaluator);
             nested_loop_joining_duration += timer.lap();
-          }
         }
       }
     } else {  // Fallback chunk-based index join
@@ -253,7 +251,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
         const auto& indexes =
             index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
-        //ToDo(pi) check has one or more PHI
         if (!indexes.empty()) {
           // We assume the first index to be efficient for our join
           // as we do not want to spend time on evaluating the best index inside of this join loop
@@ -280,7 +277,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
     }
     _append_matches_non_inner(is_semi_or_anti_join);
-
   }
 
   // write output chunks
