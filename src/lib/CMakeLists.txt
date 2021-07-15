@@ -677,6 +677,10 @@ if (${ENABLE_MEMKIND})
     set(LIBRARIES ${LIBRARIES} ${MEMKIND_LIBRARY})
 endif()
 
+if (${HYRISE_WITH_UMAP})
+    set(LIBRARIES ${LIBRARIES} umap)
+endif()
+
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
 string(REPLACE "," ";" ERASE_SEGMENT_TYPES_LIST "${ERASE_SEGMENT_TYPES}")
 string(TOUPPER "${ERASE_SEGMENT_TYPES_LIST}" ERASE_SEGMENT_TYPES_UPPER)

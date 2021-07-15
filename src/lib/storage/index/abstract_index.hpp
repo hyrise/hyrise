@@ -142,6 +142,9 @@ class AbstractIndex : private Noncopyable {
 
   SegmentIndexType type() const;
 
+  // Copies a index using a new allocator. This is useful for placing the index on a new NUMA node.
+  virtual std::shared_ptr<AbstractIndex> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+
   /**
    * Returns the memory consumption of this Index in bytes
    */

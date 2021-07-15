@@ -12,6 +12,13 @@ else()
     add_definitions(-DENABLE_MEMKIND=0)
 endif()
 
+if (HYRISE_WITH_UMAP)
+    add_definitions(-DHYRISE_WITH_UMAP=1)
+    # TODO does not seem to be available in plugins
+else()
+    add_definitions(-DHYRISE_WITH_UMAP=0)
+endif()
+
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
 if (NOT ${NUMA_FOUND})

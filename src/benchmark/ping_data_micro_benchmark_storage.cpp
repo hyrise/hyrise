@@ -32,7 +32,7 @@ using namespace opossum;
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/10mio/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/10mio/index_meta_data_int_index.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-constexpr auto STORAGE = "/mnt/samsung_ssd850"
+constexpr auto STORAGE = "/mnt/samsung_ssd850";
 
 // table and compression settings
 ///////////////////////////////
@@ -131,14 +131,14 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     const auto immutable_sorted_table = sort->get_output();
 
     // use umap
-    for (auto column_id = ColumnID{0}; column_id < immutable_sorted_table->column_count(); ++column_id) {
-      const auto& segment = immutable_sorted_table->get_chunk(chunk_id)->get_segment(column_id);
-      auto resource = new UmapMemoryResource(STORAGE);
-      auto allocator = PolymorphicAllocator<void>{resource};
+    //for (auto column_id = ColumnID{0}; column_id < immutable_sorted_table->column_count(); ++column_id) {
+    //  const auto& segment = immutable_sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+    //  auto resource = new UmapMemoryResource(STORAGE);
+    //  auto allocator = PolymorphicAllocator<void>{resource};
 
-      const auto migrated_segment = segment->copy_using_allocator(allocator);
-      immutable_sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
-    }
+    //  const auto migrated_segment = segment->copy_using_allocator(allocator);
+    //  immutable_sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+    // }
 
     // add sorted chunk to output table
     // Note: we do not care about MVCC at all at the moment
@@ -151,6 +151,16 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     // in case a chunk encoding spec is provided, encode chunk
     if (chunk_encoding_spec) {
       ChunkEncoder::encode_chunk(added_chunk, immutable_sorted_table->column_data_types(), *chunk_encoding_spec);
+    }
+	
+    // use umap
+    auto resource = new UmapMemoryResource(STORAGE);
+    auto allocator = PolymorphicAllocator<void>{resource};
+
+    for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
+      const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+      const auto migrated_segment = segment->copy_using_allocator(allocator);
+      sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
     }
   }
 
@@ -238,7 +248,7 @@ class PingDataStorageMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
                 auto resource = new UmapMemoryResource(STORAGE);
                 auto allocator = PolymorphicAllocator<void>{resource};
 
-                const auto migrated_index = index->copy_using_allocator(allocator);
+                const auto  migrated_index = index->copy_using_allocator(allocator);
                 new_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
 
                 index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";

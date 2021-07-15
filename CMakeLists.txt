@@ -129,6 +129,8 @@ if (${ENABLE_MEMKIND})
     find_package(Memkind REQUIRED)
 endif()
 
+option(HYRISE_WITH_UMAP "Set to OFF to build Hyrise without umap support" ON)
+
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
