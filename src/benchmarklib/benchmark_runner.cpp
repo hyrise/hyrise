@@ -176,8 +176,8 @@ void BenchmarkRunner::run() {
   // Stop the thread that tracks the system utilization
   track_system_utilization = false;
   system_utilization_tracker.join();
-  Hyrise::get().plugin_manager.load_plugin(
-      "/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so");
+  //Hyrise::get().plugin_manager.load_plugin(
+  //    "/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so");
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {

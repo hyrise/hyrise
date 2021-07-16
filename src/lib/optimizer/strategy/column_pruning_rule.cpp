@@ -446,50 +446,18 @@ void try_join_to_semi_rewrite(
     join_node->join_mode = JoinMode::Semi;
   }
 
+  // try scan rewrite for used input
+  /*if(!right_input_is_used) {
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right);
+  }
+
+  if (!left_input_is_used) {
+    if (join->mode == JoinMode::)
+
+  }*/
+
+  // TO DO: input side, check if used
   if (equals_predicate_expressions_left.size() == 1 && equals_predicate_expressions_right.size() == 1) {
-    /*const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(*equals_predicate_expressions_left.begin());
-    const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(*equals_predicate_expressions_right.begin());
-    if (!left_column_expression) {
-      std::cout << "    left no column expression" << std::endl;
-    }
-    if (!left_column_expression) {
-      std::cout << "    right no column expression" << std::endl;
-    }
-    if (left_column_expression) {
-      std::string column_name{};
-      std::string table_name{};
-      const auto orig_node = left_column_expression->original_node.lock();
-      if (orig_node->type == LQPNodeType::StoredTable) {
-        const auto stored_table_node = static_pointer_cast<const StoredTableNode>(orig_node);
-        const auto original_column_id = left_column_expression->original_column_id;
-        table_name = stored_table_node->table_name;
-        if (Hyrise::get().storage_manager.has_table(table_name)) {
-          const auto original_table = Hyrise::get().storage_manager.get_table(table_name);
-          if (original_column_id != INVALID_COLUMN_ID) {
-            column_name = original_table->column_name(original_column_id);
-          }
-        }
-      }
-      std::cout << "    left: " << table_name << "." << column_name << std::endl;
-    }
-    if (right_column_expression) {
-      std::string column_name{};
-      std::string table_name{};
-      const auto orig_node = right_column_expression->original_node.lock();
-      if (orig_node->type == LQPNodeType::StoredTable) {
-        const auto stored_table_node = static_pointer_cast<const StoredTableNode>(orig_node);
-        const auto original_column_id = right_column_expression->original_column_id;
-        table_name = stored_table_node->table_name;
-        if (Hyrise::get().storage_manager.has_table(table_name)) {
-          const auto original_table = Hyrise::get().storage_manager.get_table(table_name);
-          if (original_column_id != INVALID_COLUMN_ID) {
-            column_name = original_table->column_name(original_column_id);
-          }
-        }
-      }
-      std::cout << "    right: " << table_name << "." << column_name << std::endl;
-    }
-    std::cout << "      try rewrite" << std::endl;*/
     try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right);
   }
 }
