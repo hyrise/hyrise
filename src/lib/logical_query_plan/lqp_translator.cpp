@@ -522,9 +522,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_index_node = std::dynamic_pointer_cast<DropIndexNode>(node);
-  const auto input_node = drop_index_node->left_input();
 
-  return std::make_shared<DropIndex>(drop_index_node->index_name, translate_node(input_node));
+  return std::make_shared<DropIndex>(drop_index_node->index_name, drop_index_node->table_name);
 
 }
 

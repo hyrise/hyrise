@@ -12,10 +12,10 @@
 
 namespace opossum {
 
-DropIndex::DropIndex(const std::string& init_index_name,
-                         const std::shared_ptr<const AbstractOperator>& input_operator)
-    : AbstractReadWriteOperator(OperatorType::DropIndex, input_operator),
-      index_name(init_index_name)
+DropIndex::DropIndex(const std::string& init_index_name, const std::string& init_table_name)
+    : AbstractReadWriteOperator(OperatorType::DropIndex),
+      index_name(init_index_name),
+      table_name(init_table_name)
     {}
 
 const std::string& DropIndex::name() const {
@@ -59,7 +59,7 @@ std::string DropIndex::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<const Table> DropIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
-  auto table_to_be_indexed = std::const_pointer_cast<Table>(_left_input->get_output());
+  auto table_to_be_indexed = Hyrise::get().storage_manager.get_table(table_name);
 
   table_to_be_indexed->delete_index_by_name(index_name);
 
@@ -70,11 +70,11 @@ std::shared_ptr<AbstractOperator> DropIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<DropIndex>(index_name, copied_left_input);
+  return std::make_shared<DropIndex>(index_name, table_name);
 }
 
 void DropIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  // No parameters possible for CREATE TABLE
+  // No parameters possible for DROP INDEX
 }
 
 }  // namespace opossum

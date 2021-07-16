@@ -14,11 +14,12 @@ namespace opossum {
  */
 class DropIndexNode : public EnableMakeForLQPNode<DropIndexNode>, public AbstractNonQueryNode {
  public:
-  DropIndexNode(const std::string& init_index_name);
+  DropIndexNode(const std::string& init_index_name, const std::string& init_table_name);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string index_name;
+  const std::string table_name;
 
 
  protected:
