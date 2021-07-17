@@ -7,6 +7,7 @@
 
 #include "base_test.hpp"
 
+#include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -56,6 +57,28 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+// TODO: split this test into writer and parser test
+TEST_F(BinaryWriterTest, FSSTSingleChunk) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  auto read_table = BinaryParser::parse(filename);
+
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }
 
 TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {

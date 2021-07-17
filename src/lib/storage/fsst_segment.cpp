@@ -13,6 +13,8 @@
 
 #include <iostream>
 
+#include <stdlib.h>
+
 namespace opossum {
 
 template <typename T>
@@ -43,9 +45,13 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 template <typename T>
 uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
   auto offset_decompressor = _compressed_offsets->create_base_decompressor();
-  if(chunk_offset < _number_elements_per_reference_bucket){
+  if (chunk_offset < _number_elements_per_reference_bucket) {
     return offset_decompressor->get(chunk_offset);
   }
+  if (_number_elements_per_reference_bucket == 0 || chunk_offset == 0) {
+    return offset_decompressor->get(chunk_offset);
+  }
+
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
 
   return offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
@@ -60,16 +66,18 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
   }
 
   // Calculate real offset with help of reference offset vector
-  auto real_offset = get_offset(chunk_offset);
-  auto real_offset_next = get_offset(chunk_offset + 1);
+  size_t real_offset = get_offset(chunk_offset);
+  size_t real_offset_next = get_offset(chunk_offset + 1);
 
-  auto compressed_length = real_offset_next - real_offset;
+  size_t compressed_length = real_offset_next - real_offset;
+
   auto compressed_pointer = const_cast<unsigned char*>(
       _compressed_values.data() + real_offset);  //Note: we use const_cast in order to use fsst_decompress
 
   size_t output_size = compressed_length * 8;  //TODO (anyone): is this correct?
 
   //  size_t output_size = _compressed_value_lengths[chunk_offset] * 8;  //TODO (anyone): is this correct?
+
   std::vector<unsigned char> output_buffer(output_size);
 
   size_t output_size_after_decompression =
@@ -116,7 +124,8 @@ size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
 
   auto decoder_size = sizeof(fsst_decoder_t);
   // TODO (anyone): which memory usage should we return? compressed data or all memory
-  return compressed_values_size + compressed_offsets_size + reference_offsets_size + null_value_size + number_elements_size + decoder_size;
+  return compressed_values_size + compressed_offsets_size + reference_offsets_size + null_value_size +
+         number_elements_size + decoder_size;
 }
 
 template <typename T>

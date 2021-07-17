@@ -18,6 +18,8 @@
 
 #include "utils/assert.hpp"
 
+#include <iostream>
+
 namespace opossum {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
@@ -144,6 +146,7 @@ template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                                bool column_is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
+  //  std::cout << "Importing segment with " << static_cast<uint32_t>(row_count) << " rows" << std::endl;
 
   switch (column_type) {
     case EncodingType::Unencoded:
@@ -164,7 +167,7 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       } else {
-        Fail("Unsupported data type for FSST encoding");
+        Fail("Unsupported data type for FOR encoding");
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
@@ -249,16 +252,14 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file,
                                                                             ChunkOffset row_count) {
+  // Read vector compression id
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
-
-  // Read compressed values
+  // Read compressed_values size
   const auto compressed_value_size = _read_value<uint32_t>(file);
+  // Read compressed values
   pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
 
-  // Read compressed offsets
-  //  const auto compressed_offsets_size = _read_value<uint32_t>(file);
   auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
-  //  BaseCompressedVector compressed_offsets(_read_values<unsigned long>(file, compressed_offsets_size));
 
   const auto reference_offsets_size = _read_value<uint32_t>(file);
   pmr_vector<uint64_t> reference_offsets(_read_values<uint64_t>(file, reference_offsets_size));
@@ -274,7 +275,8 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   const auto number_elements_per_reference_bucket = _read_value<uint64_t>(file);
   fsst_decoder_t decoder = _read_value<fsst_decoder_t>(file);
 
-  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, reference_offsets, null_values, number_elements_per_reference_bucket, decoder);
+  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, reference_offsets, null_values,
+                                                   number_elements_per_reference_bucket, decoder);
 }
 
 template <typename T>

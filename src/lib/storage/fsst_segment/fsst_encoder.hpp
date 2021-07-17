@@ -70,12 +70,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     fsst_decoder_t decoder;
 
     uint8_t reference_offsets_size = 8;
-    pmr_vector<uint64_t> reference_offsets(reference_offsets_size);
+    pmr_vector<uint64_t> reference_offsets{reference_offsets_size, allocator};
 
     if (values.size() == 0) {
       offsets.resize(1);
       auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
-      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets, null_values_optional, 0 ,decoder);
+      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
+                                              null_values_optional, 0, decoder);
     }
 
     // our temporary data structure keeping char pointer and their length
@@ -85,23 +86,22 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     row_pointers.reserve(values.size());
 
     // needed for compression
-    pmr_vector<unsigned long> compressed_value_lengths;
+    pmr_vector<uint64_t> compressed_value_lengths;
     pmr_vector<unsigned char*> compressed_value_pointers;
     compressed_value_lengths.resize(values.size());
     compressed_value_pointers.resize(values.size());
 
     offsets.resize(values.size() + 1);
 
-    unsigned total_length = 0;
+    uint64_t total_length = 0LL;
 
     for (pmr_string& value : values) {
       total_length += value.size();
       row_lengths.push_back(value.size());
       row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
     }
-
     compressed_values.resize(16 + 2 * total_length);  // why 16? need to find out
-    // create symbol table
+
     fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
 
     //  size_t number_compressed_strings = TODO(anyone): avoid error about unused variable in release mode
@@ -110,12 +110,11 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     //  DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not big enough");
 
-
     decoder = fsst_decoder(encoder);
     fsst_destroy(encoder);
 
-
-    uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(std::ceil(static_cast<double>(offsets.size()) / static_cast<double>(reference_offsets_size + 1)));
+    uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(
+        std::ceil(static_cast<double>(offsets.size()) / static_cast<double>(reference_offsets_size + 1)));
     size_t compressed_values_size = compressed_value_lengths.size();
 
     // Calculate global offset based on compressed value lengths
@@ -132,9 +131,9 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
     }
 
-    // Shift global offsets by reference offsets
     for (size_t index{n_elements_in_reference_bucket}; index <= compressed_values_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
+
       auto reference_offset = reference_offsets[reference_offset_index];
       offsets[index] = offsets[index] - reference_offset;
     }
@@ -143,10 +142,17 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       null_values_optional = std::make_optional(null_values);
     }
 
-    // vector compression
-    auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
+    uint32_t max_offset = 0;
+    // TODO: only look at last value in bucket
+    for (auto offset : offsets) {
+      max_offset = std::max(max_offset, offset);
+    }
 
-    return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets, null_values_optional, n_elements_in_reference_bucket, decoder);
+    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {max_offset});
+
+    auto result = std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
+                                                   null_values_optional, n_elements_in_reference_bucket, decoder);
+    return result;
   }
 };
 
