@@ -34,27 +34,30 @@ class DDLStatementTest : public BaseTest {
   const std::string _create_index_multi_column = "CREATE INDEX myindex ON table_a (a, b)";
 };
 
+void check_if_index_exists_correctly(std::shared_ptr<std::vector<ColumnID>> column_ids, std::shared_ptr<Table> table) {
+  auto chunk_count = table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = table->get_chunk(id);
+    auto actual_indices = current_chunk->get_indexes(*column_ids);
+    EXPECT_TRUE(actual_indices.size() == 1);
+  }
+}
+
 TEST_F(DDLStatementTest, CreateIndexSingleColumn) {
   auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
-  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
 
-  auto actual_index = targeted_table->indexes_statistics().at(0);
+  auto actual_index = _table_a->indexes_statistics().at(0);
 
   EXPECT_TRUE(actual_index.name == "myindex");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
 
-  auto chunk_count = targeted_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = targeted_table->get_chunk(id);
-    auto actual_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(actual_indices.size() == 1);
-  }
+  check_if_index_exists_correctly(column_ids, _table_a);
 }
 
 TEST_F(DDLStatementTest, CreateIndexMultiColumn) {
@@ -63,22 +66,16 @@ TEST_F(DDLStatementTest, CreateIndexMultiColumn) {
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
-  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
   column_ids->emplace_back(ColumnID{1});
 
-  auto actual_index = targeted_table->indexes_statistics().at(0);
+  auto actual_index = _table_a->indexes_statistics().at(0);
 
   EXPECT_TRUE(actual_index.name == "myindex");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
 
-  auto chunk_count = targeted_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = targeted_table->get_chunk(id);
-    auto applied_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(applied_indices.size() == 1);
-  }
+  check_if_index_exists_correctly(column_ids, _table_a);
 }
 
 TEST_F(DDLStatementTest, CreateIndexWithoutName) {
@@ -87,57 +84,49 @@ TEST_F(DDLStatementTest, CreateIndexWithoutName) {
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
-  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
 
-  auto actual_index = targeted_table->indexes_statistics().at(0);
+  auto actual_index = _table_a->indexes_statistics().at(0);
 
   EXPECT_TRUE(actual_index.name == "table_a_a");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
 
-  auto chunk_count = targeted_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = targeted_table->get_chunk(id);
-    auto applied_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(applied_indices.size() == 1);
-  }
+  check_if_index_exists_correctly(column_ids, _table_a);
 }
 
-TEST_F(DDLStatementTest, CreateIndexIfNotExistsRun) {
-  auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX myindex IF NOT EXISTS ON table_a (a)"}.create_pipeline();
+TEST_F(DDLStatementTest, CreateIndexIfNotExistsFirstTime) {
+  auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS myindex ON table_a (a)"}.create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
-  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
 
-  auto actual_index = targeted_table->indexes_statistics().at(0);
+  auto actual_index = _table_a->indexes_statistics().at(0);
 
   EXPECT_TRUE(actual_index.name == "myindex");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
 
-  auto chunk_count = targeted_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = targeted_table->get_chunk(id);
-    auto actual_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(actual_indices.size() == 1);
-  }
+  check_if_index_exists_correctly(column_ids, _table_a);
 }
 
-TEST_F(DDLStatementTest, CreateIndexIfNotExistsAbort) {
-  // auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
+TEST_F(DDLStatementTest, CreateIndexIfNotExistsSecondTime) {
+  auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
 
-  //const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  //EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
-  //auto second_sql_pipeline = SQLPipelineBuilder{"CREATE INDEX myindex IF NOT EXISTS ON table_a (a, b)"}.create_pipeline();
+  auto second_sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS myindex ON table_a (a, b)"}.create_pipeline();
 
-  // This seems to be a very generic test, which could fail for various reasons, however a failing 'Assert' statement
-  // leads to an std::logic_error apparently, so this is the way
-  //EXPECT_THROW(second_sql_pipeline.get_result_table(), std::logic_error);
+  const auto& [second_pipeline_status, second_table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(second_pipeline_status, SQLPipelineStatus::Success);
+
+  auto single_column_col_ids = std::make_shared<std::vector<ColumnID>>();
+  single_column_col_ids->emplace_back(ColumnID{0});
+
+  check_if_index_exists_correctly(single_column_col_ids, _table_a);
 }
 
 }
