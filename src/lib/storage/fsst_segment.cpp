@@ -13,8 +13,6 @@
 
 #include <iostream>
 
-#include <stdlib.h>
-
 namespace opossum {
 
 template <typename T>

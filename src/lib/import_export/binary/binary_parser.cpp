@@ -18,7 +18,6 @@
 
 #include "utils/assert.hpp"
 
-#include <iostream>
 
 namespace opossum {
 
@@ -146,7 +145,6 @@ template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                                bool column_is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
-  //  std::cout << "Importing segment with " << static_cast<uint32_t>(row_count) << " rows" << std::endl;
 
   switch (column_type) {
     case EncodingType::Unencoded:
