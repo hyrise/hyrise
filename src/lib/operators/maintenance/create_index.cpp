@@ -67,15 +67,14 @@ std::string CreateIndex::description(DescriptionMode description_mode) const {
 std::shared_ptr<const Table> CreateIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
   auto table_to_be_indexed = Hyrise::get().storage_manager.get_table(table_name);
 
-  if(if_not_exists) {
-    _check_if_index_already_exists(index_name, table_to_be_indexed);
-  }
-
-  // group key index only works with a single column
-  if(column_ids->size() == 1) {
-    table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
-  } else {
-    table_to_be_indexed->create_index<CompositeGroupKeyIndex>(*column_ids, index_name);
+  // We just want to notify the user, that the index does already exist (if it already exists), and do no more.
+  if(!if_not_exists || !_index_already_exists(index_name, table_to_be_indexed)) {
+    // group key index only works with a single column
+    if(column_ids->size() == 1) {
+      table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
+    } else {
+      table_to_be_indexed->create_index<CompositeGroupKeyIndex>(*column_ids, index_name);
+    }
   }
 
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
@@ -92,11 +91,17 @@ void CreateIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTy
   // No parameters possible for CREATE INDEX
 }
 
-void CreateIndex::_check_if_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table) {
+bool CreateIndex::_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table) {
   auto index_statistics = table->indexes_statistics();
+
   for(auto index:index_statistics) {
-    Assert(index.name != new_index_name, "Index " + new_index_name + " already exists");
+    if(index.name == new_index_name) {
+      std::cout << "Notice: Index with name '" + new_index_name + "' already exists, no new index is created.";
+      return true;
+    }
   }
+
+  return false;
 }
 
 }  // namespace opossum

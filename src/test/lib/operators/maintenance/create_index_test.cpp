@@ -27,6 +27,15 @@ class CreateIndexTest : public BaseTest {
   std::string table_name = "TestTable";
 };
 
+void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, std::shared_ptr<Table> table) {
+  auto chunk_count = table->chunk_count();
+  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+    auto current_chunk = table->get_chunk(id);
+    auto applied_indices = current_chunk->get_indexes(*created_index->column_ids);
+    EXPECT_TRUE(applied_indices.size() == 1);
+  }
+}
+
 TEST_F(CreateIndexTest, NameAndDescription) { EXPECT_EQ(create_index->name(), "CreateIndex"); }
 
 TEST_F(CreateIndexTest, Execute) {
@@ -44,12 +53,7 @@ TEST_F(CreateIndexTest, Execute) {
   EXPECT_EQ(actual_index.name, index_name);
   EXPECT_EQ(actual_index.column_ids, *column_ids);
 
-  auto chunk_count = test_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = test_table->get_chunk(id);
-    auto applied_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(applied_indices.size() == 1);
-  }
+  check_index_exists_correctly(create_index, test_table);
 }
 
 TEST_F(CreateIndexTest, TableExists) {
@@ -72,13 +76,15 @@ TEST_F(CreateIndexTest, ExecuteWithIfNotExists) {
   create_index->execute();
   context->commit();
 
+  // let name stay the same, but alter column ids
+  column_ids->emplace_back(test_table->column_id_by_name("a"));
   auto another_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
   const auto another_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   another_index->set_transaction_context(another_context);
 
-  EXPECT_THROW(another_index->execute(), std::logic_error);
-  another_context->rollback(RollbackReason::Conflict);
+  // make sure that initially created index still exists
+  check_index_exists_correctly(create_index, test_table);
 }
 
 TEST_F(CreateIndexTest, ExecuteMultipleColumns) {
@@ -99,12 +105,7 @@ TEST_F(CreateIndexTest, ExecuteMultipleColumns) {
   EXPECT_EQ(actual_index.name, index_name);
   EXPECT_EQ(actual_index.column_ids, *column_ids);
 
-  auto chunk_count = test_table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
-    auto current_chunk = test_table->get_chunk(id);
-    auto applied_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(applied_indices.size() == 1);
-  }
+  check_index_exists_correctly(create_index, test_table);
 }
 
 TEST_F(CreateIndexTest, ExecuteWithIfNotExistsWithoutName) {}

@@ -38,6 +38,6 @@ class CreateIndex : public AbstractReadWriteOperator {
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
 
-  void _check_if_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);
+  bool _index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);
 };
 }  // namespace opossum
