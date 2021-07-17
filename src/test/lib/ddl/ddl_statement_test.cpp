@@ -129,4 +129,10 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsSecondTime) {
   check_if_index_exists_correctly(single_column_col_ids, _table_a);
 }
 
+TEST_F(DDLStatementTest, CreateIndexIfNotExistsWithoutName) {
+  auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS ON table_a (a, b)"}.create_pipeline();
+
+  EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
+}
+
 }

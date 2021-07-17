@@ -1315,6 +1315,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
   if(create_statement.indexName) {
     index_name = create_statement.indexName;
   } else {
+    Assert(create_statement.ifNotExists == false, "Index name has to be provided when using 'if not exists' flag.");
     index_name = create_statement.tableName + column_name_string;
   }
 
