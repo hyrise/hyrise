@@ -120,7 +120,7 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsSecondTime) {
 
   auto second_sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS myindex ON table_a (a, b)"}.create_pipeline();
 
-  const auto& [second_pipeline_status, second_table] = sql_pipeline.get_result_table();
+  const auto& [second_pipeline_status, second_table] = second_sql_pipeline.get_result_table();
   EXPECT_EQ(second_pipeline_status, SQLPipelineStatus::Success);
 
   auto single_column_col_ids = std::make_shared<std::vector<ColumnID>>();
