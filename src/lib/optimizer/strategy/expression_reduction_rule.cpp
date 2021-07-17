@@ -18,11 +18,6 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-std::string ExpressionReductionRule::name() const {
-  static const auto name = std::string{"ExpressionReductionRule"};
-  return name;
-}
-
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");

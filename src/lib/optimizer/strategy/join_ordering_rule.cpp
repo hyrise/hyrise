@@ -13,11 +13,6 @@
 
 namespace opossum {
 
-std::string JoinOrderingRule::name() const {
-  static const auto name = std::string{"JoinOrderingRule"};
-  return name;
-}
-
 void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
 

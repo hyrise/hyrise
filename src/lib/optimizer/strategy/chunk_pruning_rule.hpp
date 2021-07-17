@@ -25,9 +25,6 @@ class Table;
  * The resulting pruning information is stored inside the StoredTableNode objects.
  */
 class ChunkPruningRule : public AbstractRule {
- public:
-  std::string name() const override;
-
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 

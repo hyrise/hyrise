@@ -7,10 +7,9 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
 
+namespace opossum {
+
 namespace {
-
-using namespace opossum;  // NOLINT
-
 bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   // Optimization: The ExpressionReductionRule transforms `x NOT LIKE 'foo%'` into `x < 'foo' OR x >= 'fop'`. For this
   // special case, we know that the two OR arguments are mutually exclusive. In this case, we do not need to use
@@ -67,14 +66,7 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
 }
 }  // namespace
 
-namespace opossum {
-
 PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions) : _split_disjunctions(split_disjunctions) {}
-
-std::string PredicateSplitUpRule::name() const {
-  static const auto name = std::string{"PredicateSplitUpRule"};
-  return name;
-}
 
 void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");

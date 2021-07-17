@@ -31,25 +31,7 @@
 namespace opossum {
 
 template <typename T>
-TopKUniformDistributionHistogram<T>::TopKUniformDistributionHistogram(std::shared_ptr<GenericHistogram<T>> histogram, 
-  std::vector<T>&& top_k_names, std::vector<HistogramCountType>&& top_k_counts, const HistogramDomain<T>& domain)
-    : AbstractHistogram<T>(domain), _histogram(histogram), _top_k_names(std::move(top_k_names)), _top_k_counts(std::move(top_k_counts)) {
-
-  // TODO: moved to sliced method
-  if (_histogram == nullptr) {
-    GenericHistogramBuilder<T> builder{0, AbstractHistogram<T>::domain()};
-    _histogram = builder.build();
-  }
-
-  const auto histogram_total_count = _histogram->total_count();
-  const auto top_k_total_count = std::accumulate(_top_k_counts.cbegin(), _top_k_counts.cend(), HistogramCountType{0});
-  _total_count = histogram_total_count + top_k_total_count;
-  _total_distinct_count = _histogram->total_distinct_count();
-
-}
-
-template <typename T>
-std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHistogram<T>::from_column(
+std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_column(
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
@@ -84,12 +66,6 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
     }
   }
 
-  //print top k values
-
-  // for(auto i = 0u; i < TOP_K; i++) {
-  //       std::cout << "value: " << top_k_names[i] << " with count: " << top_k_counts[i] <<std::endl;
-  // }
-
   // Remove TOP_K values from value distribution
   for (auto i = 0u; i < k; i++) {
     auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[i], top_k_counts[i]));
@@ -97,301 +73,79 @@ std::shared_ptr<TopKUniformDistributionHistogram<T>> TopKUniformDistributionHist
   }
 
   // Model uniform distribution as one bin for all non-Top K values.
-  const auto bin_count = value_distribution.size() < 1 ? BinID{0} : BinID{1};
+  const auto bin_count = value_distribution.size() < 1 ? BinID{top_k_names.size()} : BinID{2*top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
 
-  if (bin_count > 0) {
+  // Split values evenly among bins.
+  //const auto range_minimum = value_distribution.front().first;
+  const auto range_maximum = value_distribution.back().first;
+  const auto non_top_k_count = std::accumulate(
+        value_distribution.cbegin(), 
+        value_distribution.cend(), 
+        HistogramCountType{0}, 
+        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
-    // Split values evenly among bins.
-    const auto bin_minimum = value_distribution.front().first;
-    const auto bin_maximum = value_distribution.back().first;
-    const auto bin_height = std::accumulate(
-          value_distribution.cbegin(), 
-          value_distribution.cend(), 
-          HistogramCountType{0}, 
-          [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
+  const auto bin_distinct_count = value_distribution.size();
+  const auto count_per_non_top_k_value = non_top_k_count / bin_distinct_count;
 
-    const auto bin_distinct_count = value_distribution.size();
+  auto current_minimum_index = 0u;
+  auto current_maximum_index = value_distribution.size() - 1;
 
-  
-    builder.add_bin(bin_minimum, bin_maximum, bin_height, bin_distinct_count);  
+  for (auto top_k_index = 0u, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
+    // current top_k value
+    auto skip_bin = false;
+    const auto current_top_k_value = top_k_names[top_k_index];
+
+    // find value smaller than current top_k value for current maximum
+    auto value_dist_lower_bound = std::lower_bound(value_distribution.begin(), value_distribution.end(), current_top_k_value,
+      [](const auto value_count_pair, auto value) {
+        return value_count_pair.first < value;
+      });
+
+    // can't build a bin if top_k value bigger than all values (== value_distribution.end()) or if there is no value smaller than top-k
+    if (value_dist_lower_bound == value_distribution.begin() || value_dist_lower_bound == value_distribution.end() || 
+      std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index) {
+      skip_bin = true;
+    } 
+    // find out how many values are before current top k value
+    if (!skip_bin) {
+      current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
+      auto current_distinct_values = current_maximum_index - current_maximum_index + 1;
+
+      auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+
+      // add bin with values before top_k
+      builder.add_bin(
+        value_distribution[current_minimum_index].first, 
+        value_distribution[current_maximum_index].first, 
+        current_bin_height, 
+        current_distinct_values
+      );
+    }
+    
+    // add bin for topk value
+    builder.add_bin(
+      current_top_k_value, 
+      current_top_k_value, 
+      top_k_counts[top_k_index], 
+      1
+    );
+
+    // advance minimum pointer
+
+    current_minimum_index = value_dist_lower_bound - value_distribution.begin();
+    
+  }
+      // add last bucket if necessary
+  if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
+    auto current_distinct_values = value_distribution.size() - current_maximum_index;
+    auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+    builder.add_bin(value_distribution[current_minimum_index].first, range_maximum, current_bin_height, current_distinct_values);    
   }
 
-  auto histogram = builder.build();
 
-  return std::make_shared<TopKUniformDistributionHistogram<T>>(histogram, std::move(top_k_names), std::move(top_k_counts));
-}
-
-template <typename T>
-std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::sliced(
-    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2) const {
-
-  // if (AbstractHistogram<T>::does_not_contain(predicate_condition, variant_value, variant_value2)) {
-  //   return nullptr;
-  // }
-
-  const auto value = lossy_variant_cast<T>(variant_value);
-  DebugAssert(value, "sliced() cannot be called with NULL");
-
-  switch (predicate_condition) {
-    case PredicateCondition::Equals: {
-      GenericHistogramBuilder<T> builder{1, AbstractHistogram<T>::domain()};
-
-      auto value_lower_bound = std::lower_bound(_top_k_names.begin(), _top_k_names.end(), value);
-      auto value_upper_bound = std::upper_bound(_top_k_names.begin(), _top_k_names.end(), value);
-
-      if (value_lower_bound != value_upper_bound) {
-        // Value in Top-K Values
-        builder.add_bin(*value, *value, _top_k_counts[value_lower_bound - _top_k_names.begin()], 1);
-      } else {
-        builder.add_bin(*value, *value,
-                static_cast<HistogramCountType>(AbstractHistogram<T>::estimate_cardinality(PredicateCondition::Equals, variant_value)),
-                1);
-      }
-      return builder.build();
-    }
-    case PredicateCondition::NotEquals: {
-      // Check if value in top-k values
-
-      auto new_top_k_names = _top_k_names;
-      auto new_top_k_counts = _top_k_counts;
-      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->clone());
-
-      auto value_lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
-      auto value_upper_bound = std::upper_bound(_top_k_names.begin(), _top_k_names.end(), value);
-
-      if (value_lower_bound != value_upper_bound) {
-        // Value in Top-K Values
-        const auto value_index = value_lower_bound - new_top_k_names.begin();
-        new_top_k_names.erase(value_lower_bound);
-        new_top_k_counts.erase(new_top_k_counts.begin() + value_index);
-
-      } else {
-        // Value not in Top-K Values
-        new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-      }
-
-      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
-    }
-    case PredicateCondition::LessThanEquals: {
-      // Top-K Values
-      // TODO: is copy necessary?
-      auto new_top_k_names = _top_k_names;
-      auto new_top_k_counts = _top_k_counts;
-
-      auto upper_bound = std::upper_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
-      new_top_k_names.erase(upper_bound, new_top_k_names.end());
-      new_top_k_counts.resize(new_top_k_names.size());
-
-      //print new top k values
-      // std::cout << "New top k values after applying PredicateCondition::LessThanEquals" << std::endl;
-      // for(auto i = 0u; i < new_top_k_names.size(); i++) {
-      //   std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
-      // }
-
-      // Histogram Values
-      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-
-      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
-    }
-    case PredicateCondition::LessThan: {
-      // Top-K Values
-      auto new_top_k_names = _top_k_names;
-      auto new_top_k_counts = _top_k_counts;
-
-      auto lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
-      new_top_k_names.erase(lower_bound, new_top_k_names.end());
-      new_top_k_counts.resize(new_top_k_names.size());
-
-      //print new top k values
-      // std::cout << "New top k values after applying PredicateCondition::LessThan" << std::endl;
-      // for(auto i = 0u; i < new_top_k_names.size(); i++) {
-      //   std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
-      // }
-
-      // Histogram Values
-      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-
-      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
-    }
-    case PredicateCondition::GreaterThan: {
-      // Top-K Values
-      auto new_top_k_names = _top_k_names;
-      auto new_top_k_counts = _top_k_counts;
-
-      auto upper_bound = std::upper_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
-
-      const auto previous_top_k_names_size = new_top_k_names.size();
-      new_top_k_names.erase(new_top_k_names.begin(), upper_bound);
-      const auto num_deleted_top_k_values = previous_top_k_names_size - new_top_k_names.size();
-      new_top_k_counts.erase(new_top_k_counts.begin(), new_top_k_counts.begin() + num_deleted_top_k_values);
-
-      //print new top k values
-      // std::cout << "New top k values after applying PredicateCondition::GreaterThan" << std::endl;
-      // for(auto i = 0u; i < new_top_k_names.size(); i++) {
-      //   std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
-      // }
-
-      // Histogram Values
-      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-
-      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
-    }
-    case PredicateCondition::GreaterThanEquals: {
-      // Top-K Values
-      auto new_top_k_names = _top_k_names;
-      auto new_top_k_counts = _top_k_counts;
-
-      auto lower_bound = std::lower_bound(new_top_k_names.begin(), new_top_k_names.end(), value);
-
-      const auto previous_top_k_names_size = new_top_k_names.size();
-      new_top_k_names.erase(new_top_k_names.begin(), lower_bound);
-      const auto num_deleted_top_k_values = previous_top_k_names_size - new_top_k_names.size();
-      new_top_k_counts.erase(new_top_k_counts.begin(), new_top_k_counts.begin() + num_deleted_top_k_values);
-
-      //print new top k values
-      // std::cout << "New top k values after applying PredicateCondition::GreaterThanEquals" << std::endl;
-      // for(auto i = 0u; i < new_top_k_names.size(); i++) {
-      //   std::cout << "value: " << new_top_k_names[i] << " with count: " << new_top_k_counts[i] << std::endl;
-      // }
-
-      // Histogram Values
-      auto new_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->sliced(predicate_condition, variant_value, variant_value2));
-
-      return std::make_shared<TopKUniformDistributionHistogram<T>>(new_histogram, std::move(new_top_k_names), std::move(new_top_k_counts));
-    }
-    case PredicateCondition::BetweenInclusive:
-      Assert(variant_value2, "BETWEEN needs a second value.");
-      return std::static_pointer_cast<TopKUniformDistributionHistogram<T>>(sliced(PredicateCondition::GreaterThanEquals, variant_value, variant_value2))
-          ->sliced(PredicateCondition::LessThanEquals, *variant_value2, variant_value2);
-    case PredicateCondition::BetweenLowerExclusive:
-      Assert(variant_value2, "BETWEEN needs a second value.");
-      return std::static_pointer_cast<TopKUniformDistributionHistogram<T>>(sliced(PredicateCondition::GreaterThan, variant_value, variant_value2))
-          ->sliced(PredicateCondition::LessThanEquals, *variant_value2, variant_value2);
-    case PredicateCondition::BetweenUpperExclusive:
-      Assert(variant_value2, "BETWEEN needs a second value.");
-      return std::static_pointer_cast<TopKUniformDistributionHistogram<T>>(sliced(PredicateCondition::GreaterThanEquals, variant_value, variant_value2))
-          ->sliced(PredicateCondition::LessThan, *variant_value2, variant_value2);
-    case PredicateCondition::BetweenExclusive:
-      Assert(variant_value2, "BETWEEN needs a second value.");
-      return std::static_pointer_cast<TopKUniformDistributionHistogram<T>>(sliced(PredicateCondition::GreaterThan, variant_value, variant_value2))
-          ->sliced(PredicateCondition::LessThan, *variant_value2, variant_value2);
-    case PredicateCondition::Like:
-    case PredicateCondition::NotLike:
-      // TODO(anybody) Slicing for (NOT) LIKE not supported, yet
-      return clone();
-    case PredicateCondition::In:
-    case PredicateCondition::NotIn:
-    case PredicateCondition::IsNull:
-    case PredicateCondition::IsNotNull:
-      Fail("PredicateCondition not supported by TopKUnifromDistributionHistogram");
-  }
-  
-  Fail("Invalid enum value");
-}
-
-template <typename T>
-std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::scaled(const Selectivity selectivity) const {
-  Assert(!std::isnan(selectivity), "Selectivity should not be NaN");
-
-  // As we have no better information we assume that the occurrences of top-k values are scaled uniformly.
-  auto scaled_top_k_names = _top_k_names;
-  auto scaled_top_k_counts = _top_k_counts;
-  std::transform(_top_k_counts.begin(), _top_k_counts.end(), scaled_top_k_counts.begin(),
-                   [&selectivity](HistogramCountType count) -> HistogramCountType { return count * selectivity; });
-
-  // Scale histogram values
-  auto scaled_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->scaled(selectivity));
-
-  return std::make_shared<TopKUniformDistributionHistogram<T>>(scaled_histogram, std::move(scaled_top_k_names), std::move(scaled_top_k_counts));
-}
-
-template <typename T>
-std::shared_ptr<AbstractStatisticsObject> TopKUniformDistributionHistogram<T>::pruned(
-    const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2) const {
-
-  // for now, we don't prune the top_k values
-  auto pruned_top_k_names = _top_k_names;
-  auto pruned_top_k_counts = _top_k_counts;
-
-  auto pruned_histogram = std::static_pointer_cast<GenericHistogram<T>>(_histogram->pruned(num_values_pruned, predicate_condition, variant_value, variant_value2));
-  return std::make_shared<TopKUniformDistributionHistogram<T>>(pruned_histogram, std::move(pruned_top_k_names), std::move(pruned_top_k_counts));
-}
-
-
-template <typename T>
-std::string TopKUniformDistributionHistogram<T>::name() const {
-  return "TopKEqualDistinctCount";
-}
-
-template <typename T>
-std::shared_ptr<AbstractHistogram<T>> TopKUniformDistributionHistogram<T>::clone() const {
-  // The new histogram needs a copy of the data
-  auto histogram_copy = std::static_pointer_cast<GenericHistogram<T>>(_histogram->clone());
-  auto top_k_names_copy = _top_k_names;
-  auto top_k_counts_copy = _top_k_counts;
-  //return histogram_copy;
-  return std::make_shared<TopKUniformDistributionHistogram<T>>(histogram_copy, std::move(top_k_names_copy), std::move(top_k_counts_copy));
-}
-
-template <typename T>
-BinID TopKUniformDistributionHistogram<T>::bin_count() const {
-  return _histogram->bin_count();
-}
-
-template <typename T>
-BinID TopKUniformDistributionHistogram<T>::_bin_for_value(const T& value) const {
-  //TODO: look at where is that used
-  for (auto i = 0u; i < _top_k_names.size(); i++) {
-    if(_top_k_names[i] == value) {
-      return 1;
-    }
-  }
-  return _histogram->bin_for_value(value);
-}
-
-template <typename T>
-BinID TopKUniformDistributionHistogram<T>::_next_bin_for_value(const T& value) const {
-  //TODO: look at where is that used
-  for (auto i = 0u; i < _top_k_names.size(); i++) {
-    if(_top_k_names[i] == value) {
-      return 1;
-    }
-  }
-  return _histogram->next_bin_for_value(value);
-}
-
-template <typename T>
-const T& TopKUniformDistributionHistogram<T>::bin_minimum(const BinID index) const {
-  return _histogram->bin_minimum(index);
-}
-
-template <typename T>
-const T& TopKUniformDistributionHistogram<T>::bin_maximum(const BinID index) const {
-  return _histogram->bin_maximum(index);
-}
-
-template <typename T>
-HistogramCountType TopKUniformDistributionHistogram<T>::bin_height(const BinID index) const {
-  return _histogram->bin_height(index);
-}
-
-template <typename T>
-HistogramCountType TopKUniformDistributionHistogram<T>::bin_distinct_count(const BinID index) const {
-  return _histogram->bin_distinct_count(index);
-}
-
-template <typename T>
-HistogramCountType TopKUniformDistributionHistogram<T>::total_count() const {
-  return _total_count;
-}
-
-template <typename T>
-HistogramCountType TopKUniformDistributionHistogram<T>::total_distinct_count() const {
-  return _total_distinct_count;
+  return builder.build();
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(TopKUniformDistributionHistogram);

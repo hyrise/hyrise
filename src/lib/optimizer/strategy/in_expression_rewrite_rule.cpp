@@ -99,11 +99,6 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
-std::string InExpressionRewriteRule::name() const {
-  static const auto name = std::string{"InExpressionRewriteRule"};
-  return name;
-}
-
 void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   if (strategy == Strategy::ExpressionEvaluator) {

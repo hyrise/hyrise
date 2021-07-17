@@ -131,11 +131,6 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
 
 namespace opossum {
 
-std::string ChunkPruningRule::name() const {
-  static const auto name = std::string{"ChunkPruningRule"};
-  return name;
-}
-
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>
       predicate_pruning_chains_by_stored_table_node;

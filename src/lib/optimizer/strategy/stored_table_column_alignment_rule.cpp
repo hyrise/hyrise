@@ -95,11 +95,6 @@ void align_pruned_column_ids(const ColumnPruningAgnosticMultiSet& grouped_stored
 
 namespace opossum {
 
-std::string StoredTableColumnAlignmentRule::name() const {
-  static const auto name = std::string{"StoredTableColumnAlignmentRule"};
-  return name;
-}
-
 /**
  * The default implementation of this function optimizes a given LQP and all of its subquery LQPs individually.
  * However, as we do not want to align StoredTableNodes per plan but across all plans, we override it accordingly.

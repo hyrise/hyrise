@@ -20,9 +20,6 @@ namespace opossum {
  * for why we have that duplication.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
- public:
-  std::string name() const override;
-
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };

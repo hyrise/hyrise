@@ -109,9 +109,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
    public:
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
-    std::string name() const override { return "LQPBreakingRule"; }
 
-   protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
@@ -138,7 +136,6 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
-    std::string name() const override { return "MockRule"; }
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
@@ -210,7 +207,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     EXPECT_NE(subquery_a_a->lqp, subquery_a_b->lqp);
   }
 
-  /**
+  /**q
    * 2. Optimize the LQP with a telemetric Rule
    */
 
@@ -221,7 +218,6 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
-    std::string name() const override { return "MockRule"; }
 
     size_t& counter;
 

@@ -36,11 +36,6 @@ PredicateCondition get_between_predicate_condition(bool left_inclusive, bool rig
 
 namespace opossum {
 
-std::string BetweenCompositionRule::name() const {
-  static const auto name = std::string{"BetweenCompositionRule"};
-  return name;
-}
-
 /**
  * Distinction from the ChunkPruningRule:
  *  Both rules search for predicate chains, but of different types:

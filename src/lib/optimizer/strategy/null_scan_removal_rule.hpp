@@ -16,7 +16,6 @@ class PredicateNode;
 class NullScanRemovalRule : public AbstractRule {
  public:
   void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const override;
-  std::string name() const override;
 
  private:
   static void _remove_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes);
