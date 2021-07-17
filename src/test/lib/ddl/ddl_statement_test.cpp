@@ -141,10 +141,16 @@ TEST_F(DDLStatementTest, DropIndex) {
   check_if_index_exists_correctly(single_column_col_ids, _table_a, 0);
 }
 
-TEST_F(DDLStatementTest, DropIndexNotExists) {
+TEST_F(DDLStatementTest, DropIndexNotExistsNoFlag) {
   auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON table_a"}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
+}
+
+TEST_F(DDLStatementTest, DropIndexNotExistsWithFlag) {
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex ON table_a"}.create_pipeline();
+
+  EXPECT_NO_THROW(sql_pipeline.get_result_table());
 }
 
 }

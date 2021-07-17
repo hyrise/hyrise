@@ -523,8 +523,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_index_node = std::dynamic_pointer_cast<DropIndexNode>(node);
 
-  return std::make_shared<DropIndex>(drop_index_node->index_name, drop_index_node->table_name);
-
+  return std::make_shared<DropIndex>(drop_index_node->index_name, drop_index_node->if_exists, drop_index_node->table_name);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

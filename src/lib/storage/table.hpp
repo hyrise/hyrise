@@ -197,7 +197,7 @@ class Table : private Noncopyable {
     _indexes.emplace_back(index_statistics);
   }
 
-  void delete_index_by_name(const std::string& name) {
+  void delete_index_by_name(const std::string& name, const bool if_exists) {
     const auto chunk_count = _chunks.size();
 
     // find index statistics
@@ -221,7 +221,7 @@ class Table : private Noncopyable {
       _indexes.erase(new_end, _indexes.end());
 
     } else {
-      throw std::invalid_argument("No index with name " + name);
+      if_exists ? std::cout << "No index with name '" << name << "' exists." : throw std::invalid_argument("No index with name " + name);
     }
   }
 
