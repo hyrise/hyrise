@@ -22,6 +22,7 @@ std::string CreateTableNode::description(const DescriptionMode mode) const {
 size_t CreateTableNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(table_name);
   boost::hash_combine(hash, if_not_exists);
+  boost::hash_combine(hash, key_constraints);
   return hash;
 }
 
@@ -31,7 +32,7 @@ std::shared_ptr<AbstractLQPNode> CreateTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool CreateTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& create_table_node = static_cast<const CreateTableNode&>(rhs);
-  return table_name == create_table_node.table_name && if_not_exists == create_table_node.if_not_exists && key_constraints == create_table_node.key_constraints;
+  return table_name == create_table_node.table_name && if_not_exists == create_table_node.if_not_exists && *key_constraints == *(create_table_node.key_constraints);
 }
 
 }  // namespace opossum
