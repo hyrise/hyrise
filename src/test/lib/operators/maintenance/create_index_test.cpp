@@ -76,12 +76,17 @@ TEST_F(CreateIndexTest, ExecuteWithIfNotExists) {
   create_index->execute();
   context->commit();
 
-  // let name stay the same, but alter column ids
-  column_ids->emplace_back(test_table->column_id_by_name("a"));
-  auto another_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
+  // let name and table stay the same, but alter column ids
+  auto other_column_ids = std::make_shared<std::vector<ColumnID>>();
+  other_column_ids->emplace_back(test_table->column_id_by_name("a"));
+  other_column_ids->emplace_back(test_table->column_id_by_name("b"));
+
+  auto another_index = std::make_shared<CreateIndex>(index_name, true, table_name, other_column_ids);
   const auto another_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   another_index->set_transaction_context(another_context);
+  another_index->execute();
+  another_context->commit();
 
   // make sure that initially created index still exists
   check_index_exists_correctly(create_index, test_table);
