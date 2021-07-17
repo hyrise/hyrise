@@ -34,20 +34,24 @@ class DDLStatementTest : public BaseTest {
   const std::string _create_index_multi_column = "CREATE INDEX myindex ON table_a (a, b)";
 };
 
-void check_if_index_exists_correctly(std::shared_ptr<std::vector<ColumnID>> column_ids, std::shared_ptr<Table> table) {
+void create_index(const std::string statement) {
+  auto sql_pipeline = SQLPipelineBuilder{statement}.create_pipeline();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+}
+
+void check_if_index_exists_correctly(std::shared_ptr<std::vector<ColumnID>> column_ids, std::shared_ptr<Table> table, int index_count = 1) {
   auto chunk_count = table->chunk_count();
   for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
     auto current_chunk = table->get_chunk(id);
     auto actual_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(actual_indices.size() == 1);
+    EXPECT_TRUE(actual_indices.size() == static_cast<unsigned long>(index_count));
   }
 }
 
 TEST_F(DDLStatementTest, CreateIndexSingleColumn) {
-  auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
-
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  create_index(_create_index_single_column);
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
@@ -61,10 +65,7 @@ TEST_F(DDLStatementTest, CreateIndexSingleColumn) {
 }
 
 TEST_F(DDLStatementTest, CreateIndexMultiColumn) {
-  auto sql_pipeline = SQLPipelineBuilder{_create_index_multi_column}.create_pipeline();
-
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  create_index(_create_index_multi_column);
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
@@ -79,10 +80,7 @@ TEST_F(DDLStatementTest, CreateIndexMultiColumn) {
 }
 
 TEST_F(DDLStatementTest, CreateIndexWithoutName) {
-  auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX ON table_a (a)"}.create_pipeline();
-
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  create_index("CREATE INDEX ON table_a (a)");
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
@@ -96,10 +94,7 @@ TEST_F(DDLStatementTest, CreateIndexWithoutName) {
 }
 
 TEST_F(DDLStatementTest, CreateIndexIfNotExistsFirstTime) {
-  auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS myindex ON table_a (a)"}.create_pipeline();
-
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  create_index("CREATE INDEX IF NOT EXISTS myindex ON table_a (a)");
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
   column_ids->emplace_back(ColumnID{0});
@@ -113,10 +108,7 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsFirstTime) {
 }
 
 TEST_F(DDLStatementTest, CreateIndexIfNotExistsSecondTime) {
-  auto sql_pipeline = SQLPipelineBuilder{_create_index_single_column}.create_pipeline();
-
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  create_index(_create_index_single_column);
 
   auto second_sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS myindex ON table_a (a, b)"}.create_pipeline();
 
@@ -133,6 +125,26 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsWithoutName) {
   auto sql_pipeline = SQLPipelineBuilder{"CREATE INDEX IF NOT EXISTS ON table_a (a, b)"}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
+}
+
+TEST_F(DDLStatementTest, DropIndex) {
+  create_index(_create_index_single_column);
+
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON table_a"}.create_pipeline();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  auto single_column_col_ids = std::make_shared<std::vector<ColumnID>>();
+  single_column_col_ids->emplace_back(ColumnID{0});
+
+  check_if_index_exists_correctly(single_column_col_ids, _table_a, 0);
+}
+
+TEST_F(DDLStatementTest, DropIndexNotExists) {
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON table_a"}.create_pipeline();
+
+  EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 
 }
