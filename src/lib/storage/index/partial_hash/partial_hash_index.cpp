@@ -11,14 +11,9 @@ size_t PartialHashIndex::estimate_memory_consumption(ChunkOffset row_count, Chun
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
                                    const ColumnID column_id)
-    : AbstractTableIndex{get_index_type_of<PartialHashIndex>()} {
+    : AbstractTableIndex{get_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
   if (!chunks_to_index.empty()) {
-    resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(),
-                      [&](const auto column_data_type) {
-                        using ColumnDataType = typename decltype(column_data_type)::type;
-
-                        _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id);
-                      });
+    add(chunks_to_index);
   } else {
     /**
      * Because 'chunks_to_index' is empty, we cannot determine the data type of the column and therefore construct
@@ -28,8 +23,28 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   }
 }
 
-PartialHashIndex::IteratorPair PartialHashIndex::_equals(
-    const AllTypeVariant& value) const {
+size_t PartialHashIndex::add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
+  if (!_is_initialized) {
+    resolve_data_type(chunks_to_index.front().second->get_segment(_column_id)->data_type(),
+                      [&](const auto column_data_type) {
+                        using ColumnDataType = typename decltype(column_data_type)::type;
+                        _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, _column_id);
+                      });
+    _is_initialized = true;
+    return _impl->get_indexed_chunk_ids().size();
+  } else {
+    return _impl->add(chunks_to_index, _column_id);
+  }
+}
+
+size_t PartialHashIndex::remove(const std::vector<ChunkID>& chunks_to_remove) {
+  if (!_is_initialized) {
+    return 0;
+  }
+  return _impl->remove(chunks_to_remove);
+}
+
+PartialHashIndex::IteratorPair PartialHashIndex::_equals(const AllTypeVariant& value) const {
   return _impl->equals(value);
 }
 
@@ -48,7 +63,7 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cend() const { return _impl->
 
 size_t PartialHashIndex::_memory_consumption() const { return 0; }
 
-bool PartialHashIndex::_is_index_for(const ColumnID column_id) const { return _impl->is_index_for(column_id); }
+bool PartialHashIndex::_is_index_for(const ColumnID column_id) const { return column_id == _column_id; }
 
 std::set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const { return _impl->get_indexed_chunk_ids(); }
 

@@ -6,9 +6,15 @@ namespace opossum {
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
-    : BasePartialHashIndexImpl(), _column_id(column_id) {
+    : BasePartialHashIndexImpl() {
+  add(chunks_to_index, column_id);
+}
+
+template <typename DataType>
+size_t PartialHashIndexImpl<DataType>::add(
+    const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   // ToDo(pi) check all have same data type by taking first and comparing rest
-  // ToDo(pi) set null positions
+  size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
     if (_indexed_chunk_ids.contains(chunk.first)) continue;
 
@@ -29,11 +35,38 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
       }
     });
   }
+
+  return _indexed_chunk_ids.size() - size_before;
 }
 
-//ToDO(pi) change index (add) chunks later after creation
+template <typename DataType>
+size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks_to_remove) {
+  size_t size_before = _indexed_chunk_ids.size();
+  for (const auto chunk_id : chunks_to_remove) {
+    if (!_indexed_chunk_ids.contains(chunk_id)) continue;
 
-// ToDo(pi) return from cbegin to cend instead of map vectors
+    _indexed_chunk_ids.erase(chunk_id);
+    auto map_iter = _map.begin();
+    while (map_iter != _map.end()) {
+      auto& values = _map.at(map_iter->first);
+      values.erase(std::remove_if(values.begin(), values.end(),
+                                  [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
+                   values.end());
+      if (values.empty()) {
+        map_iter = _map.erase(map_iter);
+      } else {
+        ++map_iter;
+      }
+    }
+    auto& _nulls = _null_values[true];
+    _nulls.erase(
+        std::remove_if(_nulls.begin(), _nulls.end(), [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
+        _nulls.end());
+  }
+
+  return size_before - _indexed_chunk_ids.size();
+}
+
 template <typename DataType>
 PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
   auto begin = _map.find(boost::get<DataType>(value));
@@ -82,11 +115,6 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   return 0;
-}
-
-template <typename DataType>
-bool PartialHashIndexImpl<DataType>::is_index_for(const ColumnID column_id) const {
-  return column_id == _column_id;
 }
 
 template <typename DataType>

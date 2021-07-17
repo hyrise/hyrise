@@ -24,6 +24,9 @@ class PartialHashIndex : public AbstractTableIndex {
   PartialHashIndex() = delete;
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
+  size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
+  size_t remove(const std::vector<ChunkID>&);
+
  protected:
   Iterator _cbegin() const override;
   Iterator _cend() const override;
@@ -39,6 +42,8 @@ class PartialHashIndex : public AbstractTableIndex {
   std::set<ChunkID> _get_indexed_chunk_ids() const override;
 
  private:
+  ColumnID _column_id;  // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
+  bool _is_initialized = false;
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
 };
 

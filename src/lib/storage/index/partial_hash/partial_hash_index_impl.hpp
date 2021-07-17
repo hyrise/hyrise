@@ -22,6 +22,9 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual ~BasePartialHashIndexImpl() = default;
 
+  virtual size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) { return 0; }
+  virtual size_t remove(const std::vector<ChunkID>&) { return 0; }
+
   virtual Iterator cbegin() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
   virtual Iterator cend() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
   virtual Iterator null_cbegin() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
@@ -49,6 +52,9 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
+  size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) override;
+  size_t remove(const std::vector<ChunkID>&) override;
+
   Iterator cbegin() const override;
   Iterator cend() const override;
   Iterator null_cbegin() const override;
@@ -58,7 +64,6 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   IteratorPair equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const override;
 
-  bool is_index_for(const ColumnID column_id) const override;
   // returns sorted array
   std::set<ChunkID> get_indexed_chunk_ids() const override;
 
@@ -66,8 +71,6 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   tsl::robin_map<DataType, std::vector<RowID>> _map;
   tsl::robin_map<bool, std::vector<RowID>> _null_values;
 
-  // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
-  ColumnID _column_id;
   std::set<ChunkID> _indexed_chunk_ids = {};  // constant time lookup
 };
 
