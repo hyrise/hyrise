@@ -12,6 +12,7 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/dependent_group_by_reduction_rule.hpp"
+#include "strategy/dips_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -80,6 +81,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  optimizer->add_rule(std::make_unique<DipsPruningRule>());
 
   // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
   // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that

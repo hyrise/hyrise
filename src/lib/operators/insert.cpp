@@ -179,6 +179,19 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
 
+    auto target_chunk_statistic = target_chunk->pruning_statistics_modifiable();
+
+    // If the chunk has no statistics, we need to add the attribute statistics for every segment.
+    if (!target_chunk_statistic.has_value()) {
+      target_chunk_statistic = std::vector<std::shared_ptr<BaseAttributeStatistics>>(target_chunk->column_count());
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
+        resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          target_chunk_statistic.value()[column_id] = std::make_shared<AttributeStatistics<ColumnDataType>>();
+        });
+      }
+    }
+
     auto target_chunk_offset = target_chunk_range.begin_chunk_offset;
     auto target_chunk_range_remaining_rows =
         target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
@@ -197,6 +210,14 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           using ColumnDataType = typename decltype(data_type_t)::type;
           copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
                                            target_chunk_offset, num_rows_current_iteration);
+
+          auto segment_statisitcs = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+              target_chunk_statistic.value()[static_cast<size_t>(column_id)]);
+          std::shared_ptr<AttributeStatistics<ColumnDataType>> new_segment_statistics =
+              _update_min_max_filter_segment_statistics<ColumnDataType>(
+                  source_segment, source_row_id.chunk_offset, segment_statisitcs, num_rows_current_iteration, context);
+
+          target_chunk_statistic.value()[column_id] = new_segment_statistics;
         });
       }
 
@@ -211,9 +232,42 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       target_chunk_offset += num_rows_current_iteration;
       target_chunk_range_remaining_rows -= num_rows_current_iteration;
     }
+
+    // target_chunk->set_pruning_statistics(target_chunk_statistic);
   }
 
   return nullptr;
+}
+
+template <typename T>
+std::shared_ptr<AttributeStatistics<T>> Insert::_update_min_max_filter_segment_statistics(
+    const std::shared_ptr<AbstractSegment>& source_segment, ChunkOffset source_chunk_offset,
+    std::shared_ptr<AttributeStatistics<T>> attribute_statistics, ChunkOffset num_rows_current_iteration,
+    const std::shared_ptr<TransactionContext>& context) {
+  std::shared_ptr<AttributeStatistics<T>> result = std::make_shared<AttributeStatistics<T>>();
+
+  segment_with_iterators<T>(*source_segment, [&](const auto source_begin, const auto source_end) {
+    auto source_iter = source_begin + source_chunk_offset;
+    auto min_max_filter = attribute_statistics->min_max_filter;
+
+    // Check if there exists a min-max filter. If so use extract the min-max values. If not use the first value of
+    // the iterator as the min and max value.
+    auto min_value = min_max_filter ? min_max_filter->min : source_iter->value();
+    auto max_value = min_max_filter ? min_max_filter->max : source_iter->value();
+
+    for (auto index = ChunkOffset(source_chunk_offset); index < num_rows_current_iteration; index++) {
+      if (!source_iter->is_null()) {
+        auto value = source_iter->value();
+        if (value > max_value) max_value = value;
+        if (value < min_value) min_value = value;
+      }
+      ++source_iter;
+    }
+    result->set_statistics_object(
+        std::make_shared<DipsMinMaxFilter<T>>(min_value, max_value, context->transaction_id()));
+  });
+
+  return result;
 }
 
 void Insert::_on_commit_records(const CommitID cid) {

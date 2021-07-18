@@ -193,6 +193,7 @@ Contact: firstname.lastname@hpi.de
 -   Dominik   Meier
 -   Julian    Menzler
 -   Torben    Meyer
+-   Tobias    Nack
 -   Leander   Neiß
 -   Hendrik   Rätz
 -   Alexander Riese
@@ -206,6 +207,7 @@ Contact: firstname.lastname@hpi.de
 -   Nils      Thamm
 -   Hendrik   Tjabben
 -   Justin    Trautmann
+-   Petr      Tsayun
 -   Carsten   Walther
 -   Marcel    Weisgut
 -   Lukas     Wenzel

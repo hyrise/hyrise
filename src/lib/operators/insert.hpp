@@ -5,6 +5,10 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/statistics_objects/dips_min_max_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "utils/assert.hpp"
 
@@ -38,6 +42,12 @@ class Insert : public AbstractReadWriteOperator {
 
  private:
   const std::string _target_table_name;
+
+  template <typename T>
+  std::shared_ptr<AttributeStatistics<T>> _update_min_max_filter_segment_statistics(
+      const std::shared_ptr<AbstractSegment>& source_segment, ChunkOffset source_chunk_offset,
+      std::shared_ptr<AttributeStatistics<T>> attribute_statistics, ChunkOffset num_rows_current_iteration,
+      const std::shared_ptr<TransactionContext>& context);
 
   // Ranges of rows to which the inserted values are written
   struct ChunkRange {

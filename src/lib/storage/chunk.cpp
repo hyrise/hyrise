@@ -206,12 +206,18 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
+std::optional<ChunkPruningStatistics> Chunk::pruning_statistics() const { return _pruning_statistics; }
+
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics_modifiable() const {
+  return _pruning_statistics;
+}
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
-  Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
+  // Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as Chunk");
+
+  const std::lock_guard<std::mutex> lock(_statistics_update_mutex);
 
   _pruning_statistics = pruning_statistics;
 }
@@ -224,7 +230,7 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 }
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
-  Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
+  // Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
   // Currently, we assume that set_individually_sorted_by is called only once at most.
   // As such, there should be no existing sorting and the new sorting should contain at least one column.
   // Feel free to remove this assertion if necessary.
