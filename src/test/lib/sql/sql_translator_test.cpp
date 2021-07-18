@@ -2307,6 +2307,10 @@ TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, CreateIndexWrongColumnName) {
+  EXPECT_ANY_THROW(sql_to_lqp_helper("CREATE INDEX ON int_int_int (d)"));
+}
+
 TEST_F(SQLTranslatorTest, CreateView) {
   const auto query = "CREATE VIEW my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
   const auto [result_node, translation_info] = sql_to_lqp_helper(query);
