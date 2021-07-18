@@ -69,8 +69,8 @@ class FSSTSegment : public AbstractEncodedSegment {
   pmr_vector<uint64_t> _reference_offsets;
   std::optional<pmr_vector<bool>> _null_values;
   uint64_t _number_elements_per_reference_bucket;
-
   mutable fsst_decoder_t _decoder;
+  std::unique_ptr<BaseVectorDecompressor> _offset_decompressor;
 };
 
 //EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);

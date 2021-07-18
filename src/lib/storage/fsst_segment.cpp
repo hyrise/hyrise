@@ -26,7 +26,8 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
       _reference_offsets{std::move(reference_offsets)},
       _null_values{std::move(null_values)},
       _number_elements_per_reference_bucket{number_elements_per_reference_bucket},
-      _decoder{std::move(decoder)} {}
+      _decoder{std::move(decoder)},
+      _offset_decompressor{std::move(_compressed_offsets->create_base_decompressor())} {}
 
 template <typename T>
 AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -42,17 +43,17 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
 template <typename T>
 uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
-  auto offset_decompressor = _compressed_offsets->create_base_decompressor();
+  // auto offset_decompressor = _compressed_offsets->create_base_decompressor();
   if (chunk_offset < _number_elements_per_reference_bucket) {
-    return offset_decompressor->get(chunk_offset);
+    return _offset_decompressor->get(chunk_offset);
   }
   if (_number_elements_per_reference_bucket == 0 || chunk_offset == 0) {
-    return offset_decompressor->get(chunk_offset);
+    return _offset_decompressor->get(chunk_offset);
   }
 
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
 
-  return offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
+  return _offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
 }
 
 template <typename T>
