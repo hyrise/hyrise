@@ -250,6 +250,7 @@ std::pair<std::vector<pmr_string>, std::vector<pmr_string>> EqualDistinctCountHi
 {
   return std::make_pair(std::vector<pmr_string>(), std::vector<pmr_string>());
 }
+
 template<typename T>
 std::pair<std::vector<T>, std::vector<T>> EqualDistinctCountHistogram<T>::_merge_splitted_bounds(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms) {
   auto global_min = histograms[0]->bin_minimum(0);
@@ -258,7 +259,9 @@ std::pair<std::vector<T>, std::vector<T>> EqualDistinctCountHistogram<T>::_merge
     global_min = std::min(global_min, hist->bin_minimum(0));
     global_max = std::max(global_max, hist->bin_maximum(hist->bin_count()-1));
   }
-
+  const auto domain = histograms[0]->domain();
+  global_max = global_max + (domain.next_value_clamped(global_max) - global_max) *2;
+  showln(global_max);
   std::shared_ptr<AbstractHistogram<T>> split_helper_histogram = std::make_shared<EqualDistinctCountHistogram<T>>(std::vector<T>{global_min}, std::vector<T>{global_max}, std::vector<HistogramCountType>{1}, HistogramCountType{1}, 0);
   for (const auto& hist : histograms) {
     split_helper_histogram = split_helper_histogram->split_at_bin_bounds(hist->bin_bounds());
@@ -492,12 +495,20 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto interval_distinct_counts_begin = interval_distinct_counts.begin();
   auto interval_distinct_counts_end = interval_distinct_counts.end();
 
+  println("Balancing Bins");
+  showln(bin_count);
+
   for (auto i = 0u; i < bin_count; i++) {
     auto bin_distinct_count_target = distinct_count_per_bin_target;
     if (i < bin_count_with_extra_value) {
       bin_distinct_count_target++;
     }
+
     auto is_last_bin = (bin_count - 1) == i;
+
+    show(i);
+    show(is_last_bin);
+    showln(bin_distinct_count_target);
     auto [bin_start, bin_end, bin_height] = _create_one_bin(
       interval_minima_begin, interval_minima_end,
       interval_maxima_begin, interval_maxima_end,
@@ -507,6 +518,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       domain,
       is_last_bin
     );
+    show(bin_start); show(bin_end); show(bin_height);
     merged_histogram_bin_minima.push_back(bin_start);
     merged_histogram_bin_maxima.push_back(bin_end);
     merged_histogram_bin_heights.push_back(bin_height);
@@ -535,6 +547,13 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   , "\t_merge_splitted_bounds")
   auto splitted_bounds_minima = splitted_bounds.first;
   auto splitted_bounds_maxima = splitted_bounds.second;
+
+  println("###############  merge() ##############");
+  println("Splitted Bounds:")
+  std::cout << "\t";
+  for(auto i = 0u; i < splitted_bounds_minima.size(); i++) {
+    std::cout << "("<< splitted_bounds_minima[i] << ", " << splitted_bounds_maxima[i] << "); ";
+  }
   
   auto distinct_counts = std::vector<HistogramCountType>();
   auto bin_heights = std::vector<HistogramCountType>();
@@ -568,8 +587,9 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
         combined_distinct_count += distinct_count;
       }
     }
-    if ((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) && (interval_start != interval_end)) {
+    if ((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) &&  && (interval_start != interval_end)) {
       kept_previous_split_bin = false;
+      std::cout << "Deleting interval" << interval_start << ", " << interval_end << std::endl;
       continue;
     }
     bin_minima.push_back(interval_start);
@@ -610,6 +630,14 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   // showln(total_distinct_count);
   // showln(bin_count_with_extra_value);
   // showln(distinct_counts.size());
+
+  println("Estimated Intervals:")
+  std::cout << "\t";
+  for(auto i = 0u; i < bin_maxima.size(); i++) {
+    std::cout << "("<< bin_minima[i] << ", " << bin_maxima[i] << ", h=" << bin_heights[i] << ", d="<< distinct_counts[i] << "); ";
+  }
+
+
   TIMEIT(auto merged_histogram = _balance_bins(distinct_counts, bin_heights, bin_minima, bin_maxima, distinct_count_per_bin_target, bin_count, bin_count_with_extra_value, domain);
   , "\t_balance_bins"
   );
