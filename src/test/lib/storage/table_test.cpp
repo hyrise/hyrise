@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "storage/index/group_key/group_key_index.hpp"
+
 #include "base_test.hpp"
 
 #include "resolve_type.hpp"
@@ -162,6 +164,27 @@ TEST_F(StorageTableTest, EmplaceChunk) {
 
   t->append_chunk({vs_int, vs_str});
   EXPECT_EQ(t->chunk_count(), 1u);
+}
+
+TEST_F(StorageTableTest, DeleteColumn) {
+  EXPECT_EQ(t->column_count(), 2u);
+  t->delete_column(ColumnID{0});
+  EXPECT_EQ(t->column_count(), 1u);
+  EXPECT_EQ(t->column_count(), 1u);
+}
+
+TEST_F(StorageTableTest, DeleteColumnAndIndex) {
+  EXPECT_EQ(t->column_count(), 2u);
+  const auto test_column_ids = std::vector<ColumnID>{ColumnID{0}};
+
+  t->create_index<GroupKeyIndex>(test_column_ids, "TestIndex");
+
+  t->delete_column(ColumnID{0});
+
+  EXPECT_EQ(t->column_count(), 1u);
+  EXPECT_EQ(t->column_count(), 1u);
+
+  EXPECT_EQ(t->indexes_statistics().size(), 0u);
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunk) {

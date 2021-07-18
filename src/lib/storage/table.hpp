@@ -156,6 +156,8 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  void delete_column(ColumnID column_id);
+
   template <typename T>
   std::optional<T> get_value(const std::string& column_name, const size_t row_number) const {
     return get_value<T>(column_id_by_name(column_name), row_number);
@@ -251,7 +253,7 @@ class Table : private Noncopyable {
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
  protected:
-  const TableColumnDefinitions _column_definitions;
+  TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
   const ChunkOffset _target_chunk_size;

@@ -9,13 +9,14 @@ namespace opossum {
 // maintenance operator for the "DROP INDEX" sql statement
 class AlterDropColumn : public AbstractReadWriteOperator {
  public:
-  AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name);
+  AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
   const std::string target_table_name;
   const std::string target_column_name;
+  const bool if_exists;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -32,5 +33,7 @@ class AlterDropColumn : public AbstractReadWriteOperator {
 
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
+
+  bool _column_exists_on_table(const std::string& table_name, const std::string& column_name);
 };
 }  // namespace opossum

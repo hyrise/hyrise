@@ -528,7 +528,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_no
   const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterDropColumnNode>(node);
   const auto input_node = alter_drop_column_node->left_input();
 
-  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name);
+  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name, alter_drop_column_node->if_exists);
 
 }
 

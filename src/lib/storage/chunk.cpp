@@ -49,12 +49,12 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegm
 
 void Chunk::delete_segment(size_t column_id) {
   const auto segment_to_be_deleted = _segments.at(column_id);
-  _segments.erase(_segments.begin() + column_id);
   for(auto index : _indexes) {
     if(index->is_index_for({segment_to_be_deleted})) {
       remove_index(index);
     }
   }
+  _segments.erase(_segments.begin() + column_id);
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {

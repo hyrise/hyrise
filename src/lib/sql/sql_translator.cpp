@@ -210,6 +210,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       //  but the translation is still called, so we return a dummy node here.
       return DummyTableNode::make();
     case hsql::kStmtAlter:
+      return _translate_alter(static_cast<const hsql::AlterStatement&>(statement));
     case hsql::kStmtError:
     case hsql::kStmtRename:
       FailInput("Statement type not supported");
@@ -1412,7 +1413,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_alter(const hsql::AlterStatement& alter_statement) {
   switch (alter_statement.type) {
     case hsql::AlterType::kAlterDropColumn:
-      return AlterDropColumnNode::make(alter_statement.name, alter_statement.column_name);
+      return AlterDropColumnNode::make(alter_statement.name, alter_statement.column_name, alter_statement.if_exists);
   }
   Fail("Invalid enum value");
 }

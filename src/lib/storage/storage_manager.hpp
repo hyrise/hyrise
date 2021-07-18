@@ -40,6 +40,7 @@ class StorageManager : public Noncopyable {
    */
   void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
   void drop_view(const std::string& name);
+  void drop_column_from_table(const std::string& table_name, const std::string& column_name);
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const std::string& name) const;
   std::vector<std::string> view_names() const;

@@ -67,6 +67,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropView:
     case LQPNodeType::DropIndex:
     case LQPNodeType::DropTable:
+    case LQPNodeType::AlterDropColumn:
     case LQPNodeType::DummyTable:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
@@ -179,7 +180,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // No pruning of the input columns for these nodes as they need them all.
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreateIndex:
-    case LQPNodeType::AlterDropColumn:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
     case LQPNodeType::Export:

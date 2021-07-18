@@ -7,12 +7,13 @@ namespace opossum {
 
 class AlterDropColumnNode : public EnableMakeForLQPNode<AlterDropColumnNode>, public AbstractNonQueryNode {
  public:
-  AlterDropColumnNode(const std::string& init_table_name, const std::string& init_column_name);
+  AlterDropColumnNode(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string table_name;
   const std::string column_name;
+  const bool if_exists;
 
  protected:
   size_t _on_shallow_hash() const override;
