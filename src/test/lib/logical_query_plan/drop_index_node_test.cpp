@@ -43,7 +43,7 @@ class DropIndexNodeTest : public BaseTest {
     create_index->execute();
     context->commit();
 
-    drop_index_node = DropIndexNode::make("some_index", test_table_name);
+    drop_index_node = DropIndexNode::make("some_index", false, test_table_name);
   }
 
   std::shared_ptr<DropIndexNode> drop_index_node;
@@ -55,21 +55,28 @@ class DropIndexNodeTest : public BaseTest {
 
 TEST_F(DropIndexNodeTest, Description) {
   EXPECT_EQ(drop_index_node->description(), "[DropIndex] Name: 'some_index' On table: 't_a'");
+
+  drop_index_node = DropIndexNode::make("some_index", true, test_table_name);
+  EXPECT_EQ(drop_index_node->description(), "[DropIndex] (if exists) Name: 'some_index' On table: 't_a'");
 }
+
 TEST_F(DropIndexNodeTest, NodeExpressions) { ASSERT_EQ(drop_index_node->node_expressions.size(), 0u); }
 
 TEST_F(DropIndexNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = drop_index_node->deep_copy();
   EXPECT_EQ(*drop_index_node, *deep_copy_node);
 
-  const auto different_drop_index_node_a = DropIndexNode::make("some_index1", test_table_name);
-  const auto different_drop_index_node_b = DropIndexNode::make("some_index", "t_b");
+  const auto different_drop_index_node_a = DropIndexNode::make("some_index1", false, test_table_name);
+  const auto different_drop_index_node_b = DropIndexNode::make("some_index", false, "t_b");
+  const auto different_drop_index_node_c = DropIndexNode::make("some_index", true, test_table_name);
 
   EXPECT_NE(*different_drop_index_node_a, *drop_index_node);
   EXPECT_NE(*different_drop_index_node_b, *drop_index_node);
+  EXPECT_NE(*different_drop_index_node_c, *drop_index_node);
 
   EXPECT_NE(different_drop_index_node_a->hash(), drop_index_node->hash());
   EXPECT_NE(different_drop_index_node_b->hash(), drop_index_node->hash());
+  EXPECT_NE(different_drop_index_node_c->hash(), drop_index_node->hash());
 }
 
 TEST_F(DropIndexNodeTest, Copy) { EXPECT_EQ(*drop_index_node, *drop_index_node->deep_copy()); }

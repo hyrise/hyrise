@@ -9,12 +9,13 @@ namespace opossum {
 // maintenance operator for the "DROP INDEX" sql statement
 class DropIndex : public AbstractReadWriteOperator {
  public:
-  DropIndex(const std::string& init_index_name, const std::string& init_table_name);
+  DropIndex(const std::string& init_index_name, const bool init_if_exists, const std::string& init_table_name);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
   const std::string index_name;
+  const bool if_exists;
   const std::string table_name;
 
  protected:
