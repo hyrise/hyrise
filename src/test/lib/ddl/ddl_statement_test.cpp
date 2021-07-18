@@ -4,6 +4,8 @@
 
 #include "base_test.hpp"
 #include "tasks/chunk_compression_task.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
@@ -152,5 +154,53 @@ TEST_F(DDLStatementTest, DropIndexNotExistsWithFlag) {
 
   EXPECT_NO_THROW(sql_pipeline.get_result_table());
 }
+
+TEST_F(DDLStatementTest, CreateTableWithTableKeyConstraints) {
+  auto sql_pipeline = SQLPipelineBuilder{
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT NULL  , PRIMARY KEY ( a_int, a_float ), UNIQUE (a_double))"}.create_pipeline();
+
+  const TableColumnDefinitions& column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
+
+  std::shared_ptr<Table> table = Table::create_dummy_table(column_definitions);
+
+  std::unordered_set<ColumnID> column_ids {table->column_id_by_name("a_int"), table->column_id_by_name("a_float")};
+
+  table->add_soft_key_constraint({column_ids, KeyConstraintType::PRIMARY_KEY});
+  table->add_soft_key_constraint({{table->column_id_by_name("a_double")}, KeyConstraintType::UNIQUE});
+
+  const auto& [pipeline_status, pipeline_table] = sql_pipeline.get_result_table();
+
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  std::shared_ptr<const Table> result_table = Hyrise::get().storage_manager.get_table("a_table");
+  EXPECT_TABLE_EQ(result_table, table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
+}
+
+TEST_F(DDLStatementTest, CreateTableWithColumnConstraints) {
+  auto sql_pipeline = SQLPipelineBuilder{
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT UNIQUE, a_double DOUBLE NULL PRIMARY KEY, a_string VARCHAR(10) NOT "
+      "NULL)"}.create_pipeline();
+
+  const TableColumnDefinitions& column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                                            {"a_long", DataType::Long, false},
+                                                                            {"a_float", DataType::Float, false, KeyConstraintType::UNIQUE},
+                                                                            {"a_double", DataType::Double, true, KeyConstraintType::PRIMARY_KEY},
+                                                                            {"a_string", DataType::String, false}};
+
+  std::shared_ptr<const Table> table = Table::create_dummy_table(column_definitions);
+
+
+  const auto& [pipeline_status, pipeline_table] = sql_pipeline.get_result_table();
+
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  std::shared_ptr<const Table> result_table = Hyrise::get().storage_manager.get_table("a_table");
+  EXPECT_TABLE_EQ(result_table, table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
+}
+
 
 }

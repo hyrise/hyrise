@@ -10,7 +10,7 @@ namespace opossum {
 class CreateTable : public AbstractReadWriteOperator {
  public:
   CreateTable(const std::string& init_table_name, bool init_if_not_exists,
-              const std::shared_ptr<const AbstractOperator>& input_operator, std::shared_ptr<TableKeyConstraints> init_key_constraints = nullptr);
+              const std::shared_ptr<const AbstractOperator>& input_operator, std::shared_ptr<TableKeyConstraints> init_key_constraints = std::make_shared<TableKeyConstraints>());
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
