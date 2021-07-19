@@ -34,6 +34,8 @@ class AbstractLQPNode;
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
+  std::string name() const override;
+
   /**
    * Use the law of boolean distributivity to reduce an expression
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
