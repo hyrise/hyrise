@@ -26,7 +26,7 @@ size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
-    : AbstractOrderedIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
+    : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 
   if constexpr (HYRISE_DEBUG) {
@@ -110,16 +110,16 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _keys.shrink_to_fit();
 }
 
-AbstractOrderedIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
 
-AbstractOrderedIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-AbstractOrderedIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);
 }
 
-AbstractOrderedIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, true);
   return _get_position_iterator_for_key(composite_key);
 }
@@ -157,7 +157,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   return result;
 }
 
-AbstractOrderedIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
   auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);

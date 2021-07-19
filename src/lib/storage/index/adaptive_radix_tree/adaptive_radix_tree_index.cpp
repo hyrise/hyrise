@@ -9,7 +9,7 @@
 
 #include "adaptive_radix_tree_nodes.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -23,7 +23,7 @@ size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
-    : AbstractOrderedIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
+    : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
                            ? nullptr              // but range check needed for accessing the first segment
                            : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
@@ -54,7 +54,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(
   _root = _bulk_insert(pairs_to_insert);
 }
 
-AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
@@ -69,7 +69,7 @@ AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::v
   }
 }
 
-AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
@@ -84,9 +84,9 @@ AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::v
   }
 }
 
-AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
 
-AbstractOrderedIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
@@ -100,8 +100,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth,
-    AbstractOrderedIndex::Iterator& it) {
+    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, AbstractIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;

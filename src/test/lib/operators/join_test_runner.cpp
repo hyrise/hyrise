@@ -177,7 +177,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     });
 
     const auto all_predicate_conditions = std::vector{
-        PredicateCondition::Equals/*,      PredicateCondition::NotEquals,
+        PredicateCondition::Equals,      PredicateCondition::NotEquals/*,
         PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
         PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,*/
     };

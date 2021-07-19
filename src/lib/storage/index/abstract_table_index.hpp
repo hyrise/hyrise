@@ -111,7 +111,7 @@ class AbstractTableIndex : private Noncopyable {
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   //AbstractTableIndex() = delete;
-  explicit AbstractTableIndex(const IndexType type);
+  explicit AbstractTableIndex(const SegmentIndexType type);
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
 
@@ -127,7 +127,7 @@ class AbstractTableIndex : private Noncopyable {
 
   Iterator null_cend() const { return _null_cend(); }
 
-  IndexType type() const { return _type; }
+  SegmentIndexType type() const { return _type; }
 
   size_t memory_consumption() const {
     size_t bytes{0u};
@@ -154,7 +154,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual size_t _memory_consumption() const = 0;
 
  private:
-  const IndexType _type;
+  const SegmentIndexType _type;
 };
 
 }  // namespace opossum

@@ -209,7 +209,7 @@ class Table : private Noncopyable {
   // ToDo(pi) Frage: index nur auf immutable chunks? wo check? -> checkchunk immutable
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    IndexType index_type = get_index_type_of<Index>();
+    SegmentIndexType index_type = get_index_type_of<Index>();
 
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

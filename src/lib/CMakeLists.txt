@@ -454,8 +454,6 @@ set(
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
     storage/index/abstract_index.cpp
     storage/index/abstract_index.hpp
-    storage/index/abstract_ordered_index.cpp
-    storage/index/abstract_ordered_index.hpp
     storage/index/abstract_table_index.cpp
     storage/index/abstract_table_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp

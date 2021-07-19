@@ -12,7 +12,7 @@
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -206,9 +206,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // hash join fallback for PHI
     // do only PHI, no Chunk Indices
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-
-    std::cout << "(" << std::to_string(_adjusted_primary_predicate.column_ids.second) + ":"  + std::to_string(table_indexes.size())<< std::endl;
-    if (!table_indexes.empty() && _adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals && _secondary_predicates.empty()) {  // ToDo (pi) assert equi join // table-based index join
+    if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals) && _secondary_predicates.empty()) {  // ToDo (pi) assert equi join // table-based index join
 
       PerformanceWarning("Table-based index join used.");
       const auto& table_index = table_indexes.front();
@@ -371,8 +369,22 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
         }
     } else {
       if (!probe_side_position.is_null()) {
-        const auto [index_begin, index_end] = table_index->equals(probe_side_position.value());
-        index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
+        switch (_adjusted_primary_predicate.predicate_condition) {
+          case PredicateCondition::Equals: {
+            const auto [index_begin, index_end] = table_index->equals(probe_side_position.value());
+            index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
+            break;
+          }
+          case PredicateCondition::NotEquals: {
+            const auto [part1, part2] = table_index->not_equals(probe_side_position.value());
+            index_ranges.emplace_back(TableIndexRange{part1.first, part1.second});
+            index_ranges.emplace_back(TableIndexRange{part2.first, part2.second});
+            break;
+          }
+          default: {
+            Fail("Unsupported comparison type encountered");
+          }
+        }
       }
     }
     for (const auto& [index_begin, index_end] : index_ranges) {
@@ -386,7 +398,7 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                     const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                    const std::shared_ptr<AbstractOrderedIndex>& index) {
+                                                    const std::shared_ptr<AbstractIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
@@ -399,7 +411,7 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractOrderedIndex>& index,
+    const std::shared_ptr<AbstractIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     RowIDPosList index_scan_pos_list;
@@ -426,7 +438,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                           const std::shared_ptr<AbstractOrderedIndex>& index) const {
+                                                           const std::shared_ptr<AbstractIndex>& index) const {
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
 
@@ -443,8 +455,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   }
 
   if (!probe_side_position.is_null()) {
-    auto range_begin = AbstractOrderedIndex::Iterator{};
-    auto range_end = AbstractOrderedIndex::Iterator{};
+    auto range_begin = AbstractIndex::Iterator{};
+    auto range_end = AbstractIndex::Iterator{};
 
     switch (_adjusted_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
@@ -492,8 +504,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   return index_ranges;
 }
 
-void JoinIndex::_append_matches(const AbstractOrderedIndex::Iterator& range_begin,
-                                const AbstractOrderedIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin,
+                                const AbstractIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
                                 const ChunkID probe_chunk_id, const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 

@@ -156,31 +156,31 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<AbstractSegment> dict_segment_string_empty = nullptr;
 
   // indexes
-  std::shared_ptr<AbstractOrderedIndex> index_int_no_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_int_no_nulls_2 = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_int_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_int_mixed = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_int_empty = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_no_nulls_2 = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_empty = nullptr;
 
-  std::shared_ptr<AbstractOrderedIndex> index_long_no_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_long_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_long_mixed = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_long_empty = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_empty = nullptr;
 
-  std::shared_ptr<AbstractOrderedIndex> index_float_no_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_float_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_float_mixed = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_float_empty = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_empty = nullptr;
 
-  std::shared_ptr<AbstractOrderedIndex> index_double_no_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_double_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_double_mixed = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_double_empty = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_empty = nullptr;
 
-  std::shared_ptr<AbstractOrderedIndex> index_string_no_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_string_nulls = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_string_mixed = nullptr;
-  std::shared_ptr<AbstractOrderedIndex> index_string_empty = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_empty = nullptr;
 
   // index NULL positions
   std::vector<ChunkOffset>* index_int_no_nulls_null_positions;
@@ -470,13 +470,13 @@ TYPED_TEST(SingleSegmentIndexTest, NullCBeginCEndTest) {
 
 TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
   if constexpr (std::is_same_v<TypeParam, AdaptiveRadixTreeIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::AdaptiveRadixTree);
+    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::AdaptiveRadixTree);
   } else if constexpr (std::is_same_v<TypeParam, BTreeIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::BTree);
+    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::BTree);
   } else if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::CompositeGroupKey);
+    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::CompositeGroupKey);
   } else if constexpr (std::is_same_v<TypeParam, GroupKeyIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), IndexType::GroupKey);
+    EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::GroupKey);
   }
 }
 

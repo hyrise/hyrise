@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -29,7 +29,7 @@ class BaseDictionarySegment;
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/ART
  *
  */
-class AdaptiveRadixTreeIndex : public AbstractOrderedIndex {
+class AdaptiveRadixTreeIndex : public AbstractIndex {
   friend class AdaptiveRadixTreeIndexTest;
 
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;

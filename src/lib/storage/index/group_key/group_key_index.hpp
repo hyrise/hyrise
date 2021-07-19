@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -50,7 +50,7 @@ class GroupKeyIndexTest;
  *
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey
  */
-class GroupKeyIndex : public AbstractOrderedIndex {
+class GroupKeyIndex : public AbstractIndex {
   friend class GroupKeyIndexTest;
 
  public:

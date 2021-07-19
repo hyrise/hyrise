@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-AbstractTableIndex::AbstractTableIndex(const IndexType type) : _type(type) {}
+AbstractTableIndex::AbstractTableIndex(const SegmentIndexType type) : _type(type) {}
 
 AbstractTableIndex::IteratorPair AbstractTableIndex::equals(
     const AllTypeVariant& value) const {

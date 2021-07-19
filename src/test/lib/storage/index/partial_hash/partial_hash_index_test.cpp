@@ -60,7 +60,7 @@ class PartialHashIndexTest : public BaseTest {
   tsl::robin_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 };
 
-TEST_F(PartialHashIndexTest, Type) { EXPECT_EQ(index->type(), IndexType::PartialHash); }
+TEST_F(PartialHashIndexTest, Type) { EXPECT_EQ(index->type(), SegmentIndexType::PartialHash); }
 
 TEST_F(PartialHashIndexTest, IndexCoverage) {
   EXPECT_EQ(index->get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{0}, ChunkID{1}}));

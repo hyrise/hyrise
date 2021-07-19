@@ -3,14 +3,14 @@
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class BTreeIndexTest;
 
-class BTreeIndex : public AbstractOrderedIndex {
+class BTreeIndex : public AbstractIndex {
   friend BTreeIndexTest;
 
  public:

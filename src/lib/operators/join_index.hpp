@@ -7,14 +7,14 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "storage/index/abstract_ordered_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class MultiPredicateJoinEvaluator;
-using IndexRange = std::pair<AbstractOrderedIndex::Iterator, AbstractOrderedIndex::Iterator>;
+using IndexRange = std::pair<AbstractIndex::Iterator, AbstractIndex::Iterator>;
 using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
 /**
@@ -66,7 +66,7 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename ProbeIterator>
   void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                            const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                           const std::shared_ptr<AbstractOrderedIndex>& index);
+                                           const std::shared_ptr<AbstractIndex>& index);
 
   template <typename ProbeIterator>
   void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
@@ -76,14 +76,14 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_index(
       ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractOrderedIndex>& index,
+      const std::shared_ptr<AbstractIndex>& index,
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
   std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                  const std::shared_ptr<AbstractOrderedIndex>& index) const;
+                                                  const std::shared_ptr<AbstractIndex>& index) const;
 
-  void _append_matches(const AbstractOrderedIndex::Iterator& range_begin, const AbstractOrderedIndex::Iterator& range_end,
+  void _append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
 
