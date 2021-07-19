@@ -68,7 +68,7 @@ size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks
 }
 
 template <typename DataType>
-PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
+typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::equals(const AllTypeVariant& value) const {
   auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
     auto end_iter = cend();
