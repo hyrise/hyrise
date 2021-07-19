@@ -587,7 +587,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
         combined_distinct_count += distinct_count;
       }
     }
-    if ((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) &&  && (interval_start != interval_end)) {
+    if (((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) && (interval_start != interval_end)) || combined_distinct_count == 0.0) {
       kept_previous_split_bin = false;
       std::cout << "Deleting interval" << interval_start << ", " << interval_end << std::endl;
       continue;
