@@ -17,7 +17,7 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   } else {
     /**
      * Because 'chunks_to_index' is empty, we cannot determine the data type of the column and therefore construct
-     * an empty Impl. When chunks are added to this index, it is swapped out again
+     * an empty impl object. When chunks are added to this index, it is swapped out again.
      */
     _impl = std::make_shared<BasePartialHashIndexImpl>();
   }
@@ -61,7 +61,14 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const { return _impl
 
 PartialHashIndex::Iterator PartialHashIndex::_null_cend() const { return _impl->null_cend(); }
 
-size_t PartialHashIndex::_memory_consumption() const { return 0; }
+size_t PartialHashIndex::_memory_consumption() const { return 0;
+  size_t bytes{0u};
+  bytes += sizeof (_impl);
+  bytes += sizeof (_is_initialized);
+  bytes += sizeof (_column_id);
+  bytes += _impl->memory_consumption();
+  return bytes;
+}
 
 bool PartialHashIndex::_is_index_for(const ColumnID column_id) const { return column_id == _column_id; }
 

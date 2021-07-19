@@ -48,8 +48,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id}); // ToDo(pi) change here
-      // toDo(pi) Frage: wie viele chunks haben index?
+      chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
     }
   }
 

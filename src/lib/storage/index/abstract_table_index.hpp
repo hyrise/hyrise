@@ -132,8 +132,6 @@ class AbstractTableIndex : private Noncopyable {
   size_t memory_consumption() const {
     size_t bytes{0u};
     bytes += _memory_consumption();
-    bytes += sizeof(std::vector<ChunkOffset>);  // _null_positions
-    // bytes += sizeof(ChunkOffset) * _null_positions.capacity(); ToDo(pi) fix
     bytes += sizeof(_type);
     return bytes;
   }

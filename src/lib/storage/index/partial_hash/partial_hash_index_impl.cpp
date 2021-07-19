@@ -24,12 +24,12 @@ size_t PartialHashIndexImpl<DataType>::add(
       auto row_id = RowID{chunk.first, position.chunk_offset()};
       if (position.is_null()) {
         if (!_null_values.contains(true)) {
-          _null_values[true] = std::vector<RowID>();  // ToDo(pi) size
+          _null_values[true] = std::vector<RowID>();
         }
         _null_values[true].push_back(row_id);
       } else {
         if (!_map.contains(position.value())) {
-          _map[position.value()] = std::vector<RowID>();  // ToDo(pi) size
+          _map[position.value()] = std::vector<RowID>();
         }
         _map[position.value()].push_back(row_id);
       }
@@ -114,7 +114,11 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
-  return 0;
+  size_t bytes{0u};
+  bytes += sizeof(std::set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size();
+  bytes += sizeof(_map);
+  bytes += sizeof(_null_values);
+  return bytes;
 }
 
 template <typename DataType>

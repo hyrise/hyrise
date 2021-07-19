@@ -186,27 +186,27 @@ class Table : private Noncopyable {
 
   std::vector<IndexStatistics> indexes_statistics() const;
 
-  // TODO(pi) restrict to partial indexes
   template <typename Index>
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const std::string& name = "") {
-    //IndexType index_type = get_index_type_of<Index>();
+    static_assert(std::is_base_of<AbstractTableIndex, Index>::value, "'Index' template argument is not an AbstractTableIndex");
 
-    // ToDo(pi) Note: Passing a shared_ptr for the table here would create a cyclic dependency because the index is owned by the table
+    //SegmentIndexType index_type = get_index_type_of<Index>();
+
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
     for(auto chunk_id: chunk_ids){
-      chunks_to_index.push_back(std::make_pair(chunk_id, get_chunk(chunk_id)));
+      auto chunk = get_chunk(chunk_id);
+      Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
+      chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
     }
     auto index = std::make_shared<Index>(chunks_to_index, column_id);
     _table_indexes.emplace_back(index);
 
-    //PartialIndexStatistics index_statistics = {{std::vector<ColumnID>{column_id}, name, index_type}, chunk_ids}; // ToDo(pi) add chunkIDs to IndexStatistics
+    // ToDo(pi) add chunkIDs to IndexStatistics
+    //PartialIndexStatistics index_statistics = {{std::vector<ColumnID>{column_id}, name, index_type}, chunk_ids};
     //_partial_index_statistics.emplace_back(index_statistics);
   }
 
-  // ToDo(pi) new create_table_index method for whole table PHI
-  // ToDo(pi) implement get_indexes(column_id)
-  // ToDo(pi) Frage: index nur auf immutable chunks? wo check? -> checkchunk immutable
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
@@ -218,7 +218,7 @@ class Table : private Noncopyable {
 
       chunk->create_index<Index>(column_ids);
     }
-    IndexStatistics index_statistics = {column_ids, name, index_type}; // ToDo(pi) add chunkIDs to IndexStatistics
+    IndexStatistics index_statistics = {column_ids, name, index_type};
     _index_statistics.emplace_back(index_statistics);
   }
 

@@ -14,17 +14,28 @@ class PartialHashIndex : public AbstractTableIndex {
 
  public:
   /**
- * Predicts the memory consumption in bytes of creating this index.
- * See AbstractIndex::estimate_memory_consumption()
- * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
- * in reducing the memory footprint of these indexes, this is probably the first place you should look.
- */
+   * Predicts the memory consumption in bytes of creating this index.
+   * See AbstractIndex::estimate_memory_consumption()
+   * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
+   * in reducing the memory footprint of these indexes, this is probably the first place you should look.
+   */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   PartialHashIndex() = delete;
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
+  /**
+   * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
+   *
+   * @return The number of added chunks.
+   */
   size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
+
+  /**
+   * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
+   *
+   * @return The number of removed chunks.
+   */
   size_t remove(const std::vector<ChunkID>&);
 
  protected:
@@ -38,11 +49,10 @@ class PartialHashIndex : public AbstractTableIndex {
   std::pair<IteratorPair, IteratorPair> _not_equals(const AllTypeVariant& value) const override;
 
   bool _is_index_for(const ColumnID column_id) const override;
-  // returns sorted array
   std::set<ChunkID> _get_indexed_chunk_ids() const override;
 
  private:
-  ColumnID _column_id;  // TODO(pi): Decide whether we store column id here or use tablestatistics on the table
+  ColumnID _column_id;
   bool _is_initialized = false;
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
 };
