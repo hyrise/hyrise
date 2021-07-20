@@ -104,7 +104,8 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const std::shared_ptr<AbstractOperator>& left,
+  static void test_join_output(const IndexScope index_scope,
+                               const std::shared_ptr<AbstractOperator>& left,
                                const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
@@ -137,8 +138,13 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
-      EXPECT_EQ(performance_data.chunks_scanned_with_index,
-                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+      if(index_scope == IndexScope::Table) {
+        // one table index is created over all chunks, so it is only used once
+        EXPECT_EQ(performance_data.chunks_scanned_with_index, 1);
+      } else {
+        EXPECT_EQ(performance_data.chunks_scanned_with_index,
+                  static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+      }
       EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
     } else {
       EXPECT_EQ(performance_data.chunks_scanned_with_index, 0);
@@ -260,7 +266,7 @@ TEST_P(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
   auto scan_b = create_table_scan(_table_wrapper_i_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
+  test_join_output(GetParam(), scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
 }
 
 TEST_P(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
@@ -278,7 +284,7 @@ TEST_P(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
 
   // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
   // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
-  test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
+  test_join_output(GetParam(), join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
                    IndexSide::Left, false);
 }
 
@@ -287,7 +293,7 @@ TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
   auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
+  test_join_output(GetParam(), scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
                    1, true);
 }
 

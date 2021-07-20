@@ -787,13 +787,22 @@ TEST_P(JoinTestRunner, TestJoin) {
       indexed_used_count = range_end - range_begin;
     }
 
-    if(indexed_input.index_scope != IndexScope::Table) { //TODO(pi) revert
-      EXPECT_EQ(performance_data.chunks_scanned_with_index, indexed_used_count);
-      if (performance_data.chunks_scanned_with_index != indexed_used_count) {
-        print_configuration_info();
+    if(indexed_input.index_scope == IndexScope::Table) {
+      if(indexed_input.table_type == InputTableType::Data && configuration.secondary_predicates.empty() &&
+         (configuration.predicate_condition == PredicateCondition::Equals
+          || configuration.predicate_condition == PredicateCondition::NotEquals)) {
+        // one table index is created over the complete chunk range, so it is only used once
+        indexed_used_count = 1;
+      } else {
+        // if not supported by table indexes, no chunks are joined via index
+        indexed_used_count = 0;
       }
     }
 
+    EXPECT_EQ(performance_data.chunks_scanned_with_index, indexed_used_count);
+    if (performance_data.chunks_scanned_with_index != indexed_used_count) {
+      print_configuration_info();
+    }
   }
 }
 

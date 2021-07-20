@@ -218,7 +218,18 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
 
         if(!indexed_chunk_ids.empty()) {
-          // TODO(pi): Check if sets are disjoint, otherwise 'continue'
+          auto indexed_chunk_ids_itr = indexed_chunk_ids.begin();
+          auto indexed_chunk_ids_in_index_itr = indexed_chunk_ids_in_index.begin();
+          while(indexed_chunk_ids_itr != indexed_chunk_ids.end() && indexed_chunk_ids_in_index_itr != indexed_chunk_ids_in_index.end()) {
+            if (*indexed_chunk_ids_itr < *indexed_chunk_ids_in_index_itr)
+              indexed_chunk_ids_itr++;
+            else if (*indexed_chunk_ids_in_index_itr < *indexed_chunk_ids_itr)
+              indexed_chunk_ids_in_index_itr++;
+            else {
+              // sets are not disjoint => at least one chunk would be indexed twice => do not use this table index
+              continue;
+            }
+          }
         }
 
         indexed_chunk_ids.insert(indexed_chunk_ids_in_index.begin(), indexed_chunk_ids_in_index.end());
@@ -233,16 +244,15 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
             _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
           });
-          index_joining_duration += timer.lap();
-          join_index_performance_data.chunks_scanned_with_index++;
         }
+        index_joining_duration += timer.lap();
+        join_index_performance_data.chunks_scanned_with_index++;
       }
 
-
+      // Check if chunk was indexed in one of the table indexes, thus no need to join it again.
+      // Otherwise perform NestedLoopJoin on the not-indexed chunk.
       auto indexed_chunk_ids_iterator = indexed_chunk_ids.begin();
       for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
-        // Check if chunk was indexed in one of the table index, thus no need to join it again.
-        // Otherwise perform NestedLoopJoin on the not-indexed chunk.
         if(*indexed_chunk_ids_iterator == index_side_chunk_id && indexed_chunk_ids_iterator != indexed_chunk_ids.end()){
           indexed_chunk_ids_iterator++;
           continue;
