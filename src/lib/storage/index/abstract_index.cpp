@@ -25,7 +25,7 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
     case SegmentIndexType::PartialHash:
       return PartialHashIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::Invalid:
-    Fail("SegmentIndexType is invalid.");
+      Fail("SegmentIndexType is invalid.");
   }
   Fail("GCC thinks this is reachable.");
 }
@@ -78,4 +78,4 @@ size_t AbstractIndex::memory_consumption() const {
   return bytes;
 }
 
-}  // namespace opossum// namespace opossum
+}  // namespace opossum
