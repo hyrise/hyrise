@@ -202,11 +202,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
-    // ToDo(pi) first use all PHIs on table to calculate first result, for unindexed chunks don't do segment fallback
+    // first use all PHIs on table to calculate first result, for unindexed chunks don't do segment fallback
     // hash join fallback for PHI
     // do only PHI, no Chunk Indices
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-    if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals) && _secondary_predicates.empty()) {  // ToDo (pi) assert equi join // table-based index join
+    if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals) && _secondary_predicates.empty()) {
 
       PerformanceWarning("Table-based index join used.");
       const auto& table_index = table_indexes.front();

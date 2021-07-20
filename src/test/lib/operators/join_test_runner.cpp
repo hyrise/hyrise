@@ -177,20 +177,20 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     });
 
     const auto all_predicate_conditions = std::vector{
-        PredicateCondition::Equals,      PredicateCondition::NotEquals/*,
+        PredicateCondition::Equals,      PredicateCondition::NotEquals,
         PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
-        PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,*/
+        PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
     };
-    const auto all_join_modes = std::vector{JoinMode::Inner/*,         JoinMode::Left, JoinMode::Right,
+    const auto all_join_modes = std::vector{JoinMode::Inner,         JoinMode::Left, JoinMode::Right,
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
-                                            JoinMode::AntiNullAsTrue*/};
+                                            JoinMode::AntiNullAsTrue};
     const auto all_table_sizes = std::vector{10u, 15u, 0u};
     const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
     const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
-        /*{{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
+        {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
-        {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}*/};
+        {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
     const auto all_index_sides = std::vector{IndexSide::Left, IndexSide::Right};
 
     const auto all_input_table_types =

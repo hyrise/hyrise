@@ -19,7 +19,11 @@
 
 namespace opossum {
 
-class OperatorsJoinIndexTest : public BaseTest {
+enum class IndexScope {
+  Table, Chunk
+};
+
+class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
     const auto dummy_table =
@@ -73,27 +77,30 @@ class OperatorsJoinIndexTest : public BaseTest {
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    // ToDo(pi) new test is built here
-    // build index over all chunks and columns
-    std::vector<ChunkID> chunk_ids(table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      chunk_ids[chunk_id] = chunk_id;
-    }
-    auto column_count = table->get_chunk(ChunkID{0})->column_count();
-    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
-    }
+    const auto indexScope = GetParam();
 
-    // old impl
-    /*for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
+    if(indexScope == IndexScope::Chunk) {
+      // build chunk-based index for every chunk and column
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
 
-      std::vector<ColumnID> columns{1};
-      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-        columns[0] = column_id;
-        chunk->create_index<GroupKeyIndex>(columns);
+        std::vector<ColumnID> columns{1};
+        for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+          columns[0] = column_id;
+          chunk->create_index<GroupKeyIndex>(columns);
+        }
       }
-    }*/
+    } else if(indexScope == IndexScope::Table) {
+      // build table-based index over all chunks and columns
+      std::vector<ChunkID> chunk_ids(table->chunk_count());
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        chunk_ids[chunk_id] = chunk_id;
+      }
+      auto column_count = table->get_chunk(ChunkID{0})->column_count();
+      for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+        table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
+      }
+    }
 
     return std::make_shared<TableWrapper>(table);
   }
@@ -285,5 +292,9 @@ TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
   test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
                    1, true);
 }
+
+
+INSTANTIATE_TEST_SUITE_P(ChunkIndex, OperatorsJoinIndexTest,
+                         ::testing::Values(IndexScope::Chunk, IndexScope::Table));
 
 }  // namespace opossum

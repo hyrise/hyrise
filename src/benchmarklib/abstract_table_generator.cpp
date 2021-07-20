@@ -339,7 +339,7 @@ void AbstractTableGenerator::generate_and_store() {
       const auto& table = table_info_by_name[table_name].table;
 
       auto chunk_ids = std::vector<ChunkID>{};
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) { //TODO(pi): revert
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         chunk_ids.emplace_back(chunk_id);
       }
       for (const auto& index_columns : indexes) {

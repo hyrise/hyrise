@@ -13,7 +13,6 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::add(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
-  // ToDo(pi) check all have same data type by taking first and comparing rest
   size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
     if (_indexed_chunk_ids.contains(chunk.first)) continue;

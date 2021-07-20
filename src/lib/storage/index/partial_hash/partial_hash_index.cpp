@@ -61,7 +61,7 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const { return _impl
 
 PartialHashIndex::Iterator PartialHashIndex::_null_cend() const { return _impl->null_cend(); }
 
-size_t PartialHashIndex::_memory_consumption() const { return 0;
+size_t PartialHashIndex::_memory_consumption() const {
   size_t bytes{0u};
   bytes += sizeof (_impl);
   bytes += sizeof (_is_initialized);
