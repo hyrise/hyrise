@@ -3,12 +3,13 @@
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
 #include "types.hpp"
+#include "table_key_constraint.hpp"
 
 namespace opossum {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable);
+  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, const KeyConstraintType init_constraint = KeyConstraintType::NOT_SET);
 
   bool operator==(const TableColumnDefinition& rhs) const;
   size_t hash() const;
@@ -16,6 +17,7 @@ struct TableColumnDefinition final {
   std::string name;
   DataType data_type{DataType::Int};
   bool nullable{false};
+  KeyConstraintType constraint;
 };
 
 // So that google test, e.g., prints readable error messages

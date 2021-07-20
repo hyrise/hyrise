@@ -1333,6 +1333,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
   std::shared_ptr<AbstractLQPNode> input_node;
+  auto tableKeyConstraints = std::make_shared<TableKeyConstraints>();
 
   if (create_statement.select) {
     input_node = _translate_select_statement(*create_statement.select);
@@ -1382,10 +1383,48 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
+
+
+        switch (parser_column_definition->constraintType) {
+          case hsql::ConstraintType::PRIMARY_KEY:
+            column_definition.constraint = KeyConstraintType::PRIMARY_KEY;
+            break;
+          case hsql::ConstraintType::UNIQUE:
+            column_definition.constraint = KeyConstraintType::UNIQUE;
+            break;
+          case hsql::ConstraintType::NOT_SET:
+          default:
+            column_definition.constraint = KeyConstraintType::NOT_SET;
+            break;
+      }
     }
-    input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+
+    auto table = Table::create_dummy_table(column_definitions);
+    input_node = StaticTableNode::make(table);
+
+    for (auto tableKeyConstraint : *create_statement.tableKeyConstraints) {
+      std::unordered_set<ColumnID> column_ids;
+      switch (tableKeyConstraint->type) {
+        case hsql::ConstraintType::PRIMARY_KEY:
+          for(auto name : *tableKeyConstraint->columnNames) {
+            auto column_id = table->column_id_by_name(std::basic_string<char>{name});
+                column_ids.insert(column_id);
+          }
+          tableKeyConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
+          break;
+        case hsql::ConstraintType::UNIQUE:
+          for(auto name : *tableKeyConstraint->columnNames) {
+            auto column_id = table->column_id_by_name(std::basic_string<char>{name});
+            column_ids.insert(column_id);
+          }
+          tableKeyConstraints->push_back({column_ids, KeyConstraintType::UNIQUE});
+          break;
+        default:
+          std::cout << "keyType not supported";
+      }
+    }
   }
-  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
+  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, tableKeyConstraints, input_node);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
