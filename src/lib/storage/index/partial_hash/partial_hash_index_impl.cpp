@@ -118,8 +118,7 @@ size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   size_t bytes{0u};
   bytes += (sizeof(std::set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size());
 
-  //TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a
-  // fixed hash size of 8 Byte
+  // TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a hash size of 8 byte
   bytes += sizeof(_map);
   bytes += (8 /* hash size */ + sizeof(std::vector<RowID>)) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());

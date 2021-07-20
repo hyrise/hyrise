@@ -205,7 +205,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     if (!table_indexes.empty() && _secondary_predicates.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
-
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       std::set<ChunkID> indexed_chunk_ids;
 
@@ -221,11 +220,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           auto indexed_chunk_ids_in_index_itr = indexed_chunk_ids_in_index.begin();
           while (indexed_chunk_ids_itr != indexed_chunk_ids.end() &&
                  indexed_chunk_ids_in_index_itr != indexed_chunk_ids_in_index.end()) {
-            if (*indexed_chunk_ids_itr < *indexed_chunk_ids_in_index_itr)
+            if (*indexed_chunk_ids_itr < *indexed_chunk_ids_in_index_itr) {
               indexed_chunk_ids_itr++;
-            else if (*indexed_chunk_ids_in_index_itr < *indexed_chunk_ids_itr)
+            } else if (*indexed_chunk_ids_in_index_itr < *indexed_chunk_ids_itr) {
               indexed_chunk_ids_in_index_itr++;
-            else {
+            } else {
               // sets are not disjoint => at least one chunk would be indexed twice => do not use this table index
               continue;
             }

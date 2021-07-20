@@ -36,7 +36,7 @@ class TableIndexIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tsl::robin_map<DataType, std::vector<RowID>>::const_iterator;
 
-  TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+  explicit TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
 
   reference operator*() const override { return _map_iterator->second[_vector_index]; }
 
@@ -77,7 +77,7 @@ class TableIndexIterator : public BaseTableIndexIterator {
  */
 class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const RowID> {
  public:
-  IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& ptr) : _impl(std::move(ptr)) {}
+  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& ptr) : _impl(std::move(ptr)) {}
 
   IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
   IteratorWrapper& operator=(const IteratorWrapper& other) {

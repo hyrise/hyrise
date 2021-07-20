@@ -12,9 +12,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.cpp"
-#include "utils/load_table.hpp"
-#include "utils/make_bimap.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
