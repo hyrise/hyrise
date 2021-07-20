@@ -35,7 +35,10 @@ class AlterTableColumnTest : public BaseTest {
   std::shared_ptr<AlterDropColumn> alter_drop_column_if_exists;
 };
 
-TEST_F(AlterTableColumnTest, NameAndDescription) { EXPECT_EQ(alter_drop_column->name(), "AlterDropColumn"); }
+TEST_F(AlterTableColumnTest, NameAndDescription) {
+  EXPECT_EQ(alter_drop_column->name(), "AlterDropColumn");
+  EXPECT_EQ(alter_drop_column->description(DescriptionMode::SingleLine), "AlterDropColumn 'TestTable'('b')");
+}
 
 TEST_F(AlterTableColumnTest, Execute) {
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
