@@ -297,16 +297,12 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   EXPECT_EQ(end2, index->cend());
 }
 
-// The following tests contain switches for different implementations of the stdlib.
-// Short String Optimization (SSO) stores strings of a certain size in the pmr_string object itself.
-// Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
-
 /*
   Test cases:
-    MemoryConsumptionVeryShortStringNoNulls
-    MemoryConsumptionVeryShortStringNulls
-    MemoryConsumptionVeryShortStringMixed
-    MemoryConsumptionVeryShortStringEmpty
+    MemoryConsumptionNoNulls
+    MemoryConsumptionNulls
+    MemoryConsumptionMixed
+    MemoryConsumptionEmpty
   Tested functions:
     size_t memory_consumption() const;
 
@@ -326,7 +322,7 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
 */
 
 // A2, B2, C1
-TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
+TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
 
@@ -338,190 +334,111 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //   840 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
-  // +  44 number of non-NULL elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
+  //    80 map size (index non-NULL positions)
+  // +  80 map size NULL values (index NULL positions)
+  // +  72 number of different non-NULL values (9) * hash size (8)
+  // + 216 number of different non-NULL values (9) * vector size (24)
+  // +  88 number of non-NULL values (11) * sizeof(RowID) (8)
+  // +   0 (NULL elements hash size (8) + vector size (24)) * 0
+  // +   0 number of NULL elements (0) * sizeof(RowID) (8)
+  // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
+  // +  48 chunk ids set
+  // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
+  // +   1 _is_initialized
+  // +  16 impl
   // +   1 SegmentIndexType
-  // = 933
-  EXPECT_EQ(index->memory_consumption(), 232u);//933u);
-#else
-  // libc++:
-  //   848 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  // = 941
-  EXPECT_EQ(index->memory_consumption(), 941u);
-#endif
+  // = 608
+  EXPECT_EQ(index->memory_consumption(), 608u);
 }
 
-/*
 // A2, B1, C2
-TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringNulls) {
+TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
-  const auto& index =
-      std::make_shared<PartialHashIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
 
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //    24 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
-  // +   0 number of non-NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   8 number of NULL elements (2) * sizeof(ChunkOffset) (4)
+  Segments segments = {dict_segment_string_nulls};
+  auto chunk = std::make_shared<Chunk>(segments);
+
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+
+  //    80 map size (index non-NULL positions)
+  // +  80 map size NULL values (index NULL positions)
+  // +   0 number of different non-NULL values (0) * hash size (8)
+  // +   0 number of different non-NULL values (0) * vector size (24)
+  // +   0 number of non-NULL values (2) * sizeof(RowID) (8)
+  // +  32 (NULL elements hash size (8) + vector size (24)) * 1
+  // +  16 number of NULL elements (2) * sizeof(RowID) (8)
+  // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
+  // +  48 chunk ids set
+  // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
+  // +   1 _is_initialized
+  // +  16 impl
   // +   1 SegmentIndexType
-  // =  81
-  EXPECT_EQ(index->memory_consumption(), 81u);
-#else
-  // libc++:
-  // TODO(anyone) implement this more accurate
-  //    ?? (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   8 number of NULL elements (2) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  EXPECT_GT(index->memory_consumption(), 57u);
-#endif
+  // = 280
+  EXPECT_EQ(index->memory_consumption(), 280u);
 }
+
 // A2, B1, C1
-TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringMixed) {
+TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
   const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
-  const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_mixed}));
 
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //   840 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
-  // +  44 number of non-NULL elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +  20 number of NULL elements (5) * sizeof(ChunkOffset) (4)
+  Segments segments = {dict_segment_string_mixed};
+  auto chunk = std::make_shared<Chunk>(segments);
+
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+
+  //    80 map size (index non-NULL positions)
+  // +  80 map size NULL values (index NULL positions)
+  // +  72 number of different non-NULL values (9) * hash size (8)
+  // + 216 number of different non-NULL values (9) * vector size (24)
+  // +  88 number of non-NULL values (11) * sizeof(RowID) (8)
+  // +  32 (NULL elements hash size (8) + vector size (24)) * 1
+  // +  40 number of NULL elements (5) * sizeof(RowID) (8)
+  // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
+  // +  48 chunk ids set
+  // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
+  // +   1 _is_initialized
+  // +  16 impl
   // +   1 SegmentIndexType
-  // = 953
-  EXPECT_EQ(index->memory_consumption(), 953u);
-#else
-  // libc++:
-  //   848 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +  20 number of NULL elements (5) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  // = 961
-  EXPECT_EQ(index->memory_consumption(), 961u);
-#endif
+  // = 680
+  EXPECT_EQ(index->memory_consumption(), 680u);
 }
 
 // A1, B2, C2
-TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringEmpty) {
+TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
-  const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_empty}));
 
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //    24 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
-  // +   0 number of non-NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
+  Segments segments = {dict_segment_string_empty};
+  auto chunk = std::make_shared<Chunk>(segments);
+
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+
+  //    80 map size (index non-NULL positions)
+  // +  80 map size NULL values (index NULL positions)
+  // +   0 number of different non-NULL values (0) * hash size (8)
+  // +   0 number of different non-NULL values (0) * vector size (24)
+  // +   0 number of non-NULL values (0) * sizeof(RowID) (8)
+  // +   0 (NULL elements hash size (8) + vector size (24)) * 0
+  // +   0 number of NULL elements (0) * sizeof(RowID) (8)
+  // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
+  // +  48 chunk ids set
+  // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
+  // +   1 _is_initialized
+  // +  16 impl
   // +   1 SegmentIndexType
-  // =  73
-  EXPECT_EQ(index->memory_consumption(), 73u);
-#else
-  // libc++:
-  // TODO(anyone) implement this more accurate
-  //    ?? (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  EXPECT_GT(index->memory_consumption(), 49u);
-#endif
+  // = 232
+  EXPECT_EQ(index->memory_consumption(), 232u);
 }
 
-TEST_F(PartialHashIndexTest, MemoryConsumptionShortString) {
-  ASSERT_GE(pmr_string("").capacity(), 7u)
-      << "Short String Optimization (SSO) is expected to hold at least 7 characters";
-
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //   841 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  // = 921
-  EXPECT_EQ(index->memory_consumption(), 921u);
-#else
-  // libc++:
-  //   264 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  // = 345
-  EXPECT_EQ(index->memory_consumption(), 345u);
-#endif
-}
-
-TEST_F(PartialHashIndexTest, MemoryConsumptionLongString) {
-  ASSERT_LE(pmr_string("").capacity(), 22u)
-      << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
-
-  auto local_values = pmr_vector<pmr_string>{
-      "hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
-      "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
-  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
-
-// Index memory consumption depends on implementation of pmr_string.
-#ifdef __GLIBCXX__
-  // libstdc++:
-  //    576 (reported by cpp_btree implementation)
-  // +   24 std::vector<ChunkOffset> object overhead
-  // +   32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +   20 "appleappleappleapple"
-  // +   21 "charliecharliecharlie"
-  // +   20 "deltadeltadeltadelta"
-  // +   20 "frankfrankfrankfrank"
-  // +   20 "inboxinboxinboxinbox"
-  // +   25 "hotelhotelhotelhotelhotel"
-  // +   24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +    0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +    1 SegmentIndexType
-  // = 1047
-  EXPECT_EQ(index->memory_consumption(), 1147u);
-#else
-  // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
-  //   264 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  25 "hotelhotelhotelhotelhotel"
-  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
-  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
-  // +   1 SegmentIndexType
-  // = 370
-  EXPECT_EQ(index->memory_consumption(), 441u);
-#endif
-}
-*/
 }  // namespace opossum

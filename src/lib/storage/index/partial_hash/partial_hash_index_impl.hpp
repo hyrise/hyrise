@@ -69,6 +69,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
 
  private:
   tsl::robin_map<DataType, std::vector<RowID>> _map;
+  //TODO(pi): write documentation!
   tsl::robin_map<bool, std::vector<RowID>> _null_values;
   std::set<ChunkID> _indexed_chunk_ids = {};
 };

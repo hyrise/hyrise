@@ -114,9 +114,18 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   size_t bytes{0u};
-  bytes += sizeof(std::set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size();
+  bytes += (sizeof(std::set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size());
+
+  //TODO(anyone): Find a clever way to estimate the hash sizes in the maps
   bytes += sizeof(_map);
+  bytes += (8 /* hash size */ + sizeof(std::vector<RowID>)) * _map.size();
+  bytes += sizeof(RowID) * std::distance(cbegin(), cend());
+
   bytes += sizeof(_null_values);
+  // if no NULL values are present, the map is empty; otherwise the map has one element
+  bytes += (8 + sizeof(std::vector<RowID>)) * _null_values.size();
+  bytes += sizeof(RowID) * std::distance(null_cbegin(), null_cend());
+
   return bytes;
 }
 
