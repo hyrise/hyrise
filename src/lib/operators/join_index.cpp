@@ -201,33 +201,48 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
-    // Scan all chunks for index input
-    // first use all PHIs on table to calculate first result, for unindexed chunks don't do segment fallback
-    // hash join fallback for PHI
-    // do only PHI, no Chunk Indices
+
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-    if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals) && _secondary_predicates.empty()) {
-
-      const auto& table_index = table_indexes.front();
-
-      // Scan all chunks from the probe side input
-      const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-      for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
-        const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
-        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
-        const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-        segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
-          _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
-        });
-        index_joining_duration += timer.lap();
-        join_index_performance_data.chunks_scanned_with_index++;
-      }
+    if (!table_indexes.empty() && _secondary_predicates.empty() &&
+        (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals
+         || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
 
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-      auto indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+      std::set<ChunkID> indexed_chunk_ids;
+
+      // We assume the first table index to be efficient for an indexed chunk
+      // as we do not want to spend time on evaluating the best index inside of this join loop.
+      // Thus, the first table index is selected and if a table index follows that indexed already seen chunks, this
+      // table index is ignored.
+      for (const auto& table_index : table_indexes) {
+        const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
+
+        if(!indexed_chunk_ids.empty()) {
+          // TODO(pi): Check if sets are disjoint, otherwise 'continue'
+        }
+
+        indexed_chunk_ids.insert(indexed_chunk_ids_in_index.begin(), indexed_chunk_ids_in_index.end());
+
+        // Scan all chunks from the probe side input
+        const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
+        for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+          const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+          Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+          const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
+          segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
+            _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
+          });
+          index_joining_duration += timer.lap();
+          join_index_performance_data.chunks_scanned_with_index++;
+        }
+      }
+
+
       auto indexed_chunk_ids_iterator = indexed_chunk_ids.begin();
       for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
+        // Check if chunk was indexed in one of the table index, thus no need to join it again.
+        // Otherwise perform NestedLoopJoin on the not-indexed chunk.
         if(*indexed_chunk_ids_iterator == index_side_chunk_id && indexed_chunk_ids_iterator != indexed_chunk_ids.end()){
           indexed_chunk_ids_iterator++;
           continue;
