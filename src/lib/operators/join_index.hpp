@@ -70,8 +70,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   template <typename ProbeIterator>
   void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                           const ChunkID probe_chunk_id,
-                                           const std::shared_ptr<AbstractTableIndex>& table_index);
+                                                 const ChunkID probe_chunk_id,
+                                                 const std::shared_ptr<AbstractTableIndex>& table_index);
 
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_index(
@@ -87,8 +87,9 @@ class JoinIndex : public AbstractJoinOperator {
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
 
-  void _append_matches_table_index(const AbstractTableIndex::Iterator& range_begin, const AbstractTableIndex::Iterator& range_end,
-                       const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id);
+  void _append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
+                                   const AbstractTableIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+                                   const ChunkID probe_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                     const RowIDPosList& index_table_matches);

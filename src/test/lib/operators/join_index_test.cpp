@@ -16,9 +16,7 @@
 
 namespace opossum {
 
-enum class IndexScope {
-  Table, Chunk
-};
+enum class IndexScope { Table, Chunk };
 
 class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
  public:
@@ -77,7 +75,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    if(index_scope == IndexScope::Chunk) {
+    if (index_scope == IndexScope::Chunk) {
       // build chunk-based index for every chunk and column
       for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
@@ -88,7 +86,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
           chunk->create_index<GroupKeyIndex>(columns);
         }
       }
-    } else if(index_scope == IndexScope::Table) {
+    } else if (index_scope == IndexScope::Table) {
       // build table-based index over all chunks and columns
       std::vector<ChunkID> chunk_ids(table->chunk_count());
       for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -104,8 +102,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const IndexScope index_scope,
-                               const std::shared_ptr<AbstractOperator>& left,
+  static void test_join_output(const IndexScope index_scope, const std::shared_ptr<AbstractOperator>& left,
                                const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
@@ -138,7 +135,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
-      if(index_scope == IndexScope::Table) {
+      if (index_scope == IndexScope::Table) {
         // one table index is created over all chunks, so it is only used once
         EXPECT_EQ(performance_data.chunks_scanned_with_index, 1);
       } else {
@@ -266,7 +263,8 @@ TEST_P(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
   auto scan_b = create_table_scan(_table_wrapper_i_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output(GetParam(), scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
+  test_join_output(GetParam(), scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                   JoinMode::Inner, 1, false);
 }
 
 TEST_P(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
@@ -284,8 +282,8 @@ TEST_P(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
 
   // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
   // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
-  test_join_output(GetParam(), join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-                   IndexSide::Left, false);
+  test_join_output(GetParam(), join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
+                   1, true, IndexSide::Left, false);
 }
 
 TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
@@ -293,11 +291,11 @@ TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
   auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  test_join_output(GetParam(), scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                   1, true);
+  test_join_output(GetParam(), scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                   JoinMode::Right, 1, true);
 }
 
-const std::map<IndexScope, std::string> index_scope_string {{IndexScope::Chunk, "Chunk"}, {IndexScope::Table, "Table"}};
+const std::map<IndexScope, std::string> index_scope_string{{IndexScope::Chunk, "Chunk"}, {IndexScope::Table, "Table"}};
 
 auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> info) {
   auto stream = std::stringstream{};
@@ -309,8 +307,7 @@ auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> i
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(JoinIndex, OperatorsJoinIndexTest,
-                         ::testing::Values(IndexScope::Chunk, IndexScope::Table),
+INSTANTIATE_TEST_SUITE_P(JoinIndex, OperatorsJoinIndexTest, ::testing::Values(IndexScope::Chunk, IndexScope::Table),
                          join_index_test_formatter);
 
 }  // namespace opossum

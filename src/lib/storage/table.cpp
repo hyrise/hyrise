@@ -398,8 +398,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   _value_clustered_by = value_clustered_by;
 }
 
-std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(
-    const ColumnID column_id) const {
+std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(const ColumnID column_id) const {
   auto result = std::vector<std::shared_ptr<AbstractTableIndex>>();
   std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(column_id); });

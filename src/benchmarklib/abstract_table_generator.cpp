@@ -7,9 +7,9 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
@@ -346,7 +346,8 @@ void AbstractTableGenerator::generate_and_store() {
         for (const auto& index_column : index_columns) {
           std::cout << "-  Creating table index on " << table_name << " [ ";
           std::cout << index_column << " ";
-          std::cout << "with chunk size" << " ";
+          std::cout << "with chunk size"
+                    << " ";
           std::cout << chunk_ids.size() << " ";
           std::cout << "] " << std::flush;
 
@@ -357,7 +358,6 @@ void AbstractTableGenerator::generate_and_store() {
           std::cout << "(" << table->column_id_by_name(index_column) << ")" << std::endl;
         }
       }
-
     }
     metrics.table_index_duration = timer.lap();
     std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;

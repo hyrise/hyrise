@@ -39,8 +39,8 @@ class Table : private Noncopyable {
         pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        std::vector<std::shared_ptr<Chunk>>&& chunks,
-        const UseMvcc use_mvcc = UseMvcc::No, pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
+        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
+        pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
 
   /**
    * @defgroup Getter and convenience functions for the column definitions
@@ -186,14 +186,16 @@ class Table : private Noncopyable {
   std::vector<IndexStatistics> indexes_statistics() const;
 
   template <typename Index>
-  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const std::string& name = "") {
-    static_assert(std::is_base_of<AbstractTableIndex, Index>::value, "'Index' template argument is not an AbstractTableIndex");
+  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
+                          const std::string& name = "") {
+    static_assert(std::is_base_of<AbstractTableIndex, Index>::value,
+                  "'Index' template argument is not an AbstractTableIndex");
 
     SegmentIndexType index_type = get_index_type_of<Index>();
 
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
-    for(auto chunk_id: chunk_ids){
+    for (auto chunk_id : chunk_ids) {
       auto chunk = get_chunk(chunk_id);
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
       chunks_to_index.push_back(std::make_pair(chunk_id, chunk));

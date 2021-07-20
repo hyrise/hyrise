@@ -53,7 +53,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     Hyrise::get().set_scheduler(scheduler);
   }
 
-
   _table_generator->generate_and_store();
 
   _benchmark_item_runner->on_tables_loaded();

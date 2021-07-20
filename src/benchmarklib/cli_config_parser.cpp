@@ -137,10 +137,10 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes, table_indexes, max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, metrics};
+  return BenchmarkConfig{benchmark_mode, chunk_size,       *encoding_config,     indexes,          table_indexes,
+                         max_runs,       timeout_duration, warmup_duration,      output_file_path, enable_scheduler,
+                         cores,          clients,          enable_visualization, verify,           cache_binary_tables,
+                         metrics};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

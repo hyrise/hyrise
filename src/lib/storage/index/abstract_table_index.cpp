@@ -4,8 +4,7 @@ namespace opossum {
 
 AbstractTableIndex::AbstractTableIndex(const SegmentIndexType type) : _type(type) {}
 
-AbstractTableIndex::IteratorPair AbstractTableIndex::equals(
-    const AllTypeVariant& value) const {
+AbstractTableIndex::IteratorPair AbstractTableIndex::equals(const AllTypeVariant& value) const {
   return _equals(value);
 }
 

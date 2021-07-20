@@ -43,18 +43,15 @@ enum class InputTableType {
   IndividualPosLists
 };
 
-enum class IndexScope {
-  Table, Chunk
-};
+enum class IndexScope { Table, Chunk };
 
 std::unordered_map<InputTableType, std::string> input_table_type_to_string{
     {InputTableType::Data, "Data"},
     {InputTableType::SharedPosList, "SharedPosList"},
     {InputTableType::IndividualPosLists, "IndividualPosLists"}};
 
-std::unordered_map<IndexScope, std::string> input_table_scope_to_string{
-    {IndexScope::Table, "Table"},
-    {IndexScope::Chunk, "Chunk"}};
+std::unordered_map<IndexScope, std::string> input_table_scope_to_string{{IndexScope::Table, "Table"},
+                                                                        {IndexScope::Chunk, "Chunk"}};
 
 struct InputTableConfiguration {
   InputSide side{};
@@ -196,8 +193,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    const auto all_index_scopes =
-        std::vector{IndexScope::Chunk, IndexScope::Table};
+    const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
@@ -619,7 +615,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             }
           }
         }
-      } else if(index_scope == IndexScope::Table) {
+      } else if (index_scope == IndexScope::Table) {
         std::vector<ChunkID> chunk_ids(indexed_chunk_range.second - indexed_chunk_range.first);
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
           chunk_ids.push_back(chunk_id);
@@ -787,10 +783,10 @@ TEST_P(JoinTestRunner, TestJoin) {
       indexed_used_count = range_end - range_begin;
     }
 
-    if(indexed_input.index_scope == IndexScope::Table) {
-      if(indexed_input.table_type == InputTableType::Data && configuration.secondary_predicates.empty() &&
-         (configuration.predicate_condition == PredicateCondition::Equals
-          || configuration.predicate_condition == PredicateCondition::NotEquals)) {
+    if (indexed_input.index_scope == IndexScope::Table) {
+      if (indexed_input.table_type == InputTableType::Data && configuration.secondary_predicates.empty() &&
+          (configuration.predicate_condition == PredicateCondition::Equals ||
+           configuration.predicate_condition == PredicateCondition::NotEquals)) {
         // one table index is created over the complete chunk range, so it is only used once
         indexed_used_count = 1;
       } else {

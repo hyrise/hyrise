@@ -204,8 +204,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
     if (!table_indexes.empty() && _secondary_predicates.empty() &&
-        (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals
-         || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
+        (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
+         _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
 
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       std::set<ChunkID> indexed_chunk_ids;
@@ -217,10 +217,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       for (const auto& table_index : table_indexes) {
         const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
 
-        if(!indexed_chunk_ids.empty()) {
+        if (!indexed_chunk_ids.empty()) {
           auto indexed_chunk_ids_itr = indexed_chunk_ids.begin();
           auto indexed_chunk_ids_in_index_itr = indexed_chunk_ids_in_index.begin();
-          while(indexed_chunk_ids_itr != indexed_chunk_ids.end() && indexed_chunk_ids_in_index_itr != indexed_chunk_ids_in_index.end()) {
+          while (indexed_chunk_ids_itr != indexed_chunk_ids.end() &&
+                 indexed_chunk_ids_in_index_itr != indexed_chunk_ids_in_index.end()) {
             if (*indexed_chunk_ids_itr < *indexed_chunk_ids_in_index_itr)
               indexed_chunk_ids_itr++;
             else if (*indexed_chunk_ids_in_index_itr < *indexed_chunk_ids_itr)
@@ -253,13 +254,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       // Otherwise perform NestedLoopJoin on the not-indexed chunk.
       auto indexed_chunk_ids_iterator = indexed_chunk_ids.begin();
       for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
-        if(*indexed_chunk_ids_iterator == index_side_chunk_id && indexed_chunk_ids_iterator != indexed_chunk_ids.end()){
+        if (*indexed_chunk_ids_iterator == index_side_chunk_id &&
+            indexed_chunk_ids_iterator != indexed_chunk_ids.end()) {
           indexed_chunk_ids_iterator++;
           continue;
         } else {
-            _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                  secondary_predicate_evaluator);
-            nested_loop_joining_duration += timer.lap();
+          _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                                secondary_predicate_evaluator);
+          nested_loop_joining_duration += timer.lap();
         }
       }
     } else {  // chunk-based index join
@@ -375,8 +377,8 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 // and a table index for the index side
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                    const ChunkID probe_chunk_id,
-                                                    const std::shared_ptr<AbstractTableIndex>& table_index) {
+                                                          const ChunkID probe_chunk_id,
+                                                          const std::shared_ptr<AbstractTableIndex>& table_index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
     //const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
@@ -384,11 +386,11 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
     index_ranges.reserve(2);
 
     if (_mode == JoinMode::AntiNullAsTrue) {
-        const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
-        if (probe_side_position.is_null() || indexed_null_values) {
-            index_ranges.emplace_back(TableIndexRange{table_index->cbegin(), table_index->cend()});
-            index_ranges.emplace_back(TableIndexRange{table_index->null_cbegin(), table_index->null_cend()});
-        }
+      const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
+      if (probe_side_position.is_null() || indexed_null_values) {
+        index_ranges.emplace_back(TableIndexRange{table_index->cbegin(), table_index->cend()});
+        index_ranges.emplace_back(TableIndexRange{table_index->null_cbegin(), table_index->null_cend()});
+      }
     } else {
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
@@ -526,9 +528,9 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   return index_ranges;
 }
 
-void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin,
-                                const AbstractIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id) {
+void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
+                                const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
+                                const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {
@@ -564,8 +566,8 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin,
 }
 
 void JoinIndex::_append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
-                                const AbstractTableIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                const ChunkID probe_chunk_id) {
+                                            const AbstractTableIndex::Iterator& range_end,
+                                            const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {
