@@ -47,6 +47,16 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegm
   std::atomic_store(&_segments.at(column_id), segment);
 }
 
+void Chunk::delete_segment(size_t column_id) {
+  const auto segment_to_be_deleted = _segments.at(column_id);
+  for(auto index : _indexes) {
+    if(index->is_index_for({segment_to_be_deleted})) {
+      remove_index(index);
+    }
+  }
+  _segments.erase(_segments.begin() + column_id);
+}
+
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 

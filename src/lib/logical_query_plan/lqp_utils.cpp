@@ -251,6 +251,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
         break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreateIndex:
+      case LQPNodeType::AlterDropColumn:
       case LQPNodeType::DropIndex:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:

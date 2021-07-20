@@ -60,6 +60,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/alter_drop_column_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -209,6 +210,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       //  but the translation is still called, so we return a dummy node here.
       return DummyTableNode::make();
     case hsql::kStmtAlter:
+      return _translate_alter(static_cast<const hsql::AlterStatement&>(statement));
     case hsql::kStmtError:
     case hsql::kStmtRename:
       FailInput("Statement type not supported");
@@ -1439,6 +1441,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
       return _translate_drop_index(drop_statement);
     case hsql::DropType::kDropPreparedStatement:
       FailInput("This DROP type is not implemented yet");
+  }
+  Fail("Invalid enum value");
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_alter(const hsql::AlterStatement& alter_statement) {
+  switch (alter_statement.type) {
+    case hsql::AlterType::kAlterDropColumn:
+      return AlterDropColumnNode::make(alter_statement.name, alter_statement.column_name, alter_statement.if_exists);
   }
   Fail("Invalid enum value");
 }

@@ -121,6 +121,8 @@ set(
     logical_query_plan/delete_node.hpp
     logical_query_plan/drop_table_node.cpp
     logical_query_plan/drop_table_node.hpp
+    logical_query_plan/alter_drop_column_node.cpp
+    logical_query_plan/alter_drop_column_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
@@ -229,6 +231,8 @@ set(
     operators/maintenance/create_table.hpp
     operators/maintenance/create_index.cpp
     operators/maintenance/create_index.hpp
+    operators/maintenance/alter_drop_column.cpp
+    operators/maintenance/alter_drop_column.hpp
     operators/maintenance/drop_index.cpp
     operators/maintenance/drop_index.hpp
     operators/maintenance/create_view.cpp

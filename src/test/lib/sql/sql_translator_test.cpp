@@ -14,6 +14,7 @@
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/drop_index_node.hpp"
+#include "logical_query_plan/alter_drop_column_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -2304,6 +2305,26 @@ TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
   column_ids->emplace_back(ColumnID{1});
 
   const auto expected_lqp = CreateIndexNode::make("int_int_int_a_b", false, "int_int_int", column_ids);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AlterTableDropColumn) {
+  const auto query = "ALTER TABLE int_int_int DROP COLUMN a;";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  const auto expected_lqp = AlterDropColumnNode::make("int_int_int", "a", false);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AlterTableDropColumnIfNotExists) {
+  const auto query = "ALTER TABLE int_int_int DROP COLUMN IF EXISTS a;";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  const auto expected_lqp = AlterDropColumnNode::make("int_int_int", "a", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

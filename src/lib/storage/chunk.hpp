@@ -61,6 +61,8 @@ class Chunk : private Noncopyable {
   // Atomically replaces the current segment at column_id with the passed segment
   void replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment);
 
+  void delete_segment(size_t column_id);
+
   // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
   ColumnCount column_count() const;
 

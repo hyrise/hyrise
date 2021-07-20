@@ -13,6 +13,7 @@
 #include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_index_node.hpp"
+#include "alter_drop_column_node.hpp"
 #include "drop_index_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"
@@ -50,6 +51,7 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_index.hpp"
+#include "operators/maintenance/alter_drop_column.hpp"
 #include "operators/maintenance/drop_index.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
@@ -148,7 +150,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateIndex:        return _translate_create_index_node(node);
-    case LQPNodeType::DropIndex:        return _translate_drop_index_node(node);
+    case LQPNodeType::AlterDropColumn:    return _translate_alter_drop_column_node(node);
+    case LQPNodeType::DropIndex:          return _translate_drop_index_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
     case LQPNodeType::Import:             return _translate_import_node(node);
@@ -516,6 +519,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
   const auto create_index_node = std::dynamic_pointer_cast<CreateIndexNode>(node);
 
   return std::make_shared<CreateIndex>(create_index_node->index_name, create_index_node->if_not_exists, create_index_node->table_name, create_index_node->column_ids);
+
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterDropColumnNode>(node);
+  const auto input_node = alter_drop_column_node->left_input();
+
+  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name, alter_drop_column_node->if_exists);
 
 }
 

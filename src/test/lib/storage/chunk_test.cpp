@@ -217,6 +217,30 @@ TEST_F(StorageChunkTest, RemoveIndex) {
             indexes_for_segment_0.cend());
 }
 
+TEST_F(StorageChunkTest, DeleteSegment) {
+  chunk = std::make_shared<Chunk>(Segments({vs_str, vs_int}));
+
+  chunk->append({"two", 2});
+
+  EXPECT_EQ(chunk->column_count(), 2);
+
+  chunk->delete_segment(ColumnID{0});
+  EXPECT_EQ(chunk->column_count(), 1);
+
+  auto abstract_segment = chunk->get_segment(ColumnID{0});
+  EXPECT_EQ(abstract_segment->size(), 4u);
+}
+
+TEST_F(StorageChunkTest, DeleteSegmentAndIndex) {
+  chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+
+  chunk->delete_segment(ColumnID{0});
+  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
+            indexes_for_segment_0.cend());
+}
+
 TEST_F(StorageChunkTest, SetSortedInformationSingle) {
   EXPECT_TRUE(chunk->individually_sorted_by().empty());
   const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);

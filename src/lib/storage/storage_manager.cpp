@@ -109,6 +109,14 @@ void StorageManager::drop_view(const std::string& name) {
   _views[name] = nullptr;
 }
 
+void StorageManager::drop_column_from_table(const std::string& table_name, const std::string& column_name) {
+  auto table = get_table(table_name);
+  auto column_id = table->column_id_by_name(column_name);
+  table->delete_column(column_id);
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  generate_chunk_pruning_statistics(table);
+}
+
 std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
   const auto view_iter = _views.find(name);
   Assert(view_iter != _views.end(), "No such view named '" + name + "'");

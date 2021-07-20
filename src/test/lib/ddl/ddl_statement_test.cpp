@@ -34,6 +34,8 @@ class DDLStatementTest : public BaseTest {
 
   const std::string _create_index_single_column = "CREATE INDEX myindex ON table_a (a)";
   const std::string _create_index_multi_column = "CREATE INDEX myindex ON table_a (a, b)";
+  const std::string _create_index = "CREATE INDEX myindex ON table_a (a)";
+  const std::string _alter_table = "ALTER TABLE table_a DROP COLUMN a";
 };
 
 void create_index(const std::string statement) {
@@ -168,6 +170,19 @@ TEST_F(DDLStatementTest, DropIndexNotExistsWithFlag) {
   auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex ON table_a"}.create_pipeline();
 
   EXPECT_NO_THROW(sql_pipeline.get_result_table());
+}
+
+
+TEST_F(DDLStatementTest, AlterTableDropColumn) {
+  auto sql_pipeline = SQLPipelineBuilder{_alter_table}.create_pipeline();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
+
+  EXPECT_EQ(targeted_table->column_count(), 1u);
+  EXPECT_EQ(targeted_table->column_name(ColumnID{0}), "b");
 }
 
 TEST_F(DDLStatementTest, CreateTableWithTableKeyConstraints) {
