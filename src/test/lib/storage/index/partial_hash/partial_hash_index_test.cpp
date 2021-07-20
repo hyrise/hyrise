@@ -1,19 +1,12 @@
 #include <memory>
 #include <set>
-#include <string>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
 
-#include "storage/abstract_segment.hpp"
-#include "storage/chunk.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
-
-// In this domain input modeling is explicitly used.
-// https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
 
 namespace opossum {
 

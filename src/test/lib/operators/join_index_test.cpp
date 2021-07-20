@@ -295,7 +295,8 @@ TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
                    JoinMode::Right, 1, true);
 }
 
-const std::map<IndexScope, std::string> index_scope_string{{IndexScope::Chunk, "Chunk"}, {IndexScope::Table, "Table"}};
+const std::unordered_map<IndexScope, std::string> index_scope_string{{IndexScope::Chunk, "Chunk"},
+                                                                     {IndexScope::Table, "Table"}};
 
 auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> info) {
   auto stream = std::stringstream{};

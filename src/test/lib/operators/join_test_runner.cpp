@@ -602,10 +602,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-       * for non-dictionary segments.
+       * indexes for the data table are created. The index scope is either chunk based (AbstractIndex) or table based
+       * (AbstractTableIndex).
        */
       if (index_scope == IndexScope::Chunk) {
+        // The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
+        // for non-dictionary segments.
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
           for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
             if (encoding_type == EncodingType::Dictionary) {
@@ -616,6 +618,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           }
         }
       } else if (index_scope == IndexScope::Table) {
+        // Creates a PartialHashIndex on the defined chunk range of every column of the index side.
         std::vector<ChunkID> chunk_ids(indexed_chunk_range.second - indexed_chunk_range.first);
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
           chunk_ids.push_back(chunk_id);

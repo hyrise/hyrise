@@ -71,12 +71,11 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   IteratorPair equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const override;
 
-  // returns sorted array
   std::set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
   tsl::robin_map<DataType, std::vector<RowID>> _map;
-  //TODO(pi): write documentation!
+  // We construct a map for NULL-values here to make use of the same iterator type on values and NULL-values.
   tsl::robin_map<bool, std::vector<RowID>> _null_values;
   std::set<ChunkID> _indexed_chunk_ids = {};
 };

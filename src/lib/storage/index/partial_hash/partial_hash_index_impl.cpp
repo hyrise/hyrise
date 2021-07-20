@@ -15,6 +15,7 @@ size_t PartialHashIndexImpl<DataType>::add(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
+    // do not allow multiple indexing of one chunk
     if (_indexed_chunk_ids.contains(chunk.first)) continue;
 
     _indexed_chunk_ids.insert(chunk.first);
@@ -117,7 +118,8 @@ size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   size_t bytes{0u};
   bytes += (sizeof(std::set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size());
 
-  //TODO(anyone): Find a clever way to estimate the hash sizes in the maps
+  //TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a
+  // fixed hash size of 8 Byte
   bytes += sizeof(_map);
   bytes += (8 /* hash size */ + sizeof(std::vector<RowID>)) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());

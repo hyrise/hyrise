@@ -185,6 +185,11 @@ class Table : private Noncopyable {
 
   std::vector<IndexStatistics> indexes_statistics() const;
 
+  /**
+   * Creates a subclass of AbstractTableIndex on a set of chunks of a specific column and adds the index to the
+   * table's index statistics.
+   * Table indexes can only be created on a set of immutable chunks.
+   */
   template <typename Index>
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
                           const std::string& name = "") {
@@ -233,7 +238,14 @@ class Table : private Noncopyable {
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
 
-  pmr_vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes() const { return _table_indexes; }
+  /**
+   * Returns all table indexes created for this table.
+   */
+  pmr_vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes() const;
+
+  /**
+   * Returns all table indexes created for this table that index a specific ColumnID.
+   */
   std::vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes(const ColumnID column_id) const;
 
   /**
