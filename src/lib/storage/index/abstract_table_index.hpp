@@ -110,7 +110,7 @@ class AbstractTableIndex : private Noncopyable {
  */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
-  //AbstractTableIndex() = delete;
+  AbstractTableIndex() = delete;
   explicit AbstractTableIndex(const SegmentIndexType type);
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
