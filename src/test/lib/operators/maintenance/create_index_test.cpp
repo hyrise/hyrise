@@ -36,7 +36,10 @@ void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, st
   }
 }
 
-TEST_F(CreateIndexTest, NameAndDescription) { EXPECT_EQ(create_index->name(), "CreateIndex"); }
+TEST_F(CreateIndexTest, NameAndDescription) {
+  EXPECT_EQ(create_index->name(), "CreateIndex");
+  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine), "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('0',)");
+}
 
 TEST_F(CreateIndexTest, Execute) {
   ChunkEncoder::encode_all_chunks(test_table);

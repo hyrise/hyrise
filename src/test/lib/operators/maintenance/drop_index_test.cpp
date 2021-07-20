@@ -47,6 +47,12 @@ class DropIndexTest: public BaseTest {
   std::string table_name = "TestTable";
 };
 
+TEST_F(DropIndexTest, NameAndDescription) {
+  auto drop_index = std::make_shared<DropIndex>(index_name, true, table_name);
+  EXPECT_EQ(drop_index->name(), "DropIndex");
+  EXPECT_EQ(drop_index->description(DescriptionMode::SingleLine), "DropIndex 'IF EXISTS' 'TestIndex' ON 'TestTable'");
+}
+
 TEST_F(DropIndexTest, IndexStatisticsEmpty) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
   auto drop_index = std::make_shared<DropIndex>(index_name, false, table_name);

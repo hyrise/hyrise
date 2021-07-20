@@ -25,38 +25,14 @@ const std::string& DropIndex::name() const {
 }
 
 std::string DropIndex::description(DescriptionMode description_mode) const {
-  // TODO: craft usefull description print output
-  /*
   std::ostringstream stream;
 
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
-
-  // If the input operator has already been cleared, we cannot retrieve its columns anymore. However, since the table
-  // has been created, we can simply pull the definitions from the new table.
-  const auto column_definitions = left_input_table()
-                                  ? left_input_table()->column_definitions()
-                                  : Hyrise::get().storage_manager.get_table(table_name)->column_definitions();
-
-  stream << AbstractOperator::description(description_mode) << " '" << table_name << "' (";
-  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
-    const auto& column_definition = column_definitions[column_id];
-
-    stream << "'" << column_definition.name << "' " << column_definition.data_type << " ";
-    if (column_definition.nullable) {
-      stream << "NULL";
-    } else {
-      stream << "NOT NULL";
-    }
-
-    if (column_id + 1u < column_definitions.size()) {
-      stream << separator;
-    }
-  }
-  stream << ")";
+  stream << AbstractOperator::description(description_mode);
+  if(if_exists) stream << " 'IF EXISTS'";
+  stream << " '" << index_name << "' ON";
+  stream << " '" << table_name << "'";
 
   return stream.str();
-   */
-  return std::string("DROP INDEX description");
 }
 
 std::shared_ptr<const Table> DropIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
