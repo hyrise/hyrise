@@ -489,6 +489,7 @@ set(
     storage/index/index_statistics.cpp
     storage/index/index_statistics.hpp
     storage/index/segment_index_type.hpp
+    storage/index/segment_index_type.cpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
@@ -610,6 +611,8 @@ set(
     utils/meta_tables/meta_segments_table.cpp
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_indexes_table.cpp
+    utils/meta_tables/meta_indexes_table.hpp
     utils/meta_tables/meta_settings_table.hpp
     utils/meta_tables/meta_system_information_table.cpp
     utils/meta_tables/meta_system_information_table.hpp
