@@ -297,27 +297,6 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   EXPECT_EQ(end2, index->cend());
 }
 
-/*TEST_F(PartialHashIndexTest, IndexProbes) {
-  auto begin = index->cbegin();
-  EXPECT_EQ(index->equal({"apple"}) - begin, 0);
-  EXPECT_EQ(index->upper_bound({"apple"}) - begin, 1);
-
-  EXPECT_EQ(index->lower_bound({"charlie"}) - begin, 1);
-  EXPECT_EQ(index->upper_bound({"charlie"}) - begin, 3);
-
-  EXPECT_EQ(index->lower_bound({"delta"}) - begin, 3);
-  EXPECT_EQ(index->upper_bound({"delta"}) - begin, 5);
-
-  EXPECT_EQ(index->lower_bound({"frank"}) - begin, 5);
-  EXPECT_EQ(index->upper_bound({"frank"}) - begin, 6);
-
-  EXPECT_EQ(index->lower_bound({"hotel"}) - begin, 6);
-  EXPECT_EQ(index->upper_bound({"hotel"}) - begin, 7);
-
-  EXPECT_EQ(index->lower_bound({"inbox"}) - begin, 7);
-  EXPECT_EQ(index->upper_bound({"inbox"}) - begin, 8);
-}*/
-
 // The following tests contain switches for different implementations of the stdlib.
 // Short String Optimization (SSO) stores strings of a certain size in the pmr_string object itself.
 // Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
@@ -345,12 +324,19 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
    (A1, B1, C1) --infeasible---+
     A1, B2, C2 <-alternative-<-+
 */
-/*
+
 // A2, B2, C1
 TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
-  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
+
+  Segments segments = {segment};
+  Chunk chunk = std::make_shared<Chunk>(segments);
+
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -381,7 +367,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionVeryShortStringNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
   const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
+      std::make_shared<PartialHashIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -537,5 +523,5 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionLongString) {
   EXPECT_EQ(index->memory_consumption(), 441u);
 #endif
 }
-*/
+
 }  // namespace opossum
