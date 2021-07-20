@@ -197,6 +197,43 @@ class Table : private Noncopyable {
     _indexes.emplace_back(index_statistics);
   }
 
+  void delete_index_by_name(const std::string& name, const bool if_exists) {
+    const auto chunk_count = _chunks.size();
+
+    // find index statistics
+    auto index_stats = std::find_if(
+        _indexes.begin(), _indexes.end(),
+        [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
+
+    if(index_stats != std::end(_indexes)){
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto chunk = std::atomic_load(&_chunks[chunk_id]);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+        auto index = chunk->get_index(index_stats->type, index_stats->column_ids);
+        chunk->remove_index(index);
+      }
+
+      // remove index statistics
+      auto new_end = std::remove_if(
+          _indexes.begin(), _indexes.end(),
+          [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
+      _indexes.erase(new_end, _indexes.end());
+
+    } else {
+      Assert(if_exists, "No index with name " + name);
+      std::cout << "No index with name '" << name << "' exists.";
+
+      //if(if_exists) {
+      //  std::cout << "No index with name '" << name << "' exists.";
+      //} else {
+      //  Fail("No index with name " + name);
+      //}
+
+      //if_exists ? std::cout << "No index with name '" << name << "' exists." : throw("No index with name " + name);
+    }
+  }
+
   /**
    * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" key constraints to draw attention to that.

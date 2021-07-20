@@ -23,6 +23,8 @@ enum class OperatorType {
   Alias,
   ChangeMetaTable,
   CreateTable,
+  CreateIndex,
+  DropIndex,
   CreatePreparedPlan,
   CreateView,
   DropTable,

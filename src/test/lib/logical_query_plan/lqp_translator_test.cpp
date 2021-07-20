@@ -1,4 +1,5 @@
 #include <memory>
+#include <operators/maintenance/create_index.hpp>
 #include <optional>
 #include <string>
 #include <utility>
@@ -16,9 +17,11 @@
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
@@ -42,9 +45,11 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_index.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_index.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -1092,6 +1097,40 @@ TEST_F(LQPTranslatorTest, DropTable) {
 
   const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
   EXPECT_EQ(drop_table->table_name, "t");
+}
+
+TEST_F(LQPTranslatorTest, DropIndex) {
+  const auto lqp = DropIndexNode::make("myindex", false, "t");
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropIndex);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto drop_table = std::dynamic_pointer_cast<DropIndex>(pqp);
+  EXPECT_EQ(drop_table->index_name, "myindex");
+  EXPECT_EQ(drop_table->if_exists, false);
+  EXPECT_EQ(drop_table->table_name, "t");
+
+}
+
+TEST_F(LQPTranslatorTest, CreateIndex) {
+  auto column_ids = std::make_shared<std::vector<ColumnID>>();
+  column_ids->push_back(ColumnID{0});
+  column_ids->push_back(ColumnID{1});
+
+  const auto lqp = CreateIndexNode::make("i", false, "t", column_ids);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreateIndex);
+
+  const auto create_index = std::dynamic_pointer_cast<CreateIndex>(pqp);
+  EXPECT_EQ(create_index->table_name, "t");
+  EXPECT_EQ(create_index->index_name, "i");
+
+   // CreateTable input must be executed to enable access to column definitions
+   EXPECT_EQ(*(create_index->column_ids), *column_ids);
 }
 
 TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
