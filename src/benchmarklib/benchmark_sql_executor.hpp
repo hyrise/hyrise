@@ -42,7 +42,6 @@ class BenchmarkSQLExecutor {
                        const std::shared_ptr<const Table>& expected_result_table,
                        const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
-  void _print_debug_estimation_results(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline);
 
   std::optional<SQLiteWrapper::Connection> _sqlite_connection;
