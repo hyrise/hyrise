@@ -29,9 +29,9 @@ constexpr auto segment_index_map =
 
 }  // namespace detail
 
-template <typename IndexType2>
+template <typename IndexType>
 SegmentIndexType get_index_type_of() {
-  return detail::segment_index_map[hana::type_c<IndexType2>];
+  return detail::segment_index_map[hana::type_c<IndexType>];
 }
 
 }  // namespace opossum

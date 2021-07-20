@@ -104,7 +104,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
     }
   }
 
-  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks), UseMvcc::No);
+  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
 }  // namespace opossum

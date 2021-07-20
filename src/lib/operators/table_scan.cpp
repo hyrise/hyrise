@@ -226,7 +226,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   scan_performance_data.num_chunks_with_all_rows_matching = _impl->num_chunks_with_all_rows_matching.load();
   scan_performance_data.num_chunks_with_binary_search = _impl->num_chunks_with_binary_search.load();
 
-  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks), UseMvcc::No);
+  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(

@@ -208,7 +208,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
     if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals || _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals) && _secondary_predicates.empty()) {
 
-      PerformanceWarning("Table-based index join used.");
       const auto& table_index = table_indexes.front();
 
       // Scan all chunks from the probe side input
@@ -238,9 +237,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             nested_loop_joining_duration += timer.lap();
         }
       }
-    } else {  // Fallback chunk-based index join
-
-      PerformanceWarning("Fallback chunk-based index join used.");
+    } else {  // chunk-based index join
 
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
@@ -350,7 +347,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 }
 
 // join loop that joins two segments of two columns using an iterator for the probe side,
-// and an table index for the index side
+// and a table index for the index side
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                     const ChunkID probe_chunk_id,
