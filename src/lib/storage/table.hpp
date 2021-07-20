@@ -221,7 +221,16 @@ class Table : private Noncopyable {
       _indexes.erase(new_end, _indexes.end());
 
     } else {
-      if_exists ? std::cout << "No index with name '" << name << "' exists." : throw std::invalid_argument("No index with name " + name);
+      Assert(if_exists, "No index with name " + name);
+      std::cout << "No index with name '" << name << "' exists.";
+
+      //if(if_exists) {
+      //  std::cout << "No index with name '" << name << "' exists.";
+      //} else {
+      //  Fail("No index with name " + name);
+      //}
+
+      //if_exists ? std::cout << "No index with name '" << name << "' exists." : throw("No index with name " + name);
     }
   }
 

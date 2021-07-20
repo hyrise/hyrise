@@ -36,7 +36,10 @@ void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, st
   }
 }
 
-TEST_F(CreateIndexTest, NameAndDescription) { EXPECT_EQ(create_index->name(), "CreateIndex"); }
+TEST_F(CreateIndexTest, NameAndDescription) {
+  EXPECT_EQ(create_index->name(), "CreateIndex");
+  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine), "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('0',)");
+}
 
 TEST_F(CreateIndexTest, Execute) {
   ChunkEncoder::encode_all_chunks(test_table);
@@ -84,9 +87,36 @@ TEST_F(CreateIndexTest, ExecuteWithIfNotExists) {
   auto another_index = std::make_shared<CreateIndex>(index_name, true, table_name, other_column_ids);
   const auto another_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
+  // with flag, it should not fail
   another_index->set_transaction_context(another_context);
   another_index->execute();
   another_context->commit();
+
+  // make sure that initially created index still exists
+  check_index_exists_correctly(create_index, test_table);
+}
+
+TEST_F(CreateIndexTest, ExecuteWithOutIfNotExists) {
+  ChunkEncoder::encode_all_chunks(test_table);
+
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  create_index->set_transaction_context(context);
+
+  create_index->execute();
+  context->commit();
+
+  // let name and table stay the same, but alter column ids
+  auto other_column_ids = std::make_shared<std::vector<ColumnID>>();
+  other_column_ids->emplace_back(test_table->column_id_by_name("a"));
+  other_column_ids->emplace_back(test_table->column_id_by_name("b"));
+
+  auto another_index = std::make_shared<CreateIndex>(index_name, false, table_name, other_column_ids);
+  const auto another_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+  // without flag, it should fail
+  another_index->set_transaction_context(another_context);
+  EXPECT_THROW(another_index->execute(), std::logic_error);
+  another_context->rollback(RollbackReason::Conflict);
 
   // make sure that initially created index still exists
   check_index_exists_correctly(create_index, test_table);
