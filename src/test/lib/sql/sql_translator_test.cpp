@@ -13,6 +13,7 @@
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -2471,6 +2472,26 @@ TEST_F(SQLTranslatorTest, DropTableIfExists) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE IF EXISTS a_table");
 
   const auto expected_lqp = DropTableNode::make("a_table", true);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropIndex) {
+  const auto query = "DROP INDEX my_index ON int_int_int";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  const auto expected_lqp = DropIndexNode::make("my_index", false, "int_int_int");
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropIndexIfExists) {
+  const auto query = "DROP INDEX IF EXISTS my_index ON int_int_int";
+
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+
+  const auto expected_lqp = DropIndexNode::make("my_index", true, "int_int_int");
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
