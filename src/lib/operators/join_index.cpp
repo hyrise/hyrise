@@ -201,7 +201,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
-
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
     if (!table_indexes.empty() && _secondary_predicates.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
@@ -212,7 +211,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
       // We assume the first table index to be efficient for an indexed chunk
       // as we do not want to spend time on evaluating the best index inside of this join loop.
-      // Thus, the first table index is selected and if a table index follows that indexed already seen chunks, this
+      // Thus, the first table index is selected and if a table index follows that indexes an already seen chunks, this
       // table index is ignored.
       for (const auto& table_index : table_indexes) {
         const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
@@ -252,11 +251,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
       // Check if chunk was indexed in one of the table indexes, thus no need to join it again.
       // Otherwise perform NestedLoopJoin on the not-indexed chunk.
-      auto indexed_chunk_ids_iterator = indexed_chunk_ids.begin();
+      auto indexed_chunk_ids_itr = indexed_chunk_ids.begin();
       for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
-        if (*indexed_chunk_ids_iterator == index_side_chunk_id &&
-            indexed_chunk_ids_iterator != indexed_chunk_ids.end()) {
-          indexed_chunk_ids_iterator++;
+        if (*indexed_chunk_ids_itr == index_side_chunk_id && indexed_chunk_ids_itr != indexed_chunk_ids.end()) {
+          indexed_chunk_ids_itr++;
           continue;
         } else {
           _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
@@ -265,7 +263,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
       }
     } else {  // chunk-based index join
-
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
@@ -381,10 +378,13 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
                                                           const std::shared_ptr<AbstractTableIndex>& table_index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
-    //const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
+
     std::vector<TableIndexRange> index_ranges{};
     index_ranges.reserve(2);
 
+    // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
+    // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
+    // has a match.
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
       if (probe_side_position.is_null() || indexed_null_values) {

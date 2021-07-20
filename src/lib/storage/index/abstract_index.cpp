@@ -7,7 +7,7 @@
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash//partial_hash_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 
 namespace opossum {
 

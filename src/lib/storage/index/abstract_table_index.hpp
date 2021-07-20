@@ -97,47 +97,91 @@ class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const Ro
   std::shared_ptr<BaseTableIndexIterator> _impl;
 };
 
+/**
+ * This is a concept parallel to chunk based indexes superclass AbstractIndex.
+ * It allows indexing multiple chunks of a table column.
+ * It is assumed that all table index types support lookup queries, i.e. equals and not-equals queries.
+ * The IteratorWrapper type is used as the return type for all query methods.
+ */
 class AbstractTableIndex : private Noncopyable {
  public:
   using Iterator = IteratorWrapper;
   using IteratorPair = std::pair<Iterator, Iterator>;
-
-  /**
- * Predicts the memory consumption in bytes of creating this index.
- * See AbstractIndex::estimate_memory_consumption()
- * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
- * in reducing the memory footprint of these indexes, this is probably the first place you should look.
- */
-  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   AbstractTableIndex() = delete;
   explicit AbstractTableIndex(const SegmentIndexType type);
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
 
+  /**
+   * Searches for all positions of the entry within the table index.
+   *
+   * Calls _equals() of the most derived class.
+   * @param value used to query the index.
+   * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the table index.
+   */
   IteratorPair equals(const AllTypeVariant& value) const;
 
+  /**
+   * Searches for all positions that do not equal to the entry in the table index.
+   *
+   * Calls _not_equals() of the most derived class.
+   * @param value used to query the index.
+   * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the first occurence of a value equals to the searched entry and the range from the end of the value until the end of the map.
+   */
   std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const;
 
-  Iterator cbegin() const { return _cbegin(); }
+  /**
+   * Returns an Iterator to the position of the first indexed non-NULL element.
+   * Iterating from cbegin() to cend() will result in a position list.
+   * Calls _cbegin() of the most derived class.
+   * @return An Iterator on the position of first non-NULL element of the Index.
+   */
+  Iterator cbegin() const;
 
-  Iterator cend() const { return _cend(); }
+  /**
+   * Returns an Iterator past the position of the last indexed non-NULL element.
+   * Iterating from cbegin() to cend() will result in a position list.
+   * Calls _cend() of the most derived class.
+   * @return An Iterator on the end of the non-NULL elements (one after the last element).
+   */
+  Iterator cend() const;
 
-  Iterator null_cbegin() const { return _null_cbegin(); }
+  /**
+   * Returns an Iterator to the first NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   *
+   * @return An Iterator on the position of the first NULL.
+   */
+  Iterator null_cbegin() const;
 
-  Iterator null_cend() const { return _null_cend(); }
+  /**
+   * Returns an Iterator past the position of the last NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   *
+   * @return An Iterator on the end of the NULLs (one after the last NULL).
+   */
+  Iterator null_cend() const;
 
-  SegmentIndexType type() const { return _type; }
+  SegmentIndexType type() const;
 
-  size_t memory_consumption() const {
-    size_t bytes{0u};
-    bytes += _memory_consumption();
-    bytes += sizeof(_type);
-    return bytes;
-  }
+  /**
+   * Returns the memory consumption of this Index in bytes
+   */
+  size_t memory_consumption() const;
 
+  /**
+   * Checks whether the given column id is covered by the index.
+   *
+   * @return true if the given column is covered by the index.
+   */
   bool is_index_for(const ColumnID column_id) const;
 
+  /**
+   * Returns the chunk ids covered by the index.
+   *
+   * @return An ordered set of the chunk ids.
+   */
   std::set<ChunkID> get_indexed_chunk_ids() const;
 
  protected:
