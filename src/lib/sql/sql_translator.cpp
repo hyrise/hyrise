@@ -1313,26 +1313,22 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
     }
   }
 
-  auto input_node = StoredTableNode::make(create_statement.tableName);
-
   std::string index_name;
   if(create_statement.indexName) {
     index_name = create_statement.indexName;
   } else {
+    Assert(create_statement.ifNotExists == false, "Index name has to be provided when using 'if not exists' flag.");
     index_name = create_statement.tableName + column_name_string;
   }
 
-  return CreateIndexNode::make(index_name, create_statement.ifNotExists, column_ids, input_node);
-
+  return CreateIndexNode::make(index_name, create_statement.ifNotExists, create_statement.tableName, column_ids);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
 
   Assert(Hyrise::get().storage_manager.has_table(drop_statement.name), "table not existent");
-  auto table = Hyrise::get().storage_manager.get_table(drop_statement.name);
-  auto input_node = StoredTableNode::make(drop_statement.name);
 
-  return DropIndexNode::make(drop_statement.index_name, input_node);
+  return DropIndexNode::make(drop_statement.index_name, drop_statement.ifExists, drop_statement.name);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {

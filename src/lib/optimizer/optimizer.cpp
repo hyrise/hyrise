@@ -131,9 +131,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
-      auto& rule_reference = *rule;
-      auto rule_name = std::string(typeid(rule_reference).name());
-      rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
+      rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
     if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
@@ -208,8 +206,10 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       switch (node->type) {
         case LQPNodeType::CreatePreparedPlan:
         case LQPNodeType::CreateView:
+        case LQPNodeType::CreateIndex:
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
+        case LQPNodeType::DropIndex:
         case LQPNodeType::DropTable:
         case LQPNodeType::AlterDropColumn:
         case LQPNodeType::Import:
@@ -222,8 +222,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Aggregate:
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
-        case LQPNodeType::CreateIndex:
-        case LQPNodeType::DropIndex:
         case LQPNodeType::Delete:
         case LQPNodeType::Export:
         case LQPNodeType::Insert:

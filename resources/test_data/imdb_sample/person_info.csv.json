@@ -1,10 +1,10 @@
 {
-    "config": {"null_handling": "null_string_as_null"},
+    "config": {"null_handling": "null_string_as_value"},
     "columns": [
-        {"name": "id", 			"type": "int",		"nullable": true},
-        {"name": "person_id", 		"type": "int",		"nullable": true},
-        {"name": "info_type_id",	"type": "int",		"nullable": true},
-        {"name": "info",		"type": "string",	"nullable": true},
-        {"name": "note",		"type": "string",	"nullable": false}
+        {"name": "id",           "type": "int",    "nullable": false},
+        {"name": "person_id",    "type": "int",    "nullable": false},
+        {"name": "info_type_id", "type": "int",    "nullable": false},
+        {"name": "info",         "type": "string", "nullable": false},
+        {"name": "note",         "type": "string", "nullable": true}
     ]
 }

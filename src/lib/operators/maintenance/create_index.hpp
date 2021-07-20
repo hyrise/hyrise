@@ -10,16 +10,17 @@ namespace opossum {
 class CreateIndex : public AbstractReadWriteOperator {
  public:
   CreateIndex(const std::string& init_index_name,
-              const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids,
               const bool init_if_not_exists,
-              const std::shared_ptr<const AbstractOperator>& input_operator);
+              const std::string& init_table_name,
+              const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
   const std::string index_name;
-  const std::shared_ptr<const std::vector<ColumnID>> column_ids;
   const bool if_not_exists;
+  const std::string table_name;
+  const std::shared_ptr<const std::vector<ColumnID>> column_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -37,6 +38,6 @@ class CreateIndex : public AbstractReadWriteOperator {
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
 
-  void _check_if_index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);
+  bool _index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);
 };
 }  // namespace opossum

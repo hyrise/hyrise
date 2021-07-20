@@ -19,11 +19,11 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
+namespace {
+
+using namespace opossum;                         // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
-namespace opossum {
-
-namespace {
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
     const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
@@ -64,6 +64,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Alias:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
+    case LQPNodeType::CreateIndex:
     case LQPNodeType::DropView:
     case LQPNodeType::DropIndex:
     case LQPNodeType::DropTable:
@@ -179,7 +180,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     // No pruning of the input columns for these nodes as they need them all.
     case LQPNodeType::CreateTable:
-    case LQPNodeType::CreateIndex:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
     case LQPNodeType::Export:
@@ -327,6 +327,13 @@ void prune_projection_node(
 }
 
 }  // namespace
+
+namespace opossum {
+
+std::string ColumnPruningRule::name() const {
+  static const auto name = std::string{"ColumnPruningRule"};
+  return name;
+}
 
 void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
