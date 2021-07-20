@@ -2481,6 +2481,46 @@ TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, CreateTableWithTableKeyConstraints) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
+      "NULL  , PRIMARY KEY ( a_int, a_float ), UNIQUE (a_double))");
+
+  const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
+
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  auto table_key_constraints = std::make_shared<TableKeyConstraints>();
+  std::unordered_set<ColumnID> column_ids {static_table_node->table->column_id_by_name("a_int"), static_table_node->table->column_id_by_name("a_float")};
+  table_key_constraints->push_back(
+      {column_ids, KeyConstraintType::PRIMARY_KEY});
+  table_key_constraints->push_back(
+      {{static_table_node->table->column_id_by_name("a_double")}, KeyConstraintType::UNIQUE});
+  const auto expected_lqp = CreateTableNode::make("a_table", false, table_key_constraints, static_table_node);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateTableWithColumnConstraints) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT UNIQUE, a_double DOUBLE NULL PRIMARY KEY, a_string VARCHAR(10) NOT "
+      "NULL)");
+
+  const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false, KeyConstraintType::UNIQUE},
+                                                         {"a_double", DataType::Double, true, KeyConstraintType::PRIMARY_KEY},
+                                                         {"a_string", DataType::String, false}};
+
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DropTable) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DROP TABLE a_table");
 
