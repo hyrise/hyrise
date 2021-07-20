@@ -49,14 +49,22 @@ std::string CreateIndex::description(DescriptionMode description_mode) const {
 std::shared_ptr<const Table> CreateIndex::_on_execute(std::shared_ptr<TransactionContext> context) {
   auto table_to_be_indexed = Hyrise::get().storage_manager.get_table(table_name);
 
-  // We just want to notify the user, that the index does already exist (if it already exists), and do no more.
-  if(!if_not_exists || !_index_already_exists(index_name, table_to_be_indexed)) {
+  auto index_exists = _index_already_exists(index_name, table_to_be_indexed);
+  if(!index_exists) {
     // group key index only works with a single column
     if(column_ids->size() == 1) {
       table_to_be_indexed->create_index<GroupKeyIndex>(*column_ids, index_name);
     } else {
       table_to_be_indexed->create_index<CompositeGroupKeyIndex>(*column_ids, index_name);
     }
+  }
+
+  if(index_exists && !if_not_exists) {
+    Fail("Index with name '" + index_name + "' already exists, no new index is created");
+  }
+
+  if(index_exists && if_not_exists) {
+    std::cout << "Notice: Index with name '" + index_name + "' already exists, no new index is created.";
   }
 
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
@@ -77,10 +85,7 @@ bool CreateIndex::_index_already_exists(std::string new_index_name, std::shared_
   auto index_statistics = table->indexes_statistics();
 
   for(auto index:index_statistics) {
-    if(index.name == new_index_name) {
-      std::cout << "Notice: Index with name '" + new_index_name + "' already exists, no new index is created.";
-      return true;
-    }
+    if(index.name == new_index_name) return true;
   }
 
   return false;
