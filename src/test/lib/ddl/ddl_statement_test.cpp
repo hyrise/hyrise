@@ -34,6 +34,7 @@ class DDLStatementTest : public BaseTest {
   std::shared_ptr<Table> _table_a;
 
   const std::string _create_index = "CREATE INDEX myindex ON table_a (a)";
+  const std::string _alter_table = "ALTER TABLE table_a DROP COLUMN a";
 };
 
 TEST_F(DDLStatementTest, CreateIndex) {
@@ -50,6 +51,18 @@ TEST_F(DDLStatementTest, CreateIndex) {
 
   EXPECT_TRUE(actual_index.name == "myindex");
   EXPECT_TRUE(actual_index.column_ids == *column_ids);
+}
+
+TEST_F(DDLStatementTest, AlterTableDropColumn) {
+  auto sql_pipeline = SQLPipelineBuilder{_alter_table}.create_pipeline();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+  auto targeted_table = Hyrise::get().storage_manager.get_table("table_a");
+
+  EXPECT_EQ(targeted_table->column_count(), 1u);
+  EXPECT_EQ(targeted_table->column_name(ColumnID{0}), "b");
 }
 
 }
