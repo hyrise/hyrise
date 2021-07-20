@@ -13,6 +13,9 @@ namespace opossum {
 class AbstractSegment;
 class PartialHashIndexTest;
 
+/**
+ * Base class that holds a PartialHashIndexImpl object with the correct unboxed datatype.
+ */
 class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
 
@@ -44,6 +47,10 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual std::set<ChunkID> get_indexed_chunk_ids() const { return std::set<ChunkID>(); }
 };
 
+/* Implementation of a partial hash index, that can index any chunk in a column. You can add and remove chunks to
+ * the index using the add and remove methods. This index can drastically improve the performance of an IndexJoin
+ * operation.
+ */
 template <typename DataType>
 class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   friend PartialHashIndexTest;
