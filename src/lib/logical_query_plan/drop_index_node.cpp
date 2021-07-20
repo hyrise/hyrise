@@ -11,7 +11,7 @@ DropIndexNode::DropIndexNode(const std::string& init_index_name, const bool init
 
 std::string DropIndexNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
-  stream << "[DropIndex] " << (if_exists ? "(if exists)" : "");
+  stream << "[DropIndex] " << (if_exists ? "(if exists) " : "");
   stream << "Name: '" << index_name << "'";
   stream << " On table: '" << table_name << "'";
   return stream.str();
