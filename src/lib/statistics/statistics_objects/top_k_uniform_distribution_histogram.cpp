@@ -79,7 +79,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
 
   // Split values evenly among bins.
   //const auto range_minimum = value_distribution.front().first;
-  const auto range_maximum = value_distribution.back().first;
+  
   const auto non_top_k_count = std::accumulate(
         value_distribution.cbegin(), 
         value_distribution.cend(), 
@@ -87,7 +87,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
   const auto bin_distinct_count = value_distribution.size();
-  const auto count_per_non_top_k_value = non_top_k_count / bin_distinct_count;
+  const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / bin_distinct_count : BinID{0};
 
   auto current_minimum_index = 0u;
   auto current_maximum_index = value_distribution.size() - 1;
@@ -104,7 +104,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       });
 
     // can't build a bin if top_k value bigger than all values (== value_distribution.end()) or if there is no value smaller than top-k
-    if (value_dist_lower_bound == value_distribution.begin() || value_dist_lower_bound == value_distribution.end() || 
+    if (value_dist_lower_bound == value_distribution.end() || value_dist_lower_bound == value_distribution.begin() ||  
       std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index) {
       skip_bin = true;
     } 
@@ -139,6 +139,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   }
       // add last bucket if necessary
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
+    const auto range_maximum = value_distribution.back().first;
     auto current_distinct_values = value_distribution.size() - current_maximum_index;
     auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
     builder.add_bin(value_distribution[current_minimum_index].first, range_maximum, current_bin_height, current_distinct_values);    
