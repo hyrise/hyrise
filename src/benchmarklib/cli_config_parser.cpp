@@ -88,6 +88,11 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
   }
 
+  const auto table_indexes = parse_result["table_indexes"].as<bool>();
+  if (table_indexes) {
+    std::cout << "- Creating table indexes (as defined by the benchmark)" << std::endl;
+  }
+
   // Get all other variables
   const auto chunk_size = parse_result["chunk_size"].as<ChunkOffset>();
   std::cout << "- Chunk size is " << chunk_size << std::endl;
@@ -132,10 +137,10 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, metrics};
+  return BenchmarkConfig{benchmark_mode, chunk_size,       *encoding_config,     indexes,          table_indexes,
+                         max_runs,       timeout_duration, warmup_duration,      output_file_path, enable_scheduler,
+                         cores,          clients,          enable_visualization, verify,           cache_binary_tables,
+                         metrics};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

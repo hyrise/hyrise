@@ -7,6 +7,7 @@
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,8 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
+    case SegmentIndexType::PartialHash:
+      return PartialHashIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::Invalid:
       Fail("SegmentIndexType is invalid.");
   }

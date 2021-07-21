@@ -9,34 +9,36 @@
 #include "all_type_variant.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_verification.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/table.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class OperatorsJoinIndexTest : public BaseTest {
+enum class IndexScope { Table, Chunk };
+
+class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
  public:
-  static void SetUpTestCase() {  // called ONCE before the tests
+  void SetUp() override {
+    const auto index_scope = GetParam();
+
     const auto dummy_table =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
 
     // load and create the indexed tables
-    _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", 2);
-    _table_wrapper_b = load_table_with_index("resources/test_data/tbl/int_float2.tbl", 2);
-    _table_wrapper_c = load_table_with_index("resources/test_data/tbl/int_string.tbl", 4);
-    _table_wrapper_d = load_table_with_index("resources/test_data/tbl/string_int.tbl", 3);
-    _table_wrapper_e = load_table_with_index("resources/test_data/tbl/int_int2.tbl", 4);
-    _table_wrapper_f = load_table_with_index("resources/test_data/tbl/int_int3.tbl", 4);
-    _table_wrapper_g = load_table_with_index("resources/test_data/tbl/int_int4.tbl", 4);
-    _table_wrapper_h = load_table_with_index("resources/test_data/tbl/int_float_null_1.tbl", 20);
+    _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", 2, index_scope);
+    _table_wrapper_b = load_table_with_index("resources/test_data/tbl/int_float2.tbl", 2, index_scope);
+    _table_wrapper_c = load_table_with_index("resources/test_data/tbl/int_string.tbl", 4, index_scope);
+    _table_wrapper_d = load_table_with_index("resources/test_data/tbl/string_int.tbl", 3, index_scope);
+    _table_wrapper_e = load_table_with_index("resources/test_data/tbl/int_int2.tbl", 4, index_scope);
+    _table_wrapper_f = load_table_with_index("resources/test_data/tbl/int_int3.tbl", 4, index_scope);
+    _table_wrapper_g = load_table_with_index("resources/test_data/tbl/int_int4.tbl", 4, index_scope);
+    _table_wrapper_h = load_table_with_index("resources/test_data/tbl/int_float_null_1.tbl", 20, index_scope);
     _table_wrapper_h_no_index =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_1.tbl", 20));
-    _table_wrapper_i = load_table_with_index("resources/test_data/tbl/int_float_null_2.tbl", 20);
+    _table_wrapper_i = load_table_with_index("resources/test_data/tbl/int_float_null_2.tbl", 20, index_scope);
     _table_wrapper_i_no_index =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_2.tbl", 20));
 
@@ -67,18 +69,32 @@ class OperatorsJoinIndexTest : public BaseTest {
   }
 
  protected:
-  static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
+  static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size,
+                                                             const IndexScope index_scope) {
     auto table = load_table(filename, chunk_size);
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
+    if (index_scope == IndexScope::Chunk) {
+      // build chunk-based index for every chunk and column
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
 
-      std::vector<ColumnID> columns{1};
-      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-        columns[0] = column_id;
-        chunk->create_index<GroupKeyIndex>(columns);
+        std::vector<ColumnID> columns{1};
+        for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+          columns[0] = column_id;
+          chunk->create_index<GroupKeyIndex>(columns);
+        }
+      }
+    } else if (index_scope == IndexScope::Table) {
+      // build table-based index over all chunks and columns
+      std::vector<ChunkID> chunk_ids(table->chunk_count());
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        chunk_ids[chunk_id] = chunk_id;
+      }
+      auto column_count = table->get_chunk(ChunkID{0})->column_count();
+      for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+        table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
       }
     }
 
@@ -86,7 +102,7 @@ class OperatorsJoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const std::shared_ptr<AbstractOperator>& left,
+  static void test_join_output(const IndexScope index_scope, const std::shared_ptr<AbstractOperator>& left,
                                const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
@@ -119,8 +135,13 @@ class OperatorsJoinIndexTest : public BaseTest {
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
-      EXPECT_EQ(performance_data.chunks_scanned_with_index,
-                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+      if (index_scope == IndexScope::Table) {
+        // one table index is created over all chunks, so it is only used once
+        EXPECT_EQ(performance_data.chunks_scanned_with_index, 1);
+      } else {
+        EXPECT_EQ(performance_data.chunks_scanned_with_index,
+                  static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+      }
       EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
     } else {
       EXPECT_EQ(performance_data.chunks_scanned_with_index, 0);
@@ -134,7 +155,7 @@ class OperatorsJoinIndexTest : public BaseTest {
       _table_wrapper_h_no_index, _table_wrapper_i_no_index;
 };
 
-TEST_F(OperatorsJoinIndexTest, Supports) {
+TEST_P(OperatorsJoinIndexTest, Supports) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   auto configuration = JoinConfiguration{};
 
@@ -150,7 +171,7 @@ TEST_F(OperatorsJoinIndexTest, Supports) {
   EXPECT_FALSE(join_operator->supports(configuration));
 }
 
-TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
+TEST_P(OperatorsJoinIndexTest, DescriptionAndName) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   const auto secondary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals};
 
@@ -188,7 +209,7 @@ TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
 }
 
-TEST_F(OperatorsJoinIndexTest, DeepCopy) {
+TEST_P(OperatorsJoinIndexTest, DeepCopy) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   const auto secondary_predicates =
       std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
@@ -206,7 +227,7 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
 
-TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
+TEST_P(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   auto performance_data = JoinIndex::PerformanceData{};
 
   performance_data.has_output = true;
@@ -235,17 +256,18 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   }
 }
 
-TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
+TEST_P(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
   // scan that returns all rows
   auto scan_a = create_table_scan(_table_wrapper_h_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
   auto scan_b = create_table_scan(_table_wrapper_i_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
+  test_join_output(GetParam(), scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                   JoinMode::Inner, 1, false);
 }
 
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
+TEST_P(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
   // scan that returns all rows
   auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -260,17 +282,33 @@ TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
 
   // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
   // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
-  test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-                   IndexSide::Left, false);
+  test_join_output(GetParam(), join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
+                   1, true, IndexSide::Left, false);
 }
 
-TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                   1, true);
+  test_join_output(GetParam(), scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                   JoinMode::Right, 1, true);
 }
+
+const std::unordered_map<IndexScope, std::string> index_scope_string{{IndexScope::Chunk, "Chunk"},
+                                                                     {IndexScope::Table, "Table"}};
+
+auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> info) {
+  auto stream = std::stringstream{};
+  stream << index_scope_string.at(info.param);
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(JoinIndex, OperatorsJoinIndexTest, ::testing::Values(IndexScope::Chunk, IndexScope::Table),
+                         join_index_test_formatter);
 
 }  // namespace opossum

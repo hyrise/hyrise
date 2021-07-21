@@ -10,12 +10,13 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree };
+enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree, PartialHash };
 
 class GroupKeyIndex;
 class CompositeGroupKeyIndex;
 class AdaptiveRadixTreeIndex;
 class BTreeIndex;
+class PartialHashIndex;
 
 namespace detail {
 
@@ -23,7 +24,8 @@ constexpr auto segment_index_map =
     hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey),
                    hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey),
                    hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, SegmentIndexType::AdaptiveRadixTree),
-                   hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree));
+                   hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree),
+                   hana::make_pair(hana::type_c<PartialHashIndex>, SegmentIndexType::PartialHash));
 
 }  // namespace detail
 

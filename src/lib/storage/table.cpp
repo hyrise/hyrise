@@ -24,21 +24,24 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc)
+             const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc,
+             pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
-      _append_mutex(std::make_unique<std::mutex>()) {
+      _append_mutex(std::make_unique<std::mutex>()),
+      _table_indexes(table_indexes) {
   DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
   DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables");
   DebugAssert(!target_chunk_size || *target_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
+             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
+             pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
-            use_mvcc) {
+            use_mvcc, table_indexes) {
   _chunks = {chunks.begin(), chunks.end()};
 
   if constexpr (HYRISE_DEBUG) {
@@ -319,7 +322,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+std::vector<IndexStatistics> Table::indexes_statistics() const { return _index_statistics; }
 
 const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 
@@ -393,6 +396,15 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   }
 
   _value_clustered_by = value_clustered_by;
+}
+
+pmr_vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes() const { return _table_indexes; }
+
+std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(const ColumnID column_id) const {
+  auto result = std::vector<std::shared_ptr<AbstractTableIndex>>();
+  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
+               [&](const auto& index) { return index->is_index_for(column_id); });
+  return result;
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {

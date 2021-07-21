@@ -43,6 +43,7 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
   std::chrono::nanoseconds index_duration{};
+  std::chrono::nanoseconds table_index_duration{};
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
