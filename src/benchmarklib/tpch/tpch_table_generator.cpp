@@ -368,6 +368,15 @@ void TPCHTableGenerator::_add_constraints(
   const auto region_pk_constraint =
       TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
   region_table->add_soft_key_constraint(region_pk_constraint);
+
+  const std::unordered_map<std::string, std::string> unique_constraints = {{"region", "r_name"}, {"nation", "n_name"}};
+
+  for (const auto& [table_name, column_name] : unique_constraints) {
+    const auto& table = table_info_by_name.at(table_name).table;
+    const auto unique_constraint =
+        TableKeyConstraint{{table->column_id_by_name(column_name)}, KeyConstraintType::UNIQUE};
+    table->add_soft_key_constraint(unique_constraint);
+  }
 }
 
 }  // namespace opossum

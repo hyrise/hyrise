@@ -314,9 +314,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 }
 
 std::vector<OrderDependency> AbstractLQPNode::order_dependencies() {
-  // forward ODs from left input. Needs specialization for Aggregates, Stored/StaticTableNode, Joins
+  // forward ODs from left input. Needs specialization for Aggregates, Stored/StaticTableNode, Joins, Union
   // make sure that there is one single input
-  Assert(left_input() && !right_input(), "Expect one input for OD forwarding. Please override this function. " + std::string{magic_enum::enum_name(type)});
+  Assert(left_input() && !right_input(), "Expect one input for OD forwarding. Please override this function. " +
+                                             std::string{magic_enum::enum_name(type)});
   if (!_retrieved_ods) {
     _order_dependencies = left_input()->order_dependencies();
     _retrieved_ods = true;

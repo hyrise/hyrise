@@ -16,7 +16,8 @@ class PQPAnalyzer {
 
  private:
   TableColumnID _resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression) const;
-  std::vector<TableColumnID> _find_od_candidate(const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<LQPColumnExpression>& dependent) const;
+  std::vector<TableColumnID> _find_od_candidate(const std::shared_ptr<const AbstractOperator>& op,
+                                                const std::shared_ptr<LQPColumnExpression>& dependent) const;
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
 };
 

@@ -36,6 +36,8 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   // Implementation is limited to SetOperationMode::Positions only. Passes FDs from the left input node.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
+  std::vector<OrderDependency> order_dependencies() override;
+
   const SetOperationMode set_operation_mode;
 
  protected:

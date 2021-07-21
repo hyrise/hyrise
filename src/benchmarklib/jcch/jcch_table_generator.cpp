@@ -88,4 +88,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
   return generated_tables;
 }
 
+void JCCHTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  TPCHTableGenerator::_add_constraints(table_info_by_name);
+}
+
 }  // namespace opossum

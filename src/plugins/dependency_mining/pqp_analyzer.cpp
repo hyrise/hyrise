@@ -1,7 +1,7 @@
 #include "pqp_analyzer.hpp"
 
-#include "expression/lqp_column_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -63,8 +63,9 @@ void PQPAnalyzer::run() {
               determinants.emplace_back(table_column_id);
             }
           }
-          for (auto expression_idx = size_t{num_group_by_columns}; expression_idx < node_expressions.size(); ++expression_idx) {
-            visit_expression(node_expressions[expression_idx], [&](auto& expression){
+          for (auto expression_idx = size_t{num_group_by_columns}; expression_idx < node_expressions.size();
+               ++expression_idx) {
+            visit_expression(node_expressions[expression_idx], [&](auto& expression) {
               if (expression->type == ExpressionType::LQPColumn) {
                 auto table_column_id = _resolve_column_expression(expression);
                 if (table_column_id != INVALID_TABLE_COLUMN_ID) {
@@ -109,7 +110,8 @@ void PQPAnalyzer::run() {
   }
 }
 
-TableColumnID PQPAnalyzer::_resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression) const {
+TableColumnID PQPAnalyzer::_resolve_column_expression(
+    const std::shared_ptr<AbstractExpression>& column_expression) const {
   Assert(column_expression->type == ExpressionType::LQPColumn, "Expected LQPColumnExpression");
   const auto lqp_column_expression = static_pointer_cast<LQPColumnExpression>(column_expression);
   const auto orig_node = lqp_column_expression->original_node.lock();
@@ -125,17 +127,19 @@ TableColumnID PQPAnalyzer::_resolve_column_expression(const std::shared_ptr<Abst
   return TableColumnID{table_name, original_column_id};
 }
 
-
-std::vector<TableColumnID> PQPAnalyzer::_find_od_candidate(const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<LQPColumnExpression>& dependent) const {
+std::vector<TableColumnID> PQPAnalyzer::_find_od_candidate(
+    const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<LQPColumnExpression>& dependent) const {
   std::vector<TableColumnID> candidates;
-  visit_pqp(op, [&](const auto& current_op){
+  visit_pqp(op, [&](const auto& current_op) {
     switch (current_op->type()) {
-      case OperatorType::Validate: return PQPVisitation::VisitInputs;
-      default: return PQPVisitation::DoNotVisitInputs;
+      case OperatorType::Validate:
+        return PQPVisitation::VisitInputs;
+      default:
+        return PQPVisitation::DoNotVisitInputs;
     }
   });
 
   return candidates;
-  }
+}
 
 }  // namespace opossum

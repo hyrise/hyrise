@@ -237,143 +237,175 @@ void recursively_gather_required_expressions(
 // Expect discarded input to be the right one
 // only allow child plans containing one scan, storedtable, validate
 void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
-                              ExpressionUnorderedSet equals_predicate_expressions_left,
-                              ExpressionUnorderedSet equals_predicate_expressions_right) {
-  std::shared_ptr<AbstractLQPNode> scan;
+                              ExpressionUnorderedSet equals_predicate_expressions_used_side,
+                              ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side) {
+  const auto used_input = join->input(used_side);
+  const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
+  const auto unused_input = join->input(unused_side);
+
+  std::vector<std::shared_ptr<PredicateNode>> scans;
   bool abort = false;
 
-  if (join->right_input()->order_dependencies().empty()) {
-    // std::cout << "        no ods" << std::endl;
-    return;
-  }
-
-  // find previous scan
-  visit_lqp(join->right_input(), [&](auto node) {
-    if (node->type != LQPNodeType::Predicate && node->type != LQPNodeType::StoredTable &&
-        node->type != LQPNodeType::Validate) {
-      abort = true;
-      return LQPVisitation::DoNotVisitInputs;
-    }
-
-    if (node->type == LQPNodeType::Predicate) {
-      if (scan) {
-        abort = true;
+  // find candidates for optimization
+  visit_lqp(unused_input, [&](auto node) {
+    switch (node->type) {
+      case LQPNodeType::Validate:
+        return LQPVisitation::VisitInputs;
+      case LQPNodeType::StoredTable:
+      case LQPNodeType::StaticTable:
         return LQPVisitation::DoNotVisitInputs;
+      // multiple scans are ok, just find the one with the correct column later
+      case LQPNodeType::Predicate: {
+        scans.emplace_back(static_pointer_cast<PredicateNode>(node));
       }
-      scan = node;
+        return LQPVisitation::VisitInputs;
+      // more complex stucture beforehand, just as (semi-)joins, would work as well
+      // but they sub-lqps would hardly be optimized
+      default: {
+        abort = true;
+      }
+        return LQPVisitation::DoNotVisitInputs;
     }
-    return LQPVisitation::VisitInputs;
   });
 
-  if (abort || !scan) {
-    // std::cout << "        aborted / no scan" << std::endl;
+  if (abort || scans.empty()) {
     return;
   }
 
-  // if order dependency between join and scan column, rewrite
-  const auto order_dependencies = scan->order_dependencies();
-  const auto join_expression = *(equals_predicate_expressions_right.begin());
+  const auto execute_subplan = [](auto& sub_plan_root, const auto scan_column_id, const auto value_column_id) {
+    sub_plan_root->clear_outputs();
+
+    // we aborted when having multiple inputs
+    visit_lqp(sub_plan_root, [&](const auto& node) {
+      if (node->type == LQPNodeType::StoredTable) {
+        std::vector<ColumnID> pruned_column_ids;
+        const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
+        const auto num_columns = Hyrise::get().storage_manager.get_table(stored_table_node->table_name)->column_count();
+        for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+          if (column_id != scan_column_id && column_id != value_column_id) {
+            pruned_column_ids.emplace_back(column_id);
+          }
+        }
+        stored_table_node->set_pruned_column_ids(pruned_column_ids);
+      }
+      return LQPVisitation::VisitInputs;
+    });
+
+    auto chunk_pruning_rule = ChunkPruningRule{};
+    const auto sub_root = LogicalPlanRootNode::make(std::move(sub_plan_root));
+    chunk_pruning_rule.apply_to_plan(sub_root);
+    auto optimized_sub = sub_root->left_input();
+    sub_root->set_left_input(nullptr);
+
+    const auto sub_root_pqp = LQPTranslator{}.translate_node(optimized_sub);
+    // std::cout << "        execute sub pqp" << std::endl;
+    sub_root_pqp->never_clear_output();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+    sub_root_pqp->set_transaction_context_recursively(transaction_context);
+    const auto tasks = OperatorTask::make_tasks_from_operator(sub_root_pqp);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    return sub_root_pqp->get_output();
+  };
+
+  const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
-  const auto casted_scan = static_pointer_cast<PredicateNode>(scan);
-  const auto scan_predicate = casted_scan->predicate();
-  // AbstractExpression new_scan_predicate;
+  bool executed = false;
 
-  switch (scan_predicate->type) {
-    case ExpressionType::Value: {
-      // TO DO: execute subplan, get result, build new scan with other column in result as predicate
-      // PRUNING --> sonst scan ggf langsamer
-      // --> column only scan + key; chunks: chunk pruning rule
-      // std::cout << "      value expression" << std::endl;
-    } break;
-    case ExpressionType::Predicate: {
-      // TO DO: execute subplan, get result, search min/max, build new scan
-      // PRUNING
-      // std::cout << "      predicate expression" << std::endl;
-      const auto pred_expr = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
-      if (is_between_predicate_condition(pred_expr->predicate_condition)) {
-        // std::cout << "        between predicate expression" << std::endl;
-        bool executed = false;
-        visit_expression(scan_predicate, [&](auto expression) {
-          if (expression->type == ExpressionType::LQPColumn) {
-            Assert(!executed, "Did not expect mutiple scan columns");
-            // std::cout << "        got scan column" << std::endl;
-            //std::cout << "        scanex " << *expression << std::endl;
-            //std::cout << "        joinex " << *join_expression << std::endl;
-            for (const auto& od : order_dependencies) {
-              // skip larger ODs
-              if (od.determinants.size() != 1 || od.dependents.size() != 1) {
-                continue;
-              }
-              //std::cout << "        OD-det " << *od.determinants[0] << std::endl;
-              //std::cout << "        OD-dep " << *od.dependents[0] << std::endl;
-              if (*od.determinants[0] == *expression || *od.dependents[0] == *join_expression) {
-                // std::cout << "        OD matches" << std::endl;
+  for (const auto& scan : scans) {
+    const auto scan_predicate = scan->predicate();
+    const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
 
-                const auto sub = join->right_input();
-                join->set_right_input(nullptr);
-                sub->clear_outputs();
-                auto chunk_pruning_rule = ChunkPruningRule{};
-                const auto sub_root = LogicalPlanRootNode::make(std::move(sub));
-                chunk_pruning_rule.apply_to_plan(sub_root);
-                auto optimized_sub = sub_root->left_input();
-                sub_root->set_left_input(nullptr);
-                const auto sub_root_pqp = LQPTranslator{}.translate_node(optimized_sub);
-                // std::cout << "        execute sub pqp" << std::endl;
-                sub_root_pqp->never_clear_output();
-                const auto transaction_context =
-                    Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
-                sub_root_pqp->set_transaction_context_recursively(transaction_context);
-                const auto tasks = OperatorTask::make_tasks_from_operator(sub_root_pqp);
-                Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-                // std::cout << "        sub pqp output" << std::endl;
-                const auto tab = sub_root_pqp->get_output();
-                // std::cout << "        sub pqp: " << tab->row_count() << " rows" << std::endl;
-
-                const auto target_column_type = tab->column_definitions().at(target_column_id).data_type;
-                resolve_data_type(target_column_type, [&](auto type) {
-                  using ColumnDataType = typename decltype(type)::type;
-                  const auto num_chunks = tab->chunk_count();
-                  ColumnDataType min_val{};
-                  ColumnDataType max_val{};
-                  bool is_init = false;
-                  for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
-                    const auto chunk = tab->get_chunk(chunk_id);
-                    if (!chunk) {
-                      continue;
-                    }
-                    const auto segment = chunk->get_segment(target_column_id);
-                    segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-                      const auto current_value = pos.value();
-                      if (!is_init) {
-                        min_val = current_value;
-                        max_val = current_value;
-                        is_init = true;
-                      } else {
-                        min_val = std::min(min_val, current_value);
-                        max_val = std::max(max_val, current_value);
-                      }
-                    });
-                  }
-                  // std::cout << "        bounds: " << min_val << "    " << max_val << std::endl;
-                  auto scan_column_expression = *(equals_predicate_expressions_left.begin());
-                  auto predicate_node =
-                      PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
-                  lqp_replace_node(join, predicate_node);
-                  // std::cout << "        replaced successfully" << std::endl;
-                  executed = true;
-                  return ExpressionVisitation::VisitArguments;
+    if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
+      visit_expression(scan_predicate, [&](auto expression) {
+        if (expression->type == ExpressionType::LQPColumn) {
+          Assert(!executed, "Did not expect mutiple scan columns");
+          auto ref_expressions = ExpressionUnorderedSet{expression};
+          if (scan->has_matching_unique_constraint(ref_expressions)) {
+            executed = true;
+            const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
+            const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
+            const auto value_column_id = target_column_id < filter_column_id ? ColumnID{0} : ColumnID{1};
+            const auto target_column_type = tab->column_definitions().at(value_column_id).data_type;
+            resolve_data_type(target_column_type, [&](auto type) {
+              using ColumnDataType = typename decltype(type)::type;
+              const auto num_chunks = tab->chunk_count();
+              ColumnDataType val{};
+              bool is_init = false;
+              for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+                const auto chunk = tab->get_chunk(chunk_id);
+                if (!chunk) {
+                  continue;
+                }
+                const auto segment = chunk->get_segment(value_column_id);
+                segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
+                  Assert(!is_init, "did not expect multiple values");
+                  val = pos.value();
+                  is_init = true;
                 });
               }
-            }
-            return ExpressionVisitation::VisitArguments;
+              auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
+              auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
+              lqp_replace_node(join, predicate_node);
+            });
           }
-          return ExpressionVisitation::VisitArguments;
-        });
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+    if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
+      const auto order_dependencies = unused_input->order_dependencies();
+      if (order_dependencies.empty()) {
+        return;
       }
-    } break;
-    default:
-      return;
+      visit_expression(scan_predicate, [&](auto expression) {
+        if (expression->type == ExpressionType::LQPColumn) {
+          Assert(!executed, "Did not expect mutiple scan columns");
+          for (const auto& od : order_dependencies) {
+            // skip larger ODs
+            if (od.determinants.size() != 1 || od.dependents.size() != 1) {
+              continue;
+            }
+            if (*od.determinants[0] == *expression || *od.dependents[0] == *join_expression) {
+              executed = true;
+              const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
+              const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
+              const auto value_column_id = target_column_id < filter_column_id ? ColumnID{0} : ColumnID{1};
+              const auto target_column_type = tab->column_definitions().at(value_column_id).data_type;
+              resolve_data_type(target_column_type, [&](auto type) {
+                using ColumnDataType = typename decltype(type)::type;
+                const auto num_chunks = tab->chunk_count();
+                ColumnDataType min_val{};
+                ColumnDataType max_val{};
+                bool is_init = false;
+                for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+                  const auto chunk = tab->get_chunk(chunk_id);
+                  if (!chunk) {
+                    continue;
+                  }
+                  const auto segment = chunk->get_segment(value_column_id);
+                  segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
+                    const auto current_value = pos.value();
+                    if (!is_init) {
+                      min_val = current_value;
+                      max_val = current_value;
+                      is_init = true;
+                    } else {
+                      min_val = std::min(min_val, current_value);
+                      max_val = std::max(max_val, current_value);
+                    }
+                  });
+                }
+                auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
+                auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                lqp_replace_node(join, predicate_node);
+              });
+            }
+          }
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
   }
 }
 
@@ -433,6 +465,7 @@ void try_join_to_semi_rewrite(
   // Early out, if we did not see any Equals-predicates.
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
+  bool flipped_inputs = false;
   // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
   if (!left_input_is_used &&
       join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
@@ -440,25 +473,28 @@ void try_join_to_semi_rewrite(
     const auto temp = join_node->left_input();
     join_node->set_left_input(join_node->right_input());
     join_node->set_right_input(temp);
+    flipped_inputs = true;
   }
   if (!right_input_is_used &&
       join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
   }
 
+  if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
+    return;
+  }
+
   // try scan rewrite for used input
-  /*if(!right_input_is_used) {
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right);
+  if (!right_input_is_used) {
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
+                             LQPInputSide::Left);
+    return;
   }
 
   if (!left_input_is_used) {
-    if (join->mode == JoinMode::)
-
-  }*/
-
-  // TO DO: input side, check if used
-  if (equals_predicate_expressions_left.size() == 1 && equals_predicate_expressions_right.size() == 1) {
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right);
+    const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
+                             used_input_side);
   }
 }
 

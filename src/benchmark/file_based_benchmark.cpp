@@ -85,6 +85,7 @@ int main(int argc, char* argv[]) {
         {{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
     date_dim_table->add_soft_order_constraint(
         {{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
+    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date")}, KeyConstraintType::UNIQUE});
     std::cout << "added order constraint date_dim: d_date_sk <-> d_date" << std::endl;
   } else {
     std::cout << "NO date_dim found" << std::endl;
