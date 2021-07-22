@@ -538,23 +538,19 @@ set(
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
     storage/vector_compression/compressed_vector_type.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_decompressor.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp
+    storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
-    storage/vector_compression/simd_bp128/oversized_types.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.cpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_iterator.hpp
+    storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.cpp
+    storage/vector_compression/bitpacking/bitpacking_vector_type.hpp
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp
@@ -654,6 +650,7 @@ set(
 
 set(
     LIBRARIES
+    compact_vector
     lz4
     sqlparser
     uninitialized_vector

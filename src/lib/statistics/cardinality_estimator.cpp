@@ -775,59 +775,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 }
 
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(
-    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
-  /**
-   * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
-   * pairs.
-   * Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for each
-   * bin pair.
-   */
-
-  auto left_idx = BinID{0};
-  auto right_idx = BinID{0};
-  auto left_bin_count = left_histogram.bin_count();
-  auto right_bin_count = right_histogram.bin_count();
-
-  GenericHistogramBuilder<T> builder;
-
-  for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto& left_min = left_histogram.bin_minimum(left_idx);
-    const auto& right_min = right_histogram.bin_minimum(right_idx);
-
-    if (left_min < right_min) {
-      ++left_idx;
-      continue;
-    }
-
-    if (right_min < left_min) {
-      ++right_idx;
-      continue;
-    }
-
-    DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
-                "Histogram bin boundaries do not match");
-
-    const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
-    const auto distinct_count =
-        std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
-
-    if (height > 0 && distinct_count > 0) {
-      builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
-    }
-
-    ++left_idx;
-    ++right_idx;
-  }
-
-  if (builder.empty()) {
-    return nullptr;
-  }
-
-  return builder.build();
-}
-
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id, const TableStatistics& left_input_table_statistics,
     const TableStatistics& right_input_table_statistics) {
@@ -1019,62 +966,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
   const auto row_count = Cardinality{left_selectivity * right_selectivity};
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
-}
-
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
-    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
-  /**
-   * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
-   * their bins are split so that their bin boundaries match.
-   * E.g., if left_histogram has a single bin [1, 10] and right histogram has a single bin [5, 20] then
-   * unified_left_histogram == {[1, 4], [5, 10]}
-   * unified_right_histogram == {[5, 10], [11, 20]}
-   * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
-   */
-
-  auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
-  auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
-
-  auto left_idx = BinID{0};
-  auto right_idx = BinID{0};
-  auto left_bin_count = unified_left_histogram->bin_count();
-  auto right_bin_count = unified_right_histogram->bin_count();
-
-  GenericHistogramBuilder<T> builder;
-
-  // Iterate over both unified histograms and find overlapping bins
-  for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto& left_min = unified_left_histogram->bin_minimum(left_idx);
-    const auto& right_min = unified_right_histogram->bin_minimum(right_idx);
-
-    if (left_min < right_min) {
-      ++left_idx;
-      continue;
-    }
-
-    if (right_min < left_min) {
-      ++right_idx;
-      continue;
-    }
-
-    DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
-                "Histogram bin boundaries do not match");
-
-    // Overlapping bins found, estimate the join for these bins' range
-    const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(  // NOLINT
-        unified_left_histogram->bin_height(left_idx), unified_left_histogram->bin_distinct_count(left_idx),
-        unified_right_histogram->bin_height(right_idx), unified_right_histogram->bin_distinct_count(right_idx));
-
-    if (height > 0) {
-      builder.add_bin(left_min, unified_left_histogram->bin_maximum(left_idx), height, distinct_count);
-    }
-
-    ++left_idx;
-    ++right_idx;
-  }
-
-  return builder.build();
 }
 
 std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate_inner_equi_join_of_bins(

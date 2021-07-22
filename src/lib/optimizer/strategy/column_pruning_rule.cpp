@@ -24,11 +24,11 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 
+namespace {
+
+using namespace opossum;                         // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
-namespace opossum {
-
-namespace {
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
     const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
@@ -546,6 +546,13 @@ void prune_projection_node(
 }
 
 }  // namespace
+
+namespace opossum {
+
+std::string ColumnPruningRule::name() const {
+  static const auto name = std::string{"ColumnPruningRule"};
+  return name;
+}
 
 void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its

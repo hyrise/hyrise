@@ -172,6 +172,7 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Carl      Gödecken
 -   Adrian    Holfter
+-   Ben       Hurdelhey
 -   Sven      Ihde
 -   Ivan      Illic
 -   Jonathan  Janetzki
