@@ -301,32 +301,30 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
     sub_root->set_left_input(nullptr);
 
     const auto sub_root_pqp = LQPTranslator{}.translate_node(optimized_sub);
-    // std::cout << "        execute sub pqp" << std::endl;
     sub_root_pqp->never_clear_output();
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
     sub_root_pqp->set_transaction_context_recursively(transaction_context);
-    const auto tasks = OperatorTask::make_tasks_from_operator(sub_root_pqp);
+    const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(sub_root_pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
     return sub_root_pqp->get_output();
   };
 
-  const auto replace_node = [&](auto& original_node, auto& new_node) {
+  const auto replace_node = [&](const auto& original_node, const auto& new_node, const auto& unused_column) {
     original_node->set_left_input(used_input);
     original_node->set_right_input(nullptr);
-    auto new_node_required_expressions = ExpressionUnorderedSet{};
-    for (const auto& output : original_node->outputs()) {
-      for (const auto& required_expression : required_expressions_by_node.at(output)) {
-        new_node_required_expressions.insert(required_expression);
+    lqp_replace_node(original_node, new_node);
+    auto& new_node_required_expressions = required_expressions_by_node[new_node];
+    for (const auto& required_expression : required_expressions_by_node.at(original_node)) {
+      if (required_expression != unused_column) {
+          new_node_required_expressions.emplace(required_expression);
+         required_expressions_by_node[used_input].emplace(required_expression);
       }
     }
-    required_expressions_by_node.emplace(new_node, new_node_required_expressions);
-    lqp_replace_node(original_node, new_node);
   };
 
   const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
-  const auto join_output_expressions = required_expressions_by_node.at(join);
   bool executed = false;
 
   for (const auto& scan : scans) {
@@ -339,7 +337,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
           Assert(!executed, "Did not expect mutiple scan columns");
           auto ref_expressions = ExpressionUnorderedSet{expression};
           if (scan->has_matching_unique_constraint(ref_expressions)) {
-            std::cout << "rewrite Equals " << join->description() << std::endl;
+            // std::cout << "rewrite Equals " << join->description() << " with " << scan_predicate->description() << std::endl;
             executed = true;
             const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
             const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
@@ -362,11 +360,9 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                   is_init = true;
                 });
               }
-              auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
-              std::cout << scan_column_expression->description() << "\t" << val << std::endl;
-              auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
-              replace_node(join, predicate_node);
-              std::cout << "rewritten" << std::endl;
+              const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
+              const auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
+              replace_node(join, predicate_node, join_column_expression);
             });
           }
         }
@@ -387,7 +383,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
               continue;
             }
             if (*od.determinants[0] == *expression || *od.dependents[0] == *join_expression) {
-              std::cout << "rewrite Between " << join->description() << std::endl;
+              //std::cout << "rewrite Between " << join->description() << std::endl;
               executed = true;
               const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
               const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
@@ -417,10 +413,9 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                     }
                   });
                 }
-                auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
-                auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
-                replace_node(join, predicate_node);
-                std::cout << "rewritten" << std::endl;
+                const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
+                const auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                replace_node(join, predicate_node, join_column_expression);
               });
             }
           }
@@ -571,10 +566,16 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> outputs_visited_by_node;
   recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
 
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
   for (const auto& [node, required_expressions] : required_expressions_by_node) {
     DebugAssert(outputs_visited_by_node.at(node) == node->output_count(),
                 "Not all outputs have been visited - is the input LQP corrupt?");
+    // we may visit nodes twice as we need to add rewritten scans to the map
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
     switch (node->type) {
       case LQPNodeType::Mock:
       case LQPNodeType::StoredTable: {
@@ -617,7 +618,6 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         break;  // Node cannot be pruned
     }
   }
-  std::cout << "column pruning ended" << std::endl;
 }
 
 }  // namespace opossum
