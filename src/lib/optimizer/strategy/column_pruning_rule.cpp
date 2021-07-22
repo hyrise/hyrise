@@ -238,7 +238,7 @@ void recursively_gather_required_expressions(
 // only allow child plans containing one scan, storedtable, validate
 void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                               ExpressionUnorderedSet equals_predicate_expressions_used_side,
-                              ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side) {
+                              ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side, std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
@@ -248,6 +248,9 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
 
   // find candidates for optimization
   visit_lqp(unused_input, [&](auto node) {
+    if (abort) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
     switch (node->type) {
       case LQPNodeType::Validate:
         return LQPVisitation::VisitInputs;
@@ -257,14 +260,14 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
       // multiple scans are ok, just find the one with the correct column later
       case LQPNodeType::Predicate: {
         scans.emplace_back(static_pointer_cast<PredicateNode>(node));
-      }
         return LQPVisitation::VisitInputs;
+      }
       // more complex stucture beforehand, just as (semi-)joins, would work as well
       // but they sub-lqps would hardly be optimized
       default: {
         abort = true;
-      }
         return LQPVisitation::DoNotVisitInputs;
+      }
     }
   });
 
@@ -307,9 +310,23 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
     return sub_root_pqp->get_output();
   };
 
+  const auto replace_node = [&](auto& original_node, auto& new_node) {
+    original_node->set_left_input(used_input);
+    original_node->set_right_input(nullptr);
+    auto new_node_required_expressions = ExpressionUnorderedSet{};
+    for (const auto& output : original_node->outputs()) {
+      for (const auto& required_expression : required_expressions_by_node.at(output)) {
+        new_node_required_expressions.insert(required_expression);
+      }
+    }
+    required_expressions_by_node.emplace(new_node, new_node_required_expressions);
+    lqp_replace_node(original_node, new_node);
+  };
+
   const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
+  const auto join_output_expressions = required_expressions_by_node.at(join);
   bool executed = false;
 
   for (const auto& scan : scans) {
@@ -322,6 +339,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
           Assert(!executed, "Did not expect mutiple scan columns");
           auto ref_expressions = ExpressionUnorderedSet{expression};
           if (scan->has_matching_unique_constraint(ref_expressions)) {
+            std::cout << "rewrite Equals " << join->description() << std::endl;
             executed = true;
             const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
             const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
@@ -345,8 +363,10 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                 });
               }
               auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
+              std::cout << scan_column_expression->description() << "\t" << val << std::endl;
               auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
-              lqp_replace_node(join, predicate_node);
+              replace_node(join, predicate_node);
+              std::cout << "rewritten" << std::endl;
             });
           }
         }
@@ -367,6 +387,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
               continue;
             }
             if (*od.determinants[0] == *expression || *od.dependents[0] == *join_expression) {
+              std::cout << "rewrite Between " << join->description() << std::endl;
               executed = true;
               const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
               const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
@@ -398,7 +419,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                 }
                 auto scan_column_expression = *(equals_predicate_expressions_used_side.begin());
                 auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
-                lqp_replace_node(join, predicate_node);
+                replace_node(join, predicate_node);
+                std::cout << "rewritten" << std::endl;
               });
             }
           }
@@ -411,7 +433,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
 
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
-    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
@@ -487,14 +509,14 @@ void try_join_to_semi_rewrite(
   // try scan rewrite for used input
   if (!right_input_is_used) {
     try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
-                             LQPInputSide::Left);
+                             LQPInputSide::Left, required_expressions_by_node);
     return;
   }
 
   if (!left_input_is_used) {
     const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
     try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
-                             used_input_side);
+                             used_input_side, required_expressions_by_node);
   }
 }
 
@@ -588,6 +610,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         break;  // Node cannot be pruned
     }
   }
+  std::cout << "column pruning ended" << std::endl;
 }
 
 }  // namespace opossum
