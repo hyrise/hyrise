@@ -141,139 +141,139 @@ try {
               }
             }
           }
-          // , debugSystemTests: {
-          //   stage("system-tests") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
-          //       sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
-          //       sh "./scripts/test/hyriseConsole_test.py clang-debug"
-          //       sh "./scripts/test/hyriseServer_test.py clang-debug"
-          //       sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
-          //       sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-          //       sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-          //       sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
-          //       sh "./scripts/test/hyriseConsole_test.py gcc-debug"
-          //       sh "./scripts/test/hyriseServer_test.py gcc-debug"
-          //       sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
-          //       sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
-          //       sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-          //       sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+          , debugSystemTests: {
+            stage("system-tests") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
+                sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
+                sh "./scripts/test/hyriseConsole_test.py clang-debug"
+                sh "./scripts/test/hyriseServer_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+                sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+                sh "./scripts/test/hyriseServer_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
 
-          //     } else {
-          //       Utils.markStageSkippedForConditional("debugSystemTests")
-          //     }
-          //   }
-          // }, clangDebugRunShuffled: {
-          //   stage("clang-debug:test-shuffle") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "mkdir ./clang-debug/run-shuffled"
-          //       sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
-          //       sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugRunShuffled")
-          //     }
-          //   }
-          // }, clangDebugUnityODR: {
-          //   stage("clang-debug-unity-odr") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-          //       sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 3))"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugUnityODR")
-          //     }
-          //   }
-          // }, clangDebugTidy: {
-          //   stage("clang-debug:tidy") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-          //       sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 6))"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugTidy")
-          //     }
-          //   }
-          // }, clangDebugDisablePrecompileHeaders: {
-          //   stage("clang-debug:disable-precompile-headers") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-          //       sh "cd clang-debug-disable-precompile-headers && make hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 6))"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
-          //     }
-          //   }
-          // }, clangDebugAddrUBSanitizers: {
-          //   stage("clang-debug:addr-ub-sanitizers") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 6))"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
-          //     }
-          //   }
-          // }, gccRelease: {
-          //   if (env.BRANCH_NAME == 'master' || full_ci) {
-          //     stage("gcc-release") {
-          //       sh "cd gcc-release && make all -j \$(( \$(nproc) / 6))"
-          //       sh "./gcc-release/hyriseTest gcc-release"
-          //       sh "./gcc-release/hyriseSystemTest gcc-release"
-          //       sh "./scripts/test/hyriseConsole_test.py gcc-release"
-          //       sh "./scripts/test/hyriseServer_test.py gcc-release"
-          //       sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
-          //       sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
-          //       sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
-          //       sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-          //     }
-          //   } else {
-          //       Utils.markStageSkippedForConditional("gccRelease")
-          //   }
-          // }, clangReleaseAddrUBSanitizers: {
-          //   stage("clang-release:addr-ub-sanitizers") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 6))"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-          //       sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
-          //       sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
-          //     }
-          //   }
-          // }, clangRelWithDebInfoThreadSanitizer: {
-          //   stage("clang-relwithdebinfo:thread-sanitizer") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 6))"
-          //       sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
-          //       sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-          //       sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
-          //     }
-          //   }
-          // }, clangDebugCoverage: {
-          //   stage("clang-debug-coverage") {
-          //     if (env.BRANCH_NAME == 'master' || full_ci) {
-          //       sh "./scripts/coverage.sh --generate_badge=true"
-          //       sh "find coverage -type d -exec chmod +rx {} \\;"
-          //       archive 'coverage_badge.svg'
-          //       archive 'coverage_percent.txt'
-          //       publishHTML (target: [
-          //         allowMissing: false,
-          //         alwaysLinkToLastBuild: false,
-          //         keepAll: true,
-          //         reportDir: 'coverage',
-          //         reportFiles: 'index.html',
-          //         reportName: "Llvm-cov_Report"
-          //       ])
-          //       script {
-          //         coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-          //         githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
-          //       }
-          //     } else {
-          //       Utils.markStageSkippedForConditional("clangDebugCoverage")
-          //     }
-          //   }
-          // }
+              } else {
+                Utils.markStageSkippedForConditional("debugSystemTests")
+              }
+            }
+          }, clangDebugRunShuffled: {
+            stage("clang-debug:test-shuffle") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir ./clang-debug/run-shuffled"
+                sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+              }
+            }
+          }, clangDebugUnityODR: {
+            stage("clang-debug-unity-odr") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
+                sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 3))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugUnityODR")
+              }
+            }
+          }, clangDebugTidy: {
+            stage("clang-debug:tidy") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
+                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 6))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugTidy")
+              }
+            }
+          }, clangDebugDisablePrecompileHeaders: {
+            stage("clang-debug:disable-precompile-headers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
+                sh "cd clang-debug-disable-precompile-headers && make hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 6))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
+              }
+            }
+          }, clangDebugAddrUBSanitizers: {
+            stage("clang-debug:addr-ub-sanitizers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 6))"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
+              }
+            }
+          }, gccRelease: {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              stage("gcc-release") {
+                sh "cd gcc-release && make all -j \$(( \$(nproc) / 6))"
+                sh "./gcc-release/hyriseTest gcc-release"
+                sh "./gcc-release/hyriseSystemTest gcc-release"
+                sh "./scripts/test/hyriseConsole_test.py gcc-release"
+                sh "./scripts/test/hyriseServer_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+                sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+                sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+              }
+            } else {
+                Utils.markStageSkippedForConditional("gccRelease")
+            }
+          }, clangReleaseAddrUBSanitizers: {
+            stage("clang-release:addr-ub-sanitizers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 6))"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+              } else {
+                Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
+              }
+            }
+          }, clangRelWithDebInfoThreadSanitizer: {
+            stage("clang-relwithdebinfo:thread-sanitizer") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 6))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              } else {
+                Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
+              }
+            }
+          }, clangDebugCoverage: {
+            stage("clang-debug-coverage") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "./scripts/coverage.sh --generate_badge=true"
+                sh "find coverage -type d -exec chmod +rx {} \\;"
+                archive 'coverage_badge.svg'
+                archive 'coverage_percent.txt'
+                publishHTML (target: [
+                  allowMissing: false,
+                  alwaysLinkToLastBuild: false,
+                  keepAll: true,
+                  reportDir: 'coverage',
+                  reportFiles: 'index.html',
+                  reportName: "Llvm-cov_Report"
+                ])
+                script {
+                  coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+                  githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+                }
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugCoverage")
+              }
+            }
+          }
 
           parallel memcheckReleaseTest: {
             stage("memcheckReleaseTest") {
