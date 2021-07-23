@@ -140,8 +140,7 @@ try {
                 Utils.markStageSkippedForConditional("clangRelease")
               }
             }
-          }
-          , debugSystemTests: {
+          }, debugSystemTests: {
             stage("system-tests") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
