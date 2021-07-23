@@ -337,7 +337,7 @@ try {
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   parallel clangDebugMacX64: {
     node('mac') {
-      stage("clang-debug-mac-x64") {
+      stage("clangDebugMacX64") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
@@ -356,14 +356,14 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-debug-mac-x64")
+          Utils.markStageSkippedForConditional("clangDebugMacX64")
         }
       }
     }
   }, clangReleaseMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
-      stage("clang-release-mac-arm") {
+      stage("clangReleaseMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm          
@@ -388,7 +388,7 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-release-mac-arm")
+          Utils.markStageSkippedForConditional("clangReleaseMacArm")
         }
       }
     }
