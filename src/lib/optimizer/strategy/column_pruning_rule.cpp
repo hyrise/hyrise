@@ -317,7 +317,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
     for (const auto& required_expression : required_expressions_by_node.at(original_node)) {
       if (required_expression != unused_column) {
           new_node_required_expressions.emplace(required_expression);
-         required_expressions_by_node[used_input].emplace(required_expression);
+         //required_expressions_by_node[used_input].emplace(required_expression);
       }
     }
   };
@@ -566,16 +566,19 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> outputs_visited_by_node;
   recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
 
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  // We need to add rewritten scans to the required expressions map to enable rewrites of possible input joins.
+  // Thus, we cannot iterate over the map while manipulating it.
+  std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_visit;
+  nodes_to_visit.reserve(required_expressions_by_node.size());
+  for (const auto& [node, _] : required_expressions_by_node) {
+    nodes_to_visit.emplace_back(node);
+  }
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
-  for (const auto& [node, required_expressions] : required_expressions_by_node) {
+  for (const auto& node : nodes_to_visit) {
     DebugAssert(outputs_visited_by_node.at(node) == node->output_count(),
                 "Not all outputs have been visited - is the input LQP corrupt?");
-    // we may visit nodes twice as we need to add rewritten scans to the map
-    if (!visited_nodes.emplace(node).second) {
-      continue;
-    }
+    const auto& required_expressions = required_expressions_by_node.at(node);
     switch (node->type) {
       case LQPNodeType::Mock:
       case LQPNodeType::StoredTable: {
