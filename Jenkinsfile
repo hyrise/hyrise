@@ -315,6 +315,16 @@ try {
                 Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
               }
             }
+          }, jobQueryPlans: {
+            stage("jobQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/job; cd query_plans/job && ln -s ../../resources; ../../clang-release/hyriseBenchmarkJoinOrder -r 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/job/*.svg'
+                archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("jobQueryPlans")
+              }
+            }
           }
         } finally {
           sh "ls -A1 | xargs rm -rf"
