@@ -172,6 +172,8 @@ set(
     memory/dram_memory_resource.hpp
     memory/nvm_memory_resource.cpp
     memory/nvm_memory_resource.hpp
+    memory/umap_memory_resource.cpp
+    memory/umap_memory_resource.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
