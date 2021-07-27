@@ -1,10 +1,9 @@
 #include "table_statistics.hpp"
 
-#include <numeric>
 #include <iostream>
+#include <numeric>
 #include <thread>
 
-#include "attribute_statistics.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
@@ -12,9 +11,32 @@
 
 namespace opossum {
 
+template<typename ColumnDataType>
+void TableStatistics::_add_statistics_from_histogram(
+  const std::shared_ptr<AttributeStatistics<ColumnDataType>> attribute_statistics,
+  const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram,
+  const Table &table) {
+  if (histogram) {
+    attribute_statistics->set_statistics_object(histogram);
+
+    // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
+    // property
+    const auto null_value_ratio =
+        table.row_count() == 0
+            ? 0.0f
+            : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
+    attribute_statistics->set_statistics_object(
+        std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+  } else {
+    // Failure to generate a histogram currently only stems from all-null segments.
+    // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+    attribute_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+  }
+}
+
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
-  std::vector<std::shared_ptr<BaseAttributeStatistics>> new_column_statistics(table.column_count());
+  // std::vector<std::shared_ptr<BaseAttributeStatistics>> new_column_statistics(table.column_count());
   std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics(table.column_count());
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -44,95 +66,35 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
           const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
-          const auto histogram =
-              EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
+          // Use some magic oracle to find out if we want to merge or use the full histogram.
 
-          if (histogram) {
-            output_column_statistics->set_statistics_object(histogram);
+          const auto chunk_count = table.chunk_count();
 
-            // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-            // property
-            const auto null_value_ratio =
-                table.row_count() == 0
-                    ? 0.0f
-                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
-            output_column_statistics->set_statistics_object(
-                std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+          const auto the_god_says_yes = (chunk_count > 1) && column_data_type != DataType::String;  // Because it likes spaghetti (- code)
+          std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram = nullptr;
+          if (the_god_says_yes) {
+            // Generate the small histograms. Yes, it's almost as slow as generating the full histogram, but god told us to do so.
+            // Per Segment statistics will be twice as detailed.
+            
+            std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>> histograms;
+            histograms.reserve(chunk_count);
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+              const auto output_chunk_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+              const auto segment_histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(
+                  table, my_column_id, chunk_id, histogram_bin_count * 2);
+              _add_statistics_from_histogram(output_chunk_column_statistics, segment_histogram, table);
+              segment_statistics[my_column_id].push_back(output_chunk_column_statistics);
+              histograms.push_back(segment_histogram); 
+            }
+            histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
           } else {
-            // Failure to generate a histogram currently only stems from all-null segments.
-            // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-            output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+            histogram =
+                EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
           }
+
+          _add_statistics_from_histogram(output_column_statistics, histogram, table);
 
           column_statistics[my_column_id] = output_column_statistics;
-
-          // For now, also create the per segment statistics here. A bit redundant...
-          // Per Segment statistics will be twice as detailed.
-          // std::cout << "Start chunk based histograms for column" << std::endl;
-          const auto chunk_count = table.chunk_count();
-          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-            const auto output_chunk_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-            const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(
-                table, my_column_id, chunk_id, histogram_bin_count * 2);
-            if (histogram) {
-              output_chunk_column_statistics->set_statistics_object(histogram);
-
-              // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-              // property
-              const auto null_value_ratio =
-                  table.row_count() == 0
-                      ? 0.0f
-                      : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
-              output_chunk_column_statistics->set_statistics_object(
-                  std::make_shared<NullValueRatioStatistics>(null_value_ratio));
-            } else {
-              // Failure to generate a histogram currently only stems from all-null segments.
-              // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-              output_chunk_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
-            }
-            segment_statistics[my_column_id].push_back(output_chunk_column_statistics);
-          }
-          if (column_data_type != DataType::String) {
-            // std::cout << column_data_type << " in column " << my_column_id<< std::endl;
-
-            // std::cout << "Merging chunk based histograms for column, chunk count = " << chunk_count << ", " << my_column_id << std::endl;
-            //Merge small histograms
-            // std::vector<std::shared_ptr<AbstractTask>> jobs;
-            // jobs.reserve(static_cast<size_t>(num_chunks));
-            // jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {}));
-            // jobs.back()->schedule();
-            // Hyrise::get().scheduler()->wait_for_tasks(jobs);
-            auto histograms = std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>>(chunk_count);
-            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-              if (!std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id])) continue;
-              const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id]);
-              const auto histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
-              histograms[chunk_id] = histogram;
-            }
-            const auto merged_histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
-            const auto new_output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-            if (merged_histogram) {
-              new_output_column_statistics->set_statistics_object(merged_histogram);
-
-              // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-              // property
-              const auto null_value_ratio =
-                  table.row_count() == 0
-                      ? 0.0f
-                      : 1.0f - (static_cast<float>(merged_histogram->total_count()) / static_cast<float>(table.row_count()));
-              new_output_column_statistics->set_statistics_object(
-                  std::make_shared<NullValueRatioStatistics>(null_value_ratio));
-            } else {
-              // Failure to generate a histogram currently only stems from all-null segments.
-              // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-              new_output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
-            }
-            new_column_statistics[my_column_id] = new_output_column_statistics;
-          }
-          else {
-            new_column_statistics[my_column_id] = column_statistics[my_column_id];
-          }
-          // std::cout << "Finished chunk based histograms for column" << my_column_id << std::endl;
         });
       }
     });
@@ -142,7 +104,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     thread.join();
   }
 
-  return std::make_shared<TableStatistics>(std::move(new_column_statistics), std::move(column_statistics), std::move(segment_statistics),
+  return std::make_shared<TableStatistics>(std::move(column_statistics), std::move(segment_statistics),
                                            table.row_count());
 }
 
@@ -152,11 +114,9 @@ TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatis
 
 TableStatistics::TableStatistics(
     std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
-    std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_previous_statistics,
     std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>>&& init_segment_statistics,
     const Cardinality init_row_count)
     : column_statistics(std::move(init_column_statistics)),
-      previous_column_statistics(std::move(init_previous_statistics)),
       segment_statistics(std::move(init_segment_statistics)),
       row_count(init_row_count) {}
 

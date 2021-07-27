@@ -393,13 +393,20 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::merge(
-    const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
+    const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& input_histograms,
     const BinID max_bin_count) {
   // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   // if constexpr (std::is_same_v<T, pmr_string>) {
   //   Fail("Cannot split_at_bin_bounds() on string histogram");
   // }
+  auto histograms = input_histograms;
+  std::erase_if(histograms, [](std::shared_ptr<EqualDistinctCountHistogram<T>> histogram) {return !histogram || histogram->bin_count() == 0;});
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero");
+  if (histograms.size() == 0) {
+    return nullptr;
+  }
+  const auto domain = histograms[0]->domain();
+
   std::chrono::steady_clock::time_point begin;
   std::chrono::steady_clock::time_point end;
   TIMEIT(
@@ -427,6 +434,9 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   for (auto s = 0u; s < split_interval_count; s++) {
     const auto interval_start = splitted_bounds_minima[s];
     const auto interval_end = splitted_bounds_maxima[s];
+
+    const auto domain_value_step_size = domain.next_value_clamped(interval_start) - interval_start;
+    const auto interval_max_distinct_count = static_cast<HistogramCountType>(((interval_end - interval_start) / domain_value_step_size) + 1);
     auto combined_cardinality = HistogramCountType{0.0};
     auto combined_distinct_count = HistogramCountType{0.0};
     auto total_exclusive_cardinality = HistogramCountType{0.0};
@@ -447,17 +457,15 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
         combined_distinct_count += distinct_count;
       }
     }
+
     if (((total_exclusive_cardinality == 0.0) && (kept_previous_split_bin) && (interval_start != interval_end)) || combined_distinct_count == 0.0) {
       kept_previous_split_bin = false;
       // std::cout << "Deleting interval" << interval_start << ", " << interval_end << std::endl;
       continue;
     }
-    bin_minima.push_back(interval_start);
-    bin_maxima.push_back(interval_end);
-    kept_previous_split_bin = true;
 
-    if (typeid(T) != typeid(float) && combined_distinct_count > (interval_end - interval_start + 1)) {
-      combined_distinct_count = interval_end - interval_start + 1;
+  	if (combined_distinct_count > interval_max_distinct_count) {
+      combined_distinct_count = interval_max_distinct_count;
     }
 
     if (combined_distinct_count < 1.0 || interval_start == interval_end) {
@@ -466,8 +474,11 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       combined_distinct_count = 1.0;
     }
 
+    bin_minima.push_back(interval_start);
+    bin_maxima.push_back(interval_end);
     distinct_counts.push_back(combined_distinct_count);
     bin_heights.push_back(combined_cardinality);
+    kept_previous_split_bin = true;
   }
   , "\testimating_interval_counts");
   const auto total_distinct_count = HistogramCountType{std::accumulate(distinct_counts.begin(), distinct_counts.end(), HistogramCountType{0.0})};
@@ -479,7 +490,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   // number of bins that will get an extra distinct value to avoid smaller last bin
   const auto bin_count_with_extra_value =
       BinID{static_cast<int>(std::round(total_distinct_count)) - distinct_count_per_bin_target * bin_count};
-  const auto domain = histograms[0]->domain();
 
   // showln(distinct_count_per_bin_target);
   // showln(bin_count);
