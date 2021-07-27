@@ -290,7 +290,7 @@ try {
           }, tpchVerification: {
             stage("tpchVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./clang-release/hyriseBenchmarkTPCH -r 1 -s 1 --verify"
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
               } else {
                 Utils.markStageSkippedForConditional("tpchVerification")
               }
@@ -298,7 +298,7 @@ try {
           }, tpchQueryPlans: {
             stage("tpchQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
               } else {
