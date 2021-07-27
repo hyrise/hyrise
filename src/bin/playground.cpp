@@ -52,6 +52,8 @@ std::string indented_string(int n, std::string message) {
 
 
 void job(int argc, char** argv) {
+  std::chrono::steady_clock::time_point begin;
+  std::chrono::steady_clock::time_point end;
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
 
   const auto DEFAULT_TABLE_PATH = "imdb_data";
@@ -95,14 +97,96 @@ void job(int argc, char** argv) {
     const auto table = table_info_by_name.at(e.first).table;
     const auto table_chunk_count = table->chunk_count();
     const auto table_row_count = table->row_count();
+    const auto table_name = e.first;
+
+    println();println(); println("##########################"); showln(table_name);
+
+    std::ofstream output_file;
+    output_file.open ("../outputs/measurements_JOB_"+std::string(table_name) + ".txt");
+    output_file << "column_name,column_id,column_type,time_per_segment_histograms,time_merging_histograms_hlls,time_merging_histograms_without_hlls,time_full_histogram,error_full,error_merged_hll,error_merged_without_hll,full_hist_q,merged_hist_q,merged_hist_without_hlls_q" << std::endl;
+    const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table_row_count / 2'000));
     showln(table_row_count);
     showln(table_chunk_count);
+    showln(histogram_bin_count);
+    auto column = ColumnID{0};
+    for (auto column_type : table_info_by_name.at(table_name).table->column_data_types()) {
+      if (column_type == DataType::String) {column++; continue;};
+      println();
+      showln(column); showln(column_type);
+      output_file << table->column_name(column)<< ","<< column << "," << column_type <<",";
+      resolve_data_type(column_type, [&](auto type) {
+        using ColumnType = typename decltype(type)::type;
+
+        auto histograms = std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnType>>>();
+
+        TIMEIT(
+          for(auto i = ChunkID{0}; i < table_chunk_count; i++) {
+            auto hist = EqualDistinctCountHistogram<ColumnType>::from_segment(*table, column, ChunkID{i}, 2*histogram_bin_count);
+            histograms.push_back(hist);
+          }
+        , "creating_per_segment_histograms");
+        output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
+        TIMEIT(
+          const auto merged_hist = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
+        , "merge_all_histograms_with_hlls");
+        output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
+        TIMEIT(
+          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count, false);
+        , "merge_all_histograms_without_hlls");
+        output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
+        TIMEIT(
+          const auto full_hist = EqualDistinctCountHistogram<ColumnType>::from_column(*table, column, histogram_bin_count);
+        , "creating_the_full_histogram");
+        output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
+
+        auto map = std::unordered_map<ColumnType, int>();
+        for (ChunkID i = ChunkID{0}; i < table_chunk_count; i++) {
+          const auto& chunk = table->get_chunk(i);
+          for (const auto& value : std::dynamic_pointer_cast<ValueSegment<ColumnType>>(chunk->get_segment(column))->values()) {
+            map[value]++;
+          }
+        }
+
+        auto full_hist_error = 0.0;
+        auto merged_hist_error = 0.0;
+        auto merged_hist_wo_hlls_error = 0.0;
+        auto full_hist_q = 1.0;
+        auto merged_hist_q = 1.0;
+        auto merged_hist_wo_hlls_q = 1.0;
+        for (auto entry : map) {
+          auto value = entry.first;
+          auto count = entry.second;
+          auto estimate = full_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
+          full_hist_error += std::abs(estimate - count);
+          auto merged_wo_hlls_estimate = merged_hist_wo_hlls->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
+          merged_hist_wo_hlls_error += std::abs(merged_wo_hlls_estimate - count);
+          auto merged_estimate = merged_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
+          merged_hist_error += std::abs(merged_estimate - count);
+          full_hist_q = std::max((double)full_hist_q, std::max((double)estimate/count, (double)count/estimate));
+          merged_hist_q = std::max((double)merged_hist_q, std::max((double)merged_estimate/count, (double)merged_estimate/estimate));
+          merged_hist_wo_hlls_q = std::max((double)merged_hist_wo_hlls_q, std::max((double)merged_wo_hlls_estimate/count, (double)merged_wo_hlls_estimate/estimate));
+
+        }
+        output_file << full_hist_error / map.size() << "," << merged_hist_error / map.size() << "," << merged_hist_wo_hlls_error / map.size() << ",";
+        output_file << full_hist_q << "," << merged_hist_q << "," << merged_hist_wo_hlls_q << std::endl;
+        show(full_hist_error);
+        show(merged_hist_error);
+        show(merged_hist_wo_hlls_error);
+        show(full_hist->bin_count());
+
+      });
+      column++;
+    }
+    output_file.close();
   }
 }
 
 int main(int argc, char** argv) {
-  // job(argc, argv);
-  // return 0;
+  
+  std::chrono::steady_clock::time_point begin;
+  std::chrono::steady_clock::time_point end;
+  job(argc, argv);
+  return 0;
   // const auto chunk_size = 1000;
   const auto dir_001 = std::string{"resources/test_data/tbl/tpch/sf-0.02/"};
 
@@ -153,9 +237,7 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   //return 0;
 
-  std::chrono::steady_clock::time_point begin;
-  std::chrono::steady_clock::time_point end;
-  for (auto table_name : {"partsupp", "orders", "part", "supplier", "customer", "nation", "region"}) {
+  for (auto table_name : {"lineitem","partsupp", "orders", "part", "supplier", "customer", "nation", "region"}) {
     auto column = ColumnID{0};
     println();println(); println("##########################"); showln(table_name);
 

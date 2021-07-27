@@ -15,6 +15,7 @@ class EqualDistinctCountHistogramTest : public BaseTest {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _int_float4_multichunk = load_table("resources/test_data/tbl/int_float4.tbl", 5);
     _int_float_multichunk_large = load_table("resources/test_data/tbl/int_float_merging_hist.tbl", 6);
+    _int_float_multichunk_large_small_chunks = load_table("resources/test_data/tbl/int_float_merging_hist.tbl", 4);
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
     _string2 = load_table("resources/test_data/tbl/string2.tbl");
   }
@@ -23,6 +24,7 @@ class EqualDistinctCountHistogramTest : public BaseTest {
   std::shared_ptr<Table> _int_float4;
   std::shared_ptr<Table> _int_float4_multichunk;
   std::shared_ptr<Table> _int_float_multichunk_large;
+  std::shared_ptr<Table> _int_float_multichunk_large_small_chunks;
   std::shared_ptr<Table> _float2;
   std::shared_ptr<Table> _string2;
 };
@@ -139,7 +141,7 @@ TEST_F(EqualDistinctCountHistogramTest, IntHistogramMerging) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, FloatSingleBinHistogramMerging) {
-  using HistogramDataType = int32_t;
+  using HistogramDataType = float;
   using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
   using HistogramPtrType = std::shared_ptr<EqualDistinctCountHistogram<HistogramDataType>>;
   const auto max_bin_count = 3u;
@@ -149,20 +151,62 @@ TEST_F(EqualDistinctCountHistogramTest, FloatSingleBinHistogramMerging) {
   auto histograms = std::vector<HistogramPtrType>();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
     const auto hist = HistogramType::from_segment(*table, column, chunk_id, max_bin_count);
-    std::cout << "Histogram " << chunk_id  << "= {";
-    for(auto bin = BinID{0}; bin < hist->bin_count(); bin++) {
-      std::cout << hist->bin(bin) << ", ";
-    }
-    std::cout << "}" << std::endl;
     histograms.push_back(hist);
   }
 
   const auto merged_hist = HistogramType::merge(histograms, max_bin_count, false);
   
   ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
-  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(0.1, 0.1, 6, 1));
-  EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<HistogramDataType>(0.2, 0.2, 6, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(1, 1, 6, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<HistogramDataType>(2, 2, 4, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{2}), HistogramBin<HistogramDataType>(3, 3, 2, 1));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, IntSingleBinHistogramMerging) {
+  using HistogramDataType = int32_t;
+  using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
+  using HistogramPtrType = std::shared_ptr<EqualDistinctCountHistogram<HistogramDataType>>;
+  const auto max_bin_count = 5u;
+  const auto column = ColumnID{3};
+  const auto table = _int_float_multichunk_large_small_chunks;
+  const auto chunk_count = table->chunk_count();
+  auto histograms = std::vector<HistogramPtrType>();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+    const auto hist = HistogramType::from_segment(*table, column, chunk_id, max_bin_count);
+    histograms.push_back(hist);
+  }
+
+  const auto merged_hist = HistogramType::merge(histograms, max_bin_count, false);
   
+  ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
+  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(1, 1, 3, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{1}), HistogramBin<HistogramDataType>(40, 40, 2, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{2}), HistogramBin<HistogramDataType>(41, 41, 2, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{3}), HistogramBin<HistogramDataType>(42, 42, 2, 1));
+  EXPECT_EQ(merged_hist->bin(BinID{4}), HistogramBin<HistogramDataType>(100, 100, 3, 1));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, HLLHistogramMerging) {
+  using HistogramDataType = int32_t;
+  using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
+  using HistogramPtrType = std::shared_ptr<EqualDistinctCountHistogram<HistogramDataType>>;
+  const auto max_bin_count = 1u;
+  const auto column = ColumnID{3};
+  const auto table = _int_float_multichunk_large_small_chunks;
+  const auto chunk_count = table->chunk_count();
+  auto histograms = std::vector<HistogramPtrType>();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+    const auto hist = HistogramType::from_segment(*table, column, chunk_id, max_bin_count);
+    histograms.push_back(hist);
+  }
+
+  const auto merged_hist = HistogramType::merge(histograms, max_bin_count, true);
+  
+  ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
+  EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(1, 100, 12, 3));
+
+  const auto merged_hist_without_hlls = HistogramType::merge(histograms, max_bin_count, false);
+  EXPECT_EQ(merged_hist_without_hlls->bin(BinID{0}), HistogramBin<HistogramDataType>(1, 100, 12, 12));
 }
 
 // TEST_F(EqualDistinctCountHistogramTest, FloatHistogramMerging) {
