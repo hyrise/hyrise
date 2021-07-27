@@ -102,13 +102,14 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             // jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {}));
             // jobs.back()->schedule();
             // Hyrise::get().scheduler()->wait_for_tasks(jobs);
-            std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> merged_histogram = nullptr;
+            auto histograms = std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>>(chunk_count);
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               if (!std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id])) continue;
               const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(segment_statistics[my_column_id][chunk_id]);
               const auto histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
-              merged_histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(merged_histogram, histogram, histogram_bin_count);
+              histograms[chunk_id] = histogram;
             }
+            const auto merged_histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
             const auto new_output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
             if (merged_histogram) {
               new_output_column_statistics->set_statistics_object(merged_histogram);

@@ -22,9 +22,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
-
-//TODO remove again.
-#include <iostream>
 namespace opossum {
 
 template <typename T>

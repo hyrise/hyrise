@@ -131,7 +131,7 @@ void job(int argc, char** argv) {
         , "merge_all_histograms_with_hlls");
         output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
         TIMEIT(
-          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count, false);
+          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
         , "merge_all_histograms_without_hlls");
         output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
         TIMEIT(
@@ -185,8 +185,8 @@ int main(int argc, char** argv) {
   
   std::chrono::steady_clock::time_point begin;
   std::chrono::steady_clock::time_point end;
-  job(argc, argv);
-  return 0;
+  // job(argc, argv);
+  // return 0;
   // const auto chunk_size = 1000;
   const auto dir_001 = std::string{"resources/test_data/tbl/tpch/sf-0.02/"};
 
@@ -270,12 +270,12 @@ int main(int argc, char** argv) {
           }
         , "creating_per_segment_histograms");
         output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
+        // TIMEIT(
+        //   const auto merged_hist = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
+        // , "merge_all_histograms_with_hlls");
+        // output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
         TIMEIT(
-          const auto merged_hist = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
-        , "merge_all_histograms_with_hlls");
-        output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
-        TIMEIT(
-          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count, false);
+          const auto merged_hist_wo_hlls = EqualDistinctCountHistogram<ColumnType>::merge(histograms, histogram_bin_count);
         , "merge_all_histograms_without_hlls");
         output_file << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << ",";
         TIMEIT(
@@ -317,21 +317,21 @@ int main(int argc, char** argv) {
           full_hist_error += std::abs(estimate - count);
           auto merged_wo_hlls_estimate = merged_hist_wo_hlls->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
           merged_hist_wo_hlls_error += std::abs(merged_wo_hlls_estimate - count);
-          auto merged_estimate = merged_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
-          merged_hist_error += std::abs(merged_estimate - count);
+          // auto merged_estimate = merged_hist->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
+          // merged_hist_error += std::abs(merged_estimate - count);
           // auto merged_row_estimate = row_merged_histogram->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
           // merged_row_error += std::abs(merged_row_estimate - count);
           // auto merged_pyramid_estimate = merged_hist_pyramid->estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, value, value).first;
           // merged_pyramid_error += std::abs(merged_pyramid_estimate - count);
           full_hist_q = std::max((double)full_hist_q, std::max((double)estimate/count, (double)count/estimate));
-          merged_hist_q = std::max((double)merged_hist_q, std::max((double)merged_estimate/count, (double)merged_estimate/estimate));
+          // merged_hist_q = std::max((double)merged_hist_q, std::max((double)merged_estimate/count, (double)merged_estimate/estimate));
           merged_hist_wo_hlls_q = std::max((double)merged_hist_wo_hlls_q, std::max((double)merged_wo_hlls_estimate/count, (double)merged_wo_hlls_estimate/estimate));
 
         }
         output_file << full_hist_error / map.size() << "," << merged_hist_error / map.size() << "," << merged_hist_wo_hlls_error / map.size() << ",";
         output_file << full_hist_q << "," << merged_hist_q << "," << merged_hist_wo_hlls_q << std::endl;
         show(full_hist_error);
-        show(merged_hist_error);
+        // show(merged_hist_error);
         show(merged_hist_wo_hlls_error);
         // show(merged_row_error);
         // show(merged_pyramid_error);

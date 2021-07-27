@@ -9,12 +9,18 @@
 
 #include "abstract_histogram.hpp"
 #include "types.hpp"
-#include "utils/hyperloglog.hpp"
-#include "utils/murmur_hash2.h"
 
 namespace opossum {
 
 class Table;
+
+/**
+ * Distinct-balanced histogram.
+ * The first `bin_count_with_extra_value` contain each contain `distinct_count_per_bin + 1` distinct values,
+ * all other bins contain `distinct_count_per_bin` distinct values.
+ * There might be gaps between bins.
+ */
+
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
@@ -23,24 +29,12 @@ class Table;
 template <typename T>
 using ValueDistributionMap =
     tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+                  std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
-/**
- * Distinct-balanced histogram.
- * The first `bin_count_with_extra_value` contain each contain `distinct_count_per_bin + 1` distinct values,
- * all other bins contain `distinct_count_per_bin` distinct values.
- * There might be gaps between bins.
- */
 template <typename T>
 class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-
-  EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                              std::vector<HistogramCountType>&& bin_heights,
-                              std::vector<HyperLogLog>&& bin_hlls,
-                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
-                              const HistogramDomain<T>& domain = {});
 
   EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
@@ -65,12 +59,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                       const ChunkID chunk_id, const BinID max_bin_count,
                                                                       const HistogramDomain<T>& domain = {});
 
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_1,
-                                                               std::shared_ptr<EqualDistinctCountHistogram<T>> histogram_2,
-                                                               BinID bin_count_target);
-
   static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
-                                                               BinID bin_count_target, bool use_hlls = true);
+                                                               BinID bin_count_target);
 
     std::string name() const override;
     std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -103,10 +93,6 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
     static std::pair<std::vector<T>, std::vector<T>> _merge_splitted_bounds(
         const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
-    
-    static HistogramCountType _estimate_interval_overlap_with_hlls(
-      const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& involved_histograms,
-      const T interval_start, const T interval_end);
 
     // template<typename IteratorT, typename IteratorHistogramCountType>
     static std::tuple<T, T, HistogramCountType> _create_one_bin(
@@ -141,9 +127,6 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
     // Number of values on a per-bin basis.
     std::vector<HistogramCountType> _bin_heights;
-
-    // HyperLogLog data structures on a per-bin basis.
-    std::vector<HyperLogLog> _bin_hlls;
 
     // Number of distinct values per bin.
     HistogramCountType _distinct_count_per_bin;
