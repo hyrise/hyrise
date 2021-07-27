@@ -168,6 +168,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   const auto [query_pair, encoding_type] = GetParam();
   const auto& [line, sql] = query_pair;
+  
   SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
                encoding_type_to_string.left.at(encoding_type));
 
