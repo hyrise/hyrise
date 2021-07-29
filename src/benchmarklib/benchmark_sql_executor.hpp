@@ -44,6 +44,7 @@ class BenchmarkSQLExecutor {
   void _verify_with_sqlite(SQLPipeline& pipeline);
   void _print_debug_estimation_results(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline);
+  void _write_cardinalities(SQLPipeline& pipeline);
 
   std::optional<SQLiteWrapper::Connection> _sqlite_connection;
   bool _sqlite_transaction_open{false};

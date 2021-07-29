@@ -631,6 +631,8 @@ set(
     utils/timer.hpp
     utils/tracing/probes.hpp
     visualization/abstract_visualizer.hpp
+    visualization/cardinality_writer.cpp
+    visualization/cardinality_writer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
     visualization/lqp_visualizer.cpp

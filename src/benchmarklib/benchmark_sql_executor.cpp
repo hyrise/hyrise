@@ -5,6 +5,7 @@
 #include "utils/timer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
+#include "visualization/cardinality_writer.hpp"
 
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
@@ -45,7 +46,8 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   }
 
   // Print cardinality estimations from lqp and actual cardinalities from pqp to csv for debugging purposes
-  _print_debug_estimation_results(pipeline);
+  //_print_debug_estimation_results(pipeline);
+  _write_cardinalities(pipeline);
 
   return {pipeline_status, result_table};
 }
@@ -197,6 +199,13 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
   ++_num_visualized_plans;
+}
+
+void BenchmarkSQLExecutor::_write_cardinalities(SQLPipeline& pipeline) {
+  const auto& lqps = pipeline.get_optimized_logical_plans();
+  const auto& pqps = pipeline.get_physical_plans();
+  auto prefix = *_visualize_prefix;
+  CardinalityWriter{}.write_cardinalities(lqps, pqps, prefix);
 }
 
 }  // namespace opossum
