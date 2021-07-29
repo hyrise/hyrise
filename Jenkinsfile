@@ -319,7 +319,7 @@ try {
             stage("jobQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
-                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *.svg query_plans/job"
+                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
                 archiveArtifacts artifacts: 'query_plans/job/*.svg'
                 archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
               } else {
