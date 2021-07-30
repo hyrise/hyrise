@@ -103,14 +103,19 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       });
 
     // can't build a bin if top_k value bigger than all values (== value_distribution.end()) or if there is no value smaller than top-k
-    if (value_dist_lower_bound == value_distribution.end() || value_dist_lower_bound == value_distribution.begin() ||  
-      std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index) {
+    if (value_dist_lower_bound == value_distribution.end()) {
+      skip_bin = false;
+    } 
+
+     if (value_dist_lower_bound == value_distribution.begin() || std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index) {
       skip_bin = true;
     } 
+
+
     // find out how many values are before current top k value
     if (!skip_bin) {
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
-      auto current_distinct_values = current_maximum_index - current_maximum_index + 1;
+      auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
 
       auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
 
@@ -122,7 +127,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         current_distinct_values
       );
     }
-    
+
     // add bin for topk value
     builder.add_bin(
       current_top_k_value, 
@@ -139,7 +144,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       // add last bucket if necessary
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
     const auto range_maximum = value_distribution.back().first;
-    auto current_distinct_values = value_distribution.size() - current_maximum_index;
+    auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
     auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
     builder.add_bin(value_distribution[current_minimum_index].first, range_maximum, current_bin_height, current_distinct_values);    
   }

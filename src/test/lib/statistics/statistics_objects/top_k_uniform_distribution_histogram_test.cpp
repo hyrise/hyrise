@@ -15,16 +15,18 @@ class TopKUniformDistributionHistogramTest : public BaseTest {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
     _string2 = load_table("resources/test_data/tbl/string2.tbl");
+    _int300 = load_table("resources/test_data/tbl/350_ints.tbl");
   }
 
  protected:
   std::shared_ptr<Table> _int_float4;
   std::shared_ptr<Table> _float2;
   std::shared_ptr<Table> _string2;
+  std::shared_ptr<Table> _int300;
 };
 
 /* Test for strings if the number of values is below K, every value has its own bucket */
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnString) {
+TEST_F(TopKUniformDistributionHistogramTest, FromColumnStringLessThanKValues) {
   StringHistogramDomain default_domain;
   const auto default_domain_histogram =
       TopKUniformDistributionHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
@@ -42,12 +44,11 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnString) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{8}), HistogramBin<pmr_string>("xxx", "xxx", 1, 1));
   EXPECT_EQ(default_domain_histogram->bin(BinID{9}), HistogramBin<pmr_string>("yyy", "yyy", 1, 1));
   EXPECT_EQ(default_domain_histogram->bin(BinID{10}), HistogramBin<pmr_string>("zzz", "zzz", 3, 1));
-
 }
 
 
 /* Test for ints if the number of values is below K, every value has its own bucket */
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnInt) {
+TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
   const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int_float4, ColumnID{0});
 
   // _int_float_4 has 4 distinct values
@@ -60,7 +61,7 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnInt) {
 
 
 /* Test for floats if the number of values is below K, every value has its own bucket */
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloat) {
+TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
   auto hist = TopKUniformDistributionHistogram<float>::from_column(*_float2, ColumnID{0});
 
   // _float_2 has 10 distinct values
@@ -75,6 +76,33 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloat) {
   EXPECT_EQ(hist->bin(BinID{7}), HistogramBin<float>(3.6f, 3.6f, 1, 1));
   EXPECT_EQ(hist->bin(BinID{8}), HistogramBin<float>(4.4f, 4.4f, 2, 1));
   EXPECT_EQ(hist->bin(BinID{9}), HistogramBin<float>(6.1f, 6.1f, 1, 1));
+}
+
+/* Test for ints if the number of values is below K, every value has its own bucket */
+TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
+  const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int300, ColumnID{0});
+
+  /* _int350 has 200 distinct values: 
+    1 to 50 occur 3 times --> 50 buckets
+    51 to 59 occur 1 time --> 1 bucket
+    61 to 110 occur 2 times --> 50 buckets
+    111 to 200 occur 1 time --> 1 bucket
+    */
+
+  ASSERT_EQ(hist->bin_count(), 102);
+
+  for (auto i = 0u; i <= 49; i++) {
+    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i+1), (i+1), 3, 1));
+  }
+
+  EXPECT_EQ(hist->bin(BinID{50}), HistogramBin<int32_t>(51, 60, 10, 10));
+
+  for (auto i = 51u; i <= 100; i++) {
+    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i+10), (i+10), 2, 1));
+  }
+
+  EXPECT_EQ(hist->bin(BinID{101}), HistogramBin<int32_t>(111, 200, 90, 90));
+
 }
 
 }  // namespace opossum
