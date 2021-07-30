@@ -18,7 +18,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
@@ -250,11 +249,9 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file,
                                                                             ChunkOffset row_count) {
-  // Read vector compression id
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
-  // Read compressed_values size
+
   const auto compressed_value_size = _read_value<uint32_t>(file);
-  // Read compressed values
   pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
 
   auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);

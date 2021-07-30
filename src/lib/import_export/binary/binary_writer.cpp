@@ -281,39 +281,37 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 template <typename T>
 void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable,
                                   std::ofstream& ofstream) {
-  // Write encoding type
   export_value(ofstream, EncodingType::FSST);
 
   // Write vector compression id
   const auto compressed_vector_type_id = _compressed_vector_type_id<T>(fsst_segment);
   export_value(ofstream, compressed_vector_type_id);
 
-  // Write compressed_values size
-  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size()));  //TODO: check if necessary
   // Write compressed_values
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size()));
   export_values(ofstream, fsst_segment.compressed_values());
 
   // Write compressed_offsets
   _export_compressed_vector(ofstream, *fsst_segment.compressed_vector_type(), *fsst_segment.compressed_offsets());
 
-  // Write _reference_offsets size
-  export_value(ofstream, static_cast<uint32_t>(fsst_segment.reference_offsets().size()));  //TODO: check if necessary
   // Write _reference_offsets
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.reference_offsets().size()));
   export_values(ofstream, fsst_segment.reference_offsets());
 
   if (fsst_segment.null_values()) {
-    // Write NULL value size
-    export_value(ofstream, static_cast<uint32_t>(fsst_segment.null_values()->size()));
     // Write NULL values
+    export_value(ofstream, static_cast<uint32_t>(fsst_segment.null_values()->size()));
     export_values(ofstream, *fsst_segment.null_values());
   } else {
-    // No NULL values
+    // No NULL values - simply write the size of 0
     export_value(ofstream, uint32_t{0});
   }
 
+  // Write number of elements in a reference bucket
   export_value(ofstream,
-               static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));  //TODO: check if necessary
+               static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));
 
+  // Write decoder
   export_value(ofstream, fsst_segment.decoder());
 }
 
