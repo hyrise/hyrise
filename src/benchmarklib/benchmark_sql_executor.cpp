@@ -3,9 +3,9 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/timer.hpp"
+#include "visualization/cardinality_writer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
-#include "visualization/cardinality_writer.hpp"
 
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
@@ -45,9 +45,10 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
     _visualize(pipeline);
   }
 
-  // Print cardinality estimations from lqp and actual cardinalities from pqp to csv for debugging purposes
-  //_print_debug_estimation_results(pipeline);
-  _write_cardinalities(pipeline);
+  if (_visualize_prefix) {
+    // Print cardinality estimations from lqp and actual cardinalities from pqp to csv for debugging purposes
+    _write_cardinalities(pipeline);
+  }
 
   return {pipeline_status, result_table};
 }
@@ -142,39 +143,6 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
                 << "\n";
     }
   }
-}
-
-void BenchmarkSQLExecutor::_print_debug_estimation_results(SQLPipeline& pipeline) {
-
-  const auto& lqps = pipeline.get_optimized_logical_plans();
-  const auto& pqps = pipeline.get_physical_plans();
-
-  // Calculate estimated cardinality of result node in lqp
-  CardinalityEstimator cardinality_estimator = CardinalityEstimator();
-  cardinality_estimator.guarantee_bottom_up_construction();
-  float lqp_row_count = NAN;
-  auto from = (lqps[0])->left_input();
-  lqp_row_count = cardinality_estimator.estimate_cardinality(from);
-
-  // Calculate actual cardinality of result node in pqp
-  float pqp_row_count = NAN;
-  auto pqp_from = (pqps[0])->left_input();
-  const auto& performance_data = *pqp_from->performance_data;
-  if (pqp_from->executed() && performance_data.has_output) {
-    pqp_row_count = performance_data.output_row_count;
-  }
-
-  if (!_visualize_prefix) {
-    std::cout << "To get debug information about estimated and actual cardinalities the --visualize flag must be set." << std::endl;
-    return;
-  } 
-    
-  auto item_id = *_visualize_prefix;
-
-  std::ofstream output_file;
-  output_file.open ("./join_order_benchmark_cardinality_estimation.csv", std::ios_base::app);
-  output_file << item_id << "," << lqp_row_count << "," << pqp_row_count << "\n";
-  output_file.close();
 }
 
 void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
