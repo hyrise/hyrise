@@ -48,7 +48,7 @@ uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
     return _offset_decompressor->get(chunk_offset);
   }
   // For the number of values below 8 (number of reference offsets) we don't use reference offsets;
-  // chunk_offset of 0 has the offset of 0
+  // chunk_offset of 0 has the offset of 0.
   if (_number_elements_per_reference_bucket == 0 || chunk_offset == 0) {
     return _offset_decompressor->get(chunk_offset);
   }
