@@ -37,7 +37,6 @@ class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resour
 
 class StorageFSSTSegmentTest : public BaseTest {
  protected:
-  //  static constexpr auto row_count = FSSTEncoder::_block_size + size_t{1000u};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -51,22 +50,22 @@ TEST_F(StorageFSSTSegmentTest, CreateEmptyFSSTSegmentTest) {
   auto segment = compress(vs_str, DataType::String);
 
   ASSERT_EQ(segment->size(), 0);
-  //  ASSERT_EQ(segment.memory_usage(MemoryUsageCalculationMode::Full), 0); TODO(anyone): check memory consumption
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2576);
 }
 
 TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
-  vs_str->append("Moritz");
-  vs_str->append("ChrisChr");
-  vs_str->append("Christopher");
+  vs_str->append("This");
+  vs_str->append("is");
+  vs_str->append("data");
   auto segment = compress(vs_str, DataType::String);
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
-  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2613);
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2594);
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
-  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", "Christopher", "Mo", "Peter", "Petrus", "ababababababababababab"};
+  pmr_vector<pmr_string> values{"This", "is", "a", "test", "for", "the", "FSST", "segment"};
   for (const auto& value : values) {
     vs_str->append(value);
   }
@@ -79,7 +78,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
-  pmr_vector<pmr_string> values = {"Moritz", "Chris", "Peter"};
+  pmr_vector<pmr_string> values = {"This", "is", "data"};
 
   for (const auto& value : values) {
     vs_str->append(value);
@@ -98,8 +97,8 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
-  vs_str->append("Moritz");
-  vs_str->append("ChrisChr");
+  vs_str->append("This");
+  vs_str->append("is");
   vs_str->append(NULL_VALUE);
   auto segment = compress(vs_str, DataType::String);
 
@@ -108,7 +107,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
-  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
+  pmr_vector<pmr_string> values{"This", "is", "data"};
   pmr_vector<bool> expected_null_values = {false, false, true};
 
   for (size_t index = 0; index < values.size(); ++index) {
@@ -137,7 +136,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
-  pmr_vector<pmr_string> values{"Moritz", "ChrisChr", ""};
+  pmr_vector<pmr_string> values{"Two", "values", ""};
   pmr_vector<bool> expected_null_values = {false, false, true};
 
   for (size_t index = 0; index < values.size(); ++index) {
