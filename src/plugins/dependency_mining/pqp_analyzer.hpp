@@ -18,7 +18,9 @@ class PQPAnalyzer {
   TableColumnID _resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression) const;
   std::vector<TableColumnID> _find_od_candidate(const std::shared_ptr<const AbstractOperator>& op,
                                                 const std::shared_ptr<LQPColumnExpression>& dependent) const;
+  void _add_if_new(DependencyCandidate& candidate);
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
+  std::vector<DependencyCandidate> _known_candidates;
 };
 
 }  // namespace opossum

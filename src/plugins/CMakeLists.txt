@@ -30,6 +30,12 @@ endfunction(add_plugin)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
+    # ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
+)
+
+include_directories(
+    SYSTEM
+    ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
 )
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
@@ -38,6 +44,7 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining_plugin.hpp
     dependency_mining/pqp_analyzer.cpp
     dependency_mining/pqp_analyzer.hpp
+    dependency_mining/util.cpp
     dependency_mining/util.hpp
     dependency_mining/dependency_validator.cpp
     dependency_mining/dependency_validator.hpp

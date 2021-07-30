@@ -33,10 +33,10 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  //Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>(10'000'000);
-  //Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>(10'000'000);
-  Hyrise::get().default_pqp_cache = nullptr;
-  Hyrise::get().default_lqp_cache = nullptr;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>(10'000'000);
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>(10'000'000);
+  //Hyrise::get().default_pqp_cache = nullptr;
+  //Hyrise::get().default_lqp_cache = nullptr;
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
@@ -178,8 +178,8 @@ void BenchmarkRunner::run() {
   // Stop the thread that tracks the system utilization
   track_system_utilization = false;
   system_utilization_tracker.join();
-  //Hyrise::get().plugin_manager.load_plugin(
-  //    "/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so");
+  Hyrise::get().plugin_manager.load_plugin(
+      "/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so");
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
