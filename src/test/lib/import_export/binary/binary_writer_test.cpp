@@ -59,7 +59,6 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-// TODO: split this test into writer and parser test
 TEST_F(BinaryWriterTest, FSSTSingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -76,7 +75,10 @@ TEST_F(BinaryWriterTest, FSSTSingleChunk) {
 
   EXPECT_TRUE(file_exists(filename));
 
-  auto read_table = BinaryParser::parse(filename);
+  // TODO(anyone): Cannot check BinaryWriter because FSST creates different symbol table in each run;
+  // make sure BinaryWriter produces constant results across different runs;
+  // use static file for the check (without parser)
+  auto read_table = BinaryParser::parse(filename);        
 
   EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }
