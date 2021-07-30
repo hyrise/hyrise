@@ -59,7 +59,6 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     return has_null_values;
   }
-  
 
   template <typename T>
   fsst_decoder_t _compress_values(pmr_vector<T>& values, pmr_vector<unsigned char>& compressed_values, pmr_vector<uint64_t>& compressed_value_lengths) {
@@ -82,7 +81,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
     }
 
-    // why 7 -> See fsst.h interface description.
+    // 7 + 2 * total_length -> See fsst_compress interface in fsst.h description.
     compressed_values.resize(7 + 2 * total_length);
 
     fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
@@ -98,7 +97,6 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     return decoder;
   }
 
-
   uint64_t _create_offsets(pmr_vector<uint64_t>& compressed_value_lengths, pmr_vector<uint32_t>& offsets) {
     size_t compressed_values_size = compressed_value_lengths.size();
 
@@ -112,7 +110,6 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     return aggregated_offset_sum;
   }
-
 
   uint64_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
     auto reference_offsets_size = reference_offsets.size();
@@ -143,18 +140,15 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     auto null_values = pmr_vector<bool>{allocator};
     std::optional<pmr_vector<bool>> null_values_optional = std::nullopt;
     
+    // Fill values and null_values vector accordingly.
     bool has_null_values = _collect_values(segment_iterable, values, null_values);
     
     if (has_null_values) {
       null_values_optional = std::make_optional(null_values);
     }
     
-    //------------------------------------------------------------------------
-
-
     pmr_vector<unsigned char> compressed_values{allocator};
     pmr_vector<uint64_t> compressed_value_lengths;
-    // fsst_decoder_t decoder;
 
     uint8_t reference_offsets_size = 8;
     pmr_vector<uint64_t> reference_offsets{reference_offsets_size, allocator};
@@ -171,35 +165,26 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
                                               null_values_optional, 0, decoder);
     }
 
+    // Compress the values using FSST third party library.
     decoder = _compress_values(values, compressed_values, compressed_value_lengths);
 
-
-    //------------------------------------------------------------------------
-
+    // Create an offsets container (aggregated_offset_sum is the total size of the compressed values).
     uint64_t aggregated_offset_sum = _create_offsets(compressed_value_lengths, offsets);
-
+    
+    // "shrink_to_fit" to the total size of the compressed strings.
     compressed_values.resize(aggregated_offset_sum);
 
-
-    //-----------------------------------------------------------------------
-
+    // Create reference offsets as well as create the "zig-zag" pattern in offsets in order to achieve larger vector compression rates.
     uint64_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
+    // Find maximum value in offsets in order to use it in later vector compression.
+    uint32_t max_offset = *std::max_element(offsets.begin(), offsets.end());
 
-    //------------------------------------------------------------------------
-
-
-    uint32_t max_offset = 0;
-    // TODO: only look at last value in bucket
-    for (auto offset : offsets) {
-      max_offset = std::max(max_offset, offset);
-    }
-
+    // Hardcode BitPacking as vector compression type.
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {max_offset});
 
-    auto result = std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
+    return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
                                                    null_values_optional, n_elements_in_reference_bucket, decoder);
-    return result;
   }
 };
 
