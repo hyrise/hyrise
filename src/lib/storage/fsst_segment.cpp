@@ -43,16 +43,18 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
 template <typename T>
 uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
-  // auto offset_decompressor = _compressed_offsets->create_base_decompressor();
+  // For the first bucket we don't use reference offsets.
   if (chunk_offset < _number_elements_per_reference_bucket) {
     return _offset_decompressor->get(chunk_offset);
   }
+  // For the number of values below 8 (number of reference offsets) we don't use reference offsets;
+  // chunk_offset of 0 has the offset of 0
   if (_number_elements_per_reference_bucket == 0 || chunk_offset == 0) {
     return _offset_decompressor->get(chunk_offset);
   }
-
+  // Calculate the corresponding reference offset index for the chunk_offset.
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
-
+  // Remove the "zig-zag" pattern and return the original offset.
   return _offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
 }
 
@@ -67,21 +69,21 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
   // Calculate real offset with help of reference offset vector.
   size_t real_offset = get_offset(chunk_offset);
   size_t real_offset_next = get_offset(chunk_offset + 1);
-
   size_t compressed_length = real_offset_next - real_offset;
 
+  // Note: we use const_cast in order to use fsst_decompress.
   auto compressed_pointer = const_cast<unsigned char*>(
-      _compressed_values.data() + real_offset);  //Note: we use const_cast in order to use fsst_decompress
+      _compressed_values.data() + real_offset);
 
-  size_t output_size = compressed_length * 8;  //TODO (anyone): is this correct?
-
-  //  size_t output_size = _compressed_value_lengths[chunk_offset] * 8;  //TODO (anyone): is this correct?
-
+  // Since the max symbol length is 8, max uncompressed size is 8 * compressed_length.
+  size_t output_size = compressed_length * 8;
   std::vector<unsigned char> output_buffer(output_size);
 
+  // Third party library call
   size_t output_size_after_decompression =
       fsst_decompress(&_decoder, compressed_length, compressed_pointer, output_size, output_buffer.data());
 
+  // "shrink_to_fit" for output buffer
   output_buffer.resize(output_size_after_decompression);
 
   pmr_string output{output_buffer.begin(), output_buffer.end()};
@@ -90,6 +92,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 
 template <typename T>
 ChunkOffset FSSTSegment<T>::size() const {
+  // Compressed offsets have size of values.size() + 1 (see fsst_encoder.hpp).
   return static_cast<ChunkOffset>(_compressed_offsets->size() - 1);
 }
 
@@ -100,7 +103,6 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
   auto new_compressed_values = pmr_vector<unsigned char>{_compressed_values, alloc};
   auto new_compressed_offsets = _compressed_offsets->copy_using_allocator(alloc);
   auto new_reference_offsets = pmr_vector<uint64_t>{_reference_offsets, alloc};
-
   fsst_decoder_t new_decoder = _decoder;
 
   auto copy = std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_reference_offsets,
@@ -132,7 +134,6 @@ std::optional<CompressedVectorType> FSSTSegment<T>::compressed_vector_type() con
 
 template <typename T>
 const fsst_decoder_t& FSSTSegment<T>::decoder() const {
-  // TODO: check if arrays are copied
   return _decoder;
 }
 
@@ -161,7 +162,6 @@ const pmr_vector<uint64_t>& FSSTSegment<T>::reference_offsets() const {
   return _reference_offsets;
 }
 
-// EXPLICITLY_INSTANTIATE_DATA_TYPES(FSSTSegment); TODO (anyone): do we need this?
 template class FSSTSegment<pmr_string>;
 
 }  // namespace opossum
