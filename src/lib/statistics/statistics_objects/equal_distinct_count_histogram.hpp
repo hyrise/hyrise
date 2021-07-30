@@ -14,12 +14,6 @@ namespace opossum {
 
 class Table;
 
-/**
- * Distinct-balanced histogram.
- * The first `bin_count_with_extra_value` contain each contain `distinct_count_per_bin + 1` distinct values,
- * all other bins contain `distinct_count_per_bin` distinct values.
- * There might be gaps between bins.
- */
 
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
@@ -29,8 +23,15 @@ class Table;
 template <typename T>
 using ValueDistributionMap =
     tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                  std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
+
+/**
+ * Distinct-balanced histogram.
+ * The first `bin_count_with_extra_value` contain each contain `distinct_count_per_bin + 1` distinct values,
+ * all other bins contain `distinct_count_per_bin` distinct values.
+ * There might be gaps between bins.
+ */
 template <typename T>
 class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  public:
@@ -59,84 +60,82 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                       const ChunkID chunk_id, const BinID max_bin_count,
                                                                       const HistogramDomain<T>& domain = {});
 
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> merge(const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
-                                                               BinID bin_count_target);
+  /**
+    * Merge all histograms in @param histogram into one new EqualDistinctCountHistogram with at most @param bin_count_target bins.
+    * Returns the merged histgram and the max_estimation_error. 
+    * Returns (nullptr, 0.0) if no valid histograms are given.
+    * The max_estimation_error is an upper bound on how much the total_distinct_count() of the merged histogram might differ from the actual total_distinct_count
+    * one would get from building one single histogram from the underlying data of histograms.
+    * Generally speaking, the error can be high when there's a high overlap between the histograms.
+    */
+  static std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> merge(
+      const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms, BinID bin_count_target);
 
-    std::string name() const override;
-    std::shared_ptr<AbstractHistogram<T>> clone() const override;
-    HistogramCountType total_distinct_count() const override;
-    HistogramCountType total_count() const override;
+  std::string name() const override;
+  std::shared_ptr<AbstractHistogram<T>> clone() const override;
+  HistogramCountType total_distinct_count() const override;
+  HistogramCountType total_count() const override;
 
-    /**
+  /**
    * Returns the number of bins actually present in the histogram.
    * This number can be smaller than the number of bins requested when creating a histogram.
    * The number of bins is capped at the number of distinct values in the segment.
    * Otherwise, there would be empty bins without any benefit.
    */
-    BinID bin_count() const override;
+  BinID bin_count() const override;
 
-    const T& bin_minimum(const BinID index) const override;
-    const T& bin_maximum(const BinID index) const override;
-    HistogramCountType bin_height(const BinID index) const override;
-    HistogramCountType bin_distinct_count(const BinID index) const override;
+  const T& bin_minimum(const BinID index) const override;
+  const T& bin_maximum(const BinID index) const override;
+  HistogramCountType bin_height(const BinID index) const override;
+  HistogramCountType bin_distinct_count(const BinID index) const override;
 
-   protected:
-    BinID _bin_for_value(const T& value) const override;
-    BinID _next_bin_for_value(const T& value) const override;
+ protected:
+  BinID _bin_for_value(const T& value) const override;
+  BinID _next_bin_for_value(const T& value) const override;
 
-    /**
-   * TODO: Implement a method like this
-   * Create an actual histogram from a value distribution map.
-   */
-    static std::shared_ptr<EqualDistinctCountHistogram<T>> _from_value_distribution(
-        const std::vector<std::pair<T, HistogramCountType>>& value_distribution_map, const BinID max_bin_count);
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> _from_value_distribution(
+      const std::vector<std::pair<T, HistogramCountType>>& value_distribution_map, const BinID max_bin_count);
 
-    static std::pair<std::vector<T>, std::vector<T>> _merge_splitted_bounds(
-        const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
+  static std::pair<std::vector<T>, std::vector<T>> _merge_splitted_bounds(
+      const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
 
-    // template<typename IteratorT, typename IteratorHistogramCountType>
-    static std::tuple<T, T, HistogramCountType> _create_one_bin(
+  static std::tuple<T, T, HistogramCountType> _create_one_bin(
       typename std::vector<T>::iterator& interval_minima_begin, typename std::vector<T>::iterator& interval_minima_end,
       typename std::vector<T>::iterator& interval_maxima_begin, typename std::vector<T>::iterator& interval_maxima_end,
-      typename std::vector<HistogramCountType>::iterator& interval_heights_begin, typename std::vector<HistogramCountType>::iterator& interval_heights_end,
-      typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_begin, typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end,
-      const int distinct_count_target,
-      const HistogramDomain<T> domain,
-      const bool is_last_bin);
+      typename std::vector<HistogramCountType>::iterator& interval_heights_begin,
+      typename std::vector<HistogramCountType>::iterator& interval_heights_end,
+      typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_begin,
+      typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end, const int distinct_count_target,
+      const HistogramDomain<T> domain, const bool is_last_bin);
 
-    static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins(
-      std::vector<HistogramCountType>& interval_distinct_counts,
-      std::vector<HistogramCountType>& interval_heights,
-      std::vector<T>& interval_minima,
-      std::vector<T>& interval_maxima,
-      const int distinct_count_per_bin_target,
-      const BinID bin_count,
-      const BinID bin_count_with_extra_value,
-      const HistogramDomain<T> domain);
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins(
+      std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,
+      std::vector<T>& interval_minima, std::vector<T>& interval_maxima, const int distinct_count_per_bin_target,
+      const BinID bin_count, const BinID bin_count_with_extra_value, const HistogramDomain<T> domain);
 
-   private:
-    /**
+ private:
+  /**
    * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
    */
 
-    // Min values on a per-bin basis.
-    std::vector<T> _bin_minima;
+  // Min values on a per-bin basis.
+  std::vector<T> _bin_minima;
 
-    // Max values on a per-bin basis.
-    std::vector<T> _bin_maxima;
+  // Max values on a per-bin basis.
+  std::vector<T> _bin_maxima;
 
-    // Number of values on a per-bin basis.
-    std::vector<HistogramCountType> _bin_heights;
+  // Number of values on a per-bin basis.
+  std::vector<HistogramCountType> _bin_heights;
 
-    // Number of distinct values per bin.
-    HistogramCountType _distinct_count_per_bin;
+  // Number of distinct values per bin.
+  HistogramCountType _distinct_count_per_bin;
 
-    // The first bin_count_with_extra_value bins have an additional distinct value.
-    BinID _bin_count_with_extra_value;
+  // The first bin_count_with_extra_value bins have an additional distinct value.
+  BinID _bin_count_with_extra_value;
 
-    // Aggregated counts over all bins, to avoid redundant computation
-    HistogramCountType _total_count;
-    HistogramCountType _total_distinct_count;
-  };
+  // Aggregated counts over all bins, to avoid redundant computation
+  HistogramCountType _total_count;
+  HistogramCountType _total_distinct_count;
+};
 
 }  // namespace opossum

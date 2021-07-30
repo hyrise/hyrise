@@ -11,11 +11,10 @@
 
 namespace opossum {
 
-template<typename ColumnDataType>
+template <typename ColumnDataType>
 void TableStatistics::_add_statistics_from_histogram(
-  const std::shared_ptr<AttributeStatistics<ColumnDataType>> attribute_statistics,
-  const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram,
-  const Table &table) {
+    const std::shared_ptr<AttributeStatistics<ColumnDataType>> attribute_statistics,
+    const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram, const Table& table) {
   if (histogram) {
     attribute_statistics->set_statistics_object(histogram);
 
@@ -25,8 +24,7 @@ void TableStatistics::_add_statistics_from_histogram(
         table.row_count() == 0
             ? 0.0f
             : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
-    attribute_statistics->set_statistics_object(
-        std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+    attribute_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
   } else {
     // Failure to generate a histogram currently only stems from all-null segments.
     // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
@@ -36,7 +34,6 @@ void TableStatistics::_add_statistics_from_histogram(
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
-  // std::vector<std::shared_ptr<BaseAttributeStatistics>> new_column_statistics(table.column_count());
   std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics(table.column_count());
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -57,7 +54,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     threads.emplace_back([&] {
       while (true) {
         auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
-        if (static_cast<ColumnCount>(my_column_id) >= table.column_count()) return;
+        if (static_cast<ColumnCount>(my_column_id) >= table.column_count()) {
+          return;
+        }
 
         const auto column_data_type = table.column_data_type(my_column_id);
 
@@ -70,23 +69,38 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
           const auto chunk_count = table.chunk_count();
 
-          const auto the_god_says_yes = (chunk_count > 1) && column_data_type != DataType::String;  // Because it likes spaghetti (- code)
+          const auto should_generate_small_histograms = (chunk_count > 1) && column_data_type != DataType::String;
           std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram = nullptr;
-          if (the_god_says_yes) {
-            // Generate the small histograms. Yes, it's almost as slow as generating the full histogram, but god told us to do so.
+          if (should_generate_small_histograms) {
+            // Generate the small histograms.
             // Per Segment statistics will be twice as detailed.
-            
             std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>> histograms;
             histograms.reserve(chunk_count);
+
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto output_chunk_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
               const auto segment_histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(
                   table, my_column_id, chunk_id, histogram_bin_count * 2);
               _add_statistics_from_histogram(output_chunk_column_statistics, segment_histogram, table);
               segment_statistics[my_column_id].push_back(output_chunk_column_statistics);
-              histograms.push_back(segment_histogram); 
+              histograms.push_back(segment_histogram);
             }
-            histogram = EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
+
+            const auto merge_result =
+                EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
+            histogram = merge_result.first;
+            // This gives us the maximum deviation of the total distinct count when compared to the full histogram.
+            // The error might be different when measured with respect to the individual unique values.
+            const auto max_estimation_error = merge_result.second;
+            // Using the max_estimation_error, we can detect if the merged histogram is significantly too bad.
+            // In that case we generate the full histogram.
+            // Wasting time is better than using bad histograms.
+            const auto error_percent_threshold =
+                0.05;  // Some more elaborate experiments might be necessary to find a good value for this.
+            if (max_estimation_error > histogram->total_distinct_count() * error_percent_threshold) {
+              histogram =
+                  EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
+            }
           } else {
             histogram =
                 EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);

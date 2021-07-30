@@ -143,8 +143,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    *
    * @param additional_bin_edges    Pair of minima and maxima of new bins
    */
-  std::shared_ptr<AbstractHistogram<T>> split_at_bin_bounds(
-      const std::vector<std::pair<T, T>>& additional_bin_edges, bool allow_empty_bins = false) const;
+  std::shared_ptr<AbstractHistogram<T>> split_at_bin_bounds(const std::vector<std::pair<T, T>>& additional_bin_edges,
+                                                            bool allow_empty_bins = false) const;
 
   /**
    * @return [{bin_minimum(BinID{0}), bin_maximum(BinID{0})}, {bin_minimum(BinID{1}), bin_maximum(BinID{1})}, ...]
