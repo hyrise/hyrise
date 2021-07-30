@@ -98,6 +98,11 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
     estimated_usage += 1;
   }
 
+  if (encoding_spec.encoding_type == EncodingType::FSST) {
+    // An empty FSSTSegment holds a single offset value of 0 and reference offsets of the size 8 * sizeof(uint64_t)
+    estimated_usage += (1 + 8 * sizeof(uint64_t));
+  }
+
   EXPECT_EQ(resource.allocated, estimated_usage);
 }
 

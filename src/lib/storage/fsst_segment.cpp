@@ -111,20 +111,12 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
 
 template <typename T>
 size_t FSSTSegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
-  // enum class MemoryUsageCalculationMode { Sampled, Full };
-
   auto compressed_values_size = _compressed_values.size() * sizeof(unsigned char);
-  auto compressed_offsets_size = _compressed_offsets->data_size();
   auto reference_offsets_size = _reference_offsets.size() * sizeof(uint64_t);
-  auto number_elements_size = sizeof(uint64_t);
+  auto compressed_offsets_size = _compressed_offsets->data_size();
+  auto null_value_size = (_null_values.has_value() ? _null_values->capacity() / CHAR_BIT : size_t{0});
 
-  auto null_value_size = (_null_values.has_value() ? _null_values.value().size() * sizeof(bool) : size_t{0}) +
-                         sizeof(std::optional<pmr_vector<bool>>);
-
-  auto decoder_size = sizeof(fsst_decoder_t);
-  // TODO (anyone): which memory usage should we return? compressed data or all memory
-  return compressed_values_size + compressed_offsets_size + reference_offsets_size + null_value_size +
-         number_elements_size + decoder_size;
+  return sizeof(*this) + compressed_values_size + compressed_offsets_size + reference_offsets_size + null_value_size;
 }
 
 template <typename T>
