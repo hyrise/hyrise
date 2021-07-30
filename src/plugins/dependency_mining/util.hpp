@@ -15,6 +15,7 @@ struct TableColumnID {
   std::string description() const;
   bool operator==(const TableColumnID& other) const;
   bool operator!=(const TableColumnID& other) const;
+  std::string column_name() const;
 };
 
 const static TableColumnID INVALID_TABLE_COLUMN_ID = TableColumnID{"", INVALID_COLUMN_ID};

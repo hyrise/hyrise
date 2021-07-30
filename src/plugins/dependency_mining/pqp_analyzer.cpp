@@ -74,14 +74,13 @@ void PQPAnalyzer::run() {
                 continue;
               }
               const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
-              // std::cout << "join column id" << std::endl;
               const auto join_column_id = _resolve_column_expression(expression);
               if (join_column_id == INVALID_TABLE_COLUMN_ID) {
                 continue;
               }
               if (join_node->join_mode == JoinMode::Inner) {
                 auto candidate = DependencyCandidate{std::vector<TableColumnID>{join_column_id},
-                                                     std::vector<TableColumnID>{}, DependencyType::Unique, prio};
+                                                     {}, DependencyType::Unique, prio};
                 _add_if_new(candidate);
               }
               bool abort = false;
@@ -151,22 +150,28 @@ void PQPAnalyzer::run() {
             return PQPVisitation::VisitInputs;
           }
           const auto& node_expressions = aggregate_node->node_expressions;
-          std::vector<TableColumnID> determinants;
+          // split columns by table to ease validation later on
+          std::unordered_map<std::string, std::vector<TableColumnID>> columns_by_table;
           for (auto expression_idx = size_t{0}; expression_idx < num_group_by_columns; ++expression_idx) {
             if (node_expressions[expression_idx]->type != ExpressionType::LQPColumn) {
               continue;
             }
             auto table_column_id = _resolve_column_expression(node_expressions[expression_idx]);
             if (table_column_id != INVALID_TABLE_COLUMN_ID) {
-              determinants.emplace_back(table_column_id);
+              columns_by_table[table_column_id.table_name].emplace_back(table_column_id);
             }
           }
-          if (determinants.empty()) {
+          if (columns_by_table.empty()) {
             return PQPVisitation::VisitInputs;
           }
-          auto candidate =
-              DependencyCandidate{determinants, std::vector<TableColumnID>{}, DependencyType::Functional, prio};
-          _add_if_new(candidate);
+          for (const auto& [_, columns] : columns_by_table) {
+            if (columns.size() < 2) {
+              continue;
+            }
+            auto candidate =
+              DependencyCandidate{columns, {}, DependencyType::Functional, prio};
+            _add_if_new(candidate);
+          }
         } break;
         default:
           break;

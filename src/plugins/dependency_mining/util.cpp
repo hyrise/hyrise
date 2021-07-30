@@ -20,6 +20,10 @@ bool TableColumnID::operator==(const TableColumnID& other) const {
 
 bool TableColumnID::operator!=(const TableColumnID& other) const { return !operator==(other); }
 
+std::string TableColumnID::column_name() const {
+  return Hyrise::get().storage_manager.get_table(table_name)->column_name(column_id);
+}
+
 DependencyCandidate::DependencyCandidate(const std::vector<TableColumnID>& init_determinants,
                                          const std::vector<TableColumnID>& init_dependents,
                                          const DependencyType init_type, const size_t init_priority)

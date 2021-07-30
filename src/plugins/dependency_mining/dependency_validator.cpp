@@ -22,6 +22,7 @@ void DependencyValidator::start() {
   Timer timer;
   DependencyCandidate candidate;
   while (_queue->try_pop(candidate)) {
+    Timer candidate_timer;
     std::cout << "Check candidate: ";
     candidate.output_to_stream(std::cout, DescriptionMode::MultiLine);
     switch (candidate.type) {
@@ -38,6 +39,7 @@ void DependencyValidator::start() {
         _validate_ind(candidate);
         break;
     }
+    std::cout << "    " << candidate_timer.lap_formatted() << std::endl;
   }
   std::cout << "DependencyValidator finished in " << timer.lap_formatted() << std::endl;
 }
@@ -61,11 +63,35 @@ void DependencyValidator::_validate_od(const DependencyCandidate& candidate) {
   }
   const auto table_name = *table_names.begin();
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
+
+  if (candidate.determinants.size() == 1 && candidate.dependents.size() == 1) {
+    const auto determinant_column_name = table->column_name(candidate.determinants[0].column_id);
+     const auto [det_status, det_result] = SQLPipelineBuilder{"SELECT DISTINCT " + determinant_column_name + " FROM " + table_name}
+                                    .create_pipeline()
+                                    .get_result_table();
+
+     if (det_status == SQLPipelineStatus::Success) {
+      const auto det_value_count = det_result->row_count();
+      const auto dependent_column_name = table->column_name(candidate.dependents[0].column_id);
+      const auto [dep_status, dep_result] = SQLPipelineBuilder{"SELECT DISTINCT " + dependent_column_name + " FROM " + table_name}
+                                    .create_pipeline()
+                                    .get_result_table();
+      if (dep_status == SQLPipelineStatus::Success && det_value_count < dep_result->row_count()) {
+        std::cout << "    INVALID (shortcut)" << std::endl;
+        return;
+      }
+     }
+
+  }
+
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
   std::vector<SortColumnDefinition> sort_columns;
   for (const auto& determinant : candidate.determinants) {
     sort_columns.emplace_back(determinant.column_id, SortMode::Ascending);
   }
+
+
+
   const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_columns);
   table_wrapper->execute();
   sort_operator->execute();
