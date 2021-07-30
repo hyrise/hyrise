@@ -20,13 +20,12 @@ namespace opossum {
 template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
-  // explicit FSSTSegment();     // TODO: remove
-  FSSTSegment(pmr_vector<unsigned char>& compressed_values,
+  explicit FSSTSegment(pmr_vector<unsigned char>& compressed_values,
               std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
               pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
               uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
 
-      /**
+  /**
    * @defgroup AbstractSegment interface
    * @{
    */
@@ -41,8 +40,6 @@ class FSSTSegment : public AbstractEncodedSegment {
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
-  uint64_t get_offset(const ChunkOffset chunk_offset) const;
-
   /**@}*/
 
   /**
@@ -51,17 +48,20 @@ class FSSTSegment : public AbstractEncodedSegment {
    */
 
   EncodingType encoding_type() const final;
+
   std::optional<CompressedVectorType> compressed_vector_type() const final;
 
-  const fsst_decoder_t& decoder() const;
+  /**@}*/
 
+  uint64_t get_offset(const ChunkOffset chunk_offset) const;
+
+  // Getter methods
   const pmr_vector<unsigned char>& compressed_values() const;
   const std::unique_ptr<const BaseCompressedVector>& compressed_offsets() const;
+  const pmr_vector<uint64_t>& reference_offsets() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
   uint64_t number_elements_per_reference_bucket() const;
-  const pmr_vector<uint64_t>& reference_offsets() const;
-
-  /**@}*/
+  const fsst_decoder_t& decoder() const;
 
  private:
   pmr_vector<unsigned char> _compressed_values;
@@ -73,7 +73,6 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::unique_ptr<BaseVectorDecompressor> _offset_decompressor;
 };
 
-//EXPLICITLY_DECLARE_DATA_TYPES(FSSTSegment);
 extern template class FSSTSegment<pmr_string>;
 
 }  // namespace opossum
