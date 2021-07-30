@@ -26,7 +26,6 @@ class TopKUniformDistributionHistogram {
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
   static std::shared_ptr<GenericHistogram<T>> from_column(const Table& table, const ColumnID column_id,
-                                                                     const BinID max_bin_count,
                                                                      const HistogramDomain<T>& domain = {});
 
 };
