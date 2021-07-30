@@ -62,7 +62,7 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
-  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2477);
+  ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2613);
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {

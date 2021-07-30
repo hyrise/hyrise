@@ -20,7 +20,7 @@ namespace opossum {
 template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
-  //  explicit FSSTSegment();     // TODO: remove
+  // explicit FSSTSegment();     // TODO: remove
   FSSTSegment(pmr_vector<unsigned char>& compressed_values,
               std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
               pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,

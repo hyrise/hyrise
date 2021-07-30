@@ -64,7 +64,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
     }
   }
 
-  // Calculate real offset with help of reference offset vector
+  // Calculate real offset with help of reference offset vector.
   size_t real_offset = get_offset(chunk_offset);
   size_t real_offset_next = get_offset(chunk_offset + 1);
 
@@ -103,10 +103,11 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
 
   fsst_decoder_t new_decoder = _decoder;
 
-  auto new_segment = std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_reference_offsets,
+  auto copy = std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_reference_offsets,
                                                    new_null_values, _number_elements_per_reference_bucket, new_decoder);
+  copy->access_counter = access_counter;
 
-  return std::dynamic_pointer_cast<AbstractSegment>(new_segment);
+  return copy;
 }
 
 template <typename T>
