@@ -64,7 +64,6 @@ auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment
 template <typename T, typename Enabled, bool EraseSegmentType>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-
   PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
 #else
@@ -85,25 +84,7 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
 
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
-  // FSSTSegment always gets erased as we dont know what to do about it
-  // TODO(anyone): check if whe need to check for the EraseSegmentType flag
   return AnySegmentIterable<T>(FSSTSegmentIterable<T>(segment));
 }
-
-
-//template <typename T, bool EraseSegmentType>
-//auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
-//#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-//  PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
-//  return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
-//#else
-//if constexpr (EraseSegmentType) {
-//  return create_any_segment_iterable<T>(segment);
-//} else {
-//  return FSSTSegmentIterable<T, FixedStringVector>{segment};
-//}
-//#endif
-//}
-
 
 }  // namespace opossum
