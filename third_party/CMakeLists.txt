@@ -8,45 +8,6 @@ endif()
 # unity builds for this folder, even if the user manually activated it.
 set(CMAKE_UNITY_BUILD "OFF")
 
-# Build google benchmark
-add_library(
-    benchmark
-
-    STATIC
-
-    benchmark_fix/dummy.cc
-    benchmark/src/benchmark.cc
-    benchmark/src/benchmark_api_internal.cc
-    benchmark/src/benchmark_name.cc
-    benchmark/src/benchmark_register.cc
-    benchmark/src/benchmark_runner.cc
-    benchmark/src/colorprint.cc
-    benchmark/src/commandlineflags.cc
-    benchmark/src/complexity.cc
-    benchmark/src/console_reporter.cc
-    benchmark/src/counter.cc
-    benchmark/src/csv_reporter.cc
-    benchmark/src/json_reporter.cc
-    benchmark/src/reporter.cc
-    benchmark/src/sleep.cc
-    benchmark/src/statistics.cc
-    benchmark/src/string_util.cc
-    benchmark/src/sysinfo.cc
-    benchmark/src/timers.cc
-)
-
-target_compile_options(
-    benchmark
-    PRIVATE
-    -O3 -std=c++11 -DHAVE_STD_REGEX -DNDEBUG
-)
-
-target_include_directories(
-    benchmark
-    PRIVATE
-    benchmark/include
-)
-
 # Build sql-parser
 add_library(
     sqlparser
@@ -75,12 +36,14 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # Add Libraries with their own build setup
+SET(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
+add_subdirectory(benchmark)
 add_subdirectory(fsst)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
-add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(tpch-dbgen)
 
 ## Build fsst
 set_property(TARGET fsst PROPERTY POSITION_INDEPENDENT_CODE ON)
