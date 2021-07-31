@@ -90,7 +90,6 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
 
   for (auto top_k_index = 0ul, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
     // current top_k value
-    auto skip_bin = false;
     const auto current_top_k_value = top_k_names[top_k_index];
 
     // find value smaller than current top_k value for current maximum
