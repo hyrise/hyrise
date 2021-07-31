@@ -8,14 +8,20 @@
 
 namespace opossum {
 
-class TableStatisticsTest : public BaseTest {};
+class TableStatisticsTest : public BaseTest {
+  void SetUp() override { table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20); }
 
-TEST_F(TableStatisticsTest, FromTable) {
-  const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
+ protected:
+  std::shared_ptr<Table> table;
+};
 
+TEST_F(TableStatisticsTest, FromTableRowCount) {
   const auto table_statistics = TableStatistics::from_table(*table);
-
   ASSERT_EQ(table_statistics->row_count, 200u);
+}
+
+TEST_F(TableStatisticsTest, FromTableColumnStatistics) {
+  const auto table_statistics = TableStatistics::from_table(*table);
   ASSERT_EQ(table_statistics->column_statistics.size(), 2u);
 
   const auto column_statistics_a =
@@ -39,6 +45,46 @@ TEST_F(TableStatisticsTest, FromTable) {
   // The 24 nulls values should be represented in the compact statistics as well
   EXPECT_FLOAT_EQ(histogram_b->total_count(), 200 - 9);
   EXPECT_FLOAT_EQ(histogram_b->total_distinct_count(), 190);
+}
+
+TEST_F(TableStatisticsTest, FromTableSegmentStatistics) {
+  const auto table_statistics = TableStatistics::from_table(*table);
+  ASSERT_EQ(table_statistics->segment_statistics.size(), 2u);
+  ASSERT_EQ(table_statistics->segment_statistics[0].size(), 10);
+  ASSERT_EQ(table_statistics->segment_statistics[1].size(), 10);
+
+  // First chunk of column a
+  const auto segment_statistics_a0 =
+      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(0).at(0));
+  ASSERT_TRUE(segment_statistics_a0);
+
+  const auto histogram_a0 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_a0->histogram);
+  ASSERT_TRUE(histogram_a0);
+
+  EXPECT_FLOAT_EQ(histogram_a0->total_count(), 18);
+  EXPECT_FLOAT_EQ(histogram_a0->total_distinct_count(), 5);
+
+  // Second chunk of column a
+  const auto segment_statistics_a1 =
+      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(0).at(1));
+  ASSERT_TRUE(segment_statistics_a1);
+
+  const auto histogram_a1 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_a1->histogram);
+  ASSERT_TRUE(histogram_a1);
+
+  EXPECT_FLOAT_EQ(histogram_a1->total_count(), 17);
+  EXPECT_FLOAT_EQ(histogram_a1->total_distinct_count(), 7);
+
+  // First chunk of column b
+  const auto segment_statistics_b0 =
+      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(1).at(0));
+  ASSERT_TRUE(segment_statistics_b0);
+
+  const auto histogram_b0 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_b0->histogram);
+  ASSERT_TRUE(histogram_b0);
+
+  EXPECT_FLOAT_EQ(histogram_b0->total_count(), 20);
+  EXPECT_FLOAT_EQ(histogram_b0->total_distinct_count(), 20);
 }
 
 }  // namespace opossum

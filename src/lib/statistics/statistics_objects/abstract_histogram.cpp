@@ -747,7 +747,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
 
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
-    const std::vector<std::pair<T, T>>& additional_bin_edges) const {
+    const std::vector<std::pair<T, T>>& additional_bin_edges, bool allow_empty_bins) const {
   // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_same_v<T, pmr_string>) {
     Fail("Cannot split_at_bin_bounds() on string histogram");
@@ -836,10 +836,9 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
     // Skip empty bins
-    if (estimate.first == Cardinality{0}) {
+    if (!allow_empty_bins && (estimate.first == Cardinality{0})) {
       continue;
     }
-
     builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.first),
                     static_cast<HistogramCountType>(estimate.second));
   }
