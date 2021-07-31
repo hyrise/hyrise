@@ -31,6 +31,7 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/top_k_uniform_distribution_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "storage/table.hpp"
@@ -740,7 +741,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           selectivity = 0.0f;
           return;
         }
-
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
             std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
@@ -748,7 +748,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
           selectivity = 0.0f;
         } else {
-          selectivity = sliced_histogram->total_count() / scan_statistics_object->total_count();
+          selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
         }
 
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
