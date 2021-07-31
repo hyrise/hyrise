@@ -71,7 +71,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   }
   auto segment = compress(vs_str, DataType::String);
 
-  for(size_t index = 0; index < values.size(); ++index){
+  for (size_t index = 0; index < values.size(); ++index) {
     std::optional<pmr_string> value = segment->get_typed_value(static_cast<ChunkOffset>(index));
     ASSERT_EQ(value.value(), values[index]);
   }

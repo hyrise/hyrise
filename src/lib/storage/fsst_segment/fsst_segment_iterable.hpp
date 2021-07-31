@@ -28,11 +28,11 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
 
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
-
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
     using PosListIteratorType = decltype(position_filter->cbegin());
-    auto begin = PointAccessIterator<PosListIteratorType>{_segment, position_filter->cbegin(), position_filter->cbegin()};
+    auto begin =
+        PointAccessIterator<PosListIteratorType>{_segment, position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator<PosListIteratorType>{_segment, position_filter->cbegin(), position_filter->cend()};
     functor(begin, end);
   }
@@ -51,21 +51,13 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() {
-      ++_chunk_offset;
-    }
+    void increment() { ++_chunk_offset; }
 
-    void decrement() {
-      --_chunk_offset;
-    }
+    void decrement() { --_chunk_offset; }
 
-    void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
-    }
+    void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
-    bool equal(const Iterator& other) const {
-      return _chunk_offset == other._chunk_offset;
-    }
+    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
       return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
@@ -86,8 +78,8 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                         SegmentPosition<T>, PosListIteratorType> {
    public:
-    PointAccessIterator(const FSSTSegment<T>& segment,
-                        PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
+    PointAccessIterator(const FSSTSegment<T>& segment, PosListIteratorType position_filter_begin,
+                        PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},

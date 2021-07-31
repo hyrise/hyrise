@@ -74,7 +74,6 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment);
 template <typename T, bool EraseSegmentType = true>
 auto create_iterable_from_segment(const FSSTSegment<T>& segment);
 
-
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
           EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes
                                                      : EraseReferencedSegmentType::No)>

@@ -72,8 +72,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
   size_t compressed_length = real_offset_next - real_offset;
 
   // Note: we use const_cast in order to use fsst_decompress.
-  auto compressed_pointer = const_cast<unsigned char*>(
-      _compressed_values.data() + real_offset);
+  auto compressed_pointer = const_cast<unsigned char*>(_compressed_values.data() + real_offset);
 
   // Since the max symbol length is 8, max uncompressed size is 8 * compressed_length.
   size_t output_size = compressed_length * 8;
@@ -106,7 +105,7 @@ std::shared_ptr<AbstractSegment> FSSTSegment<T>::copy_using_allocator(const Poly
   fsst_decoder_t new_decoder = _decoder;
 
   auto copy = std::make_shared<FSSTSegment>(new_compressed_values, new_compressed_offsets, new_reference_offsets,
-                                                   new_null_values, _number_elements_per_reference_bucket, new_decoder);
+                                            new_null_values, _number_elements_per_reference_bucket, new_decoder);
   copy->access_counter = access_counter;
 
   return copy;

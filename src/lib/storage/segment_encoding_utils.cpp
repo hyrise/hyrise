@@ -5,8 +5,8 @@
 
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
-#include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/fsst_segment/fsst_encoder.hpp"
+#include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
 #include "utils/assert.hpp"

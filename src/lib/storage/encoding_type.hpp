@@ -23,12 +23,23 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4, FSST };
+enum class EncodingType : uint8_t {
+  Unencoded,
+  Dictionary,
+  RunLength,
+  FixedStringDictionary,
+  FrameOfReference,
+  LZ4,
+  FSST
+};
 
-inline static std::vector<EncodingType> encoding_type_enum_values{
-    EncodingType::Unencoded,        EncodingType::Dictionary,
-    EncodingType::RunLength,        EncodingType::FixedStringDictionary,
-    EncodingType::FrameOfReference, EncodingType::LZ4, EncodingType::FSST};
+inline static std::vector<EncodingType> encoding_type_enum_values{EncodingType::Unencoded,
+                                                                  EncodingType::Dictionary,
+                                                                  EncodingType::RunLength,
+                                                                  EncodingType::FixedStringDictionary,
+                                                                  EncodingType::FrameOfReference,
+                                                                  EncodingType::LZ4,
+                                                                  EncodingType::FSST};
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -81,8 +92,12 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                               EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                               EncodingType::RunLength,        EncodingType::LZ4, EncodingType::FSST};
+inline constexpr std::array all_encoding_types{EncodingType::Unencoded,
+                                               EncodingType::Dictionary,
+                                               EncodingType::FrameOfReference,
+                                               EncodingType::FixedStringDictionary,
+                                               EncodingType::RunLength,
+                                               EncodingType::LZ4,
+                                               EncodingType::FSST};
 
 }  // namespace opossum

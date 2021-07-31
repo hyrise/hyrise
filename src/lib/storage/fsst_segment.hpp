@@ -21,9 +21,9 @@ template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
  public:
   explicit FSSTSegment(pmr_vector<unsigned char>& compressed_values,
-              std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
-              pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
-              uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
+                       std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
+                       pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
+                       uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
 
   /**
    * @defgroup AbstractSegment interface

@@ -78,7 +78,7 @@ TEST_F(BinaryWriterTest, FSSTSingleChunk) {
   // TODO(anyone): Cannot test BinaryWriter currently because FSST creates different symbol table in each run;
   // make sure BinaryWriter produces constant results across different runs;
   // use static file for the check (without parser).
-  auto read_table = BinaryParser::parse(filename);        
+  auto read_table = BinaryParser::parse(filename);
 
   EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }

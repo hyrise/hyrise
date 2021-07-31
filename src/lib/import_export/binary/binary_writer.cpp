@@ -308,8 +308,7 @@ void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool colum
   }
 
   // Write number of elements in a reference bucket
-  export_value(ofstream,
-               static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));
+  export_value(ofstream, static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));
 
   // Write decoder
   export_value(ofstream, fsst_segment.decoder());
