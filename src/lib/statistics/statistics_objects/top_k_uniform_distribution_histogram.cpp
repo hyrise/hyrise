@@ -41,7 +41,6 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   }
 
   // If the column holds less than K distinct values use the distinct count as TOP_K instead
-
   const auto k = std::min(TOP_K_DEFAULT, value_distribution.size());
 
   // Get the first top k values and save them into vectors
@@ -49,29 +48,28 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   std::vector<HistogramCountType> top_k_counts(k);
 
   // Sort values by occurrence count
-  auto sorted_count_values = value_distribution;
-  std::sort(sorted_count_values.begin(), sorted_count_values.end(),
-            [&](const auto& l, const auto& r) { return l.second > r.second; });
+  auto sorted_value_counts = value_distribution;
+  std::sort(sorted_value_counts.begin(), sorted_value_counts.end(),
+            [&](const auto& left_value_count, const auto& right_value_count) { return left_value_count.second > right_value_count.second; });
 
   // Sort TOP_K values with highest occurrence count lexicographically.
   // We later use this for more performant range predicate evaluation.
-  std::sort(sorted_count_values.begin(), sorted_count_values.begin() + k,
-            [&](const auto& l, const auto& r) { return l.first < r.first; });
+  std::sort(sorted_value_counts.begin(), sorted_value_counts.begin() + k,
+            [&](const auto& left_value_count, const auto& right_value_count) { return left_value_count.first < right_value_count.first; });
 
-  if (!sorted_count_values.empty()) {
-    for(auto i = 0u; i < k; i++) {
-      top_k_names[i] = sorted_count_values[i].first;
-      top_k_counts[i] = sorted_count_values[i].second;
-    }
+  for(auto top_k_index = 0u; top_k_index < k; top_k_index++) {
+    top_k_names[top_k_index] = sorted_value_counts[top_k_index].first;
+    top_k_counts[top_k_index] = sorted_value_counts[top_k_index].second;
   }
 
   // Remove TOP_K values from value distribution
   for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
-    auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
-    value_distribution.erase(it, value_distribution.end());
+    auto value_distribution_it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
+    value_distribution.erase(value_distribution_it, value_distribution.end());
   }
 
-  // Model uniform distribution as one bin for all non Top K values between Top K bins. 
+  // Each Top K value is modeled as one bin with height as its stored count.
+  // Between two Top K value bins, one bin is created for potential non Top K values using an uniform distribution assumption. 
   const auto bin_count = value_distribution.size() < 1 ? BinID{top_k_names.size()} : BinID{2*top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
@@ -80,7 +78,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         value_distribution.cbegin(), 
         value_distribution.cend(), 
         HistogramCountType{0}, 
-        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
+        [](HistogramCountType current_count, const std::pair<T, HistogramCountType>& value_count) { return current_count + value_count.second; });
 
   const auto bin_distinct_count = value_distribution.size();
   const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / bin_distinct_count : BinID{0};
@@ -92,7 +90,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
     // current top_k value
     const auto current_top_k_value = top_k_names[top_k_index];
 
-    // find value smaller than current top_k value for current maximum
+    // find maximum value that is still smaller than current top_k value
     auto value_dist_lower_bound = std::lower_bound(value_distribution.begin(), value_distribution.end(), current_top_k_value,
       [](const auto value_count_pair, auto value) {
         return value_count_pair.first < value;
@@ -103,9 +101,8 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       
       // find out how many values are before current top k value
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
-      auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
-
-      auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+      const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
+      const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
 
       // add bin with values before top_k
       builder.add_bin(
@@ -124,19 +121,17 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       1
     );
 
-    // advance minimum pointer
-
+    // advance minimum index
     current_minimum_index = value_dist_lower_bound - value_distribution.begin();
-    
   }
-      // add last bucket if necessary
+
+  // add last bucket if non top k values are still left after the last top k value
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
     const auto range_maximum = value_distribution.back().first;
-    auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
-    auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+    const auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
+    const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
     builder.add_bin(value_distribution[current_minimum_index].first, range_maximum, current_bin_height, current_distinct_values);    
   }
-
 
   return builder.build();
 }
