@@ -14,8 +14,6 @@ namespace opossum {
 
 class Table;
 
-
-
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
@@ -24,7 +22,6 @@ template <typename T>
 using ValueDistributionMap =
     tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
                    std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
-
 
 /**
  * Distinct-balanced histogram.
@@ -61,12 +58,11 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                       const HistogramDomain<T>& domain = {});
 
   /**
-    * Merge all histograms in @param histogram into one new EqualDistinctCountHistogram with at most @param bin_count_target bins.
-    * Returns the merged histgram and the max_estimation_error. 
+    * Merge all histograms in @param histograms into one new EqualDistinctCountHistogram with at most @param bin_count_target bins.
+    * Returns the merged histogram and the max_estimation_error. 
     * Returns (nullptr, 0.0) if no valid histograms are given.
-    * The max_estimation_error is an upper bound on how much the total_distinct_count() of the merged histogram might differ from the actual total_distinct_count
+    * The max_estimation_error is an upper bound on how much the total_distinct_count of the merged histogram might differ from the actual total_distinct_count
     * one would get from building one single histogram from the underlying data of histograms.
-    * Generally speaking, the error can be high when there's a high overlap between the histograms.
     */
   static std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> merge(
       const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms, BinID bin_count_target);
@@ -98,6 +94,12 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
   static std::pair<std::vector<T>, std::vector<T>> _merge_splitted_bounds(
       const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
+
+  static std::tuple<std::vector<HistogramCountType>, std::vector<HistogramCountType>, std::vector<T>, std::vector<T>,
+                    HistogramCountType>
+  _create_merged_intervals(const std::vector<T>& splitted_bounds_minima, const std::vector<T>& splitted_bounds_maxima,
+                           const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
+                           const HistogramDomain<T>& domain);
 
   static std::tuple<T, T, HistogramCountType> _create_one_bin(
       typename std::vector<T>::iterator& interval_minima_begin, typename std::vector<T>::iterator& interval_minima_end,

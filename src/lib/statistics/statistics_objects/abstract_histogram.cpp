@@ -815,7 +815,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * E.g., [-5, -4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20, 21] becomes
    * [-4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20]
    */
-
   candidate_edges.erase(candidate_edges.begin());
   candidate_edges.pop_back();
 

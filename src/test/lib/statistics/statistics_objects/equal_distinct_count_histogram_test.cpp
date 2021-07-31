@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 
+#include <iostream>
 #include "base_test.hpp"
 
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"

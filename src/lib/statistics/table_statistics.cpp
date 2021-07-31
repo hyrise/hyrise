@@ -1,6 +1,5 @@
 #include "table_statistics.hpp"
 
-#include <iostream>
 #include <numeric>
 #include <thread>
 
@@ -35,6 +34,7 @@ void TableStatistics::_add_statistics_from_histogram(
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
   std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics(table.column_count());
+
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
    * (for tables with >= 200m rows) are created.
@@ -64,16 +64,13 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           using ColumnDataType = typename decltype(type)::type;
 
           const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-
-          // Use some magic oracle to find out if we want to merge or use the full histogram.
-
           const auto chunk_count = table.chunk_count();
-
-          const auto should_generate_small_histograms = (chunk_count > 1) && column_data_type != DataType::String;
+          const auto should_generate_small_histograms = (chunk_count > 1) && (column_data_type != DataType::String);
           std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram = nullptr;
+
           if (should_generate_small_histograms) {
             // Generate the small histograms.
-            // Per Segment statistics will be twice as detailed.
+            // Per segment statistics will be twice as detailed.
             std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>> histograms;
             histograms.reserve(chunk_count);
 
@@ -95,8 +92,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             // Using the max_estimation_error, we can detect if the merged histogram is significantly too bad.
             // In that case we generate the full histogram.
             // Wasting time is better than using bad histograms.
-            const auto error_percent_threshold =
-                0.05;  // Some more elaborate experiments might be necessary to find a good value for this.
+            const auto error_percent_threshold = 0.05;
             if (max_estimation_error > histogram->total_distinct_count() * error_percent_threshold) {
               histogram =
                   EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
