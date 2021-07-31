@@ -78,7 +78,7 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
   EXPECT_EQ(hist->bin(BinID{9}), HistogramBin<float>(6.1f, 6.1f, 1, 1));
 }
 
-/* Test for ints if the number of values is below K, every value has its own bucket */
+/* Test for ints if the number of values is more than K */
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
   const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int300, ColumnID{0});
 
