@@ -1,10 +1,10 @@
 #pragma once
 
+#include <fsst.h>
 #include <array>
 #include <memory>
 #include <type_traits>
 
-#include <fsst.h>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>

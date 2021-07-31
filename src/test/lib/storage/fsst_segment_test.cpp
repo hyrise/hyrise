@@ -13,8 +13,6 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
-#include <iostream>
-
 namespace opossum {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated

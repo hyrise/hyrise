@@ -1,17 +1,15 @@
 #include "fsst_segment.hpp"
 
 #include <climits>
-#include <libfsst.hpp>
 #include <sstream>
 #include <string>
+#include <libfsst.hpp>
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-
-#include <iostream>
 
 namespace opossum {
 

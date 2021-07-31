@@ -27,8 +27,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     segment_iterable.with_iterators([&](auto it, auto end) {
       // Early out for empty segments, code below assumes it to be non-empty
-      // is this needed?
-      if (it == end) {  // TODO: remove
+      if (it == end) {
         return;
       }
 
@@ -65,7 +64,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   fsst_decoder_t _compress_values(pmr_vector<T>& values, pmr_vector<unsigned char>& compressed_values,
                                   pmr_vector<uint64_t>& compressed_value_lengths) {
     // Temporary data structures keeping char pointers and their lengths.
-    std::vector<unsigned long> row_lengths;
+    std::vector<uint64_t> row_lengths;
     std::vector<unsigned char*> row_pointers;
     row_lengths.reserve(values.size());
     row_pointers.reserve(values.size());
@@ -80,7 +79,8 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     for (pmr_string& value : values) {
       total_length += value.size();
       row_lengths.push_back(value.size());
-      row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));  // TODO: value.c_str()
+      // TODO(anybody): refactor the cast
+      row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
     }
 
     // 7 + 2 * total_length -> See fsst_compress interface in fsst.h description.
@@ -176,7 +176,8 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // "shrink_to_fit" to the total size of the compressed strings.
     compressed_values.resize(aggregated_offset_sum);
 
-    // Create reference offsets as well as create the "zig-zag" pattern in offsets in order to achieve larger vector compression rates.
+    // Create reference offsets as well as create the "zig-zag" pattern in offsets
+    // in order to achieve larger vector compression rates.
     uint64_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
     // Find maximum value in offsets in order to use it in later vector compression.
