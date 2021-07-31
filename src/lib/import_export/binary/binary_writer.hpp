@@ -224,7 +224,32 @@ class BinaryWriter {
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
 
-  // TODO (anyone): check method
+  /**
+   * FSSTSegments are dumped with the following layout:
+   *
+   * Description                 | Type                                | Size in bytes
+   * --------------------------------------------------------------------------------------------------------
+   * Encoding Type               | EncodingType                        | 1
+   * Attribute vector compr. ID. | CompressedVectorTypeID              | 1
+   * Compressed values size      | uint32_t                            | 4
+   * Compressed values           | vector<uint32_t>                    | Compressed values size * 1
+   * Vector compress. bit width  | uint8_t                             | 1
+   * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
+   *                                                                     rounded up to next multiple of word (8 byte)
+   * Offset values               | uint(8|16|32)_t                     | (Rows + 1) * width of offset vector
+   * Reference offsets size      | uint32_t                            | 4
+   * Reference offsets           | vector<uint64_t>                    | 8 * 8
+   * NULL values size            | uint32_t                            | 4
+   * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
+   * # elements in a bucket      | uint64_t                            | 8
+   * Decoder                     | fsst_decoder_t                      | 2313
+   * 
+   * 
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   * ¹: This field is only written if NULL values' size is not 0
+   */
   template <typename T>
   static void _write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream);
 
