@@ -66,18 +66,15 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   }
 
   // Remove TOP_K values from value distribution
-  for (auto i = 0u; i < k; i++) {
-    auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[i], top_k_counts[i]));
+  for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
+    auto it = remove(value_distribution.begin(), value_distribution.end(), std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
     value_distribution.erase(it, value_distribution.end());
   }
 
-  // Model uniform distribution as one bin for all non-Top K values.
+  // Model uniform distribution as one bin for all non Top K values between Top K bins. 
   const auto bin_count = value_distribution.size() < 1 ? BinID{top_k_names.size()} : BinID{2*top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
-
-  // Split values evenly among bins.
-  //const auto range_minimum = value_distribution.front().first;
   
   const auto non_top_k_count = std::accumulate(
         value_distribution.cbegin(), 
@@ -91,7 +88,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   auto current_minimum_index = 0u;
   auto current_maximum_index = value_distribution.size() - 1;
 
-  for (auto top_k_index = 0u, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
+  for (auto top_k_index = 0ul, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
     // current top_k value
     auto skip_bin = false;
     const auto current_top_k_value = top_k_names[top_k_index];
@@ -102,18 +99,10 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         return value_count_pair.first < value;
       });
 
-    // can't build a bin if top_k value bigger than all values (== value_distribution.end()) or if there is no value smaller than top-k
-    if (value_dist_lower_bound == value_distribution.end()) {
-      skip_bin = false;
-    } 
-
-     if (value_dist_lower_bound == value_distribution.begin() || std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index) {
-      skip_bin = true;
-    } 
-
-
-    // find out how many values are before current top k value
-    if (!skip_bin) {
+    // can't build a bin if there is no value smaller than top-k
+    if (!(value_dist_lower_bound == value_distribution.begin() || std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
+      
+      // find out how many values are before current top k value
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
       auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
 
