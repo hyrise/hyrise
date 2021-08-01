@@ -19,8 +19,14 @@ class BaseCompressedVector;
 template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
+  /// Creates a dictionary encoded segment
+  /// \param dictionary The dictionary
+  /// \param attribute_vector The attribute vector
+  /// \param uses_dictionary_sharing Sets whether the dictionary is shared with other dictionary encoded segments,
+  /// this is currently only used by the DictionarySharing plugin
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                             const bool uses_dictionary_sharing = false);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
@@ -82,11 +88,14 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ValueID null_value_id() const final;
 
+  bool uses_dictionary_sharing() const;
+
   /**@}*/
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  const bool _uses_dictionary_sharing;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 

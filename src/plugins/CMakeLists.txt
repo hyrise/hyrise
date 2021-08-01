@@ -31,7 +31,10 @@ endfunction(add_plugin)
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
-
+add_plugin(NAME hyriseSharedDictionariesPlugin SRCS
+        shared_dictionaries_plugin/shared_dictionaries_plugin.cpp shared_dictionaries_plugin/shared_dictionaries_plugin.hpp
+        shared_dictionaries_plugin/shared_dictionaries_plugin_settings.cpp shared_dictionaries_plugin/shared_dictionaries_plugin_settings.hpp
+        shared_dictionaries_plugin/shared_dictionaries_column_processor.cpp shared_dictionaries_plugin/shared_dictionaries_column_processor.hpp)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
