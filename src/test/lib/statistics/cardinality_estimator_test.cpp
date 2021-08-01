@@ -620,8 +620,11 @@ TEST_F(CardinalityEstimatorTest, PredicateIn) {
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(greater_than_(a_a, 50),  // 50% of rows in histogram, which itself covers 100% of rows in the table, leads to a selectivity of 0.5 * 1 = 0.5
-    PredicateNode::make(less_than_equals_(a_b, 75),  // 55% of rows in histogram, which itself covers 70% of rows in the table, leads to a selectivity of 0.55 * 0.7 = 0.385
+  // 50% of rows in histogram, which itself covers 100% of rows in the table, leads to a selectivity of 0.5 * 1 = 0.5
+  PredicateNode::make(greater_than_(a_a, 50),
+    // 55% of rows in histogram, which itself covers 70% of rows in the table,
+    // leads to a selectivity of 0.55*0.7 = 0.385
+    PredicateNode::make(less_than_equals_(a_b, 75),
       node_a));
   // clang-format on
 

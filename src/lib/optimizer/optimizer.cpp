@@ -71,7 +71,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // This rule is currently under construction and,
   // right now, doesn't combine well with our cardinality estimation implementation.
   // For more accurate comparing results, it is therefore disabled.
-  //optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+  // optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.

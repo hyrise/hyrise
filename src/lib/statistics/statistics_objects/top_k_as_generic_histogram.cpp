@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "equal_distinct_count_histogram.cpp"
 #include "equal_distinct_count_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 
@@ -94,7 +93,8 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
     // For each Top K value a Non-Top K values bin between the previous Top K value and itself,
     // as well as a Top K value bin are created.
 
-    // We can skip creating a Non-Top K value bin, if there are no Non-Top K values between the previous and the current Top K value.
+    // We can skip creating a Non-Top K value bin,
+    // if there are no Non-Top K values between the previous and the current Top K value.
     if (!(value_dist_lower_bound == value_distribution.begin() ||
           std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
       // Create Non-Top K values bin
