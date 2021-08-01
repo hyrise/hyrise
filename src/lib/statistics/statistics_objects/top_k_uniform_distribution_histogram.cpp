@@ -38,8 +38,8 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
               return left_value_count.second > right_value_count.second;
             });
 
-  // Sort TOP_K values lexicographically
-  // We later use the lexicographically sorted TOP_K values for easier and more performant histogram construction
+  // Sort Top K values lexicographically
+  // We later use the lexicographically sorted Top K values for easier and more performant histogram construction
   std::sort(sorted_value_counts.begin(), sorted_value_counts.begin() + k,
             [&](const auto& left_value_count, const auto& right_value_count) {
               return left_value_count.first < right_value_count.first;
@@ -50,7 +50,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
     top_k_counts[top_k_index] = sorted_value_counts[top_k_index].second;
   }
 
-  // Remove TOP_K values from value distribution
+  // Remove Top K values from value distribution
   for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
     auto value_distribution_it = remove(value_distribution.begin(), value_distribution.end(),
                                         std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
@@ -98,12 +98,12 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
       const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
       const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
 
-      // add bin with values before top_k
+      // add bin with values before Top K
       builder.add_bin(value_distribution[current_minimum_index].first, value_distribution[current_maximum_index].first,
                       current_bin_height, current_distinct_values);
     }
 
-    // add bin for topk value
+    // add bin for Top K value
     builder.add_bin(current_top_k_value, current_top_k_value, top_k_counts[top_k_index], 1);
 
     // advance minimum index
