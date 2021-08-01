@@ -9,23 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
-
-#include "generic_histogram.hpp"
-#include "resolve_type.hpp"
-#include "storage/segment_iterate.hpp"
-
-#include "abstract_histogram.hpp"
 #include "equal_distinct_count_histogram.cpp"
 #include "equal_distinct_count_histogram.hpp"
-#include "expression/evaluation/like_matcher.hpp"
-#include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
-#include "lossy_cast.hpp"
-#include "resolve_type.hpp"
-#include "statistics/statistics_objects/abstract_statistics_object.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -41,7 +27,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   // If the column holds less than K distinct values use the distinct count as TOP_K instead
   const auto k = std::min(TOP_K_DEFAULT, value_distribution.size());
 
-  // Get the first top k values and save them into vectors
+  // Get the first Top K values and save them into vectors
   std::vector<T> top_k_names(k);
   std::vector<HistogramCountType> top_k_counts(k);
 
@@ -73,8 +59,8 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
 
   // Each Top K value is modeled as one bin with height as its stored count.
   // Between two Top K value bins, one bin is created for the non-Top K values between them.
-  // Together with a potential last bin after the last top k value we have a maximum bin count of 2 * K + 1
-  // If there are no more values stored in value_distribution after the top k values have been removed, we only have top k values and therefore need exactly k bins
+  // Together with a potential last bin after the last Top K value we have a maximum bin count of 2 * K + 1
+  // If there are no more values stored in value_distribution after the Top K values have been removed, we only have Top K values and therefore need exactly k bins
   const auto bin_count = value_distribution.size() < 1 ? BinID{k} : BinID{2 * top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
@@ -103,11 +89,11 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         std::lower_bound(value_distribution.begin(), value_distribution.end(), current_top_k_value,
                          [](const auto value_count_pair, auto value) { return value_count_pair.first < value; });
 
-    // Add a non top k value bin and a top k value bin
-    // We can skip a non top k value bin, if there are no non top k values between two top k value bins
+    // Add a non-Top K value bin and a top k value bin
+    // We can skip a non Top K value bin, if there are no non-Top K values between two Top K value bins
     if (!(value_dist_lower_bound == value_distribution.begin() ||
           std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
-      // find out how many values are before current top k value
+      // find out how many values are before current Top K value
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
       const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
       const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
@@ -124,7 +110,7 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
     current_minimum_index = value_dist_lower_bound - value_distribution.begin();
   }
 
-  // add last bucket if non top k values are still left after the last top k value
+  // add last bucket if non Top K values are still left after the last Top K value
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
     const auto range_maximum = value_distribution.back().first;
     const auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
