@@ -9,21 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include "generic_histogram.hpp"
-#include "resolve_type.hpp"
-#include "storage/segment_iterate.hpp"
-
-#include "abstract_histogram.hpp"
 #include "equal_distinct_count_histogram.cpp"
 #include "equal_distinct_count_histogram.hpp"
-#include "expression/evaluation/like_matcher.hpp"
-#include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
-#include "lossy_cast.hpp"
-#include "resolve_type.hpp"
-#include "statistics/statistics_objects/abstract_statistics_object.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
