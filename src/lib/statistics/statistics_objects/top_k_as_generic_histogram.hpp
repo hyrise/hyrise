@@ -25,7 +25,6 @@ class Table;
 template <typename T>
 class TopKAsGenericHistogram {
  public:
-
   // Create a Top K Generic Histogram for a column (spanning all Segments) of a Table
   static std::shared_ptr<GenericHistogram<T>> from_column(const Table& table, const ColumnID column_id,
                                                           const HistogramDomain<T>& domain = {});

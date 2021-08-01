@@ -29,8 +29,7 @@ class TopKAsGenericHistogramTest : public BaseTest {
 // If the number of distinct values is below K, every value should have its own bin.
 TEST_F(TopKAsGenericHistogramTest, FromColumnStringLessThanKValues) {
   StringHistogramDomain default_domain;
-  const auto hist =
-      TopKAsGenericHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
+  const auto hist = TopKAsGenericHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
 
   // _string2 has 11 distinct values
   ASSERT_EQ(hist->bin_count(), 11u);
@@ -80,7 +79,7 @@ TEST_F(TopKAsGenericHistogramTest, FromColumnFloatLessThanKValues) {
 }
 
 // Test histogram creation for Ints:
-// If the number of distinct values is above K, 
+// If the number of distinct values is above K,
 // K Top K value bins with one value per bin and height of their specific occurrence count should be created.
 // Between the Top K value bins,
 // Non-Top K value bins with a height of num_distinct_values * average_non_top_k_occurrence_count should be created.

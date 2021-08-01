@@ -16,9 +16,9 @@
 namespace opossum {
 
 template <typename T>
-std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
-    const Table& table, const ColumnID column_id, const HistogramDomain<T>& domain) {
-  
+std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(const Table& table,
+                                                                            const ColumnID column_id,
+                                                                            const HistogramDomain<T>& domain) {
   auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
@@ -33,9 +33,11 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
 
   // Bring Top K values (with highest occurrences counts) to the front (first k elements) of the value distribution.
   auto top_k_front_value_distribution = value_distribution;
-  std::nth_element(top_k_front_value_distribution.begin(), top_k_front_value_distribution.begin() + k, top_k_front_value_distribution.end(), [&](const auto& left_value_count, const auto& right_value_count) {
-              return left_value_count.second > right_value_count.second;
-            });
+  std::nth_element(top_k_front_value_distribution.begin(), top_k_front_value_distribution.begin() + k,
+                   top_k_front_value_distribution.end(),
+                   [&](const auto& left_value_count, const auto& right_value_count) {
+                     return left_value_count.second > right_value_count.second;
+                   });
 
   // Sort Top K values lexicographically
   // We later use the lexicographically sorted Top K values for easier and more performant histogram construction.
@@ -78,24 +80,23 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
   // Construct Generic Histogram with single bins for Top K Values.
   // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,
   // using the calculated estimation of count_per_non_top_k_value.
-  
+
   auto current_minimum_index = 0u;
   auto current_maximum_index = value_distribution.size() - 1;
 
   for (auto top_k_index = 0ul, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
     const auto current_top_k_value = top_k_names[top_k_index];
-   
-    auto value_dist_lower_bound =
-        std::lower_bound(value_distribution.begin() + current_minimum_index, value_distribution.end(), current_top_k_value,
-                         [](const auto value_count_pair, auto value) { return value_count_pair.first < value; });
+
+    auto value_dist_lower_bound = std::lower_bound(
+        value_distribution.begin() + current_minimum_index, value_distribution.end(), current_top_k_value,
+        [](const auto value_count_pair, auto value) { return value_count_pair.first < value; });
 
     // For each Top K value a Non-Top K values bin between the previous Top K value and itself,
     // as well as a Top K value bin are created.
-    
+
     // We can skip creating a Non-Top K value bin, if there are no Non-Top K values between the previous and the current Top K value.
     if (!(value_dist_lower_bound == value_distribution.begin() ||
           std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
-      
       // Create Non-Top K values bin
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
       const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
