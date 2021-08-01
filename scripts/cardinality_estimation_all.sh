@@ -9,7 +9,7 @@ then
   echo 'Benchmark Item ID ; LQP Node ; PQP Node ; LQP Row Count ; PQP Row Count'
   echo 'As the evaluation depends on the assumption that lqp and pqp will usually have the same order of nodes, additional debug information is printed to identify and manually correct cases where this is not the case.'
   echo 'For this a file with the number of nodes in LQP and PQP for each benchmark item, as well as the visualized plans of LQP and PQP are created and stored, too.'
-  echo 'Typical call from the root folder: ../scripts/cardinality_estimations_all.sh  ./path/to/build_folder ./path/to/cardinality_information_folder'
+  echo 'Typical call from the root folder: ./scripts/cardinality_estimations_all.sh  ./path/to/build_folder ./path/to/cardinality_information_folder'
   exit 1
 fi
 
