@@ -75,7 +75,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
   const auto bin_distinct_count = value_distribution.size();
   const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / bin_distinct_count : BinID{0};
 
-  // Construct Generic Histogram with single bins for Top-K Values
+  // Construct Generic Histogram with single bins for Top K Values.
   // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,
   // using the calculated estimation of count_per_non_top_k_value.
   
@@ -92,7 +92,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
     // For each Top K value a Non-Top K values bin between the previous Top K value and itself,
     // as well as a Top K value bin are created.
     
-    // We can skip creating a Non-Top K value bin, if there are no Non-Top K values between two Top K value bins.
+    // We can skip creating a Non-Top K value bin, if there are no Non-Top K values between the previous and the current Top K value.
     if (!(value_dist_lower_bound == value_distribution.begin() ||
           std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
       
@@ -110,7 +110,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
     current_minimum_index = value_dist_lower_bound - value_distribution.begin();
   }
 
-  // If after the last Top K values Non-Top K values are still left, add last Non-Top K values bin.
+  // If after the last Top K value Non-Top K values are still left, add last Non-Top K values bin.
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
     const auto range_maximum = value_distribution.back().first;
     const auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
