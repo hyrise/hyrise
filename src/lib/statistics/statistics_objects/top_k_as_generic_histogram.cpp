@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "equal_distinct_count_histogram.cpp"
 #include "equal_distinct_count_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 
