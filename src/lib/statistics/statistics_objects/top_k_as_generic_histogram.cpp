@@ -1,4 +1,4 @@
-#include "top_k_uniform_distribution_histogram.hpp"
+#include "top_k_as_generic_histogram.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,7 +16,7 @@
 namespace opossum {
 
 template <typename T>
-std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_column(
+std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(
     const Table& table, const ColumnID column_id, const HistogramDomain<T>& domain) {
   
   auto value_distribution = value_distribution_from_column(table, column_id, domain);
@@ -122,6 +122,6 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   return builder.build();
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(TopKUniformDistributionHistogram);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(TopKAsGenericHistogram);
 
 }  // namespace opossum

@@ -5,12 +5,12 @@
 #include "base_test.hpp"
 
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/statistics_objects/top_k_uniform_distribution_histogram.hpp"
+#include "statistics/statistics_objects/top_k_as_generic_histogram.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-class TopKUniformDistributionHistogramTest : public BaseTest {
+class TopKAsGenericHistogramTest : public BaseTest {
   void SetUp() override {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
@@ -22,15 +22,15 @@ class TopKUniformDistributionHistogramTest : public BaseTest {
   std::shared_ptr<Table> _int_float4;
   std::shared_ptr<Table> _float2;
   std::shared_ptr<Table> _string2;
-  std::shared_ptr<Table> _int300;
+  std::shared_ptr<Table> _int350;
 };
 
 // Test histogram creation for Strings:
 // If the number of distinct values is below K, every value should have its own bin.
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnStringLessThanKValues) {
+TEST_F(TopKAsGenericHistogramTest, FromColumnStringLessThanKValues) {
   StringHistogramDomain default_domain;
   const auto hist =
-      TopKUniformDistributionHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
+      TopKAsGenericHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
 
   // _string2 has 11 distinct values
   ASSERT_EQ(hist->bin_count(), 11u);
@@ -49,8 +49,8 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnStringLessThanKValues) {
 
 // Test histogram creation for Ints:
 // If the number of distinct values is below K, every value should have its own bin.
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
-  const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int_float4, ColumnID{0});
+TEST_F(TopKAsGenericHistogramTest, FromColumnIntLessThanKValues) {
+  const auto hist = TopKAsGenericHistogram<int32_t>::from_column(*_int_float4, ColumnID{0});
 
   // _int_float_4 has 4 distinct values
   ASSERT_EQ(hist->bin_count(), 4u);
@@ -62,8 +62,8 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
 
 // Test histogram creation for Floats:
 // If the number of distinct values is below K, every value should have its own bin.
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
-  const auto hist = TopKUniformDistributionHistogram<float>::from_column(*_float2, ColumnID{0});
+TEST_F(TopKAsGenericHistogramTest, FromColumnFloatLessThanKValues) {
+  const auto hist = TopKAsGenericHistogram<float>::from_column(*_float2, ColumnID{0});
 
   // _float_2 has 10 distinct values
   ASSERT_EQ(hist->bin_count(), 10u);
@@ -84,8 +84,8 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
 // K Top K value bins with one value per bin and height of their specific occurrence count should be created.
 // Between the Top K value bins,
 // Non-Top K value bins with a height of num_distinct_values * average_non_top_k_occurrence_count should be created.
-TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
-  const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int350, ColumnID{0});
+TEST_F(TopKAsGenericHistogramTest, FromColumnIntMoreThanKValues) {
+  const auto hist = TopKAsGenericHistogram<int32_t>::from_column(*_int350, ColumnID{0});
 
   /* _int350 has 200 distinct values: 
     1 to 50 occur 3 times --> 50 bins with height 3

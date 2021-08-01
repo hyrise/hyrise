@@ -23,7 +23,7 @@ class Table;
  *  One bin is created for all Non-Top K values between two Top K bins using a uniform distribution assumption. 
  */
 template <typename T>
-class TopKUniformDistributionHistogram {
+class TopKAsGenericHistogram {
  public:
 
   // Create a Top K Generic Histogram for a column (spanning all Segments) of a Table

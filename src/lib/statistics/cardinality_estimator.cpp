@@ -33,7 +33,7 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "statistics/statistics_objects/top_k_uniform_distribution_histogram.hpp"
+#include "statistics/statistics_objects/top_k_as_generic_histogram.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "utils/assert.hpp"
