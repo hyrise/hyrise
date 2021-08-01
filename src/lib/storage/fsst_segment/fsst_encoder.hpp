@@ -116,9 +116,10 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   uint64_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
     auto reference_offsets_size = reference_offsets.size();
     auto offsets_size = offsets.size();
-    // Since we do not save the first reference offset (which is always 0), we have reference_offsets_size + 1 reference buckets.
+    // Since the first reference offset (which is always 0) is not saved,
+    // there are reference_offsets_size + 1 reference buckets.
     if (offsets_size < reference_offsets_size + 1) {
-      // Do not create reference offsets.
+      // Do not use reference offsets.
       return 0;
     }
     uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(
