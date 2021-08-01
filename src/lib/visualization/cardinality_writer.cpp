@@ -52,17 +52,18 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   output_debug.open("./benchmark_cardinality_estimation_debug_info.csv", std::ios_base::app);
 
   // If files are empty, write CSV headers
+  // Use semicolon as seperator instead of comma to be able to work with database values containing commas
   std::ifstream csv_file;
   csv_file.open("./benchmark_cardinality_estimation.csv");
   if (csv_file.peek() == std::ifstream::traits_type::eof()) {
     output_estimations << "Benchmark Item ID"
-                       << ","
+                       << ";"
                        << "LQP Node"
-                       << ","
+                       << ";"
                        << "PQP Node"
-                       << ","
+                       << ";"
                        << "LQP Row count"
-                       << ","
+                       << ";"
                        << "PQP Row count"
                        << "\n";
   }
@@ -71,9 +72,9 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   csv_file.open("./benchmark_cardinality_estimation_debug_info.csv");
   if (csv_file.peek() == std::ifstream::traits_type::eof()) {
     output_debug << "Benchmark Item ID"
-                 << ","
+                 << ";"
                  << "LQP Number of nodes"
-                 << ","
+                 << ";"
                  << "PQP Number of nodes"
                  << "\n";
   }
@@ -95,12 +96,12 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
     }
 
     // Write node names and cardinalities in CSV
-    output_estimations << benchmark_item_id << "," << lqp_description << "," << pqp_description << "," << lqp_row_count
-                       << "," << pqp_row_count << "\n";
+    output_estimations << benchmark_item_id << ";" << lqp_description << ";" << pqp_description << ";" << lqp_row_count
+                       << ";" << pqp_row_count << "\n";
   }
 
   // Write debug information about possible different numbers of lqp and pqp nodes
-  output_debug << benchmark_item_id << "," << lqp_nodes_size << "," << pqp_nodes_size << "\n";
+  output_debug << benchmark_item_id << ";" << lqp_nodes_size << ";" << pqp_nodes_size << "\n";
 
   // Close file handles
   output_estimations.close();
