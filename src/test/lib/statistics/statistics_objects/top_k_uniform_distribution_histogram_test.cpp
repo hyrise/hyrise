@@ -25,28 +25,30 @@ class TopKUniformDistributionHistogramTest : public BaseTest {
   std::shared_ptr<Table> _int300;
 };
 
-/* Test for strings if the number of values is below K, every value has its own bucket */
+// Test histogram creation for Strings:
+// If the number of distinct values is below K, every value should have its own bin.
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnStringLessThanKValues) {
   StringHistogramDomain default_domain;
-  const auto default_domain_histogram =
+  const auto hist =
       TopKUniformDistributionHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, default_domain);
 
   // _string2 has 11 distinct values
-  ASSERT_EQ(default_domain_histogram->bin_count(), 11u);
-  EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "aa", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<pmr_string>("b", "b", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<pmr_string>("birne", "birne", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{3}), HistogramBin<pmr_string>("bla", "bla", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{4}), HistogramBin<pmr_string>("bums", "bums", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{5}), HistogramBin<pmr_string>("ttt", "ttt", 2, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{6}), HistogramBin<pmr_string>("uuu", "uuu", 2, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{7}), HistogramBin<pmr_string>("www", "www", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{8}), HistogramBin<pmr_string>("xxx", "xxx", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{9}), HistogramBin<pmr_string>("yyy", "yyy", 1, 1));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{10}), HistogramBin<pmr_string>("zzz", "zzz", 3, 1));
+  ASSERT_EQ(hist->bin_count(), 11u);
+  EXPECT_EQ(hist->bin(BinID{0}), HistogramBin<pmr_string>("aa", "aa", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{1}), HistogramBin<pmr_string>("b", "b", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{2}), HistogramBin<pmr_string>("birne", "birne", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{3}), HistogramBin<pmr_string>("bla", "bla", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{4}), HistogramBin<pmr_string>("bums", "bums", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{5}), HistogramBin<pmr_string>("ttt", "ttt", 2, 1));
+  EXPECT_EQ(hist->bin(BinID{6}), HistogramBin<pmr_string>("uuu", "uuu", 2, 1));
+  EXPECT_EQ(hist->bin(BinID{7}), HistogramBin<pmr_string>("www", "www", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{8}), HistogramBin<pmr_string>("xxx", "xxx", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{9}), HistogramBin<pmr_string>("yyy", "yyy", 1, 1));
+  EXPECT_EQ(hist->bin(BinID{10}), HistogramBin<pmr_string>("zzz", "zzz", 3, 1));
 }
 
-/* Test for ints if the number of values is below K, every value has its own bucket */
+// Test histogram creation for Ints:
+// If the number of distinct values is below K, every value should have its own bin.
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
   const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int_float4, ColumnID{0});
 
@@ -58,9 +60,10 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
   EXPECT_EQ(hist->bin(BinID{3}), HistogramBin<int32_t>(123456, 123456, 3, 1));
 }
 
-/* Test for floats if the number of values is below K, every value has its own bucket */
+// Test histogram creation for Floats:
+// If the number of distinct values is below K, every value should have its own bin.
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
-  auto hist = TopKUniformDistributionHistogram<float>::from_column(*_float2, ColumnID{0});
+  const auto hist = TopKUniformDistributionHistogram<float>::from_column(*_float2, ColumnID{0});
 
   // _float_2 has 10 distinct values
   ASSERT_EQ(hist->bin_count(), 10u);
@@ -76,15 +79,19 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
   EXPECT_EQ(hist->bin(BinID{9}), HistogramBin<float>(6.1f, 6.1f, 1, 1));
 }
 
-/* Test for ints if the number of values is more than K */
+// Test histogram creation for Ints:
+// If the number of distinct values is above K, 
+// K Top K value bins with one value per bin and height of their specific occurrence count should be created.
+// Between the Top K value bins,
+// Non-Top K value bins with a height of num_distinct_values * average_non_top_k_occurrence_count should be created.
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
   const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int300, ColumnID{0});
 
   /* _int350 has 200 distinct values: 
-    1 to 50 occur 3 times --> 50 buckets
-    51 to 59 occur 1 time --> 1 bucket
-    61 to 110 occur 2 times --> 50 buckets
-    111 to 200 occur 1 time --> 1 bucket
+    1 to 50 occur 3 times --> 50 bins with height 3
+    51 to 60 occur 1 time --> 1 bin with height 10
+    61 to 110 occur 2 times --> 50 bins with height 2
+    111 to 200 occur 1 time --> 1 bin with height 90
     */
 
   ASSERT_EQ(hist->bin_count(), 102);
