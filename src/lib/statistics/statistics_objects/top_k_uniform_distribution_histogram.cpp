@@ -45,15 +45,15 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   std::vector<T> top_k_names(k);
   std::vector<HistogramCountType> top_k_counts(k);
 
-  // Sort values by occurrence count
+  // Sort values in value distribution by occurrence count
   auto sorted_value_counts = value_distribution;
   std::sort(sorted_value_counts.begin(), sorted_value_counts.end(),
             [&](const auto& left_value_count, const auto& right_value_count) {
               return left_value_count.second > right_value_count.second;
             });
 
-  // Sort TOP_K values with highest occurrence count lexicographically.
-  // We later use this for more performant range predicate evaluation.
+  // Sort TOP_K values lexicographically
+  // We later use the lexicographically sorted TOP_K values for easier and more performant histogram construction
   std::sort(sorted_value_counts.begin(), sorted_value_counts.begin() + k,
             [&](const auto& left_value_count, const auto& right_value_count) {
               return left_value_count.first < right_value_count.first;
@@ -72,13 +72,14 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   }
 
   // Each Top K value is modeled as one bin with height as its stored count.
-  // Between two Top K value bins, one bin is created for potential non Top K values using an uniform distribution assumption.
+  // Between two Top K value bins, one bin is created for the non-Top K values between them.
   // Together with a potential last bin after the last top k value we have a maximum bin count of 2 * K + 1
-  // If the value_distribution is smaller than 1 at this point (top k values already removed), we only have top k values and therefore need this number of bins
-  const auto bin_count = value_distribution.size() < 1 ? BinID{top_k_names.size()} : BinID{2 * top_k_names.size() + 1};
+  // If there are no more values stored in value_distribution after the top k values have been removed, we only have top k values and therefore need exactly k bins
+  const auto bin_count = value_distribution.size() < 1 ? BinID{k} : BinID{2 * top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
 
+// Calculate estimate for occurrence count for Non-Top K values assuming a uniform distribution
   const auto non_top_k_count =
       std::accumulate(value_distribution.cbegin(), value_distribution.cend(), HistogramCountType{0},
                       [](HistogramCountType current_count, const std::pair<T, HistogramCountType>& value_count) {
@@ -88,13 +89,15 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
   const auto bin_distinct_count = value_distribution.size();
   const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / bin_distinct_count : BinID{0};
 
+// Construct Generic Histogram with single bins for Top-K Values
+// For Non-Top K Values, one bin is created for all non-Top K values between two Top K bins using the calculated estimation of count_per_non_top_k_value
   auto current_minimum_index = 0u;
   auto current_maximum_index = value_distribution.size() - 1;
 
   for (auto top_k_index = 0ul, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
-    // current top_k value
     const auto current_top_k_value = top_k_names[top_k_index];
 
+// For each Top K value a Non-Top K values bin between the previous Top K value and itself, as well as a Top K value bin for itself are created
     // find maximum value that is still smaller than current top_k value
     auto value_dist_lower_bound =
         std::lower_bound(value_distribution.begin(), value_distribution.end(), current_top_k_value,
