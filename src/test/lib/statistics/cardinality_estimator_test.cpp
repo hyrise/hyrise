@@ -626,7 +626,7 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 19.25f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 38.5f); 
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 38.5f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 

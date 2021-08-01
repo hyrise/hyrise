@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "abstract_histogram.hpp"
-#include "types.hpp"
 #include "generic_histogram.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -29,8 +29,7 @@ class TopKUniformDistributionHistogram {
    * Create an Top-K histogram as a GenericHistogram for a column (spanning all Segments) of a Table
    */
   static std::shared_ptr<GenericHistogram<T>> from_column(const Table& table, const ColumnID column_id,
-                                                                     const HistogramDomain<T>& domain = {});
-
+                                                          const HistogramDomain<T>& domain = {});
 };
 
 }  // namespace opossum

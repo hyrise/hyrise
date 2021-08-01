@@ -4,8 +4,8 @@
 
 #include "base_test.hpp"
 
-#include "statistics/statistics_objects/top_k_uniform_distribution_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/top_k_uniform_distribution_histogram.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -46,7 +46,6 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnStringLessThanKValues) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{10}), HistogramBin<pmr_string>("zzz", "zzz", 3, 1));
 }
 
-
 /* Test for ints if the number of values is below K, every value has its own bucket */
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
   const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int_float4, ColumnID{0});
@@ -58,7 +57,6 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntLessThanKValues) {
   EXPECT_EQ(hist->bin(BinID{2}), HistogramBin<int32_t>(12345, 12345, 2, 1));
   EXPECT_EQ(hist->bin(BinID{3}), HistogramBin<int32_t>(123456, 123456, 3, 1));
 }
-
 
 /* Test for floats if the number of values is below K, every value has its own bucket */
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
@@ -92,17 +90,16 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
   ASSERT_EQ(hist->bin_count(), 102);
 
   for (auto i = 0u; i <= 49; i++) {
-    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i+1), (i+1), 3, 1));
+    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i + 1), (i + 1), 3, 1));
   }
 
   EXPECT_EQ(hist->bin(BinID{50}), HistogramBin<int32_t>(51, 60, 10, 10));
 
   for (auto i = 51u; i <= 100; i++) {
-    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i+10), (i+10), 2, 1));
+    EXPECT_EQ(hist->bin(BinID{i}), HistogramBin<int32_t>((i + 10), (i + 10), 2, 1));
   }
 
   EXPECT_EQ(hist->bin(BinID{101}), HistogramBin<int32_t>(111, 200, 90, 90));
-
 }
 
 }  // namespace opossum
