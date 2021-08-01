@@ -70,6 +70,8 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
 
   // Each Top K value is modeled as one bin with height as its stored count.
   // Between two Top K value bins, one bin is created for potential non Top K values using an uniform distribution assumption. 
+  // Together with a potential last bin after the last top k value we have a maximum bin count of 2 * K + 1
+  // If the value_distribution is smaller than 1 at this point (top k values already removed), we only have top k values and therefore need this number of bins
   const auto bin_count = value_distribution.size() < 1 ? BinID{top_k_names.size()} : BinID{2*top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
@@ -96,7 +98,8 @@ std::shared_ptr<GenericHistogram<T>> TopKUniformDistributionHistogram<T>::from_c
         return value_count_pair.first < value;
       });
 
-    // can't build a bin if there is no value smaller than top-k
+    // Add a non top k value bin and a top k value bin
+    // We can skip a non top k value bin, if there are no non top k values between two top k value bins
     if (!(value_dist_lower_bound == value_distribution.begin() || std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
       
       // find out how many values are before current top k value

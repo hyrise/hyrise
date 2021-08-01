@@ -14,12 +14,6 @@ namespace opossum {
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
 
-  /**
-   * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
-   * (for tables with >= 200m rows) are created.
-   */
-  //const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
-
   auto next_column_id = std::atomic_size_t{0u};
   auto threads = std::vector<std::thread>{};
 
