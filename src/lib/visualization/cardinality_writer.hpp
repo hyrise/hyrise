@@ -17,7 +17,9 @@
 namespace opossum {
 
 /**
- * Class for writing the output cardinalities of each node in PQP and LQP into a CSV file./
+ * Class for writing the output cardinalities of each node in a LQP and its corresponding PQP into a CSV file.
+ * The cardinality writer currently hooks into the lqp and pqp visualization workflow.
+ * For cardinality estimation therefore the visualization flag needs to be set when running the benchmark.
  */
 
 class CardinalityWriter {

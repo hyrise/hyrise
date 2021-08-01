@@ -38,7 +38,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   const auto pqp_nodes_size = _pqp_nodes.size();
 
   // We assume that when we traverse LQP and PQP the same way, we will get the same nodes.
-  // All nodes that don't match up are ignored. This works well for the tested PQPs and LQPs.
+  // All nodes that don't match up are ignored. This works well for the majority of tested LQPs and PQPs.
   const auto number_nodes = std::min(_lqp_nodes.size(), _pqp_nodes.size());
 
   // Open estimation CSV file
@@ -47,11 +47,12 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   std::ofstream output_estimations;
   output_estimations.open("./benchmark_cardinality_estimation.csv", std::ios_base::app);
 
-  // Open debug CSV file for PQP and LQP operator numbers
+  // Open debug CSV file for PQP and LQP node number information, which can be used to identify possible
+  // benchmark items with mismatched nodes and for manual correction of the matching.
   std::ofstream output_debug;
   output_debug.open("./benchmark_cardinality_estimation_debug_info.csv", std::ios_base::app);
 
-  // If files are empty, write CSV headers
+  // If files are empty, write CSV headers.
   // Use semicolon as seperator instead of comma to be able to work with database values containing commas
   std::ifstream csv_file;
   csv_file.open("./benchmark_cardinality_estimation.csv");
@@ -81,11 +82,11 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   csv_file.close();
 
   for (auto node = 0u; node < number_nodes; node++) {
-    // Get node descriptions (for first two columns)
+    // Get lqp and pqp node descriptions (for first two columns)
     const auto lqp_description = _lqp_nodes[node]->description();
     const auto pqp_description = _pqp_nodes[node]->description();
 
-    // Get output cardinalities (for next columns)
+    // Get estimated and actual output cardinalities (for next columns)
     const auto lqp_row_count = _cardinality_estimator.estimate_cardinality(_lqp_nodes[node]);
 
     auto pqp_row_count = NAN;
@@ -95,7 +96,8 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
       pqp_row_count = performance_data.output_row_count;
     }
 
-    // Write node names and cardinalities in CSV
+    // Write benchmark id, node descriptions and cardinalities in CSV
+    // Use semicolon as seperator instead of comma to be able to work with database values containing commas
     output_estimations << benchmark_item_id << ";" << lqp_description << ";" << pqp_description << ";" << lqp_row_count
                        << ";" << pqp_row_count << "\n";
   }
@@ -161,7 +163,6 @@ void CardinalityWriter::_build_pqp_graph(const std::vector<std::shared_ptr<Abstr
 
 void CardinalityWriter::_build_pqp_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                            std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_ops) {
-  // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
   if (visited_ops.find(op) != visited_ops.end()) return;
   visited_ops.insert(op);
 

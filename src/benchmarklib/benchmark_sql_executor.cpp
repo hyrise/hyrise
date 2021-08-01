@@ -43,11 +43,10 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   if (_visualize_prefix) {
     _visualize(pipeline);
-  }
 
-  if (_visualize_prefix) {
     // Print cardinality estimations from lqp and actual cardinalities from pqp to csv for debugging purposes
     _write_cardinalities(pipeline);
+  }
   }
 
   return {pipeline_status, result_table};
