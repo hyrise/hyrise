@@ -116,6 +116,11 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   uint64_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
     auto reference_offsets_size = reference_offsets.size();
     auto offsets_size = offsets.size();
+    // Since we do not save the first reference offset (which is always 0), we have reference_offsets_size + 1 reference buckets.
+    if (offsets_size < reference_offsets_size + 1) {
+      // Do not create reference offsets.
+      return 0;
+    }
     uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(
         std::ceil(static_cast<double>(offsets.size()) / static_cast<double>(reference_offsets_size + 1)));
 
@@ -124,6 +129,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
     }
 
+    // Substract the reference offset from the original offset (create "zig-zag" pattern).
     for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
 
@@ -150,27 +156,16 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     pmr_vector<unsigned char> compressed_values{allocator};
     pmr_vector<uint64_t> compressed_value_lengths;
-
-    uint8_t reference_offsets_size = 8;
-    pmr_vector<uint64_t> reference_offsets{reference_offsets_size, allocator};
-
-    pmr_vector<uint32_t> offsets{allocator};
-
     fsst_decoder_t decoder;
 
-    offsets.resize(values.size() + 1);
-
-    if (values.size() == 0) {
-      auto compressed_offsets =
-          compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {offsets.back()});
-      return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
-                                              null_values_optional, 0, decoder);
+    if (values.size() != 0) {
+      // Compress the values using FSST third party library.
+      decoder = _compress_values(values, compressed_values, compressed_value_lengths);
     }
 
-    // Compress the values using FSST third party library.
-    decoder = _compress_values(values, compressed_values, compressed_value_lengths);
-
     // Create an offsets container (aggregated_offset_sum is the total size of the compressed values).
+    pmr_vector<uint32_t> offsets{allocator};
+    offsets.resize(values.size() + 1);
     uint64_t aggregated_offset_sum = _create_offsets(compressed_value_lengths, offsets);
 
     // "shrink_to_fit" to the total size of the compressed strings.
@@ -178,6 +173,8 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     // Create reference offsets as well as create the "zig-zag" pattern in offsets
     // in order to achieve larger vector compression rates.
+    uint8_t reference_offsets_size = 8;
+    pmr_vector<uint64_t> reference_offsets{reference_offsets_size, 0, allocator};
     uint64_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
     // Find maximum value in offsets in order to use it in later vector compression.

@@ -42,15 +42,13 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
 template <typename T>
 uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
-  // For the first bucket we don't use reference offsets.
-  if (chunk_offset < _number_elements_per_reference_bucket) {
+  // For the number of values below 8 (number of reference offsets in encoder) we don't use reference offsets;
+  // In that case _number_elements_per_reference_bucket == 0.
+  // For the first bucket we don't use reference offsets either.
+  if (_number_elements_per_reference_bucket == 0 || chunk_offset < _number_elements_per_reference_bucket) {
     return _offset_decompressor->get(chunk_offset);
   }
-  // For the number of values below 8 (number of reference offsets) we don't use reference offsets;
-  // chunk_offset of 0 has the offset of 0.
-  if (_number_elements_per_reference_bucket == 0 || chunk_offset == 0) {
-    return _offset_decompressor->get(chunk_offset);
-  }
+
   // Calculate the corresponding reference offset index for the chunk_offset.
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
   // Remove the "zig-zag" pattern and return the original offset.
