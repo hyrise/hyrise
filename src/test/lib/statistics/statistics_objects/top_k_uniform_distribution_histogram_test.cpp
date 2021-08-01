@@ -15,7 +15,7 @@ class TopKUniformDistributionHistogramTest : public BaseTest {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
     _string2 = load_table("resources/test_data/tbl/string2.tbl");
-    _int300 = load_table("resources/test_data/tbl/350_ints.tbl");
+    _int350 = load_table("resources/test_data/tbl/350_ints.tbl");
   }
 
  protected:
@@ -85,7 +85,7 @@ TEST_F(TopKUniformDistributionHistogramTest, FromColumnFloatLessThanKValues) {
 // Between the Top K value bins,
 // Non-Top K value bins with a height of num_distinct_values * average_non_top_k_occurrence_count should be created.
 TEST_F(TopKUniformDistributionHistogramTest, FromColumnIntMoreThanKValues) {
-  const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int300, ColumnID{0});
+  const auto hist = TopKUniformDistributionHistogram<int32_t>::from_column(*_int350, ColumnID{0});
 
   /* _int350 has 200 distinct values: 
     1 to 50 occur 3 times --> 50 bins with height 3
