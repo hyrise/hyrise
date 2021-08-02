@@ -3,7 +3,6 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/timer.hpp"
-#include "visualization/cardinality_writer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -43,9 +42,6 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   if (_visualize_prefix) {
     _visualize(pipeline);
-
-    // Print cardinality estimations from lqp and actual cardinalities from pqp to csv for debugging purposes
-    _write_cardinalities(pipeline);
   }
 
   return {pipeline_status, result_table};
@@ -165,13 +161,6 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
   ++_num_visualized_plans;
-}
-
-void BenchmarkSQLExecutor::_write_cardinalities(SQLPipeline& pipeline) {
-  const auto& lqps = pipeline.get_optimized_logical_plans();
-  const auto& pqps = pipeline.get_physical_plans();
-  auto prefix = *_visualize_prefix;
-  CardinalityWriter{}.write_cardinalities(lqps, pqps, prefix);
 }
 
 }  // namespace opossum
