@@ -13,7 +13,6 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/statistics_objects/top_k_as_generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
