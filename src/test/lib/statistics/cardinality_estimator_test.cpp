@@ -625,7 +625,7 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
     // 55% of rows in histogram, which itself covers 70% of rows in the table,
     // leads to a selectivity of 0.55*0.7 = 0.385
     PredicateNode::make(less_than_equals_(a_b, 75),
-      node_a));
+    node_a));
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 19.25f);
