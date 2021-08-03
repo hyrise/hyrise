@@ -86,9 +86,9 @@ void SharedDictionariesColumnProcessor<T>::_initialize_merge_plans(
     }
   }
 
-  stats->num_existing_shared_dictionaries = shared_dictionaries_map.size();
+  stats->num_existing_shared_dictionaries = static_cast<uint32_t>(shared_dictionaries_map.size());
 
-  for (const auto [key, merge_plan] : shared_dictionaries_map) {
+  for (const auto& [key, merge_plan] : shared_dictionaries_map) {
     merge_plans.emplace_back(merge_plan);
   }
 }
@@ -99,7 +99,7 @@ SharedDictionariesColumnProcessor<T>::_compare_with_existing_merge_plans(
     const std::shared_ptr<const pmr_vector<T>> current_dictionary,
     const std::vector<std::shared_ptr<MergePlan>>& merge_plans, const PolymorphicAllocator<T>& allocator) {
   auto best_merge_plan_index = -1;
-  auto best_jaccard_index = -1;
+  auto best_jaccard_index = -1.0;
   std::shared_ptr<const pmr_vector<T>> best_shared_dictionary = nullptr;
   const auto merge_plans_size = merge_plans.size();
   for (auto merge_plan_index = 0ul; merge_plan_index < merge_plans_size; ++merge_plan_index) {
