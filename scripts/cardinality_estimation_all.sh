@@ -18,7 +18,7 @@ output_folder=$2
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 
-# Run benchmarks and store results and debug information in specified output folder
+# Run benchmarks and store results and debug information in the specified output folder
 mkdir "${output_folder}" 2>/dev/null || true
 for benchmark in $benchmarks
   do
