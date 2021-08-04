@@ -36,11 +36,11 @@ class Table : private Noncopyable {
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No,
-        pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
+        pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
-        pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes = {});
+        pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes = {});
 
   /**
    * @defgroup Getter and convenience functions for the column definitions

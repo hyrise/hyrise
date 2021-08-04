@@ -5,6 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
+#include "storage/index/abstract_table_index.hpp"
 #include "tsl/robin_map.h"
 #include "types.hpp"
 

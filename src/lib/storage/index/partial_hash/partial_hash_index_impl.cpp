@@ -58,10 +58,10 @@ size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks
         ++map_iter;
       }
     }
-    auto& _nulls = _null_values[true];
-    _nulls.erase(
-        std::remove_if(_nulls.begin(), _nulls.end(), [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
-        _nulls.end());
+    auto& nulls = _null_values[true];
+    nulls.erase(
+        std::remove_if(nulls.begin(), nulls.end(), [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
+        nulls.end());
   }
 
   return size_before - _indexed_chunk_ids.size();

@@ -25,7 +25,7 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc,
-             pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes)
+             pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
@@ -39,7 +39,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
-             pmr_vector<std::shared_ptr<AbstractTableIndex>> table_indexes)
+             pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {
   _chunks = {chunks.begin(), chunks.end()};
