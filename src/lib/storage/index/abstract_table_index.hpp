@@ -1,6 +1,13 @@
 #pragma once
 
-#include "storage/table.hpp"
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "segment_index_type.hpp"
+#include "types.hpp"
+
 #include "tsl/robin_map.h"
 
 namespace opossum {

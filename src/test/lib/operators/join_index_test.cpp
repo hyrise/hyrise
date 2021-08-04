@@ -16,13 +16,13 @@
 
 namespace {
 
-enum class IndexScope { Table, Chunk };
+enum class Scope { Table, Chunk };
 
 }  // namespace
 
 namespace opossum {
 
-class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
+class OperatorsJoinIndexTest : public BaseTestWithParam<Scope> {
  public:
   void SetUp() override {
     const auto index_scope = GetParam();
@@ -74,12 +74,12 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
 
  protected:
   static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size,
-                                                             const IndexScope index_scope) {
+                                                             const Scope index_scope) {
     auto table = load_table(filename, chunk_size);
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    if (index_scope == IndexScope::Chunk) {
+    if (index_scope == Scope::Chunk) {
       // build chunk-based index for every chunk and column
       for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
@@ -90,7 +90,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
           chunk->create_index<GroupKeyIndex>(columns);
         }
       }
-    } else if (index_scope == IndexScope::Table) {
+    } else if (index_scope == Scope::Table) {
       // build table-based index over all chunks and columns
       std::vector<ChunkID> chunk_ids(table->chunk_count());
       for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -106,7 +106,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const IndexScope index_scope, const std::shared_ptr<AbstractOperator>& left,
+  static void test_join_output(const Scope index_scope, const std::shared_ptr<AbstractOperator>& left,
                                const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
@@ -139,7 +139,7 @@ class OperatorsJoinIndexTest : public BaseTestWithParam<IndexScope> {
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
-      if (index_scope == IndexScope::Table) {
+      if (index_scope == Scope::Table) {
         // one table index is created over all chunks, so it is only used once
         EXPECT_EQ(performance_data.chunks_scanned_with_index, 1);
       } else {
@@ -299,10 +299,10 @@ TEST_P(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
                    JoinMode::Right, 1, true);
 }
 
-const std::unordered_map<IndexScope, std::string> index_scope_string{{IndexScope::Chunk, "Chunk"},
-                                                                     {IndexScope::Table, "Table"}};
+const std::unordered_map<Scope, std::string> index_scope_string{{Scope::Chunk, "Chunk"},
+                                                                     {Scope::Table, "Table"}};
 
-auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> info) {
+auto join_index_test_formatter = [](const ::testing::TestParamInfo<Scope> info) {
   auto stream = std::stringstream{};
   stream << index_scope_string.at(info.param);
 
@@ -312,7 +312,7 @@ auto join_index_test_formatter = [](const ::testing::TestParamInfo<IndexScope> i
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(JoinIndex, OperatorsJoinIndexTest, ::testing::Values(IndexScope::Chunk, IndexScope::Table),
+INSTANTIATE_TEST_SUITE_P(JoinIndex, OperatorsJoinIndexTest, ::testing::Values(Scope::Chunk, Scope::Table),
                          join_index_test_formatter);
 
 }  // namespace opossum
