@@ -42,7 +42,7 @@ size_t PartialHashIndexImpl<DataType>::add(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks_to_remove) {
   size_t size_before = _indexed_chunk_ids.size();
-  for (const auto chunk_id : chunks_to_remove) {
+  for (const auto& chunk_id : chunks_to_remove) {
     if (!_indexed_chunk_ids.contains(chunk_id)) continue;
 
     _indexed_chunk_ids.erase(chunk_id);
