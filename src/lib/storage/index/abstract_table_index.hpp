@@ -21,7 +21,7 @@ class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, c
   virtual bool operator!=(const BaseTableIndexIterator& other) const { return false; }
 
   virtual std::shared_ptr<BaseTableIndexIterator> clone() const {
-    return std::make_shared<BaseTableIndexIterator>(*this);
+    return std::make_shared<BaseTableIndexIterator>();
   }
 };
 
