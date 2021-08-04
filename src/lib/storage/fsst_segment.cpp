@@ -26,7 +26,7 @@ FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
       _null_values{std::move(null_values)},
       _number_elements_per_reference_bucket{number_elements_per_reference_bucket},
       _decoder{std::move(decoder)},
-      _offset_decompressor{std::move(_compressed_offsets->create_base_decompressor())} {}
+      _offset_decompressor{_compressed_offsets->create_base_decompressor()} {}
 
 template <typename T>
 AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const {
