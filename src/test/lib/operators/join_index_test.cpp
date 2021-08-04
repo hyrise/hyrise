@@ -18,7 +18,7 @@ namespace {
 
 enum class IndexScope { Table, Chunk };
 
-} // namespace
+}  // namespace
 
 namespace opossum {
 
