@@ -34,6 +34,7 @@ void PQPAnalyzer::run() {
   Timer timer;
 
   for (const auto& [_, entry] : cache_snapshot) {
+    // std::cout << std::endl << query << std::endl;
     const auto pqp_root = entry.value;
     visit_pqp(pqp_root, [&](const auto& op) {
       const auto lqp_node = op->lqp_node;
@@ -61,11 +62,13 @@ void PQPAnalyzer::run() {
           }
           const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
           std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-          // std::cout << join_node->description() << std::endl;
+          // std::cout << join_node->description() << " " << lqp_node->comment << std::endl;
           inputs.emplace_back(join_node->right_input());
           if (join_node->join_mode == JoinMode::Inner) {
             inputs.emplace_back(join_node->left_input());
           }
+
+          const auto join_outputs = join_node->output_expressions();
 
           const auto& predicate_arguments = predicate->arguments;
           for (const auto& input : inputs) {
@@ -74,16 +77,27 @@ void PQPAnalyzer::run() {
                 continue;
               }
               const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
+              // std::cout << "    " << expression->description() << std::endl;
               const auto join_column_id = _resolve_column_expression(expression);
               if (join_column_id == INVALID_TABLE_COLUMN_ID) {
                 continue;
               }
+              bool abort = false;
+              /*for (const auto& join_output : join_outputs) {
+                if (expression_evaluable_on_lqp(join_output, *input) && *join_output != *expression) {
+                  std::cout << "        abort due " << join_output->description() << std::endl;
+                  abort = true;
+                  break;
+                }
+              }
+              if (abort) continue;*/
+
               if (join_node->join_mode == JoinMode::Inner) {
-                auto candidate = DependencyCandidate{std::vector<TableColumnID>{join_column_id},
+                auto candidate = DependencyCandidate{TableColumnIDs{join_column_id},
                                                      {}, DependencyType::Unique, prio};
                 _add_if_new(candidate);
               }
-              bool abort = false;
+
               std::vector<DependencyCandidate> my_candidates;
               visit_lqp(input, [&](const auto& node) {
                 switch (node->type) {
@@ -105,8 +119,9 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(std::vector<TableColumnID>{scan_column_id},
-                                                     std::vector<TableColumnID>{}, DependencyType::Unique, prio);
+                          my_candidates.emplace_back(TableColumnIDs{scan_column_id},
+                                                     TableColumnIDs{}, DependencyType::Unique, prio);
+                          // std::cout << "        added " << scan_input->description()  << " UCC" << std::endl;
                         }
                       }
                     }
@@ -119,9 +134,10 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(std::vector<TableColumnID>{scan_column_id},
-                                                     std::vector<TableColumnID>{join_column_id}, DependencyType::Order,
+                          my_candidates.emplace_back(TableColumnIDs{scan_column_id},
+                                                     TableColumnIDs{join_column_id}, DependencyType::Order,
                                                      prio);
+                          // std::cout << "        added " << scan_input->description() << " OD" << std::endl;
                         }
                       }
                     }
@@ -151,27 +167,21 @@ void PQPAnalyzer::run() {
           }
           const auto& node_expressions = aggregate_node->node_expressions;
           // split columns by table to ease validation later on
-          std::unordered_map<std::string, std::vector<TableColumnID>> columns_by_table;
+          TableColumnIDs columns;
           for (auto expression_idx = size_t{0}; expression_idx < num_group_by_columns; ++expression_idx) {
             if (node_expressions[expression_idx]->type != ExpressionType::LQPColumn) {
               continue;
             }
             auto table_column_id = _resolve_column_expression(node_expressions[expression_idx]);
             if (table_column_id != INVALID_TABLE_COLUMN_ID) {
-              columns_by_table[table_column_id.table_name].emplace_back(table_column_id);
+              columns.emplace_back(table_column_id);
             }
           }
-          if (columns_by_table.empty()) {
+          if (columns.size() < 2) {
             return PQPVisitation::VisitInputs;
           }
-          for (const auto& [_, columns] : columns_by_table) {
-            if (columns.size() < 2) {
-              continue;
-            }
-            auto candidate =
-              DependencyCandidate{columns, {}, DependencyType::Functional, prio};
-            _add_if_new(candidate);
-          }
+          auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
+          _add_if_new(candidate);
         } break;
         default:
           break;
@@ -184,6 +194,24 @@ void PQPAnalyzer::run() {
     for (auto& candidate : _known_candidates) {
       _queue->emplace(candidate);
     }
+  }
+
+  if (Hyrise::get().storage_manager.has_table("nation")) {
+    const auto nation = Hyrise::get().storage_manager.get_table("nation");
+    const auto n_nationkey = TableColumnID{"nation", nation->column_id_by_name("n_nationkey")};
+    const auto n_name = TableColumnID{"nation", nation->column_id_by_name("n_name")};
+
+    const auto customer = Hyrise::get().storage_manager.get_table("customer");
+    const auto c_custkey = TableColumnID{"customer", customer->column_id_by_name("c_custkey")};
+
+    const auto orders = Hyrise::get().storage_manager.get_table("orders");
+    const auto o_orderkey = TableColumnID{"orders", orders->column_id_by_name("o_orderkey")};
+
+    _queue->emplace(TableColumnIDs{c_custkey}, TableColumnIDs{n_nationkey}, DependencyType::Inclusion, 1);
+    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{n_nationkey}, DependencyType::Inclusion, 1);
+    _queue->emplace(TableColumnIDs{o_orderkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
+    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
+    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{n_name}, DependencyType::Inclusion, 1);
   }
 
   std::cout << "PQPAnalyzer finished in " << timer.lap_formatted() << std::endl;
@@ -206,9 +234,9 @@ TableColumnID PQPAnalyzer::_resolve_column_expression(
   return TableColumnID{table_name, original_column_id};
 }
 
-std::vector<TableColumnID> PQPAnalyzer::_find_od_candidate(
+TableColumnIDs PQPAnalyzer::_find_od_candidate(
     const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<LQPColumnExpression>& dependent) const {
-  std::vector<TableColumnID> candidates;
+  TableColumnIDs candidates;
   visit_pqp(op, [&](const auto& current_op) {
     switch (current_op->type()) {
       case OperatorType::Validate:

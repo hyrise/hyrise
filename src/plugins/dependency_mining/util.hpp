@@ -16,20 +16,23 @@ struct TableColumnID {
   bool operator==(const TableColumnID& other) const;
   bool operator!=(const TableColumnID& other) const;
   std::string column_name() const;
+  size_t hash() const;
 };
 
 const static TableColumnID INVALID_TABLE_COLUMN_ID = TableColumnID{"", INVALID_COLUMN_ID};
+
+using TableColumnIDs = std::vector<TableColumnID>;
 
 enum class DependencyType { Order, Functional, Unique, Inclusion };
 
 struct DependencyCandidate {
   DependencyCandidate() = default;
-  DependencyCandidate(const std::vector<TableColumnID>& init_determinants,
-                      const std::vector<TableColumnID>& init_dependents, const DependencyType init_type,
+  DependencyCandidate(const TableColumnIDs& init_determinants,
+                      const TableColumnIDs& init_dependents, const DependencyType init_type,
                       const size_t init_priority = 0);
 
-  std::vector<TableColumnID> determinants;
-  std::vector<TableColumnID> dependents;
+  TableColumnIDs determinants;
+  TableColumnIDs dependents;
   DependencyType type;
   size_t priority;
   // tell tbb's concurrent_prioroty_queue which parameter should be used for ranking
@@ -41,5 +44,13 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate);
 
 using DependencyCandidateQueue = tbb::concurrent_priority_queue<DependencyCandidate>;
-
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::TableColumnID> {
+  size_t operator()(const opossum::TableColumnID& table_column_id) const;
+};
+
+}  // namespace std

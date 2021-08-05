@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <magic_enum.hpp>
 
 #include "hyrise.hpp"
@@ -24,8 +25,14 @@ std::string TableColumnID::column_name() const {
   return Hyrise::get().storage_manager.get_table(table_name)->column_name(column_id);
 }
 
-DependencyCandidate::DependencyCandidate(const std::vector<TableColumnID>& init_determinants,
-                                         const std::vector<TableColumnID>& init_dependents,
+size_t TableColumnID::hash() const {
+  auto hash = boost::hash_value(table_name);
+  boost::hash_combine(hash, column_id);
+  return hash;
+}
+
+DependencyCandidate::DependencyCandidate(const TableColumnIDs& init_determinants,
+                                         const TableColumnIDs& init_dependents,
                                          const DependencyType init_type, const size_t init_priority)
     : determinants(init_determinants), dependents(init_dependents), type(init_type), priority(init_priority) {}
 
@@ -45,7 +52,6 @@ void DependencyCandidate::output_to_stream(std::ostream& stream, DescriptionMode
     });
     stream << " --> " << boost::algorithm::join(dependents_printable, ", ");
   }
-  stream << std::endl;
 }
 
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate) {
@@ -59,3 +65,12 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 }
 
 }  // namespace opossum
+
+
+namespace std {
+
+size_t hash<opossum::TableColumnID>::operator()(const opossum::TableColumnID& table_column_id) const {
+  return table_column_id.hash();
+}
+
+}  // namespace std

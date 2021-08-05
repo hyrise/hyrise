@@ -242,6 +242,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
+  if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) return;
 
   std::vector<std::shared_ptr<PredicateNode>> scans;
   bool abort = false;
@@ -325,8 +326,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
   const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
-  bool executed = false;
 
+  bool executed = false;
   for (const auto& scan : scans) {
     const auto scan_predicate = scan->predicate();
     const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
@@ -428,7 +429,7 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
 
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node, const bool _join_to_semi_off, const bool _join_to_predicate_off) {
   // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
@@ -483,6 +484,7 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
   bool flipped_inputs = false;
+  if (!_join_to_semi_off) {
   // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
   if (!left_input_is_used &&
       join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
@@ -507,7 +509,9 @@ void try_join_to_semi_rewrite(
                              LQPInputSide::Left, required_expressions_by_node);
     return;
   }
+  }
 
+  if (_join_to_predicate_off) return;
   if (!left_input_is_used) {
     const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
     try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
@@ -610,7 +614,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
-        try_join_to_semi_rewrite(node, required_expressions_by_node);
+        try_join_to_semi_rewrite(node, required_expressions_by_node, _join_to_semi_off, _join_to_predicate_off);
       } break;
 
       case LQPNodeType::Projection: {
