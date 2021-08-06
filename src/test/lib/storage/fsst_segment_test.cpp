@@ -16,7 +16,7 @@
 namespace opossum {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
-class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+class FSSTSimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
  public:
   size_t allocated{0};
 
@@ -39,13 +39,13 @@ class StorageFSSTSegmentTest : public BaseTest {
 };
 
 template <typename T>
-std::shared_ptr<FSSTSegment<T>> compress(std::shared_ptr<ValueSegment<T>> segment, DataType data_type) {
+std::shared_ptr<FSSTSegment<T>> create_fsst_segment(std::shared_ptr<ValueSegment<T>> segment, DataType data_type) {
   auto encoded_segment = ChunkEncoder::encode_segment(segment, data_type, SegmentEncodingSpec{EncodingType::FSST});
   return std::dynamic_pointer_cast<FSSTSegment<T>>(encoded_segment);
 }
 
 TEST_F(StorageFSSTSegmentTest, CreateEmptyFSSTSegmentTest) {
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
 
   ASSERT_EQ(segment->size(), 0);
   ASSERT_EQ(segment->memory_usage(MemoryUsageCalculationMode::Full), 2576);
@@ -55,7 +55,7 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
   vs_str->append("This");
   vs_str->append("is");
   vs_str->append("data");
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
 
   ASSERT_EQ(segment->size(), 3);
   // DECODER_SIZE = 8*256 + 256 + 1 + 8 = 2`313
@@ -67,7 +67,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
   for (const auto& value : values) {
     vs_str->append(value);
   }
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
 
   for (size_t index = 0; index < values.size(); ++index) {
     std::optional<pmr_string> value = segment->get_typed_value(static_cast<ChunkOffset>(index));
@@ -82,10 +82,10 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
     vs_str->append(value);
   }
 
-  auto resource = SimpleTrackingMemoryResource{};
+  auto resource = FSSTSimpleTrackingMemoryResource{};
   const auto allocator = PolymorphicAllocator<size_t>(&resource);
 
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
   auto copied_segment = std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
 
   ASSERT_EQ(copied_segment->size(), values.size());
@@ -98,7 +98,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
   vs_str->append("This");
   vs_str->append("is");
   vs_str->append(NULL_VALUE);
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
 
   std::optional<pmr_string> value = segment->get_typed_value(ChunkOffset{2});
   ASSERT_EQ(std::nullopt, value);
@@ -112,7 +112,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
   auto segment_iterable = FSSTSegmentIterable(*segment);
@@ -141,7 +141,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
-  auto segment = compress(vs_str, DataType::String);
+  auto segment = create_fsst_segment(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
   auto segment_iterable = FSSTSegmentIterable(*segment);
