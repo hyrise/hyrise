@@ -242,6 +242,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
+  // eraly out if input is required by another node or join column is not unique
+  if (unused_input->output_count() > 1) return;
   if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) return;
 
   std::vector<std::shared_ptr<PredicateNode>> scans;
