@@ -268,7 +268,7 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   }
 
   const auto number_elements_per_reference_bucket = _read_value<uint64_t>(file);
-  fsst_decoder_t decoder = _read_value<fsst_decoder_t>(file);
+  auto decoder = _read_value<fsst_decoder_t>(file);
 
   return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, reference_offsets, null_values,
                                                    number_elements_per_reference_bucket, decoder);
