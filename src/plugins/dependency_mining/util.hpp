@@ -27,9 +27,8 @@ enum class DependencyType { Order, Functional, Unique, Inclusion };
 
 struct DependencyCandidate {
   DependencyCandidate() = default;
-  DependencyCandidate(const TableColumnIDs& init_determinants,
-                      const TableColumnIDs& init_dependents, const DependencyType init_type,
-                      const size_t init_priority = 0);
+  DependencyCandidate(const TableColumnIDs& init_determinants, const TableColumnIDs& init_dependents,
+                      const DependencyType init_type, const size_t init_priority = 0);
 
   TableColumnIDs determinants;
   TableColumnIDs dependents;

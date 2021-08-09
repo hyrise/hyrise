@@ -4,17 +4,22 @@
 #include <magic_enum.hpp>
 
 #include "hyrise.hpp"
+#include "operators/get_table.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/segment_iterate.hpp"
+#include "ucc_validator.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
 
 // void DependencyValidator::set_queue(const DependencyCandidateQueue& queue) { _queue = queue; };
 
-DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes, size_t id) : _queue(queue), _table_constraint_mutexes(table_constraint_mutexes), _id(id) {}
+DependencyValidator::DependencyValidator(
+    const std::shared_ptr<DependencyCandidateQueue>& queue,
+    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes, size_t id)
+    : _queue(queue), _table_constraint_mutexes(table_constraint_mutexes), _id(id) {}
 
 void DependencyValidator::start() {
   _running = true;
@@ -69,22 +74,39 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
   if (candidate.determinants.size() == 1 && candidate.dependents.size() == 1) {
-    const auto determinant_column_name = table->column_name(candidate.determinants[0].column_id);
-     const auto [det_status, det_result] = SQLPipelineBuilder{"SELECT DISTINCT " + determinant_column_name + " FROM " + table_name}
-                                    .create_pipeline()
-                                    .get_result_table();
-
-     if (det_status == SQLPipelineStatus::Success) {
-      const auto det_value_count = det_result->row_count();
-      const auto dependent_column_name = table->column_name(candidate.dependents[0].column_id);
-      const auto [dep_status, dep_result] = SQLPipelineBuilder{"SELECT DISTINCT " + dependent_column_name + " FROM " + table_name}
-                                    .create_pipeline()
-                                    .get_result_table();
-      if (dep_status == SQLPipelineStatus::Success && det_value_count < dep_result->row_count()) {
-        out << "    INVALID (shortcut)" << std::endl;
-        return false;
+    const auto determinant_column_id = candidate.determinants[0].column_id;
+    const auto dependent_column_id = candidate.dependents[0].column_id;
+    std::vector<ColumnID> determinant_pruned_columns;
+    std::vector<ColumnID> dependent_pruned_columns;
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      if (column_id != determinant_column_id) {
+        determinant_pruned_columns.emplace_back(column_id);
       }
-     }
+      if (column_id != dependent_column_id) {
+        dependent_pruned_columns.emplace_back(column_id);
+      }
+    }
+    const auto get_table_determinants =
+        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, determinant_pruned_columns);
+    get_table_determinants->never_clear_output();
+    get_table_determinants->execute();
+    const auto get_table_dependents =
+        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, dependent_pruned_columns);
+    get_table_dependents->never_clear_output();
+    get_table_dependents->execute();
+    const auto determinants_aggregate =
+        std::make_shared<AggregateHash>(get_table_determinants, std::vector<std::shared_ptr<AggregateExpression>>{},
+                                        std::vector<ColumnID>{ColumnID{0}});
+    determinants_aggregate->never_clear_output();
+    const auto dependents_aggregate = std::make_shared<AggregateHash>(
+        get_table_dependents, std::vector<std::shared_ptr<AggregateExpression>>{}, std::vector<ColumnID>{ColumnID{0}});
+    dependents_aggregate->never_clear_output();
+    determinants_aggregate->execute();
+    dependents_aggregate->execute();
+    if (determinants_aggregate->get_output()->row_count() < dependents_aggregate->get_output()->row_count()) {
+      out << "    INVALID (shortcut)" << std::endl;
+      return false;
+    }
   }
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -131,7 +153,8 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
   });
   if (is_valid) {
     out << "    VALID" << std::endl;
-    const auto order_constraint = TableOrderConstraint{{candidate.determinants[0].column_id}, {candidate.dependents[0].column_id}};
+    const auto order_constraint =
+        TableOrderConstraint{{candidate.determinants[0].column_id}, {candidate.dependents[0].column_id}};
     {
       auto mutex_iter = _table_constraint_mutexes.find(table_name);
       if (mutex_iter == _table_constraint_mutexes.end()) {
@@ -177,23 +200,40 @@ bool DependencyValidator::_validate_ucc(const DependencyCandidate& candidate, st
   Assert(!candidate.determinants.empty(), "Did not expect useless UCC");
   Assert(candidate.dependents.empty(), "Invalid dependents for UCC");
   std::unordered_set<std::string> table_names;
+
   for (const auto& determinant : candidate.determinants) {
     table_names.emplace(determinant.table_name);
   }
   if (table_names.size() > 1) {
-    out << "    SKIP: Cannot resolve UCC between multipe tables" << std::endl;
+    out << "    SKIP: Cannot resolve UCC between multiple tables" << std::endl;
     return false;
   }
   const auto table_name = *table_names.begin();
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-
-  const auto add_ucc = [&](){
 
   std::unordered_set<ColumnID> column_ids;
   for (const auto& determinant : candidate.determinants) {
     column_ids.emplace(determinant.column_id);
   }
   const auto unique_constraint = TableKeyConstraint{column_ids, KeyConstraintType::UNIQUE};
+  {
+    auto mutex_iter = _table_constraint_mutexes.find(table_name);
+    if (mutex_iter == _table_constraint_mutexes.end()) {
+      const auto mutex = std::make_shared<std::mutex>();
+      _table_constraint_mutexes[table_name] = std::move(mutex);
+      mutex_iter = _table_constraint_mutexes.find(table_name);
+    }
+    std::lock_guard<std::mutex> lock(*mutex_iter->second);
+    const auto& current_constraints = table->soft_key_constraints();
+    for (const auto& current_constraint : current_constraints) {
+      if (current_constraint.columns() == unique_constraint.columns()) {
+        out << "    VALID: already known" << std::endl;
+        return true;
+      }
+    }
+  }
+
+  const auto add_ucc = [&]() {
     {
       auto mutex_iter = _table_constraint_mutexes.find(table_name);
       if (mutex_iter == _table_constraint_mutexes.end()) {
@@ -218,110 +258,40 @@ bool DependencyValidator::_validate_ucc(const DependencyCandidate& candidate, st
 
   Timer timer;
   if (candidate.determinants.size() == 1) {
-    //out << " optimized path" << std::endl;
     Assert(table->type() == TableType::Data, "Expected Data table");
     const auto column_id = candidate.determinants[0].column_id;
-    // 0 ... UCC found, 1 ... not found, -1 ... error
-    int optim_status = -1;
-    resolve_data_type(table->column_data_type(column_id), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      std::vector<std::shared_ptr<const pmr_vector<ColumnDataType>>> dictionaries;
-      const auto num_chunks = table->chunk_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
-        const auto chunk = table->get_chunk(chunk_id);
-        if (!chunk) {
-          continue;
-        }
-        const auto segment = chunk->get_segment(column_id);
-        if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment)) {
-          const auto dictionary = dictionary_segment->dictionary();
-          if (dictionary->size() != dictionary_segment->size()) {
-            optim_status = 2;
-            return;
-          }
-          dictionaries.emplace_back(dictionary);
-        } else {
-          optim_status = -1;
-          return;
+    const auto num_chunks = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+      const auto segment = chunk->get_segment(column_id);
+      if (const auto dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(segment)) {
+        if (dictionary_segment->unique_values_count() != dictionary_segment->size()) {
+          out << "   INVALID " << timer.lap_formatted() << std::endl;
+          return false;
         }
       }
-      std::vector<size_t> current_dictionary_positions;
-      current_dictionary_positions.reserve(dictionaries.size());
-      std::for_each(dictionaries.begin(), dictionaries.end(), [&](const auto _){current_dictionary_positions.emplace_back(0);});
-      size_t finished_dictionaries = 0;
-      ColumnDataType next_value = ColumnDataType{0};
-      while(finished_dictionaries < dictionaries.size()) {
-        ColumnDataType current_smallest_value = ColumnDataType{0};
-        size_t current_smallest_dictionary = 0;
-        bool is_init = false;
-        for (size_t dictionary_id = 0; dictionary_id < dictionaries.size(); ++dictionary_id) {
-          const auto& dictionary = dictionaries.at(dictionary_id);
-          const auto& value_pointer = current_dictionary_positions.at(dictionary_id);
-          if (value_pointer == dictionary->size()) {
-            continue;
-          }
-          const ColumnDataType my_next_value = (*dictionary).at(value_pointer);
-          if (!is_init) {
-            current_smallest_value = my_next_value;
-            current_smallest_dictionary = dictionary_id;
-            is_init = true;
-            continue;
-          }
-          if (my_next_value == current_smallest_value) {
-            optim_status = 1;
-            return;
-          }
-          if (my_next_value < current_smallest_value) {
-            current_smallest_value = my_next_value;
-            current_smallest_dictionary = dictionary_id;
-          }
-        }
-        if (current_dictionary_positions[current_smallest_dictionary] != 0 && current_smallest_value == next_value) {
-          optim_status = 1;
-          return;
-        }
-        next_value = current_smallest_value;
-        const auto dictionary = dictionaries[current_smallest_dictionary];
-        if (dictionary->size() == current_dictionary_positions[current_smallest_dictionary] + 1) {
-          ++finished_dictionaries;
-        }
-        ++current_dictionary_positions[current_smallest_dictionary];
-      }
-      optim_status = 0;
-    });
-
-    if (optim_status == 0) {
-      out << "   VALID? " << timer.lap_formatted() << std::endl;
-      add_ucc();
-      //return true;
-    }
-    if (optim_status == 1) {
-      out << "   INVALID? " << timer.lap_formatted() << std::endl;
-      //return false;
-    }
-    if (optim_status == 2) {
-      out << "   INVALID " << timer.lap_formatted() << std::endl;
-      return false;
     }
   }
 
-  const auto table_num_rows = table->row_count();
-
-  std::vector<std::string> column_names;
+  std::unordered_set<ColumnID> candidate_columns;
+  std::vector<ColumnID> pruned_columns;
   for (const auto& determinant : candidate.determinants) {
-    column_names.emplace_back(table->column_name(determinant.column_id));
+    candidate_columns.emplace(determinant.column_id);
   }
-  const auto columns_string = boost::algorithm::join(column_names, ", ");
-  // do not use MVCC currently as nothing here is transaction-safe
-  const auto [status, result] = SQLPipelineBuilder{"SELECT DISTINCT " + columns_string + " FROM " + table_name}
-                                    .create_pipeline()
-                                    .get_result_table();
-  if (status != SQLPipelineStatus::Success) {
-    out << "    FAILED" << std::endl;
-    return false;
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    if (!candidate_columns.count(column_id)) {
+      pruned_columns.emplace_back(column_id);
+    }
   }
-  const auto unique_num_rows = result->row_count();
-  if (table_num_rows == unique_num_rows) {
+
+  const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_columns);
+  get_table->never_clear_output();
+  get_table->execute();
+  auto ucc_validator = UCCValidator(get_table->get_output());
+  if (ucc_validator.is_unique()) {
     out << "    VALID " << timer.lap_formatted() << std::endl;
     add_ucc();
     return true;
@@ -331,7 +301,6 @@ bool DependencyValidator::_validate_ucc(const DependencyCandidate& candidate, st
   }
 }
 
-
 // semantics: dependent INCLUDED IN determinant
 bool DependencyValidator::_validate_ind(const DependencyCandidate& candidate, std::ostream& out) {
   Assert(candidate.type == DependencyType::Inclusion, "Expected IND");
@@ -340,36 +309,41 @@ bool DependencyValidator::_validate_ind(const DependencyCandidate& candidate, st
 
   const auto determinant = candidate.determinants[0];
   const auto dependent = candidate.dependents[0];
-  auto det_column_type = Hyrise::get().storage_manager.get_table(determinant.table_name)->column_data_type(determinant.column_id);
+  auto det_column_type =
+      Hyrise::get().storage_manager.get_table(determinant.table_name)->column_data_type(determinant.column_id);
   if (det_column_type == DataType::Double) {
-        det_column_type = DataType::Float;
-      } else if (det_column_type == DataType::Long) {
-        det_column_type = DataType::Int;
-    }
-  auto dep_column_type = Hyrise::get().storage_manager.get_table(dependent.table_name)->column_data_type(dependent.column_id);
-      if (dep_column_type == DataType::Double) {
-        dep_column_type = DataType::Float;
-      } else if (dep_column_type == DataType::Long) {
-        dep_column_type = DataType::Int;
-    }
+    det_column_type = DataType::Float;
+  } else if (det_column_type == DataType::Long) {
+    det_column_type = DataType::Int;
+  }
+  auto dep_column_type =
+      Hyrise::get().storage_manager.get_table(dependent.table_name)->column_data_type(dependent.column_id);
+  if (dep_column_type == DataType::Double) {
+    dep_column_type = DataType::Float;
+  } else if (dep_column_type == DataType::Long) {
+    dep_column_type = DataType::Int;
+  }
 
-    if (dep_column_type != det_column_type) {
+  if (dep_column_type != det_column_type) {
     out << "    INVALID" << std::endl;
     return false;
   }
 
-
-  const auto [det_status, det_result] = SQLPipelineBuilder{"SELECT DISTINCT " + determinant.column_name() + " placeholder_name FROM " + determinant.table_name + " ORDER BY " + determinant.column_name()}
-                                    .create_pipeline()
-                                    .get_result_table();
+  const auto [det_status, det_result] =
+      SQLPipelineBuilder{"SELECT DISTINCT " + determinant.column_name() + " placeholder_name FROM " +
+                         determinant.table_name + " ORDER BY " + determinant.column_name()}
+          .create_pipeline()
+          .get_result_table();
   if (det_status != SQLPipelineStatus::Success) {
     out << "    FAILED" << std::endl;
     return false;
   }
 
-  const auto [dep_status, dep_result] = SQLPipelineBuilder{"SELECT DISTINCT " + dependent.column_name() + " placeholder_name FROM " + dependent.table_name + " ORDER BY " + dependent.column_name()}
-                                    .create_pipeline()
-                                    .get_result_table();
+  const auto [dep_status, dep_result] =
+      SQLPipelineBuilder{"SELECT DISTINCT " + dependent.column_name() + " placeholder_name FROM " +
+                         dependent.table_name + " ORDER BY " + dependent.column_name()}
+          .create_pipeline()
+          .get_result_table();
   if (dep_status != SQLPipelineStatus::Success) {
     out << "    FAILED" << std::endl;
     return false;

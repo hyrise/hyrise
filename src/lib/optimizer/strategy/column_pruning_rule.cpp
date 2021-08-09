@@ -236,9 +236,10 @@ void recursively_gather_required_expressions(
 
 // Expect discarded input to be the right one
 // only allow child plans containing one scan, storedtable, validate
-void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
-                              ExpressionUnorderedSet equals_predicate_expressions_used_side,
-                              ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side, std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+void try_join_to_scan_rewrite(
+    const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet equals_predicate_expressions_used_side,
+    ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side,
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
@@ -319,8 +320,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
     auto& new_node_required_expressions = required_expressions_by_node[new_node];
     for (const auto& required_expression : required_expressions_by_node.at(original_node)) {
       if (required_expression != unused_column) {
-          new_node_required_expressions.emplace(required_expression);
-         //required_expressions_by_node[used_input].emplace(required_expression);
+        new_node_required_expressions.emplace(required_expression);
+        //required_expressions_by_node[used_input].emplace(required_expression);
       }
     }
   };
@@ -417,7 +418,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
                   });
                 }
                 const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
-                const auto predicate_node = PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                const auto predicate_node =
+                    PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
                 replace_node(join, predicate_node, join_column_expression);
               });
             }
@@ -431,7 +433,8 @@ void try_join_to_scan_rewrite(const std::shared_ptr<JoinNode>& join,
 
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node, const bool _join_to_semi_off, const bool _join_to_predicate_off) {
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node,
+    const bool _join_to_semi_off, const bool _join_to_predicate_off) {
   // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
@@ -487,30 +490,30 @@ void try_join_to_semi_rewrite(
 
   bool flipped_inputs = false;
   if (!_join_to_semi_off) {
-  // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
-  if (!left_input_is_used &&
-      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
-    join_node->join_mode = JoinMode::Semi;
-    const auto temp = join_node->left_input();
-    join_node->set_left_input(join_node->right_input());
-    join_node->set_right_input(temp);
-    flipped_inputs = true;
-  }
-  if (!right_input_is_used &&
-      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
-    join_node->join_mode = JoinMode::Semi;
-  }
+    // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
+    if (!left_input_is_used &&
+        join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
+      join_node->join_mode = JoinMode::Semi;
+      const auto temp = join_node->left_input();
+      join_node->set_left_input(join_node->right_input());
+      join_node->set_right_input(temp);
+      flipped_inputs = true;
+    }
+    if (!right_input_is_used &&
+        join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
+      join_node->join_mode = JoinMode::Semi;
+    }
 
-  if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
-    return;
-  }
+    if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
+      return;
+    }
 
-  // try scan rewrite for used input
-  if (!right_input_is_used) {
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
-                             LQPInputSide::Left, required_expressions_by_node);
-    return;
-  }
+    // try scan rewrite for used input
+    if (!right_input_is_used) {
+      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
+                               LQPInputSide::Left, required_expressions_by_node);
+      return;
+    }
   }
 
   if (_join_to_predicate_off) return;

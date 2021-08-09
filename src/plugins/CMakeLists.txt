@@ -33,10 +33,16 @@ include_directories(
     # ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
 )
 
+#add_subdirectory(../third_party/robin-map)
+
 include_directories(
     SYSTEM
     ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
+    ${PROJECT_SOURCE_DIR}/third_party/robin-map/include
+    ${PROJECT_SOURCE_DIR}/third_party/uninitialized_vector/
 )
+
+# target_link_libraries_system(robin_map)
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseDependencyMiningPlugin SRCS
@@ -48,6 +54,8 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/util.hpp
     dependency_mining/dependency_validator.cpp
     dependency_mining/dependency_validator.hpp
+    dependency_mining/ucc_validator.cpp
+    dependency_mining/ucc_validator.hpp
 )
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)

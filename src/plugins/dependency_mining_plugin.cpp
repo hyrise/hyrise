@@ -25,10 +25,12 @@ void DependencyMiningPlugin::start() {
   auto table_constraint_mutexes = tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>{};
   for (size_t validator_id{0}; validator_id < NUM_VALIDATORS; ++validator_id) {
     //_dependency_validators.emplace_back(std::make_unique<DependencyValidator>(_queue));
-    validator_threads.emplace_back([&](size_t i){
-      const auto validator = std::make_unique<DependencyValidator>(_queue, table_constraint_mutexes, i);
-      validator->start();
-    }, validator_id);
+    validator_threads.emplace_back(
+        [&](size_t i) {
+          const auto validator = std::make_unique<DependencyValidator>(_queue, table_constraint_mutexes, i);
+          validator->start();
+        },
+        validator_id);
   }
   /*for (auto& validator : _dependency_validators) {
     validator->start();

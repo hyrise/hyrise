@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>
 #include <tbb/concurrent_unordered_map.h>
+#include <atomic>
 #include <mutex>
 
 #include "dependency_mining/util.hpp"
@@ -10,7 +10,9 @@ namespace opossum {
 
 class DependencyValidator {
  public:
-  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes, size_t id);
+  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue,
+                      tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes,
+                      size_t id);
 
  protected:
   friend class DependencyMiningPlugin;

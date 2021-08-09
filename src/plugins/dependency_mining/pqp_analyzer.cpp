@@ -47,7 +47,8 @@ void gather_expressions_not_computed_by_expression_evaluator(
 }
 
 ExpressionUnorderedSet gather_locally_required_expressions(
-    const std::shared_ptr<const AbstractLQPNode>& node, const ExpressionUnorderedSet& expressions_required_by_consumers) {
+    const std::shared_ptr<const AbstractLQPNode>& node,
+    const ExpressionUnorderedSet& expressions_required_by_consumers) {
   // Gathers all expressions required by THIS node, i.e., expressions needed by the node to do its job. For example, a
   // PredicateNode `a < 3` requires the LQPColumn a.
   auto locally_required_expressions = ExpressionUnorderedSet{};
@@ -222,7 +223,7 @@ void recursively_gather_required_expressions(
     recursively_gather_required_expressions(input, required_expressions_by_node, outputs_visited_by_node);
   }
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -288,7 +289,7 @@ void PQPAnalyzer::run() {
           }
           const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
           std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-          std::cout << join_node->description() << " " << lqp_node->comment << std::endl;
+          // std::cout << join_node->description() << " " << lqp_node->comment << std::endl;
           inputs.emplace_back(join_node->right_input());
           if (join_node->join_mode == JoinMode::Inner) {
             inputs.emplace_back(join_node->left_input());
@@ -334,8 +335,7 @@ void PQPAnalyzer::run() {
               if (abort) continue;
 
               if (join_node->join_mode == JoinMode::Inner) {
-                auto candidate = DependencyCandidate{TableColumnIDs{join_column_id},
-                                                     {}, DependencyType::Unique, prio};
+                auto candidate = DependencyCandidate{TableColumnIDs{join_column_id}, {}, DependencyType::Unique, prio};
                 _add_if_new(candidate);
               }
 
@@ -360,8 +360,8 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(TableColumnIDs{scan_column_id},
-                                                     TableColumnIDs{}, DependencyType::Unique, prio);
+                          my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{},
+                                                     DependencyType::Unique, prio);
                           // std::cout << "        added " << scan_input->description()  << " UCC" << std::endl;
                         }
                       }
@@ -375,9 +375,8 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(TableColumnIDs{scan_column_id},
-                                                     TableColumnIDs{join_column_id}, DependencyType::Order,
-                                                     prio);
+                          my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_id},
+                                                     DependencyType::Order, prio);
                           // std::cout << "        added " << scan_input->description() << " OD" << std::endl;
                         }
                       }
@@ -437,7 +436,7 @@ void PQPAnalyzer::run() {
     }
   }
 
-  if (Hyrise::get().storage_manager.has_table("nation")) {
+  /*if (Hyrise::get().storage_manager.has_table("nation")) {
     const auto nation = Hyrise::get().storage_manager.get_table("nation");
     const auto n_nationkey = TableColumnID{"nation", nation->column_id_by_name("n_nationkey")};
     const auto n_name = TableColumnID{"nation", nation->column_id_by_name("n_name")};
@@ -453,7 +452,7 @@ void PQPAnalyzer::run() {
     _queue->emplace(TableColumnIDs{o_orderkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
     _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
     _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{n_name}, DependencyType::Inclusion, 1);
-  }
+  }*/
 
   std::cout << "PQPAnalyzer finished in " << timer.lap_formatted() << std::endl;
 }
@@ -475,8 +474,8 @@ TableColumnID PQPAnalyzer::_resolve_column_expression(
   return TableColumnID{table_name, original_column_id};
 }
 
-TableColumnIDs PQPAnalyzer::_find_od_candidate(
-    const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<LQPColumnExpression>& dependent) const {
+TableColumnIDs PQPAnalyzer::_find_od_candidate(const std::shared_ptr<const AbstractOperator>& op,
+                                               const std::shared_ptr<LQPColumnExpression>& dependent) const {
   TableColumnIDs candidates;
   visit_pqp(op, [&](const auto& current_op) {
     switch (current_op->type()) {

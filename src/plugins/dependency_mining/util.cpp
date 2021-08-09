@@ -31,8 +31,7 @@ size_t TableColumnID::hash() const {
   return hash;
 }
 
-DependencyCandidate::DependencyCandidate(const TableColumnIDs& init_determinants,
-                                         const TableColumnIDs& init_dependents,
+DependencyCandidate::DependencyCandidate(const TableColumnIDs& init_determinants, const TableColumnIDs& init_dependents,
                                          const DependencyType init_type, const size_t init_priority)
     : determinants(init_determinants), dependents(init_dependents), type(init_type), priority(init_priority) {}
 
@@ -65,7 +64,6 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 }
 
 }  // namespace opossum
-
 
 namespace std {
 
