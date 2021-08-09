@@ -51,6 +51,9 @@ uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
 
   // Calculate the corresponding reference offset index for the chunk_offset.
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
+  // Merge the last uncompleted bucket with the second last bucket.
+  reference_offset_index = std::min(reference_offset_index, _reference_offsets.size() - 1);
+
   // Remove the "zig-zag" pattern and return the original offset.
   return _offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
 }
@@ -69,18 +72,18 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
   size_t compressed_length = real_offset_next - real_offset;
 
   // Note: we use const_cast in order to use fsst_decompress.
-  auto* compressed_pointer = const_cast<unsigned char*>(_compressed_values.data() +
-                                                        real_offset);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+ auto * compressed_pointer = const_cast<unsigned char*>(  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+      _compressed_values.data() + real_offset);
 
   // Since the max symbol length is 8, max uncompressed size is 8 * compressed_length.
   size_t output_size = compressed_length * 8;
   std::vector<unsigned char> output_buffer(output_size);
 
-  // Third party library call
+  // Third party library call.
   size_t output_size_after_decompression =
       fsst_decompress(&_decoder, compressed_length, compressed_pointer, output_size, output_buffer.data());
 
-  // "shrink_to_fit" for output buffer
+  // "shrink_to_fit" for output buffer.
   output_buffer.resize(output_size_after_decompression);
 
   pmr_string output{output_buffer.begin(), output_buffer.end()};

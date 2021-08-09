@@ -122,8 +122,8 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       // Do not use reference offsets.
       return 0;
     }
-    uint64_t n_elements_in_reference_bucket = static_cast<uint64_t>(
-        std::ceil(static_cast<double>(offsets.size()) / static_cast<double>(reference_offsets_size + 1)));
+
+    uint64_t n_elements_in_reference_bucket = offsets_size / (reference_offsets_size + 1);
 
     // Calculate start offset of each reference bucket.
     for (size_t index = 0; index < reference_offsets_size; ++index) {
@@ -133,6 +133,9 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // Substract the reference offset from the original offset (create "zig-zag" pattern).
     for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
+
+      // Merge the last uncompleted bucket with the second last bucket.
+      reference_offset_index = std::min(reference_offset_index, reference_offsets_size - 1);
 
       auto reference_offset = reference_offsets[reference_offset_index];
       offsets[index] = offsets[index] - reference_offset;
