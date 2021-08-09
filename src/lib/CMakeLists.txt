@@ -310,6 +310,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
     optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/like_split_up_rule.cpp
+    optimizer/strategy/like_split_up_rule.hpp
     optimizer/strategy/null_scan_removal_rule.cpp
     optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp
