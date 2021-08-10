@@ -290,7 +290,7 @@ try {
           }, tpchVerification: {
             stage("tpchVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./clang-release/hyriseBenchmarkTPCH -r 1 -s 1 --verify"
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
               } else {
                 Utils.markStageSkippedForConditional("tpchVerification")
               }
@@ -298,7 +298,7 @@ try {
           }, tpchQueryPlans: {
             stage("tpchQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
               } else {
@@ -308,11 +308,22 @@ try {
           }, tpcdsQueryPlansAndVerification: {
             stage("tpcdsQueryPlansAndVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
                 Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
+              }
+            }
+          }, jobQueryPlans: {
+            stage("jobQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
+                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
+                archiveArtifacts artifacts: 'query_plans/job/*.svg'
+                archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
           }
@@ -324,10 +335,9 @@ try {
     }
   }
 
-  // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   parallel clangDebugMacX64: {
     node('mac') {
-      stage("clang-debug-mac-x64") {
+      stage("clangDebugMacX64") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
@@ -346,14 +356,14 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-debug-mac-x64")
+          Utils.markStageSkippedForConditional("clangDebugMacX64")
         }
       }
     }
   }, clangReleaseMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
-      stage("clang-release-mac-arm") {
+      stage("clangReleaseMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm          
@@ -378,7 +388,7 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-release-mac-arm")
+          Utils.markStageSkippedForConditional("clangReleaseMacArm")
         }
       }
     }

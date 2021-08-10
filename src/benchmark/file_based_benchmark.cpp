@@ -91,10 +91,6 @@ int main(int argc, char* argv[]) {
     std::cout << "NO date_dim found" << std::endl;
   }
 
-  // disable caching to unhide new optimization overhead
-  Hyrise::get().default_pqp_cache = nullptr;
-  Hyrise::get().default_lqp_cache = nullptr;
-
   Hyrise::get().benchmark_runner = benchmark_runner;
   benchmark_runner->run();
 }

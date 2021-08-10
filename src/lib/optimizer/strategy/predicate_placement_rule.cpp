@@ -93,9 +93,21 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(input_node);
 
+      if (join_node->join_mode == JoinMode::AntiNullAsTrue ||
+           join_node->join_mode == JoinMode::AntiNullAsFalse) {
+         // First, we need to recurse into the right side to make sure that it's optimized as well
+         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        if ((join_node->join_predicates()).size() > 1) {
+          _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+        } else {
+          _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+          untie_and_recurse(input_node);
+        }
+
+        break;
+      }
       // We pick up semi and anti joins on the way and treat them as if they were predicates
-      if (join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
-          join_node->join_mode == JoinMode::AntiNullAsFalse) {
+      if (join_node->join_mode == JoinMode::Semi) {
         // First, we need to recurse into the right side to make sure that it's optimized as well
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);

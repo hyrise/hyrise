@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/like_split_up_rule.hpp"
 #include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -37,6 +38,8 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
+  optimizer->add_rule(std::make_unique<LikeSplitUpRule>());
+
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -51,13 +54,17 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
   // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
   // (FDs) used by the DependentGroupByReductionRule.
-  // optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
+  optimizer->add_rule(std::make_unique<LikeSplitUpRule>());
+
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 
