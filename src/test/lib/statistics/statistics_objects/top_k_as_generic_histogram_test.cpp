@@ -86,7 +86,7 @@ TEST_F(TopKAsGenericHistogramTest, FromColumnFloatLessThanKValues) {
 TEST_F(TopKAsGenericHistogramTest, FromColumnIntMoreThanKValues) {
   const auto hist = TopKAsGenericHistogram<int32_t>::from_column(*_int350, ColumnID{0});
 
-  /* _int350 has 200 distinct values: 
+  /* _int350 has 200 distinct values:
     1 to 50 occur 3 times --> 50 bins with height 3
     51 to 60 occur 1 time --> 1 bin with height 10
     61 to 110 occur 2 times --> 50 bins with height 2
