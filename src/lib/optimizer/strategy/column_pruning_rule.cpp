@@ -504,23 +504,20 @@ void try_join_to_semi_rewrite(
       join_node->join_mode = JoinMode::Semi;
     }
 
-    if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
-      return;
-    }
-
-    // try scan rewrite for used input
-    if (!right_input_is_used) {
-      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
-                               LQPInputSide::Left, required_expressions_by_node);
-      return;
-    }
   }
-
+  if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
+      return;
+  }
   if (_join_to_predicate_off) return;
   if (!left_input_is_used) {
     const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
     try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
                              used_input_side, required_expressions_by_node);
+    return;
+  }
+  if (!right_input_is_used) {
+      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
+                               LQPInputSide::Left, required_expressions_by_node);
   }
 }
 
