@@ -75,7 +75,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
                       });
 
   const auto bin_distinct_count = value_distribution.size();
-  const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / bin_distinct_count : BinID{0};
+  const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / static_cast<float>(bin_distinct_count) : BinID{0};
 
   // Construct Generic Histogram with single bins for Top K Values.
   // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,
@@ -101,10 +101,10 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
       // Create Non-Top K values bin
       current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
       const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
-      const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+      const auto current_bin_height = static_cast<float>(current_distinct_values) * count_per_non_top_k_value;
 
       builder.add_bin(value_distribution[current_minimum_index].first, value_distribution[current_maximum_index].first,
-                      current_bin_height, current_distinct_values);
+                      current_bin_height, static_cast<float>(current_distinct_values));
     }
 
     builder.add_bin(current_top_k_value, current_top_k_value, top_k_counts[top_k_index], 1);
@@ -116,9 +116,9 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
   if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
     const auto range_maximum = value_distribution.back().first;
     const auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
-    const auto current_bin_height = current_distinct_values * count_per_non_top_k_value;
+    const auto current_bin_height = static_cast<float>(current_distinct_values) * count_per_non_top_k_value;
     builder.add_bin(value_distribution[current_minimum_index].first, range_maximum, current_bin_height,
-                    current_distinct_values);
+                    static_cast<float>(current_distinct_values));
   }
 
   return builder.build();
