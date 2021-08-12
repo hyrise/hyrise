@@ -153,10 +153,10 @@ void CardinalityWriter::_build_lqp_subtree(const std::shared_ptr<AbstractLQPNode
   }
 }
 
-void CardinalityWriter::_build_pqp_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
+void CardinalityWriter::_build_pqp_graph(const std::vector<std::shared_ptr<AbstractOperator>>& pqp_roots) {
   std::unordered_set<std::shared_ptr<const AbstractOperator>> visited_ops;
 
-  for (const auto& plan : plans) {
+  for (const auto& plan : pqp_roots) {
     _build_pqp_subtree(plan, visited_ops);
   }
 }
