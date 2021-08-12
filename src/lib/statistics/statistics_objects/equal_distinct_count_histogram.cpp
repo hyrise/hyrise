@@ -7,7 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
+#include "boost/sort/sort.hpp"
+#include "tsl/robin_map.h"
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
@@ -63,8 +64,8 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  std::sort(value_distribution.begin(), value_distribution.end(),
-            [&](const auto& l, const auto& r) { return l.first < r.first; });
+boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
+                    [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   return value_distribution;
 }
