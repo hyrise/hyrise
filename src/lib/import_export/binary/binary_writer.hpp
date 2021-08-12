@@ -242,7 +242,10 @@ class BinaryWriter {
    * NULL values size            | uint32_t                            | 4
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
    * # elements in a bucket      | uint64_t                            | 8
-   * Decoder                     | fsst_decoder_t                      | 2313
+   * Decoder version id          | uint64_t                            | 8
+   * Decoder zero terminated flag| char                                | 1
+   * Decoder symbol lengths      | vector<char>                        | 255
+   * Decoder symbols             | vector<uint64_t>                    | 2040
    * 
    * 
    * Please note that the number of rows are written in the header of the chunk.

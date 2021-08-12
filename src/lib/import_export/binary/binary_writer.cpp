@@ -311,7 +311,11 @@ void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool colum
   export_value(ofstream, static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));
 
   // Write decoder
-  export_value(ofstream, fsst_segment.decoder());
+  auto decoder = fsst_segment.decoder();
+  export_value(ofstream, static_cast<uint64_t>(decoder.version));
+  export_value(ofstream, decoder.zeroTerminated);
+  export_values(ofstream, std::vector(decoder.len, decoder.len + 255));
+  export_values(ofstream, std::vector(decoder.symbol, decoder.symbol + 255));
 }
 
 template <typename T>
