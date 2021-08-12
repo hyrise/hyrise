@@ -93,7 +93,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
     const auto& performance_data = *_pqp_nodes[node]->performance_data;
 
     if (_pqp_nodes[node]->executed() && performance_data.has_output) {
-      pqp_row_count = performance_data.output_row_count;
+      pqp_row_count = static_cast<float>(performance_data.output_row_count);
     }
 
     // Write benchmark id, node descriptions and cardinalities in CSV
