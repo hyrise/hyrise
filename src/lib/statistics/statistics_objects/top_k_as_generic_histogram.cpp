@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "equal_distinct_count_histogram.cpp"
 #include "equal_distinct_count_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 
@@ -75,7 +74,8 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
                       });
 
   const auto bin_distinct_count = value_distribution.size();
-  const auto count_per_non_top_k_value = bin_distinct_count != 0 ? non_top_k_count / static_cast<float>(bin_distinct_count) : BinID{0};
+  const auto count_per_non_top_k_value =
+      bin_distinct_count != 0 ? non_top_k_count / static_cast<float>(bin_distinct_count) : BinID{0};
 
   // Construct Generic Histogram with single bins for Top K Values.
   // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,

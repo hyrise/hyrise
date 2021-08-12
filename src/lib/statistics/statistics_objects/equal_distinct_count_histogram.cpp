@@ -7,68 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
-
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
-
-namespace {
-
-using namespace opossum;  // NOLINT
-
-// Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
-// defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
-// so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
-// where hashing is somewhat expensive.
-template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
-
-template <typename T>
-void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
-                                       const HistogramDomain<T>& domain) {
-  segment_iterate<T>(segment, [&](const auto& iterator_value) {
-    if (iterator_value.is_null()) return;
-
-    if constexpr (std::is_same_v<T, pmr_string>) {
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(iterator_value.value())) {
-        ++value_distribution[iterator_value.value()];
-      } else {
-        ++value_distribution[domain.string_to_domain(iterator_value.value())];
-      }
-    } else {
-      ++value_distribution[iterator_value.value()];
-    }
-  });
-}
-
-template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
-                                                                             const ColumnID column_id,
-                                                                             const HistogramDomain<T>& domain) {
-  // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
-  //               resources.
-  ValueDistributionMap<T> value_distribution_map;
-
-  const auto chunk_count = table.chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) continue;
-
-    add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
-  }
-
-  auto value_distribution =
-      std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  std::sort(value_distribution.begin(), value_distribution.end(),
-            [&](const auto& l, const auto& r) { return l.first < r.first; });
-
-  return value_distribution;
-}
-}  // namespace
 
 namespace opossum {
 
