@@ -279,7 +279,7 @@ void PQPAnalyzer::run() {
         case OperatorType::JoinNestedLoop:
         case OperatorType::JoinSortMerge: {
           return PQPVisitation::VisitInputs;
-          /*const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
+          const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
           if (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::Inner) {
             return PQPVisitation::VisitInputs;
           }
@@ -325,7 +325,7 @@ void PQPAnalyzer::run() {
                     break;
                   }
                 }
-              }*/
+              }
               /*for (const auto& join_output : join_outputs) {
                 if (expression_evaluable_on_lqp(join_output, *input) && *join_output != *expression) {
                   std::cout << "        abort due " << join_output->description() << std::endl;
@@ -333,14 +333,14 @@ void PQPAnalyzer::run() {
                   break;
                 }
               }*/
-              /*if (abort) continue;
+              if (abort) continue;
 
               if (join_node->join_mode == JoinMode::Inner) {
                 auto candidate = DependencyCandidate{TableColumnIDs{join_column_id}, {}, DependencyType::Unique, prio};
                 _add_if_new(candidate);
               }
-
-              std::vector<DependencyCandidate> my_candidates;
+              return PQPVisitation::VisitInputs;
+              /*std::vector<DependencyCandidate> my_candidates;
               visit_lqp(input, [&](const auto& node) {
                 switch (node->type) {
                   case LQPNodeType::Validate:
@@ -397,11 +397,12 @@ void PQPAnalyzer::run() {
               }*/ /* else {
                 std::cout << "aborted" << std::endl;
               }*/
-            //}
-          //}
+            }
+          }
         } break;
         case OperatorType::Aggregate: {
-          const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
+          return PQPVisitation::VisitInputs;
+          /*const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
           const auto num_group_by_columns = aggregate_node->aggregate_expressions_begin_idx;
           if (num_group_by_columns < 2) {
             return PQPVisitation::VisitInputs;
@@ -422,7 +423,7 @@ void PQPAnalyzer::run() {
             return PQPVisitation::VisitInputs;
           }
           auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
-          _add_if_new(candidate);
+          _add_if_new(candidate);*/
         } break;
         default:
           break;
