@@ -340,7 +340,7 @@ void PQPAnalyzer::run() {
                 _add_if_new(candidate);
               }
               return PQPVisitation::VisitInputs;
-              /*std::vector<DependencyCandidate> my_candidates;
+              std::vector<DependencyCandidate> my_candidates;
               visit_lqp(input, [&](const auto& node) {
                 switch (node->type) {
                   case LQPNodeType::Validate:
@@ -394,7 +394,7 @@ void PQPAnalyzer::run() {
                 for (auto& candidate : my_candidates) {
                   _add_if_new(candidate);
                 }
-              }*/ /* else {
+              } /* else {
                 std::cout << "aborted" << std::endl;
               }*/
             }
