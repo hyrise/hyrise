@@ -278,7 +278,8 @@ void PQPAnalyzer::run() {
         case OperatorType::JoinHash:
         case OperatorType::JoinNestedLoop:
         case OperatorType::JoinSortMerge: {
-          const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
+          return PQPVisitation::VisitInputs;
+          /*const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
           if (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::Inner) {
             return PQPVisitation::VisitInputs;
           }
@@ -324,7 +325,7 @@ void PQPAnalyzer::run() {
                     break;
                   }
                 }
-              }
+              }*/
               /*for (const auto& join_output : join_outputs) {
                 if (expression_evaluable_on_lqp(join_output, *input) && *join_output != *expression) {
                   std::cout << "        abort due " << join_output->description() << std::endl;
@@ -332,7 +333,7 @@ void PQPAnalyzer::run() {
                   break;
                 }
               }*/
-              if (abort) continue;
+              /*if (abort) continue;
 
               if (join_node->join_mode == JoinMode::Inner) {
                 auto candidate = DependencyCandidate{TableColumnIDs{join_column_id}, {}, DependencyType::Unique, prio};
@@ -393,11 +394,11 @@ void PQPAnalyzer::run() {
                 for (auto& candidate : my_candidates) {
                   _add_if_new(candidate);
                 }
-              } /* else {
+              }*/ /* else {
                 std::cout << "aborted" << std::endl;
               }*/
-            }
-          }
+            //}
+          //}
         } break;
         case OperatorType::Aggregate: {
           const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
