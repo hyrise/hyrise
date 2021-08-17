@@ -1411,19 +1411,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
     for (auto tableKeyConstraint : *create_statement.tableKeyConstraints) {
       std::unordered_set<ColumnID> column_ids;
+      for(auto name : *tableKeyConstraint->columnNames) {
+        auto column_id = table->column_id_by_name(std::basic_string<char>{name});
+        column_ids.insert(column_id);
+      }
       switch (tableKeyConstraint->type) {
         case hsql::ConstraintType::PRIMARY_KEY:
-          for(auto name : *tableKeyConstraint->columnNames) {
-            auto column_id = table->column_id_by_name(std::basic_string<char>{name});
-                column_ids.insert(column_id);
-          }
           tableKeyConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
           break;
         case hsql::ConstraintType::UNIQUE:
-          for(auto name : *tableKeyConstraint->columnNames) {
-            auto column_id = table->column_id_by_name(std::basic_string<char>{name});
-            column_ids.insert(column_id);
-          }
           tableKeyConstraints->push_back({column_ids, KeyConstraintType::UNIQUE});
           break;
         default:
