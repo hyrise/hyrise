@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-// maintenance operator for the "CREATE TABLE" sql statement
+// maintenance operator for the "CREATE INDEX" sql statement
 class CreateIndex : public AbstractReadWriteOperator {
  public:
   CreateIndex(const std::string& init_index_name,
