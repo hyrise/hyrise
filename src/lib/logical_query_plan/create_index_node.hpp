@@ -10,7 +10,7 @@
 namespace opossum {
 
 /**
- * This node type represents the CREATE TABLE management command.
+ * This node type represents the CREATE INDEX management command.
  */
 class CreateIndexNode : public EnableMakeForLQPNode<CreateIndexNode>, public AbstractNonQueryNode {
  public:
