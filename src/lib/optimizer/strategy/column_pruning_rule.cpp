@@ -62,13 +62,13 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this
     // node.
     case LQPNodeType::Alias:
-    case LQPNodeType::CreatePreparedPlan:
-    case LQPNodeType::CreateView:
-    case LQPNodeType::CreateIndex:
-    case LQPNodeType::DropView:
-    case LQPNodeType::DropIndex:
-    case LQPNodeType::DropTable:
     case LQPNodeType::AlterDropColumn:
+    case LQPNodeType::CreatePreparedPlan:
+    case LQPNodeType::CreateIndex:
+    case LQPNodeType::CreateView:
+    case LQPNodeType::DropIndex:
+    case LQPNodeType::DropView:
+    case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
