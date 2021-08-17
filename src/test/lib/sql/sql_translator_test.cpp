@@ -2282,7 +2282,7 @@ TEST_F(SQLTranslatorTest, CreateIndex) {
 }
 
 TEST_F(SQLTranslatorTest, CreateIndexIfNotExist) {
-  const auto query = "CREATE INDEX my_index IF NOT EXISTS ON int_int_int (a, b);";
+  const auto query = "CREATE INDEX IF NOT EXISTS my_index ON int_int_int (a, b);";
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 

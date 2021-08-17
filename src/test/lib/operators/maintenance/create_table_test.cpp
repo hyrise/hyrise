@@ -231,7 +231,9 @@ TEST_F(CreateTableTest, CreateTableWithKeyConstraints) {
   constraint_table->execute();
   constraint_context->commit();
 
-  EXPECT_EQ(constraint_table->get_output()->soft_key_constraints(), *key_constraints);
+  const auto table = Hyrise::get().storage_manager.get_table("t");
+
+  EXPECT_EQ(table->soft_key_constraints(), *key_constraints);
 }
 
 }  // namespace opossum

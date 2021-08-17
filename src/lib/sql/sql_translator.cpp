@@ -1351,6 +1351,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::INT:
           column_definition.data_type = DataType::Int;
           break;
+        case hsql::DataType::SMALLINT:
+          column_definition.data_type = DataType::Int;
+          break;
         case hsql::DataType::LONG:
           column_definition.data_type = DataType::Long;
           break;
