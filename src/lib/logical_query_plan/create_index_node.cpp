@@ -12,7 +12,6 @@ CreateIndexNode::CreateIndexNode(const std::string& init_index_name, const bool 
 
 std::string CreateIndexNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
- // TODO: put table name in here
   stream << "[CreateIndex] " << (if_not_exists ? "IfNotExists " : "");
   stream << "Name: '" << index_name << "' ";
   stream << "On Table: '" << table_name << "'";
