@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-// maintenance operator for the "DROP INDEX" sql statement
+// maintenance operator for the "ALTER DROP COLUMN" sql statement
 class AlterDropColumn : public AbstractReadWriteOperator {
  public:
   AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists);
