@@ -1293,7 +1293,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hsql::CreateStatement& create_statement) {
 
-  Assert(Hyrise::get().storage_manager.has_table(create_statement.tableName), "table not existent");
+  Assert(Hyrise::get().storage_manager.has_table(create_statement.tableName), "Table not existent");
 
   auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
 
