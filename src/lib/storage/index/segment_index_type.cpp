@@ -8,7 +8,7 @@ std::string segment_index_type_to_string(SegmentIndexType type) {
     case SegmentIndexType::Invalid:
       return "Invalid";
     case SegmentIndexType::GroupKey:
-      return "GroupKey";
+      return "Group Key";
     case SegmentIndexType::CompositeGroupKey:
       return "Composite Group Key";
     case SegmentIndexType::AdaptiveRadixTree:
