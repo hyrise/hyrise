@@ -105,24 +105,24 @@ set(
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/alias_node.cpp
     logical_query_plan/alias_node.hpp
+    logical_query_plan/alter_drop_column_node.cpp
+    logical_query_plan/alter_drop_column_node.hpp
     logical_query_plan/change_meta_table_node.cpp
     logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
+    logical_query_plan/create_index_node.cpp
+    logical_query_plan/create_index_node.hpp
     logical_query_plan/create_table_node.cpp
     logical_query_plan/create_table_node.hpp
-    logical_query_plan/create_index_node.cpp
-    logical_query_plan/drop_index_node.cpp
-    logical_query_plan/drop_index_node.hpp
-    logical_query_plan/create_index_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
+    logical_query_plan/drop_index_node.cpp
+    logical_query_plan/drop_index_node.hpp
     logical_query_plan/drop_table_node.cpp
     logical_query_plan/drop_table_node.hpp
-    logical_query_plan/alter_drop_column_node.cpp
-    logical_query_plan/alter_drop_column_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
@@ -225,18 +225,18 @@ set(
     operators/join_verification.hpp
     operators/limit.cpp
     operators/limit.hpp
-    operators/maintenance/create_prepared_plan.cpp
-    operators/maintenance/create_prepared_plan.hpp
-    operators/maintenance/create_table.cpp
-    operators/maintenance/create_table.hpp
-    operators/maintenance/create_index.cpp
-    operators/maintenance/create_index.hpp
     operators/maintenance/alter_drop_column.cpp
     operators/maintenance/alter_drop_column.hpp
-    operators/maintenance/drop_index.cpp
-    operators/maintenance/drop_index.hpp
+    operators/maintenance/create_prepared_plan.cpp
+    operators/maintenance/create_prepared_plan.hpp
+    operators/maintenance/create_index.cpp
+    operators/maintenance/create_index.hpp
+    operators/maintenance/create_table.cpp
+    operators/maintenance/create_table.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
+    operators/maintenance/drop_index.cpp
+    operators/maintenance/drop_index.hpp
     operators/maintenance/drop_table.cpp
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
@@ -488,8 +488,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_statistics.cpp
     storage/index/index_statistics.hpp
-    storage/index/segment_index_type.hpp
     storage/index/segment_index_type.cpp
+    storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
@@ -602,6 +602,8 @@ set(
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp
     utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_indexes_table.cpp
+    utils/meta_tables/meta_indexes_table.hpp
     utils/meta_tables/meta_log_table.cpp
     utils/meta_tables/meta_log_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
@@ -611,8 +613,6 @@ set(
     utils/meta_tables/meta_segments_table.cpp
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
-    utils/meta_tables/meta_indexes_table.cpp
-    utils/meta_tables/meta_indexes_table.hpp
     utils/meta_tables/meta_settings_table.hpp
     utils/meta_tables/meta_system_information_table.cpp
     utils/meta_tables/meta_system_information_table.hpp
