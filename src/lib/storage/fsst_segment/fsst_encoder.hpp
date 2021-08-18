@@ -130,7 +130,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
     }
 
-    // Substract the reference offset from the original offset (create "zig-zag" pattern).
+    // Subtract the reference offset from the original offset (create "zig-zag" pattern).
     for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
 

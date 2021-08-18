@@ -36,7 +36,7 @@ AllTypeVariant FSSTSegment<T>::operator[](const ChunkOffset chunk_offset) const 
 
   const auto typed_value = get_typed_value(chunk_offset);
   if (typed_value) {
-    return typed_value.value();
+    return *typed_value;
   }
   return NULL_VALUE;
 }

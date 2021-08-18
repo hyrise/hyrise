@@ -71,7 +71,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
 
   for (size_t index = 0; index < values.size(); ++index) {
     std::optional<pmr_string> value = segment->get_typed_value(static_cast<ChunkOffset>(index));
-    ASSERT_EQ(value.value(), values[index]);
+    ASSERT_EQ(*value, values[index]);
   }
 }
 
@@ -128,7 +128,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
     auto segment_position = collected_values.at(index);
     ASSERT_EQ(expected_null_values.at(index), segment_position.is_null());
     if (!expected_null_values.at(index)) {
-      ASSERT_EQ(values.at(index), segment_position.value());
+      ASSERT_EQ(values.at(index), *segment_position);
     }
   }
 }
@@ -165,7 +165,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
 
     ASSERT_EQ(expected_null_values.at(real_chunk_offset), segment_position.is_null());
     if (!expected_null_values.at(real_chunk_offset)) {
-      ASSERT_EQ(values.at(real_chunk_offset), segment_position.value());
+      ASSERT_EQ(values.at(real_chunk_offset), *segment_position);
     }
   }
 }
