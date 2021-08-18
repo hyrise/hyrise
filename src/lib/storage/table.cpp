@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -325,7 +327,7 @@ const TableKeyConstraints& Table::soft_key_constraints() const { return _table_k
 
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
-
+  std::cout << "added constraint " << magic_enum::enum_name(table_key_constraint.key_type()) << std::endl;
   // Check validity of specified columns
   for (const auto& column_id : table_key_constraint.columns()) {
     Assert(column_id < column_count(), "ColumnID out of range");

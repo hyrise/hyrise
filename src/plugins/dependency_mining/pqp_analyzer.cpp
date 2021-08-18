@@ -278,7 +278,6 @@ void PQPAnalyzer::run() {
         case OperatorType::JoinHash:
         case OperatorType::JoinNestedLoop:
         case OperatorType::JoinSortMerge: {
-          return PQPVisitation::VisitInputs;
           const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
           if (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::Inner) {
             return PQPVisitation::VisitInputs;
@@ -339,7 +338,7 @@ void PQPAnalyzer::run() {
                 auto candidate = DependencyCandidate{TableColumnIDs{join_column_id}, {}, DependencyType::Unique, prio};
                 _add_if_new(candidate);
               }
-              return PQPVisitation::VisitInputs;
+
               std::vector<DependencyCandidate> my_candidates;
               visit_lqp(input, [&](const auto& node) {
                 switch (node->type) {
@@ -401,8 +400,8 @@ void PQPAnalyzer::run() {
           }
         } break;
         case OperatorType::Aggregate: {
-          return PQPVisitation::VisitInputs;
-          /*const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
+          //return PQPVisitation::VisitInputs;
+          const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
           const auto num_group_by_columns = aggregate_node->aggregate_expressions_begin_idx;
           if (num_group_by_columns < 2) {
             return PQPVisitation::VisitInputs;
@@ -423,7 +422,7 @@ void PQPAnalyzer::run() {
             return PQPVisitation::VisitInputs;
           }
           auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
-          _add_if_new(candidate);*/
+          _add_if_new(candidate);
         } break;
         default:
           break;

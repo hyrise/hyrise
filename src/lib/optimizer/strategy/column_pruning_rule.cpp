@@ -240,12 +240,22 @@ void try_join_to_scan_rewrite(
     const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet equals_predicate_expressions_used_side,
     ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+  //std::cout << join->description() << std::endl;
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
   // eraly out if input is required by another node or join column is not unique
-  if (unused_input->output_count() > 1) return;
-  if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) return;
+  if (unused_input->output_count() > 1) {
+    //for (const auto& o: unused_input->outputs()) {
+    //  std::cout << "    other " << o->description() << std::endl;
+    //}
+    return;
+  }
+  const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
+  if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) {
+    //std::cout << "    missing UCC " <<  join_expression->description() << std::endl;
+    return;
+  }
 
   std::vector<std::shared_ptr<PredicateNode>> scans;
   bool abort = false;
@@ -269,6 +279,7 @@ void try_join_to_scan_rewrite(
       // more complex stucture beforehand, just as (semi-)joins, would work as well
       // but they sub-lqps would hardly be optimized
       default: {
+        //std::cout << "    abort (complex)" << std::endl;
         abort = true;
         return LQPVisitation::DoNotVisitInputs;
       }
@@ -326,12 +337,13 @@ void try_join_to_scan_rewrite(
     }
   };
 
-  const auto join_expression = *(equals_predicate_expressions_unused_side.begin());
+
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
 
   bool executed = false;
   for (const auto& scan : scans) {
+    //std::cout << scan->description() << std::endl;
     const auto scan_predicate = scan->predicate();
     const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
 
@@ -341,7 +353,7 @@ void try_join_to_scan_rewrite(
           Assert(!executed, "Did not expect mutiple scan columns");
           auto ref_expressions = ExpressionUnorderedSet{expression};
           if (scan->has_matching_unique_constraint(ref_expressions)) {
-            // std::cout << "rewrite Equals " << join->description() << " with " << scan_predicate->description() << std::endl;
+            //std::cout << "rewrite Equals " << join->description() << " with " << scan_predicate->description() << std::endl;
             executed = true;
             const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
             const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
