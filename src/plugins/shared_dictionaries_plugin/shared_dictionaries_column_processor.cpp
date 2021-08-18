@@ -6,7 +6,7 @@ template <typename T>
 SharedDictionariesColumnProcessor<T>::SharedDictionariesColumnProcessor(
     const std::shared_ptr<Table>& init_table, const std::string& init_table_name, const ColumnID init_column_id,
     const std::string& init_column_name, const double init_jaccard_index_threshold,
-    const std::shared_ptr<SharedDictionariesPlugin::SharedDictionariesStats>& init_stats)
+    SharedDictionariesPlugin::SharedDictionariesStats& init_stats)
     : table(init_table),
       table_name(init_table_name),
       column_id(init_column_id),
@@ -26,32 +26,32 @@ void SharedDictionariesColumnProcessor<T>::process() {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     const auto segment = chunk->get_segment(column_id);
-    stats->total_previous_bytes += segment->memory_usage(MemoryUsageCalculationMode::Full);
+    stats.total_previous_bytes += segment->memory_usage(MemoryUsageCalculationMode::Full);
 
     const auto current_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment);
     if (current_dictionary_segment && !current_dictionary_segment->uses_dictionary_sharing()) {
       const auto current_dictionary = current_dictionary_segment->dictionary();
       const auto current_segment_chunk_pair = std::make_pair(current_dictionary_segment, chunk);
 
-      const auto [best_merge_plan_index, best_shared_dictionary] =
-          _compare_with_existing_merge_plans(current_dictionary, merge_plans, allocator);
+      const auto [best_merge_plan_index_opt, best_shared_dictionary] =
+          _union_with_best_existing_shared_dictionary(current_dictionary, merge_plans, allocator);
 
       auto merged_current_dictionary = false;
-      if (best_merge_plan_index >= 0 && best_shared_dictionary) {
+      if (best_merge_plan_index_opt && best_shared_dictionary) {
         // Merge with existing shared dictionary
-        const auto merge_plan = merge_plans[best_merge_plan_index];
+        const auto merge_plan = merge_plans[*best_merge_plan_index_opt];
         merge_plan->shared_dictionary = best_shared_dictionary;
-        _add_segment_chunk_pair(*merge_plan, current_segment_chunk_pair, false);
+        merge_plan->add_segment_chunk_pair(current_segment_chunk_pair, false);
         merged_current_dictionary = true;
       } else if (previous_segment_chunk_pair_opt) {
         // Check with previous segment
         const auto shared_dictionary_with_previous =
-            _compare_with_previous_dictionary(current_dictionary, *previous_segment_chunk_pair_opt, allocator);
+            _union_with_previous_dictionary(current_dictionary, *previous_segment_chunk_pair_opt, allocator);
         if (shared_dictionary_with_previous) {
           // Merge with previous dictionary
           const auto new_merge_plan = std::make_shared<MergePlan>(shared_dictionary_with_previous);
-          _add_segment_chunk_pair(*new_merge_plan, current_segment_chunk_pair, false);
-          _add_segment_chunk_pair(*new_merge_plan, *previous_segment_chunk_pair_opt, false);
+          new_merge_plan->add_segment_chunk_pair(current_segment_chunk_pair, false);
+          new_merge_plan->add_segment_chunk_pair(*previous_segment_chunk_pair_opt, false);
           merge_plans.emplace_back(new_merge_plan);
           merged_current_dictionary = true;
         }
@@ -76,17 +76,17 @@ void SharedDictionariesColumnProcessor<T>::_initialize_merge_plans(
 
     const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment);
     if (dictionary_segment && dictionary_segment->uses_dictionary_sharing()) {
-      stats->num_existing_merged_dictionaries++;
+      stats.num_existing_merged_dictionaries++;
       const auto shared_dictionary = dictionary_segment->dictionary();
       const auto [iter, inserted] =
           shared_dictionaries_map.try_emplace(shared_dictionary, std::make_shared<MergePlan>(shared_dictionary));
       const auto segment_chunk_pair = std::make_pair(dictionary_segment, chunk);
       const auto merge_plan = iter->second;
-      _add_segment_chunk_pair(*merge_plan, segment_chunk_pair, true);
+      merge_plan->add_segment_chunk_pair(segment_chunk_pair, true);
     }
   }
 
-  stats->num_existing_shared_dictionaries = static_cast<uint32_t>(shared_dictionaries_map.size());
+  stats.num_existing_shared_dictionaries = static_cast<uint32_t>(shared_dictionaries_map.size());
 
   for (const auto& [key, merge_plan] : shared_dictionaries_map) {
     merge_plans.emplace_back(merge_plan);
@@ -94,40 +94,40 @@ void SharedDictionariesColumnProcessor<T>::_initialize_merge_plans(
 }
 
 template <typename T>
-std::pair<int32_t, std::shared_ptr<const pmr_vector<T>>>
-SharedDictionariesColumnProcessor<T>::_compare_with_existing_merge_plans(
+std::pair<std::optional<size_t>, std::shared_ptr<const pmr_vector<T>>>
+SharedDictionariesColumnProcessor<T>::_union_with_best_existing_shared_dictionary(
     const std::shared_ptr<const pmr_vector<T>> current_dictionary,
     const std::vector<std::shared_ptr<MergePlan>>& merge_plans, const PolymorphicAllocator<T>& allocator) {
-  auto best_merge_plan_index = -1;
+  std::optional<size_t> best_merge_plan_index_opt = std::nullopt;
   auto best_jaccard_index = -1.0;
-  std::shared_ptr<const pmr_vector<T>> best_shared_dictionary = nullptr;
+  auto best_shared_dictionary = pmr_vector<T>{};
   const auto merge_plans_size = merge_plans.size();
   for (auto merge_plan_index = 0ul; merge_plan_index < merge_plans_size; ++merge_plan_index) {
     const auto merge_plan = merge_plans[merge_plan_index];
     const auto shared_dictionary = merge_plan->shared_dictionary;
-    auto union_result = std::make_shared<pmr_vector<T>>(allocator);
-    union_result->reserve(std::max(current_dictionary->size(), shared_dictionary->size()));
+    auto union_result = pmr_vector<T>(allocator);
+    union_result.reserve(std::max(current_dictionary->size(), shared_dictionary->size()));
     std::set_union(current_dictionary->cbegin(), current_dictionary->cend(), shared_dictionary->cbegin(),
-                   shared_dictionary->cend(), std::back_inserter(*union_result));
+                   shared_dictionary->cend(), std::back_inserter(union_result));
     const auto total_size = current_dictionary->size() + shared_dictionary->size();
-    const auto union_size = union_result->size();
+    const auto union_size = union_result.size();
     const auto jaccard_index = _calc_jaccard_index(union_size, total_size - union_size);
     if (jaccard_index > best_jaccard_index) {
       if (_should_merge(jaccard_index, current_dictionary->size(), union_size,
                         merge_plan->segment_chunk_pairs_to_merge)) {
-        best_merge_plan_index = static_cast<int32_t>(merge_plan_index);
+        best_merge_plan_index_opt = merge_plan_index;
         best_jaccard_index = jaccard_index;
-        union_result->shrink_to_fit();
+        union_result.shrink_to_fit();
         best_shared_dictionary = union_result;
       }
     }
   }
 
-  return std::make_pair(best_merge_plan_index, best_shared_dictionary);
+  return std::make_pair(best_merge_plan_index_opt, std::make_shared<const pmr_vector<T>>(best_shared_dictionary));
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> SharedDictionariesColumnProcessor<T>::_compare_with_previous_dictionary(
+std::shared_ptr<const pmr_vector<T>> SharedDictionariesColumnProcessor<T>::_union_with_previous_dictionary(
     const std::shared_ptr<const pmr_vector<T>> current_dictionary,
     const SegmentChunkPair<T> previous_segment_chunk_pair, const PolymorphicAllocator<T>& allocator) {
   const auto previous_dictionary = previous_segment_chunk_pair.first->dictionary();
@@ -157,7 +157,7 @@ void SharedDictionariesColumnProcessor<T>::_process_merge_plans(
     const auto segment_chunk_pairs_to_merge = merge_plan->segment_chunk_pairs_to_merge;
     Assert(segment_chunk_pairs_to_merge.size() >= 2, "At least 2 segments should be merged.");
     if (merge_plan->contains_non_merged_segment) {
-      stats->num_shared_dictionaries++;
+      stats.num_shared_dictionaries++;
       auto shared_dictionary_memory_usage = _calc_dictionary_memory_usage(shared_dictionary);
       const auto new_dictionary_memory_usage = shared_dictionary_memory_usage;
 
@@ -167,11 +167,11 @@ void SharedDictionariesColumnProcessor<T>::_process_merge_plans(
       }
 
       previous_dictionary_memory_usage += merge_plan->non_merged_dictionary_bytes;
-      stats->modified_previous_bytes += merge_plan->non_merged_total_bytes;
+      stats.modified_previous_bytes += merge_plan->non_merged_total_bytes;
 
       for (auto segment_chunk_pair_to_merge : segment_chunk_pairs_to_merge) {
         const auto segment = segment_chunk_pair_to_merge.first;
-        stats->num_merged_dictionaries++;
+        stats.num_merged_dictionaries++;
         // Create new dictionary encoded segment with adjusted attribute vector and shared dictionary
         const auto new_attribute_vector = _create_new_attribute_vector(segment, shared_dictionary, allocator);
         const auto new_dictionary_segment =
@@ -184,7 +184,7 @@ void SharedDictionariesColumnProcessor<T>::_process_merge_plans(
       Assert(new_dictionary_memory_usage < previous_dictionary_memory_usage,
              "New dictionary memory usage should be lower than previous");
       const auto bytes_saved = previous_dictionary_memory_usage - new_dictionary_memory_usage;
-      stats->total_bytes_saved += bytes_saved;
+      stats.total_bytes_saved += bytes_saved;
 
       auto log_stream = std::stringstream();
       log_stream << "[Table=" << table_name << ", Column=" << column_name << "] Merged "
@@ -250,22 +250,21 @@ bool SharedDictionariesColumnProcessor<T>::_should_merge(
 }
 
 template <typename T>
-void SharedDictionariesColumnProcessor<T>::_add_segment_chunk_pair(MergePlan& merge_plan,
-                                                                   const SegmentChunkPair<T>& segment_chunk_pair,
-                                                                   bool is_already_merged) {
+void SharedDictionariesColumnProcessor<T>::MergePlan::add_segment_chunk_pair(
+    const SegmentChunkPair<T>& segment_chunk_pair, bool is_already_merged) {
   if (is_already_merged) {
-    merge_plan.contains_already_merged_segment = true;
+    contains_already_merged_segment = true;
+  } else {
+    contains_non_merged_segment = true;
+    non_merged_dictionary_bytes += _calc_dictionary_memory_usage(segment_chunk_pair.first->dictionary());
+    non_merged_total_bytes += segment_chunk_pair.first->memory_usage(MemoryUsageCalculationMode::Full);
   }
-  if (!is_already_merged) {
-    merge_plan.contains_non_merged_segment = true;
-    merge_plan.non_merged_dictionary_bytes += _calc_dictionary_memory_usage(segment_chunk_pair.first->dictionary());
-    merge_plan.non_merged_total_bytes += segment_chunk_pair.first->memory_usage(MemoryUsageCalculationMode::Full);
-  }
-  merge_plan.segment_chunk_pairs_to_merge.emplace_back(segment_chunk_pair);
+  segment_chunk_pairs_to_merge.emplace_back(segment_chunk_pair);
 }
 
 template <typename T>
-double SharedDictionariesColumnProcessor<T>::_calc_jaccard_index(size_t union_size, size_t intersection_size) {
+double SharedDictionariesColumnProcessor<T>::_calc_jaccard_index(const size_t union_size,
+                                                                 const size_t intersection_size) {
   DebugAssert(union_size >= intersection_size, "Union size should be larger than or equal intersection size.");
   return union_size == 0 ? 0.0 : static_cast<double>(intersection_size) / static_cast<double>(union_size);
 }

@@ -6,7 +6,6 @@
 #include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/shared_dictionaries_plugin/shared_dictionaries_column_processor.hpp"
-#include "../../plugins/shared_dictionaries_plugin/shared_dictionaries_plugin.hpp"
 
 namespace opossum {
 
@@ -100,12 +99,6 @@ class SharedDictionariesPluginTest : public BaseTest {
     return column_processor._should_merge(jaccard_index, current_dictionary_size, shared_dictionary_size,
                                           shared_segment_chunk_pairs);
   }
-
-  static void _add_segment_chunk_pair(SharedDictionariesColumnProcessor<pmr_string>::MergePlan& merge_plan,
-                                      const SegmentChunkPair<pmr_string>& segment_chunk_pair, bool is_already_merged) {
-    SharedDictionariesColumnProcessor<pmr_string>::_add_segment_chunk_pair(merge_plan, segment_chunk_pair,
-                                                                           is_already_merged);
-  }
 };
 
 TEST_F(SharedDictionariesPluginTest, LoadUnloadPluginEmpty) {
@@ -137,18 +130,18 @@ TEST_F(SharedDictionariesPluginTest, ReloadPlugin) {
 
 TEST_F(SharedDictionariesPluginTest, ProcessColumn) {
   _add_customer_table();
-  auto stats = std::make_shared<SharedDictionariesPlugin::SharedDictionariesStats>();
+  auto stats = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor = SharedDictionariesColumnProcessor<pmr_string>{
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats};
   column_processor.process();
 
-  EXPECT_GT(stats->total_bytes_saved, 0);
-  EXPECT_GT(stats->total_previous_bytes, 0);
-  EXPECT_GT(stats->modified_previous_bytes, 0);
-  EXPECT_GT(stats->num_merged_dictionaries, 0);
-  EXPECT_GT(stats->num_shared_dictionaries, 0);
-  EXPECT_EQ(stats->num_existing_shared_dictionaries, 0);
-  EXPECT_EQ(stats->num_existing_merged_dictionaries, 0);
+  EXPECT_GT(stats.total_bytes_saved, 0);
+  EXPECT_GT(stats.total_previous_bytes, 0);
+  EXPECT_GT(stats.modified_previous_bytes, 0);
+  EXPECT_GT(stats.num_merged_dictionaries, 0);
+  EXPECT_GT(stats.num_shared_dictionaries, 0);
+  EXPECT_EQ(stats.num_existing_shared_dictionaries, 0);
+  EXPECT_EQ(stats.num_existing_merged_dictionaries, 0);
 
   _validate_customer_table();
 
@@ -181,43 +174,43 @@ TEST_F(SharedDictionariesPluginTest, ProcessColumn) {
 
 TEST_F(SharedDictionariesPluginTest, InitializeMergePlansEmpty) {
   _add_customer_table();
-  auto stats = std::make_shared<SharedDictionariesPlugin::SharedDictionariesStats>();
+  auto stats = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor = SharedDictionariesColumnProcessor<pmr_string>{
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats};
 
   auto merge_plans = std::vector<std::shared_ptr<SharedDictionariesColumnProcessor<pmr_string>::MergePlan>>{};
   _initialize_merge_plans(column_processor, merge_plans);
   EXPECT_EQ(merge_plans.size(), 0);
-  EXPECT_EQ(stats->num_existing_merged_dictionaries, 0);
-  EXPECT_EQ(stats->num_existing_shared_dictionaries, 0);
+  EXPECT_EQ(stats.num_existing_merged_dictionaries, 0);
+  EXPECT_EQ(stats.num_existing_shared_dictionaries, 0);
 }
 
 TEST_F(SharedDictionariesPluginTest, InitializeMergePlansNonEmpty) {
   _add_customer_table();
 
-  auto stats_1 = std::make_shared<SharedDictionariesPlugin::SharedDictionariesStats>();
+  auto stats_1 = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor_1 = SharedDictionariesColumnProcessor<pmr_string>{
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats_1};
   column_processor_1.process();
 
-  auto stats_2 = std::make_shared<SharedDictionariesPlugin::SharedDictionariesStats>();
+  auto stats_2 = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor_2 = SharedDictionariesColumnProcessor<pmr_string>{
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats_2};
 
   auto merge_plans = std::vector<std::shared_ptr<SharedDictionariesColumnProcessor<pmr_string>::MergePlan>>{};
   _initialize_merge_plans(column_processor_2, merge_plans);
 
-  EXPECT_EQ(merge_plans.size(), stats_1->num_shared_dictionaries);
-  EXPECT_EQ(stats_2->num_existing_merged_dictionaries, stats_1->num_merged_dictionaries);
-  EXPECT_EQ(stats_2->num_existing_shared_dictionaries, stats_1->num_shared_dictionaries);
+  EXPECT_EQ(merge_plans.size(), stats_1.num_shared_dictionaries);
+  EXPECT_EQ(stats_2.num_existing_merged_dictionaries, stats_1.num_merged_dictionaries);
+  EXPECT_EQ(stats_2.num_existing_shared_dictionaries, stats_1.num_shared_dictionaries);
 
-  EXPECT_GT(stats_2->num_existing_shared_dictionaries, 0);
-  EXPECT_GT(stats_2->num_existing_merged_dictionaries, 0);
+  EXPECT_GT(stats_2.num_existing_shared_dictionaries, 0);
+  EXPECT_GT(stats_2.num_existing_merged_dictionaries, 0);
 }
 
 TEST_F(SharedDictionariesPluginTest, ShouldMerge) {
   _add_customer_table();
-  auto stats = std::make_shared<SharedDictionariesPlugin::SharedDictionariesStats>();
+  auto stats = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor = SharedDictionariesColumnProcessor<pmr_string>{
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.5, stats};
 
@@ -238,7 +231,7 @@ TEST_F(SharedDictionariesPluginTest, AddNonMergedSegmentChunkPair) {
   _add_customer_table();
   const auto shared_dictionary = std::make_shared<pmr_vector<pmr_string>>();
   auto merge_plan = SharedDictionariesColumnProcessor<pmr_string>::MergePlan{shared_dictionary};
-  _add_segment_chunk_pair(merge_plan, _get_segment_chunk_pair(), false);
+  merge_plan.add_segment_chunk_pair(_get_segment_chunk_pair(), false);
   EXPECT_TRUE(merge_plan.contains_non_merged_segment);
   EXPECT_GT(merge_plan.non_merged_dictionary_bytes, 0);
   EXPECT_GT(merge_plan.non_merged_total_bytes, 0);
@@ -249,7 +242,7 @@ TEST_F(SharedDictionariesPluginTest, AddMergedSegmentChunkPair) {
   _add_customer_table();
   const auto shared_dictionary = std::make_shared<pmr_vector<pmr_string>>();
   auto merge_plan = SharedDictionariesColumnProcessor<pmr_string>::MergePlan{shared_dictionary};
-  _add_segment_chunk_pair(merge_plan, _get_segment_chunk_pair(), true);
+  merge_plan.add_segment_chunk_pair(_get_segment_chunk_pair(), true);
   EXPECT_TRUE(merge_plan.contains_already_merged_segment);
   EXPECT_EQ(merge_plan.segment_chunk_pairs_to_merge.size(), 1);
 }

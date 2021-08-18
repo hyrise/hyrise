@@ -2,7 +2,7 @@
 
 #include <gtest/gtest_prod.h>
 #include "hyrise.hpp"
-#include "shared_dictionaries_plugin_settings.hpp"
+#include "shared_dictionaries_plugin/plugin_settings/jaccard_index_threshold_setting.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -34,18 +34,16 @@ class SharedDictionariesPlugin : public AbstractPlugin {
   inline static const std::string LOG_NAME = "SharedDictionariesPlugin";
 
   struct SharedDictionariesStats {
-    uint64_t total_bytes_saved = 0ul;
-    uint64_t total_previous_bytes = 0ul;
-    uint64_t modified_previous_bytes = 0u;
-    uint32_t num_merged_dictionaries = 0u;
-    uint32_t num_shared_dictionaries = 0u;
-    uint32_t num_existing_merged_dictionaries = 0u;
-    uint32_t num_existing_shared_dictionaries = 0u;
+    uint64_t total_bytes_saved = 0;
+    uint64_t total_previous_bytes = 0;
+    uint64_t modified_previous_bytes = 0;
+    uint32_t num_merged_dictionaries = 0;
+    uint32_t num_shared_dictionaries = 0;
+    uint32_t num_existing_merged_dictionaries = 0;
+    uint32_t num_existing_shared_dictionaries = 0;
   };
 
-  SharedDictionariesPlugin() : storage_manager(Hyrise::get().storage_manager), log_manager(Hyrise::get().log_manager) {
-    stats = std::make_shared<SharedDictionariesStats>();
-  }
+  SharedDictionariesPlugin();
 
   std::string description() const final;
 
@@ -53,18 +51,28 @@ class SharedDictionariesPlugin : public AbstractPlugin {
 
   void stop() final;
 
-  StorageManager& storage_manager;
-  LogManager& log_manager;
-
-  std::shared_ptr<SharedDictionariesStats> stats;
+  SharedDictionariesStats stats = {};
 
  private:
+  StorageManager& _storage_manager;
+  LogManager& _log_manager;
+
+  /*
+   * The following settings are currently hard coded for the plugin but could be made configurable:
+   *   - option to disable auto start of compression
+   *     The plugin currently starts the merging of dictionaries automatically once it is loaded.
+   *   - option to disable tracking of compression statistics
+   *     The plugin currently tracks memory usage statistics for merged data.
+   *   - option to select all tables / include tables / exclude tables
+   *     The plugin currently tries to merge dictionary segments of all available tables.
+   */
+
   std::shared_ptr<JaccardIndexThresholdSetting> _jaccard_index_threshold_setting;
 
   void _process_for_every_column();
 
-  void _log_plugin_configuration();
-  void _log_processing_result();
+  void _log_plugin_configuration() const;
+  void _log_processing_result() const;
 };
 
 }  // namespace opossum
