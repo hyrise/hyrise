@@ -74,7 +74,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     compressed_value_pointers.resize(values.size());
     compressed_value_lengths.resize(values.size());
 
-    uint64_t total_length = 0LL;
+    auto total_length = uint64_t{0};
 
     for (pmr_string& value : values) {
       total_length += value.size();
@@ -188,7 +188,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     uint32_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
     // Find maximum value in offsets in order to use it in later vector compression.
-    uint32_t max_offset = *std::max_element(offsets.begin(), offsets.end());
+    uint32_t max_offset = *std::max_element(offsets.cbegin(), offsets.cend());
 
     // Hardcode BitPacking as vector compression type.
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {max_offset});

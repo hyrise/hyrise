@@ -70,16 +70,16 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
   }
 
   // Calculate real offset with help of reference offset vector.
-  const size_t real_offset = get_offset(chunk_offset);
-  const size_t real_offset_next = get_offset(chunk_offset + 1);
-  const size_t compressed_length = real_offset_next - real_offset;
+  const auto real_offset = get_offset(chunk_offset);
+  const auto real_offset_next = get_offset(chunk_offset + 1);
+  const auto compressed_length = real_offset_next - real_offset;
 
   // Note: we use const_cast in order to use fsst_decompress.
   auto* compressed_pointer = const_cast<unsigned char*>(  // NOLINT(cppcoreguidelines-pro-type-const-cast)
       _compressed_values.data() + real_offset);
 
   // Since the max symbol length is 8, max uncompressed size is 8 * compressed_length.
-  const size_t max_output_size = compressed_length * 8;
+  const auto max_output_size = compressed_length * 8;
   std::vector<unsigned char> output_buffer(max_output_size);
 
   size_t output_size_after_decompression =
