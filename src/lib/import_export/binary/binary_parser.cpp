@@ -252,35 +252,33 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
 
   const auto compressed_value_size = _read_value<uint32_t>(file);
-  pmr_vector<unsigned char> compressed_values(_read_values<unsigned char>(file, compressed_value_size));
+  const auto compressed_values = _read_values<unsigned char>(file, compressed_value_size);
 
-  auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
+  const auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
 
   const auto reference_offsets_size = _read_value<uint32_t>(file);
-  pmr_vector<uint64_t> reference_offsets(_read_values<uint64_t>(file, reference_offsets_size));
+  const auto reference_offsets = _read_values<uint64_t>(file, reference_offsets_size);
 
   const auto null_values_size = _read_value<uint32_t>(file);
   std::optional<pmr_vector<bool>> null_values;
   if (null_values_size != 0) {
     null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
-  } else {
-    null_values = std::nullopt;
   }
 
   const auto number_elements_per_reference_bucket = _read_value<uint64_t>(file);
 
-  // Read decoder.
+  // Read decoder
   fsst_decoder_t decoder;
 
-  auto version = _read_value<uint64_t>(file);
-  auto zero_terminated = _read_value<bool>(file);
-  size_t number_elements = sizeof(decoder.len);
-  auto lengths = _read_values<char>(file, number_elements);
-  auto symbols = _read_values<uint64_t>(file, number_elements);
+  const auto version = _read_value<uint64_t>(file);
+  const auto zero_terminated = _read_value<bool>(file);
+  const size_t number_elements = sizeof(decoder.len);
+  const auto lengths = _read_values<char>(file, number_elements);
+  const auto symbols = _read_values<uint64_t>(file, number_elements);
 
   decoder.version = version;
   decoder.zeroTerminated = zero_terminated;
-  for (size_t index{0}; index < number_elements; ++index) {
+  for (auto index = size_t{0}; index < number_elements; ++index) {
     decoder.len[index] = lengths[index];
     decoder.symbol[index] = symbols[index];
   }

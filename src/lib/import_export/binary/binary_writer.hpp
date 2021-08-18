@@ -236,7 +236,6 @@ class BinaryWriter {
    * Vector compress. bit width  | uint8_t                             | 1
    * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
-   * Offset values               | uint(8|16|32)_t                     | (Rows + 1) * width of offset vector
    * Reference offsets size      | uint32_t                            | 4
    * Reference offsets           | vector<uint64_t>                    | 8 * 8
    * NULL values size            | uint32_t                            | 4
