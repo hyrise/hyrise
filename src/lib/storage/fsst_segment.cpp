@@ -52,7 +52,9 @@ uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
 
   // Calculate the corresponding reference offset index for the chunk_offset.
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
-  // Merge the last uncompleted bucket with the second last bucket.
+  
+  // Move last unmatched elements to the last bucket.
+  // See a comment in _create_reference_offsets method in fsst_encoder.hpp for details.
   reference_offset_index = std::min(static_cast<size_t>(reference_offset_index), _reference_offsets.size() - 1);
 
   // Return the original offset.

@@ -134,7 +134,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
 
-      // Merge the last uncompleted bucket with the second last bucket.
+      // Move last unmatched elements to the last bucket.
+      //
+      // Example:
+      // offset_size = 200, number of elements per bucket = 200 / (8 + 1) = 22. However,
+      // 22 * 9 = 198 != 200. So, the last 2 Elements refer to the 10th bucket, but we
+      // only have 9 (and we save 8 reference offsets, since the reference offset in the
+      // 1st bucket is 0). So, the last 2 Elements will be added to the last (9th) bucket.
       reference_offset_index = std::min(reference_offset_index, reference_offsets_size - 1);
 
       auto reference_offset = reference_offsets[reference_offset_index];
