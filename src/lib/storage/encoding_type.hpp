@@ -24,22 +24,22 @@ namespace opossum {
 namespace hana = boost::hana;
 
 enum class EncodingType : uint8_t {
+  Unencoded,
   Dictionary,
+  RunLength,
   FixedStringDictionary,
   FrameOfReference,
-  FSST,
   LZ4,
-  RunLength,
-  Unencoded
+  FSST
 };
 
-inline static std::vector<EncodingType> encoding_type_enum_values{EncodingType::Dictionary,
+inline static std::vector<EncodingType> encoding_type_enum_values{EncodingType::Unencoded,
+                                                                  EncodingType::Dictionary,
+                                                                  EncodingType::RunLength,
                                                                   EncodingType::FixedStringDictionary,
                                                                   EncodingType::FrameOfReference,
-                                                                  EncodingType::FSST,
                                                                   EncodingType::LZ4,
-                                                                  EncodingType::RunLength,
-                                                                  EncodingType::Unencoded};
+                                                                  EncodingType::FSST};
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -50,13 +50,13 @@ inline static std::vector<EncodingType> encoding_type_enum_values{EncodingType::
  * Use data_types if the encoding supports all data types.
  */
 constexpr auto supported_data_types_for_encoding_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
+    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<pmr_string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FSST>, hana::tuple_t<pmr_string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, data_types),
-    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
-    hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types));
+    hana::make_pair(enum_c<EncodingType, EncodingType::FSST>, hana::tuple_t<pmr_string>));
 
 /**
  * @return an integral constant implicitly convertible to bool
@@ -92,12 +92,12 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array all_encoding_types{EncodingType::Dictionary,
+inline constexpr std::array all_encoding_types{EncodingType::Unencoded,
+                                               EncodingType::Dictionary,
                                                EncodingType::FrameOfReference,
                                                EncodingType::FixedStringDictionary,
-                                               EncodingType::FSST,
-                                               EncodingType::LZ4,
                                                EncodingType::RunLength,
-                                               EncodingType::Unencoded};
+                                               EncodingType::LZ4,
+                                               EncodingType::FSST};
 
 }  // namespace opossum
