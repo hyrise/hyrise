@@ -128,7 +128,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
     auto segment_position = collected_values.at(index);
     ASSERT_EQ(expected_null_values.at(index), segment_position.is_null());
     if (!expected_null_values.at(index)) {
-      ASSERT_EQ(values.at(index), *segment_position);
+      ASSERT_EQ(values.at(index), segment_position.value());
     }
   }
 }
@@ -165,7 +165,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
 
     ASSERT_EQ(expected_null_values.at(real_chunk_offset), segment_position.is_null());
     if (!expected_null_values.at(real_chunk_offset)) {
-      ASSERT_EQ(values.at(real_chunk_offset), *segment_position);
+      ASSERT_EQ(values.at(real_chunk_offset), segment_position.value());
     }
   }
 }
