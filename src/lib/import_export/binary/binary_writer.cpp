@@ -308,14 +308,14 @@ void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool colum
   }
 
   // Write number of elements in a reference bucket
-  export_value(ofstream, static_cast<uint64_t>(fsst_segment.number_elements_per_reference_bucket()));
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.number_elements_per_reference_bucket()));
 
   // Write decoder
-  auto decoder = fsst_segment.decoder();
+  const auto& decoder = fsst_segment.decoder();
   export_value(ofstream, static_cast<uint64_t>(decoder.version));
   export_value(ofstream, decoder.zeroTerminated);
-  export_values(ofstream, std::vector(decoder.len, decoder.len + 255));
-  export_values(ofstream, std::vector(decoder.symbol, decoder.symbol + 255));
+  export_values(ofstream, std::vector(std::begin(decoder.len), std::end(decoder.len)));
+  export_values(ofstream, std::vector(std::begin(decoder.symbol), std::end(decoder.symbol)));
 }
 
 template <typename T>

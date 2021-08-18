@@ -19,7 +19,7 @@ template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
                             std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
                             pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
-                            uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder)
+                            uint32_t number_elements_per_reference_bucket, fsst_decoder_t& decoder)
     : AbstractEncodedSegment{data_type_from_type<pmr_string>()},
       _compressed_values{std::move(compressed_values)},
       _compressed_offsets{std::move(compressed_offsets)},
@@ -53,7 +53,7 @@ uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
   // Calculate the corresponding reference offset index for the chunk_offset.
   auto reference_offset_index = (chunk_offset / _number_elements_per_reference_bucket) - 1;
   // Merge the last uncompleted bucket with the second last bucket.
-  reference_offset_index = std::min(reference_offset_index, _reference_offsets.size() - 1);
+  reference_offset_index = std::min(static_cast<size_t>(reference_offset_index), _reference_offsets.size() - 1);
 
   // Return the original offset.
   return _offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
@@ -151,7 +151,7 @@ const std::optional<pmr_vector<bool>>& FSSTSegment<T>::null_values() const {
 }
 
 template <typename T>
-uint64_t FSSTSegment<T>::number_elements_per_reference_bucket() const {
+uint32_t FSSTSegment<T>::number_elements_per_reference_bucket() const {
   return _number_elements_per_reference_bucket;
 }
 

@@ -23,7 +23,7 @@ class FSSTSegment : public AbstractEncodedSegment {
   explicit FSSTSegment(pmr_vector<unsigned char>& compressed_values,
                        std::unique_ptr<const BaseCompressedVector>& compressed_offsets,
                        pmr_vector<uint64_t>& reference_offsets, std::optional<pmr_vector<bool>>& null_values,
-                       uint64_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
+                       uint32_t number_elements_per_reference_bucket, fsst_decoder_t& decoder);
 
   /**
    * @defgroup AbstractSegment interface
@@ -60,7 +60,7 @@ class FSSTSegment : public AbstractEncodedSegment {
   const std::unique_ptr<const BaseCompressedVector>& compressed_offsets() const;
   const pmr_vector<uint64_t>& reference_offsets() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
-  uint64_t number_elements_per_reference_bucket() const;
+  uint32_t number_elements_per_reference_bucket() const;
   const fsst_decoder_t& decoder() const;
 
  private:
@@ -68,7 +68,7 @@ class FSSTSegment : public AbstractEncodedSegment {
   std::unique_ptr<const BaseCompressedVector> _compressed_offsets;
   pmr_vector<uint64_t> _reference_offsets;
   std::optional<pmr_vector<bool>> _null_values;
-  const uint64_t _number_elements_per_reference_bucket;
+  const uint32_t _number_elements_per_reference_bucket;
   mutable fsst_decoder_t _decoder;
   std::unique_ptr<BaseVectorDecompressor> _offset_decompressor;
 };

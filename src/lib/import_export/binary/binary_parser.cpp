@@ -265,7 +265,7 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
     null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
   }
 
-  const auto number_elements_per_reference_bucket = _read_value<uint64_t>(file);
+  const auto number_elements_per_reference_bucket = _read_value<uint32_t>(file);
 
   // Read decoder
   fsst_decoder_t decoder;

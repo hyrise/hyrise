@@ -113,7 +113,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     return aggregated_offset_sum;
   }
 
-  uint64_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
+  uint32_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
     auto reference_offsets_size = reference_offsets.size();
     auto offsets_size = offsets.size();
     // Since the first reference offset (which is always 0) is not saved,
@@ -123,7 +123,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       return 0;
     }
 
-    uint64_t n_elements_in_reference_bucket = offsets_size / (reference_offsets_size + 1);
+    uint32_t n_elements_in_reference_bucket = offsets_size / (reference_offsets_size + 1);
 
     // Calculate start offset of each reference bucket.
     for (size_t index = 0; index < reference_offsets_size; ++index) {
@@ -179,7 +179,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // in order to achieve larger vector compression rates.
     uint8_t reference_offsets_size = 8;
     pmr_vector<uint64_t> reference_offsets{reference_offsets_size, 0, allocator};
-    uint64_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
+    uint32_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
     // Find maximum value in offsets in order to use it in later vector compression.
     uint32_t max_offset = *std::max_element(offsets.begin(), offsets.end());

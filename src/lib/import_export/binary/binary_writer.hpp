@@ -232,15 +232,15 @@ class BinaryWriter {
    * Encoding Type               | EncodingType                        | 1
    * Attribute vector compr. ID. | CompressedVectorTypeID              | 1
    * Compressed values size      | uint32_t                            | 4
-   * Compressed values           | vector<uint32_t>                    | Compressed values size * 1
+   * Compressed values           | vector<unsigned char>               | Compressed values size * 1
    * Vector compress. bit width  | uint8_t                             | 1
    * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
    *                                                                     rounded up to next multiple of word (8 byte)
    * Reference offsets size      | uint32_t                            | 4
-   * Reference offsets           | vector<uint64_t>                    | 8 * 8
+   * Reference offsets           | vector<uint64_t>                    | 64
    * NULL values size            | uint32_t                            | 4
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
-   * # elements in a bucket      | uint64_t                            | 8
+   * # elements in a bucket      | uint32_t                            | 4
    * Decoder version id          | uint64_t                            | 8
    * Decoder zero terminated flag| char                                | 1
    * Decoder symbol lengths      | vector<char>                        | 255
