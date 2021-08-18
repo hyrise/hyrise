@@ -55,40 +55,34 @@ uint64_t FSSTSegment<T>::get_offset(const ChunkOffset chunk_offset) const {
   // Merge the last uncompleted bucket with the second last bucket.
   reference_offset_index = std::min(reference_offset_index, _reference_offsets.size() - 1);
 
-  // Remove the "zig-zag" pattern and return the original offset.
+  // Return the original offset.
   return _offset_decompressor->get(chunk_offset) + _reference_offsets[reference_offset_index];
 }
 
 template <typename T>
 std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values) {
-    if (_null_values.value()[chunk_offset]) {
+    if ((*_null_values)[chunk_offset]) {
       return std::nullopt;
     }
   }
 
   // Calculate real offset with help of reference offset vector.
-  size_t real_offset = get_offset(chunk_offset);
-  size_t real_offset_next = get_offset(chunk_offset + 1);
-  size_t compressed_length = real_offset_next - real_offset;
+  const size_t real_offset = get_offset(chunk_offset);
+  const size_t real_offset_next = get_offset(chunk_offset + 1);
+  const size_t compressed_length = real_offset_next - real_offset;
 
   // Note: we use const_cast in order to use fsst_decompress.
   auto* compressed_pointer = const_cast<unsigned char*>(  // NOLINT(cppcoreguidelines-pro-type-const-cast)
       _compressed_values.data() + real_offset);
 
   // Since the max symbol length is 8, max uncompressed size is 8 * compressed_length.
-  size_t output_size = compressed_length * 8;
-  std::vector<unsigned char> output_buffer(output_size);
+  const size_t max_output_size = compressed_length * 8;
+  std::vector<unsigned char> output_buffer(max_output_size);
 
-  // Third party library call.
-  size_t output_size_after_decompression =
-      fsst_decompress(&_decoder, compressed_length, compressed_pointer, output_size, output_buffer.data());
+  fsst_decompress(&_decoder, compressed_length, compressed_pointer, max_output_size, output_buffer.data());
 
-  // "shrink_to_fit" for output buffer.
-  output_buffer.resize(output_size_after_decompression);
-
-  pmr_string output{output_buffer.begin(), output_buffer.end()};
-  return {output};
+  return {pmr_string{output_buffer.begin(), output_buffer.end()}};
 }
 
 template <typename T>
