@@ -37,9 +37,9 @@ class SharedDictionariesColumnProcessor {
   };
 
   const std::shared_ptr<Table> table;
-  const std::string& table_name;
+  const std::string table_name;
   const ColumnID column_id;
-  const std::string& column_name;
+  const std::string column_name;
   const double jaccard_index_threshold;
   SharedDictionariesPlugin::SharedDictionariesStats& stats;
 
