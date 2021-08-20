@@ -1,15 +1,10 @@
 #include "equal_distinct_count_histogram.hpp"
 
 #include <cmath>
-#include <memory>
 #include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
-#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

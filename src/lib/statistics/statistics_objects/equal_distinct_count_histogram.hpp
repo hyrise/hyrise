@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include "abstract_histogram.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 
 namespace opossum {
