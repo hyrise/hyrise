@@ -291,8 +291,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     auto count_it = std::find_if(counts.begin(), counts.end(), finder);
     if (sum_it != sums.end() && count_it != counts.end()) {
       // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list
-      // The cast will become unnecessary once #1799 is fixed
-      replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
+      replacements[avg_expression_ptr] = div_(sum_it->get(), count_it->get());
     }
   }
 
