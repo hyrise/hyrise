@@ -208,7 +208,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(b), COUNT(*), AVG(b) stays unmodified as b is NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),         // NOLINT
                              stored_table_node);
     // clang-format on
 
@@ -223,7 +223,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     const auto join_node = JoinNode::make(JoinMode::Inner, equals_(col_a, col_b),
                              stored_table_node,
                              stored_table_node);
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(count_star_(join_node)),  // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(count_star_(join_node)),
                              join_node);
     // clang-format on
 
@@ -235,7 +235,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(a), COUNT(b), AVG(a) stays unmodified as COUNT(b) is unrelated
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_b), avg_(col_a)),  // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_b), avg_(col_a)),     // NOLINT
                              stored_table_node);
     // clang-format on
 
@@ -255,7 +255,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)), expected_aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)),             // NOLINT
                                   ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),                             // NOLINT
-                                    AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),                                                                  // NOLINT
+                                    AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),                                         // NOLINT
                                       stored_table_node))));
     // clang-format on
 
@@ -269,12 +269,12 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
 
     // clang-format off
     const auto input_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), avg_(col_a)), aliases,
-                             AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),                                 // NOLINT
+                             AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),        // NOLINT
                               stored_table_node));
 
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),    // NOLINT
-                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),                                         // NOLINT
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),                // NOLINT
                                     stored_table_node)));
     // clang-format on
 
