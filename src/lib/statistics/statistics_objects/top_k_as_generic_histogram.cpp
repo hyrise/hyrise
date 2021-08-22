@@ -62,7 +62,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
   // Together with a potential last bin after the last Top K value we have a maximum bin count of 2 * K + 1.
   // If there are no more values stored in value_distribution after the Top K values have been removed,
   // we only have Top K values and therefore need exactly k bins.
-  const auto bin_count = value_distribution.size() < 1 ? BinID{k} : BinID{2 * top_k_names.size() + 1};
+  const auto bin_count = value_distribution.empty() ? BinID{k} : BinID{2 * top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
 
