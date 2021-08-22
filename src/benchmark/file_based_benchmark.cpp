@@ -12,6 +12,21 @@
 
 using namespace opossum;  // NOLINT
 
+void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  if (!table_info_by_name.count("date_dim")) {
+    std::cout << "no date_dim table found" << std::endl;
+    return;
+  }
+  const auto& date_dim_table = table_info_by_name.at("date_dim").table;
+    date_dim_table->add_soft_order_constraint(
+        {{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
+    date_dim_table->add_soft_order_constraint(
+        {{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
+    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date")}, KeyConstraintType::UNIQUE});
+    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
+  std::cout << "added order constraint date_dim: d_date_sk <-> d_date" << std::endl;
+}
+
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
@@ -75,23 +90,11 @@ int main(int argc, char* argv[]) {
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path,
                                                                               query_filename_blacklist, query_subset);
 
+  // manually add OD for testing
+  table_generator->set_add_constraints_callback(add_key_constraints);
+
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
                                                             std::move(table_generator), context);
-
-  // manually add OD for testing
-  /*if (Hyrise::get().storage_manager.has_table("date_dim")) {
-    const auto& date_dim_table = Hyrise::get().storage_manager.get_table("date_dim");
-    date_dim_table->add_soft_order_constraint(
-        {{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
-    date_dim_table->add_soft_order_constraint(
-        {{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
-    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date")}, KeyConstraintType::UNIQUE});
-    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
-    std::cout << "added order constraint date_dim: d_date_sk <-> d_date" << std::endl;
-  } else {
-    std::cout << "NO date_dim found" << std::endl;
-  }*/
-
   Hyrise::get().benchmark_runner = benchmark_runner;
   benchmark_runner->run();
 }

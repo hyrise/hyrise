@@ -25,7 +25,7 @@ using namespace std::string_literals;  // NOLINT
  * Each of the 21 JOB tables has one surrogate key. This function registers key constraints for all of them.
  */
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  /*const auto& aka_name_table = table_info_by_name.at("aka_name").table;
+  const auto& aka_name_table = table_info_by_name.at("aka_name").table;
   aka_name_table->add_soft_key_constraint({{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& aka_title_table = table_info_by_name.at("aka_title").table;
@@ -114,7 +114,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
     const auto unique_constraint =
         TableKeyConstraint{{table->column_id_by_name(column_name)}, KeyConstraintType::UNIQUE};
     table->add_soft_key_constraint(unique_constraint);
-  }*/
+  }
 }
 
 int main(int argc, char* argv[]) {

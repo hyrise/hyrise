@@ -7,14 +7,13 @@
 #include "operators/get_table.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/get_table.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/segment_iterate.hpp"
 #include "ucc_validator.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
-
-// void DependencyValidator::set_queue(const DependencyCandidateQueue& queue) { _queue = queue; };
 
 DependencyValidator::DependencyValidator(
     const std::shared_ptr<DependencyCandidateQueue>& queue,
@@ -57,7 +56,7 @@ void DependencyValidator::stop() { _running = false; }
 
 bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std::ostream& out) {
   Assert(candidate.type == DependencyType::Order, "Expected OD");
-  Assert(!candidate.determinants.empty() && !candidate.dependents.empty(), "Did not expect useless UCC");
+  Assert(!candidate.determinants.empty() && !candidate.dependents.empty(), "Did not expect useless OD");
   std::unordered_set<std::string> table_names;
   for (const auto& determinant : candidate.determinants) {
     table_names.emplace(determinant.table_name);
@@ -68,6 +67,10 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
   }
   if (candidate.dependents.size() > 1) {
     out << "    SKIP: Cannot resolve OD with multiple dependents" << std::endl;
+    return false;
+  }
+  if (candidate.determinants.size() > 1) {
+    out << "    SKIP: Cannot resolve OD with multiple determinants" << std::endl;
     return false;
   }
   const auto table_name = *table_names.begin();
@@ -104,54 +107,77 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
     determinants_aggregate->execute();
     dependents_aggregate->execute();
     if (determinants_aggregate->get_output()->row_count() < dependents_aggregate->get_output()->row_count()) {
-      out << "    INVALID (shortcut)" << std::endl;
+      out << "    INVALID (shortcut column sizes)" << std::endl;
       return false;
     }
   }
 
-  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  const auto column_sorted = [](const auto& sorted_table, const auto column_id){
+    const auto column_type = sorted_table->column_definitions().at(column_id).data_type;
+    bool is_valid = true;
+    resolve_data_type(column_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      const auto num_chunks = sorted_table->chunk_count();
+      ColumnDataType last_value{};
+      bool is_init = false;
+      for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+        if (!is_valid) {
+          return;
+        }
+        const auto chunk = sorted_table->get_chunk(chunk_id);
+        if (!chunk) {
+          continue;
+        }
+        const auto segment = chunk->get_segment(column_id);
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
+          const auto current_value = pos.value();
+          if (!is_init) {
+            is_init = true;
+          } else {
+            if (last_value > current_value) {
+              is_valid = false;
+              return;
+            }
+          }
+          last_value = current_value;
+        });
+      }
+    });
+    return is_valid;
+  };
+
+  std::vector<ColumnID> pruned_column_ids;
+  const auto det_column_id = candidate.determinants[0].column_id;
+  const auto dep_column_id = candidate.dependents[0].column_id;
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    if (column_id == det_column_id || column_id == dep_column_id) continue;
+    pruned_column_ids.emplace_back(column_id);
+  }
+  std::vector<ChunkID> pruned_chunk_ids;
+  pruned_chunk_ids.reserve(table->chunk_count() - 1);
+  for (auto chunk_id = ChunkID{1}; chunk_id < table->chunk_count(); ++chunk_id) {
+    pruned_chunk_ids.emplace_back(chunk_id);
+  }
+  auto get_table = std::make_shared<GetTable>(table_name, pruned_chunk_ids, pruned_column_ids);
+  const auto sort_column_id = det_column_id < dep_column_id ? ColumnID{0} : ColumnID{1};
+  const auto target_column_id = det_column_id < dep_column_id ? ColumnID{1} : ColumnID{0};
   std::vector<SortColumnDefinition> sort_columns;
-  for (const auto& determinant : candidate.determinants) {
-    sort_columns.emplace_back(determinant.column_id, SortMode::Ascending);
+  sort_columns.emplace_back(sort_column_id, SortMode::Ascending);
+  auto sort_operator = std::make_shared<Sort>(get_table, sort_columns);
+  get_table->execute();
+  sort_operator->execute();
+
+  if (!column_sorted(sort_operator->get_output(), target_column_id)) {
+    out << "    INVALID (shortcut sample)" << std::endl;
+      return false;
   }
 
-  const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_columns);
-  table_wrapper->execute();
+  get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
+  sort_operator = std::make_shared<Sort>(get_table, sort_columns);
+  get_table->execute();
   sort_operator->execute();
-  const auto result_table = sort_operator->get_output();
 
-  const auto column_type = result_table->column_definitions().at(candidate.dependents[0].column_id).data_type;
-  bool is_valid = true;
-  const auto column_id = candidate.dependents[0].column_id;
-  resolve_data_type(column_type, [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
-    const auto num_chunks = result_table->chunk_count();
-    ColumnDataType last_value{};
-    bool is_init = false;
-    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
-      if (!is_valid) {
-        return;
-      }
-      const auto chunk = result_table->get_chunk(chunk_id);
-      if (!chunk) {
-        continue;
-      }
-      const auto segment = chunk->get_segment(column_id);
-      segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-        const auto current_value = pos.value();
-        if (!is_init) {
-          is_init = true;
-        } else {
-          if (last_value > current_value) {
-            is_valid = false;
-            return;
-          }
-        }
-        last_value = current_value;
-      });
-    }
-  });
-  if (is_valid) {
+  if (column_sorted(sort_operator->get_output(), target_column_id)) {
     out << "    VALID" << std::endl;
     const auto order_constraint =
         TableOrderConstraint{{candidate.determinants[0].column_id}, {candidate.dependents[0].column_id}};

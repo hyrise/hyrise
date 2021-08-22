@@ -185,7 +185,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add constraints if defined by the benchmark
    */
-  //_add_constraints(table_info_by_name);
+  _add_constraints(table_info_by_name);
 
   /**
    * Encode the tables

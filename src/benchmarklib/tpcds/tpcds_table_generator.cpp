@@ -1152,7 +1152,7 @@ void TPCDSTableGenerator::_add_constraints(
    */
 
   // Fact Tables (7)
-  /*const auto& store_sales_table = table_info_by_name.at("store_sales").table;
+  const auto& store_sales_table = table_info_by_name.at("store_sales").table;
   store_sales_table->add_soft_key_constraint(
       {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
        KeyConstraintType::PRIMARY_KEY});
@@ -1254,7 +1254,7 @@ void TPCDSTableGenerator::_add_constraints(
 
   const auto& time_dim_table = table_info_by_name.at("time_dim").table;
   time_dim_table->add_soft_key_constraint(
-      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});*/
+      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
 }  // namespace opossum

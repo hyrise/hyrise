@@ -16,7 +16,6 @@ class DependencyValidator {
 
  protected:
   friend class DependencyMiningPlugin;
-  // void set_queue(const DependencyCandidateQueue& queue);
   void start();
   void stop();
 

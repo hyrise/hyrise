@@ -11,16 +11,19 @@ class PQPAnalyzer {
  protected:
   friend class DependencyMiningPlugin;
   PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue);
-  //void set_queue(const DependencyCandidateQueue& queue);
+
   void run();
 
  private:
   TableColumnID _resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression) const;
-  TableColumnIDs _find_od_candidate(const std::shared_ptr<const AbstractOperator>& op,
-                                    const std::shared_ptr<LQPColumnExpression>& dependent) const;
   void _add_if_new(DependencyCandidate& candidate);
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
   std::vector<DependencyCandidate> _known_candidates;
+
+  // switches for mining specific optimizations
+  constexpr static bool _enable_groupby_reduction = true;
+  constexpr static bool _enable_join_to_semi = true;
+  constexpr static bool _enable_join_to_predicate = true;
 };
 
 }  // namespace opossum

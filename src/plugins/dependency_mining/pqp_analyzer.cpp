@@ -93,16 +93,16 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           if (!AggregateExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
           } else {
-            /**
-             * COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
-             * INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
-             * ensure that the AggregateNode requires at least one expression from other nodes.
-             * For
-             *  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
-             *  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
-             *     is the only type of aggregate function, we simply require the first output expression from the
-             *     left input node.
-             */
+            //
+             // COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
+             // INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
+             // ensure that the AggregateNode requires at least one expression from other nodes.
+             // For
+             //  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
+             //  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
+             //     is the only type of aggregate function, we simply require the first output expression from the
+             //     left input node.
+             //
             if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
@@ -227,8 +227,6 @@ void recursively_gather_required_expressions(
 
 namespace opossum {
 
-// void PQPAnalyzer::set_queue(const DependencyCandidateQueue& queue) { _queue = queue; };
-
 PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue) : _queue(queue) {}
 
 void PQPAnalyzer::run() {
@@ -246,9 +244,12 @@ void PQPAnalyzer::run() {
 
   std::cout << "Run PQPAnalyzer" << std::endl;
   Timer timer;
+  //size_t num_q = 0;
 
   for (const auto& [_, entry] : cache_snapshot) {
     // std::cout << std::endl << query << std::endl;
+    //++num_q;
+    //std::cout << "Query " << num_q << std::endl;
     const auto pqp_root = entry.value;
     const auto& lqp_root = pqp_root->lqp_node;
     if (!lqp_root) {
@@ -266,7 +267,7 @@ void PQPAnalyzer::run() {
     // those. However, we track how many of a node's outputs we have already visited and recurse only once we have seen
     // all of them. That way, the performance should be similar to that of visit_lqp.
     std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> outputs_visited_by_node;
-    recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
+    bool gathered_expressions = false;
 
     visit_pqp(pqp_root, [&](const auto& op) {
       const auto& lqp_node = op->lqp_node;
@@ -278,8 +279,9 @@ void PQPAnalyzer::run() {
         case OperatorType::JoinHash:
         case OperatorType::JoinNestedLoop:
         case OperatorType::JoinSortMerge: {
+          if (!(_enable_join_to_semi || _enable_join_to_predicate)) return PQPVisitation::VisitInputs;
           const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
-          if (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::Inner) {
+          if (!(join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Inner)) {
             return PQPVisitation::VisitInputs;
           }
 
@@ -287,15 +289,18 @@ void PQPAnalyzer::run() {
           if (predicates.size() != 1) {
             return PQPVisitation::VisitInputs;
           }
-          const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
+
+          // determine if we need to check both inputsa
           std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-          // std::cout << join_node->description() << " " << lqp_node->comment << std::endl;
           inputs.emplace_back(join_node->right_input());
           if (join_node->join_mode == JoinMode::Inner) {
             inputs.emplace_back(join_node->left_input());
           }
 
+          const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
           const auto& predicate_arguments = predicate->arguments;
+
+          // check for given inputs
           for (const auto& input : inputs) {
             for (const auto& expression : predicate_arguments) {
               if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
@@ -308,38 +313,17 @@ void PQPAnalyzer::run() {
               if (join_column_id == INVALID_TABLE_COLUMN_ID) {
                 continue;
               }
-              bool abort = false;
-              for (const auto& output : join_node->outputs()) {
-                if (abort) break;
-                if (required_expressions_by_node.find(output) == required_expressions_by_node.end()) {
-                  std::cout << " Could not find ouput node " << output->description() << std::endl;
-                  abort = true;
-                  break;
-                }
-                for (const auto& required_expression : required_expressions_by_node.at(output)) {
-                  // abort if any column other than join column required
-                  if (expression_evaluable_on_lqp(required_expression, *input) && *required_expression != *expression) {
-                    // std::cout << " abort due " << required_expression->description() << std::endl;
-                    abort = true;
-                    break;
-                  }
-                }
-              }
-              /*for (const auto& join_output : join_outputs) {
-                if (expression_evaluable_on_lqp(join_output, *input) && *join_output != *expression) {
-                  std::cout << "        abort due " << join_output->description() << std::endl;
-                  abort = true;
-                  break;
-                }
-              }*/
-              if (abort) continue;
 
+              // add join column as UCC candidate
+              std::vector<DependencyCandidate> my_candidates;
               if (join_node->join_mode == JoinMode::Inner) {
                 auto candidate = DependencyCandidate{TableColumnIDs{join_column_id}, {}, DependencyType::Unique, prio};
-                _add_if_new(candidate);
+                my_candidates.emplace_back(candidate);
               }
 
-              std::vector<DependencyCandidate> my_candidates;
+              std::vector<DependencyCandidate> further_candidates;
+              bool abort = false;
+              if (_enable_join_to_predicate) {
               visit_lqp(input, [&](const auto& node) {
                 switch (node->type) {
                   case LQPNodeType::Validate:
@@ -360,7 +344,7 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{},
+                          further_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{},
                                                      DependencyType::Unique, prio);
                           // std::cout << "        added " << scan_input->description()  << " UCC" << std::endl;
                         }
@@ -375,7 +359,7 @@ void PQPAnalyzer::run() {
                           if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                             continue;
                           }
-                          my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_id},
+                          further_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_id},
                                                      DependencyType::Order, prio);
                           // std::cout << "        added " << scan_input->description() << " OD" << std::endl;
                         }
@@ -389,18 +373,62 @@ void PQPAnalyzer::run() {
                     return LQPVisitation::DoNotVisitInputs;
                 }
               });
-              if (!abort) {
-                for (auto& candidate : my_candidates) {
-                  _add_if_new(candidate);
+            }
+
+            if (!abort) {
+              my_candidates.insert(my_candidates.end(), std::make_move_iterator(further_candidates.begin()), std::make_move_iterator(further_candidates.end()));
+            } else {
+              abort = false;
+            }
+            if (my_candidates.empty()) {
+              return PQPVisitation::VisitInputs;
+            }
+
+            for (auto& candidate : my_candidates) {
+              bool is_found = false;
+              for (auto& known_candidate : _known_candidates) {
+                if (known_candidate.type != candidate.type) {
+                  continue;
                 }
-              } /* else {
-                std::cout << "aborted" << std::endl;
-              }*/
+                if (candidate.dependents == known_candidate.dependents && candidate.determinants == known_candidate.determinants) {
+                  if (known_candidate.priority < candidate.priority) {
+                    known_candidate.priority = candidate.priority;
+                  }
+                  is_found = true;
+                  break;
+                }
+              }
+              if (is_found) continue;
+
+              // candidate is new, check if gathered expressions
+              if (!gathered_expressions) {
+              //Timer gathered_expressions_timer;
+              recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
+              //std::cout << "gathered_expressions for Q" << num_q << " in " << gathered_expressions_timer.lap_formatted() << std::endl;
+              gathered_expressions = true;
+              }
+
+              // check if columns from inpur are needed elsewhere later
+              for (const auto& output : join_node->outputs()) {
+                Assert(required_expressions_by_node.find(output) != required_expressions_by_node.end(), "Could not find output node " + output->description());
+                for (const auto& required_expression : required_expressions_by_node.at(output)) {
+                  // abort if any column other than join column required
+                  if (expression_evaluable_on_lqp(required_expression, *input) && *required_expression != *expression) {
+                    // std::cout << " abort due " << required_expression->description() << std::endl;
+                    abort = true;
+                    break;
+                  }
+                }
+              }
+              // if columns are required, continue with other input
+              if (abort) break;
+              _known_candidates.emplace_back(candidate);
+              }
             }
           }
         } break;
         case OperatorType::Aggregate: {
-          //return PQPVisitation::VisitInputs;
+          if (!_enable_groupby_reduction) return PQPVisitation::VisitInputs;
           const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
           const auto num_group_by_columns = aggregate_node->aggregate_expressions_begin_idx;
           if (num_group_by_columns < 2) {
@@ -421,8 +449,14 @@ void PQPAnalyzer::run() {
           if (columns.size() < 2) {
             return PQPVisitation::VisitInputs;
           }
-          auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
-          _add_if_new(candidate);
+
+          // for now, use UCC candidates instead of FD candidates
+          // auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
+          // _add_if_new(candidate);
+          for (const auto& column : columns) {
+            auto candidate = DependencyCandidate{TableColumnIDs{column}, {}, DependencyType::Unique, prio};
+            _add_if_new(candidate);
+          }
         } break;
         default:
           break;
@@ -436,24 +470,6 @@ void PQPAnalyzer::run() {
       _queue->emplace(candidate);
     }
   }
-
-  /*if (Hyrise::get().storage_manager.has_table("nation")) {
-    const auto nation = Hyrise::get().storage_manager.get_table("nation");
-    const auto n_nationkey = TableColumnID{"nation", nation->column_id_by_name("n_nationkey")};
-    const auto n_name = TableColumnID{"nation", nation->column_id_by_name("n_name")};
-
-    const auto customer = Hyrise::get().storage_manager.get_table("customer");
-    const auto c_custkey = TableColumnID{"customer", customer->column_id_by_name("c_custkey")};
-
-    const auto orders = Hyrise::get().storage_manager.get_table("orders");
-    const auto o_orderkey = TableColumnID{"orders", orders->column_id_by_name("o_orderkey")};
-
-    _queue->emplace(TableColumnIDs{c_custkey}, TableColumnIDs{n_nationkey}, DependencyType::Inclusion, 1);
-    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{n_nationkey}, DependencyType::Inclusion, 1);
-    _queue->emplace(TableColumnIDs{o_orderkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
-    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{c_custkey}, DependencyType::Inclusion, 1);
-    _queue->emplace(TableColumnIDs{n_nationkey}, TableColumnIDs{n_name}, DependencyType::Inclusion, 1);
-  }*/
 
   std::cout << "PQPAnalyzer finished in " << timer.lap_formatted() << std::endl;
 }
@@ -473,21 +489,6 @@ TableColumnID PQPAnalyzer::_resolve_column_expression(
   const auto stored_table_node = static_pointer_cast<const StoredTableNode>(orig_node);
   const auto table_name = stored_table_node->table_name;
   return TableColumnID{table_name, original_column_id};
-}
-
-TableColumnIDs PQPAnalyzer::_find_od_candidate(const std::shared_ptr<const AbstractOperator>& op,
-                                               const std::shared_ptr<LQPColumnExpression>& dependent) const {
-  TableColumnIDs candidates;
-  visit_pqp(op, [&](const auto& current_op) {
-    switch (current_op->type()) {
-      case OperatorType::Validate:
-        return PQPVisitation::VisitInputs;
-      default:
-        return PQPVisitation::DoNotVisitInputs;
-    }
-  });
-
-  return candidates;
 }
 
 void PQPAnalyzer::_add_if_new(DependencyCandidate& candidate) {
