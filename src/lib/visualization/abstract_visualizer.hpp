@@ -267,9 +267,9 @@ class AbstractVisualizer {
         line_length += line_words.at(word_idx).length();
 
         // Exit while on last word
-        if (word_idx++ == line_words.size()) break;
+        if (++word_idx == line_words.size()) break;
 
-        if (line_length++ < MAX_LABEL_WIDTH) {  // include whitespace with ++
+        if (++line_length < MAX_LABEL_WIDTH) {  // include whitespace with ++
           label_stream << ' ';
         } else {
           label_stream << '\n';
