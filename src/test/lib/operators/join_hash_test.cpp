@@ -81,15 +81,15 @@ TEST_F(OperatorsJoinHashTest, DescriptionAndName) {
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinHash (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
+            "JoinHash\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)\nRadix bits: Unspecified");
   EXPECT_EQ(join_operator_with_radix->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: 4");
+            "JoinHash\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)\nRadix bits: 4");
 
   dummy_input->execute();
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinHash (Inner Join where a = a AND a != a) Radix bits: Unspecified");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where a = a AND a != a) Radix bits: Unspecified");
+            "JoinHash\n(Inner Join where a = a \nAND a != a)\nRadix bits: Unspecified");
 
   EXPECT_EQ(join_operator->name(), "JoinHash");
 }

@@ -29,13 +29,13 @@ TEST_F(OperatorsJoinSortMergeTest, DescriptionAndName) {
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinSortMerge (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinSortMerge\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
+            "JoinSortMerge\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)");
 
   dummy_input->execute();
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinSortMerge (Inner Join where a = a AND a != a)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinSortMerge\n(Inner Join where a = a AND a != a)");
+            "JoinSortMerge\n(Inner Join where a = a \nAND a != a)");
 
   EXPECT_EQ(join_operator->name(), "JoinSortMerge");
 }
