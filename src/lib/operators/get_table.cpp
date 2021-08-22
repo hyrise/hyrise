@@ -39,17 +39,16 @@ const std::string& GetTable::name() const {
 
 std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
-
   const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-
   std::stringstream stream;
 
-  stream << AbstractOperator::description(description_mode) << separator << "(" << table_name() << ")";
-
-  stream << separator << "pruned:" << separator;
+  stream << AbstractOperator::description(description_mode) << separator;
+  stream << "(" << table_name() << ")" << separator;
+  stream << "pruned:" << separator;
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
   if (description_mode == DescriptionMode::SingleLine) stream << ",";
-  stream << separator << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
+  stream << separator;
+  stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
 }

@@ -46,9 +46,10 @@ const std::string& JoinHash::name() const {
 }
 
 std::string JoinHash::description(DescriptionMode description_mode) const {
+  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::ostringstream stream;
-  stream << AbstractJoinOperator::description(description_mode);
-  stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
+  stream << AbstractJoinOperator::description(description_mode) << separator;
+  stream << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
 
   return stream.str();
 }
