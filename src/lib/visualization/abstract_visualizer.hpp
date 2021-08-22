@@ -245,8 +245,7 @@ class AbstractVisualizer {
   std::string _wrap_label(const std::string& label) {
     if (label.length() <= MAX_LABEL_WIDTH) return label;
     std::stringstream label_stream;
-    std::cout << "_wrap_label Input" << std::endl;
-    std::cout << label << std::endl;
+
     // 1. Split label into lines
     std::vector<std::string> lines;
     boost::split(lines, label, boost::is_any_of("\n"));
@@ -267,10 +266,10 @@ class AbstractVisualizer {
         label_stream << line_words.at(word_idx);
         line_length += line_words.at(word_idx).length();
 
-        // Exit while on last word
+        // Exit on last word
         if (word_idx == line_words.size() - 1) break;
 
-        line_length++; // include whitespace
+        line_length++;  // include whitespace
         size_t next_line_length = line_length + line_words.at(++word_idx).length();
         if (next_line_length < MAX_LABEL_WIDTH) {
           label_stream << ' ';
@@ -281,8 +280,6 @@ class AbstractVisualizer {
       }
     }
 
-    std::cout << "_wrap_label Output:" << std::endl;
-    std::cout << label_stream.str();
     return label_stream.str();
   }
 
