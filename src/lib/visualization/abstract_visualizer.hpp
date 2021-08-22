@@ -245,7 +245,8 @@ class AbstractVisualizer {
   std::string _wrap_label(const std::string& label) {
     if (label.length() <= MAX_LABEL_WIDTH) return label;
     std::stringstream label_stream;
-
+    std::cout << "_wrap_label Input" << std::endl;
+    std::cout << label << std::endl;
     // 1. Split label into lines
     std::vector<std::string> lines;
     boost::split(lines, label, boost::is_any_of("\n"));
