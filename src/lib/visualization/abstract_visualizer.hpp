@@ -250,9 +250,11 @@ class AbstractVisualizer {
     std::vector<std::string> lines;
     boost::split(lines, label, boost::is_any_of("\n"));
 
-    for (const auto& line : lines) {
+    for (size_t line_idx = 0; line_idx < lines.size(); ++line_idx) {
+      if (line_idx > 0) label_stream << '\n';
+      const auto& line = lines.at(line_idx);
       if (line.length() <= MAX_LABEL_WIDTH) {
-        label_stream << line << '\n';
+        label_stream << line;
         continue;
       }
       // 2. Split line into words, so we don't break a line in the middle of a word
