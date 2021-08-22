@@ -113,7 +113,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
   }
 
   // If after the last Top K value Non-Top K values are still left, add last Non-Top K values bin.
-  if (current_minimum_index <= value_distribution.size() - 1 && value_distribution.size() > 0) {
+  if (current_minimum_index <= value_distribution.size() - 1 && !value_distribution.empty()) {
     const auto range_maximum = value_distribution.back().first;
     const auto current_distinct_values = value_distribution.size() - 1 - current_maximum_index;
     const auto current_bin_height = static_cast<float>(current_distinct_values) * count_per_non_top_k_value;
