@@ -22,7 +22,7 @@ const std::string& AliasOperator::name() const {
 }
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
 
   stream << AbstractOperator::description(description_mode) << separator << "[";

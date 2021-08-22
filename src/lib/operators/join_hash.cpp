@@ -577,7 +577,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   stream << separator << "Radix bits: " << radix_bits << ".";
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }

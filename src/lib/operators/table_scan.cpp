@@ -70,7 +70,7 @@ const std::string& TableScan::name() const {
 }
 
 std::string TableScan::description(DescriptionMode description_mode) const {
-  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
   std::stringstream stream;
 
