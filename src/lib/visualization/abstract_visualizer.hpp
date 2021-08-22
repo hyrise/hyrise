@@ -274,7 +274,6 @@ class AbstractVisualizer {
         } else {
           label_stream << '\n';
           line_length = 0;
-          break;
         }
       }
     }
