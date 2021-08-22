@@ -42,7 +42,6 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
     }
   }
   desc << "}" << separator;
-  desc << "Aggregates:" << separator;
   for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
     const auto& aggregate = _aggregates[expression_idx];
     desc << aggregate->as_column_name();
