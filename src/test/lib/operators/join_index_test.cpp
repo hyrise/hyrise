@@ -166,24 +166,24 @@ TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
             "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)\nIndex side: Left");
+            "JoinIndex\n(Inner Join where Column #0 = Column #0\nAND Column #0 != Column #0)\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
             "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)\nIndex side: Right");
+            "JoinIndex\n(Inner Join where Column #0 = Column #0\nAND Column #0 != Column #0)\nIndex side: Right");
 
   dummy_input->execute();
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
             "JoinIndex (Inner Join where a = a AND a != a) Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a \nAND a != a)\nIndex side: Left");
+            "JoinIndex\n(Inner Join where a = a\nAND a != a)\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
             "JoinIndex (Inner Join where a = a AND a != a) Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a \nAND a != a)\nIndex side: Right");
+            "JoinIndex\n(Inner Join where a = a\nAND a != a)\nIndex side: Right");
 
   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
 }

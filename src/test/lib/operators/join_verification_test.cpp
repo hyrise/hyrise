@@ -29,13 +29,13 @@ TEST_F(OperatorsJoinVerificationTest, DescriptionAndName) {
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinVerification (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinVerification\n(Inner Join where Column #0 = Column #0 \nAND Column #0 != Column #0)");
+            "JoinVerification\n(Inner Join where Column #0 = Column #0\nAND Column #0 != Column #0)");
 
   dummy_input->execute();
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
             "JoinVerification (Inner Join where a = a AND a != a)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinVerification\n(Inner Join where a = a \nAND a != a)");
+            "JoinVerification\n(Inner Join where a = a\nAND a != a)");
 
   EXPECT_EQ(join_operator->name(), "JoinVerification");
 }
