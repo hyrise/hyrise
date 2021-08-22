@@ -262,14 +262,14 @@ class AbstractVisualizer {
       boost::split(line_words, line, boost::is_any_of(" "));
       size_t line_length = 0;
       size_t word_idx = 0;
-      while (word_idx < line_words.size()) {
+      while (true) {
         label_stream << line_words.at(word_idx);
         line_length += line_words.at(word_idx).length();
 
-        // Exit on last word in line
+        // Exit while on last word
         if (word_idx++ == line_words.size()) break;
 
-        if (line_length++ < MAX_LABEL_WIDTH) {  // includes whitespace
+        if (line_length++ < MAX_LABEL_WIDTH) {  // include whitespace with ++
           label_stream << ' ';
         } else {
           label_stream << '\n';
@@ -278,6 +278,8 @@ class AbstractVisualizer {
       }
     }
 
+    std::cout << "_wrap_label Output:" << std::endl;
+    std::cout << label_stream.str();
     return label_stream.str();
   }
 
