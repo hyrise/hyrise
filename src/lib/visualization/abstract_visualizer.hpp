@@ -244,27 +244,32 @@ class AbstractVisualizer {
 
   std::string _wrap_label(const std::string& label) {
     if (label.length() <= MAX_LABEL_WIDTH) return label;
+    std::stringstream label_stream;
 
-    // Split by word so we don't break a line in the middle of a word
-    std::vector<std::string> label_words;
-    boost::split(label_words, label, boost::is_any_of(" "));
+    // 1. Split label into lines
+    std::vector<std::string> lines;
+    boost::split(lines, label, boost::is_any_of("\n"));
 
-    std::stringstream wrapped_label;
-    auto current_line_length = 0;
-
-    for (const auto& word : label_words) {
-      auto word_length = word.length() + 1;  // include whitespace
-
-      if (current_line_length + word_length > MAX_LABEL_WIDTH) {
-        wrapped_label << "\\n";
-        current_line_length = 0u;
+    for (const auto& line : lines) {
+      if (line.length() <= MAX_LABEL_WIDTH) {
+        label_stream << line << '\n';
+        continue;
       }
-
-      wrapped_label << word << ' ';
-      current_line_length += word_length;
+      // 2. Split line into words, so we don't break a line in the middle of a word
+      size_t line_length = 0;
+      std::vector<std::string> line_words;
+      boost::split(line_words, line, boost::is_any_of(" "));
+      for (const auto& word : line_words) {
+        label_stream << word << ' ';
+        line_length += word.length() + 1;  // include whitespace
+        if (line_length > MAX_LABEL_WIDTH) {
+          label_stream << '\n';
+          line_length = 0;
+        }
+      }
     }
 
-    return wrapped_label.str();
+    return label_stream.str();
   }
 
   std::string _random_color() {
