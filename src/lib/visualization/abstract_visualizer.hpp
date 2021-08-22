@@ -261,10 +261,11 @@ class AbstractVisualizer {
       size_t line_length = 0;
       std::vector<std::string> line_words;
       boost::split(line_words, line, boost::is_any_of(" "));
-      for (const auto& word : line_words) {
+      for (size_t word_idx = 0; word_idx < line_words.size(); ++word_idx) {
+        auto word = line_words.at(word_idx);
         label_stream << word << ' ';
         line_length += word.length() + 1;  // include whitespace
-        if (line_length > MAX_LABEL_WIDTH) {
+        if (line_length > MAX_LABEL_WIDTH && word_idx < line_words.size() - 1) {
           label_stream << '\n';
           line_length = 0;
         }
