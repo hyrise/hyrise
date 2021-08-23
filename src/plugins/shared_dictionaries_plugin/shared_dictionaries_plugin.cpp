@@ -26,7 +26,7 @@ void SharedDictionariesPlugin::stop() { _jaccard_index_threshold_setting->unregi
 
 void SharedDictionariesPlugin::_process_for_every_column() {
   _log_manager.add_message(LOG_NAME, "Starting creation of shared dictionaries", LogLevel::Info);
-  const auto jaccard_index_threshold = std::stod(_jaccard_index_threshold_setting->get());
+  const auto jaccard_index_threshold = std::stof(_jaccard_index_threshold_setting->get());
 
   auto table_names = _storage_manager.table_names();
   std::sort(table_names.begin(), table_names.end());

@@ -15,7 +15,7 @@ template <typename T>
 using SegmentChunkPair = std::pair<std::shared_ptr<DictionarySegment<T>>, std::shared_ptr<Chunk>>;
 
 /**
- * The intention of this plugin is to save memory by using "dictionary sharing"
+ * The intention of this plugin is to save memory by using "dictionary sharing" (see below)
  * while trying to not decrease the performance of Hyrise.
  *
  * Per default every dictionary encoded segment in Hyrise has its own dictionary.
@@ -56,16 +56,6 @@ class SharedDictionariesPlugin : public AbstractPlugin {
  private:
   StorageManager& _storage_manager;
   LogManager& _log_manager;
-
-  /*
-   * The following settings are currently hard coded for the plugin but could be made configurable:
-   *   - option to disable auto start of compression
-   *     The plugin currently starts the merging of dictionaries automatically once it is loaded.
-   *   - option to disable tracking of compression statistics
-   *     The plugin currently tracks memory usage statistics for merged data.
-   *   - option to select all tables / include tables / exclude tables
-   *     The plugin currently tries to merge dictionary segments of all available tables.
-   */
 
   std::shared_ptr<JaccardIndexThresholdSetting> _jaccard_index_threshold_setting;
 

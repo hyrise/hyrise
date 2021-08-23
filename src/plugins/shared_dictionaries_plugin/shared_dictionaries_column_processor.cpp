@@ -5,7 +5,7 @@ namespace opossum {
 template <typename T>
 SharedDictionariesColumnProcessor<T>::SharedDictionariesColumnProcessor(
     const std::shared_ptr<Table>& init_table, const std::string& init_table_name, const ColumnID init_column_id,
-    const std::string& init_column_name, const double init_jaccard_index_threshold,
+    const std::string& init_column_name, const float init_jaccard_index_threshold,
     SharedDictionariesPlugin::SharedDictionariesStats& init_stats)
     : table(init_table),
       table_name(init_table_name),
@@ -94,6 +94,17 @@ void SharedDictionariesColumnProcessor<T>::_initialize_merge_plans(
 }
 
 template <typename T>
+float SharedDictionariesColumnProcessor<T>::_build_union_and_calculate_jaccard_index(
+    pmr_vector<T>& union_result, const pmr_vector<T>& dictionary_a, const pmr_vector<T>& dictionary_b) {
+  const auto total_size = dictionary_a.size() + dictionary_b.size();
+  union_result.reserve(total_size);
+  std::set_union(dictionary_a.cbegin(), dictionary_a.cend(), dictionary_b.cbegin(), dictionary_b.cend(),
+                 std::back_inserter(union_result));
+  const auto union_size = union_result.size();
+  return _calc_jaccard_index(union_size, total_size - union_size);
+}
+
+template <typename T>
 std::pair<std::optional<size_t>, std::shared_ptr<const pmr_vector<T>>>
 SharedDictionariesColumnProcessor<T>::_union_with_best_existing_shared_dictionary(
     const std::shared_ptr<const pmr_vector<T>> current_dictionary,
@@ -106,14 +117,10 @@ SharedDictionariesColumnProcessor<T>::_union_with_best_existing_shared_dictionar
     const auto merge_plan = merge_plans[merge_plan_index];
     const auto shared_dictionary = merge_plan->shared_dictionary;
     auto union_result = pmr_vector<T>(allocator);
-    union_result.reserve(std::max(current_dictionary->size(), shared_dictionary->size()));
-    std::set_union(current_dictionary->cbegin(), current_dictionary->cend(), shared_dictionary->cbegin(),
-                   shared_dictionary->cend(), std::back_inserter(union_result));
-    const auto total_size = current_dictionary->size() + shared_dictionary->size();
-    const auto union_size = union_result.size();
-    const auto jaccard_index = _calc_jaccard_index(union_size, total_size - union_size);
+    const auto jaccard_index =
+        _build_union_and_calculate_jaccard_index(union_result, *current_dictionary, *shared_dictionary);
     if (jaccard_index > best_jaccard_index) {
-      if (_should_merge(jaccard_index, current_dictionary->size(), union_size,
+      if (_should_merge(jaccard_index, current_dictionary->size(), union_result.size(),
                         merge_plan->segment_chunk_pairs_to_merge)) {
         best_merge_plan_index_opt = merge_plan_index;
         best_jaccard_index = jaccard_index;
@@ -131,17 +138,13 @@ std::shared_ptr<const pmr_vector<T>> SharedDictionariesColumnProcessor<T>::_unio
     const std::shared_ptr<const pmr_vector<T>> current_dictionary,
     const SegmentChunkPair<T> previous_segment_chunk_pair, const PolymorphicAllocator<T>& allocator) {
   const auto previous_dictionary = previous_segment_chunk_pair.first->dictionary();
-  auto union_result = std::make_shared<pmr_vector<T>>(allocator);
-  union_result->reserve(std::max(current_dictionary->size(), previous_dictionary->size()));
-  std::set_union(current_dictionary->cbegin(), current_dictionary->cend(), previous_dictionary->cbegin(),
-                 previous_dictionary->cend(), std::back_inserter(*union_result));
-  const auto total_size = current_dictionary->size() + previous_dictionary->size();
-  const auto union_size = union_result->size();
-  const auto jaccard_index = _calc_jaccard_index(union_size, total_size - union_size);
-  if (_should_merge(jaccard_index, current_dictionary->size(), union_size,
+  auto union_result = pmr_vector<T>(allocator);
+  const auto jaccard_index =
+      _build_union_and_calculate_jaccard_index(union_result, *current_dictionary, *previous_dictionary);
+  if (_should_merge(jaccard_index, current_dictionary->size(), union_result.size(),
                     std::vector<SegmentChunkPair<T>>{previous_segment_chunk_pair})) {
-    union_result->shrink_to_fit();
-    return union_result;
+    union_result.shrink_to_fit();
+    return std::make_shared<const pmr_vector<T>>(union_result);
   } else {
     return nullptr;
   }
@@ -235,7 +238,7 @@ size_t SharedDictionariesColumnProcessor<T>::_calc_dictionary_memory_usage(
 
 template <typename T>
 bool SharedDictionariesColumnProcessor<T>::_should_merge(
-    const double jaccard_index, const size_t current_dictionary_size, const size_t shared_dictionary_size,
+    const float jaccard_index, const size_t current_dictionary_size, const size_t shared_dictionary_size,
     const std::vector<SegmentChunkPair<T>>& shared_segment_chunk_pairs) {
   if (jaccard_index >= jaccard_index_threshold) {
     if (!_increases_attribute_vector_width(shared_dictionary_size, current_dictionary_size)) {
@@ -263,10 +266,10 @@ void SharedDictionariesColumnProcessor<T>::MergePlan::add_segment_chunk_pair(
 }
 
 template <typename T>
-double SharedDictionariesColumnProcessor<T>::_calc_jaccard_index(const size_t union_size,
-                                                                 const size_t intersection_size) {
+float SharedDictionariesColumnProcessor<T>::_calc_jaccard_index(const size_t union_size,
+                                                                const size_t intersection_size) {
   DebugAssert(union_size >= intersection_size, "Union size should be larger than or equal intersection size.");
-  return union_size == 0 ? 0.0 : static_cast<double>(intersection_size) / static_cast<double>(union_size);
+  return union_size == 0 ? 0.0f : static_cast<float>(intersection_size) / static_cast<float>(union_size);
 }
 
 template <typename T>

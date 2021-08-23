@@ -83,7 +83,7 @@ class SharedDictionariesPluginTest : public BaseTest {
 
   std::string _get_table_path(const std::string& table_name) { return _tables_path + table_name + _table_extension; }
 
-  static double _calc_jaccard_index(size_t union_size, size_t intersection_size) {
+  static float _calc_jaccard_index(size_t union_size, size_t intersection_size) {
     return SharedDictionariesColumnProcessor<int32_t>::_calc_jaccard_index(union_size, intersection_size);
   }
 
@@ -93,7 +93,7 @@ class SharedDictionariesPluginTest : public BaseTest {
     column_processor._initialize_merge_plans(merge_plans);
   }
 
-  static bool _should_merge(SharedDictionariesColumnProcessor<pmr_string>& column_processor, const double jaccard_index,
+  static bool _should_merge(SharedDictionariesColumnProcessor<pmr_string>& column_processor, const float jaccard_index,
                             const size_t current_dictionary_size, const size_t shared_dictionary_size,
                             const std::vector<SegmentChunkPair<pmr_string>>& shared_segment_chunk_pairs) {
     return column_processor._should_merge(jaccard_index, current_dictionary_size, shared_dictionary_size,
@@ -132,7 +132,7 @@ TEST_F(SharedDictionariesPluginTest, ProcessColumn) {
   _add_customer_table();
   auto stats = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor = SharedDictionariesColumnProcessor<pmr_string>{
-      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats};
+      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1f, stats};
   column_processor.process();
 
   EXPECT_GT(stats.total_bytes_saved, 0);
@@ -176,7 +176,7 @@ TEST_F(SharedDictionariesPluginTest, InitializeMergePlansEmpty) {
   _add_customer_table();
   auto stats = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor = SharedDictionariesColumnProcessor<pmr_string>{
-      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats};
+      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1f, stats};
 
   auto merge_plans = std::vector<std::shared_ptr<SharedDictionariesColumnProcessor<pmr_string>::MergePlan>>{};
   _initialize_merge_plans(column_processor, merge_plans);
@@ -190,12 +190,12 @@ TEST_F(SharedDictionariesPluginTest, InitializeMergePlansNonEmpty) {
 
   auto stats_1 = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor_1 = SharedDictionariesColumnProcessor<pmr_string>{
-      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats_1};
+      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1f, stats_1};
   column_processor_1.process();
 
   auto stats_2 = SharedDictionariesPlugin::SharedDictionariesStats{};
   auto column_processor_2 = SharedDictionariesColumnProcessor<pmr_string>{
-      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1, stats_2};
+      _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1f, stats_2};
 
   auto merge_plans = std::vector<std::shared_ptr<SharedDictionariesColumnProcessor<pmr_string>::MergePlan>>{};
   _initialize_merge_plans(column_processor_2, merge_plans);
@@ -215,16 +215,16 @@ TEST_F(SharedDictionariesPluginTest, ShouldMerge) {
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.5, stats};
 
   // Jaccard-Index threshold not reached
-  EXPECT_FALSE(_should_merge(column_processor, 0.4, 0, 0, {}));
+  EXPECT_FALSE(_should_merge(column_processor, 0.4f, 0, 0, {}));
 
   // Increases attribute vector width of current segment
-  EXPECT_FALSE(_should_merge(column_processor, 0.6, 1, 255, {}));
+  EXPECT_FALSE(_should_merge(column_processor, 0.6f, 1, 255, {}));
 
   // Increases attribute vector width of other shared segments
-  EXPECT_FALSE(_should_merge(column_processor, 0.6, 10000000, 255, {_get_segment_chunk_pair()}));
+  EXPECT_FALSE(_should_merge(column_processor, 0.6f, 10000000, 255, {_get_segment_chunk_pair()}));
 
   // Does none of the above
-  EXPECT_TRUE(_should_merge(column_processor, 0.6, 1, 254, {_get_segment_chunk_pair()}));
+  EXPECT_TRUE(_should_merge(column_processor, 0.6f, 1, 254, {_get_segment_chunk_pair()}));
 }
 
 TEST_F(SharedDictionariesPluginTest, AddNonMergedSegmentChunkPair) {
@@ -248,8 +248,8 @@ TEST_F(SharedDictionariesPluginTest, AddMergedSegmentChunkPair) {
 }
 
 TEST_F(SharedDictionariesPluginTest, JaccardIndex) {
-  EXPECT_EQ(_calc_jaccard_index(0, 0), 0.0);
-  EXPECT_EQ(_calc_jaccard_index(100, 50), 0.5);
+  EXPECT_EQ(_calc_jaccard_index(0, 0), 0.0f);
+  EXPECT_EQ(_calc_jaccard_index(100, 50), 0.5f);
   if (HYRISE_DEBUG) {
     EXPECT_THROW(_calc_jaccard_index(1, 2), std::exception);
   }

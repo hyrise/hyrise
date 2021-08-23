@@ -22,7 +22,8 @@ class SharedDictionariesColumnProcessor {
   /**
  * Merge plan for a shared dictionary containing the segments to merge and additional information
  */
-  struct MergePlan {
+  class MergePlan {
+   public:
     std::shared_ptr<const pmr_vector<T>> shared_dictionary;
     std::vector<SegmentChunkPair<T>> segment_chunk_pairs_to_merge = {};
     bool contains_non_merged_segment = false;
@@ -40,18 +41,21 @@ class SharedDictionariesColumnProcessor {
   const std::string table_name;
   const ColumnID column_id;
   const std::string column_name;
-  const double jaccard_index_threshold;
+  const float jaccard_index_threshold;
   SharedDictionariesPlugin::SharedDictionariesStats& stats;
 
   SharedDictionariesColumnProcessor(const std::shared_ptr<Table>& init_table, const std::string& init_table_name,
                                     const ColumnID init_column_id, const std::string& init_column_name,
-                                    const double init_jaccard_index_threshold,
+                                    const float init_jaccard_index_threshold,
                                     SharedDictionariesPlugin::SharedDictionariesStats& init_stats);
 
   void process();
 
  private:
   void _initialize_merge_plans(std::vector<std::shared_ptr<MergePlan>>& merge_plans);
+
+  float _build_union_and_calculate_jaccard_index(pmr_vector<T>& union_result, const pmr_vector<T>& dictionary_a,
+                                                 const pmr_vector<T>& dictionary_b);
 
   std::pair<std::optional<size_t>, std::shared_ptr<const pmr_vector<T>>> _union_with_best_existing_shared_dictionary(
       const std::shared_ptr<const pmr_vector<T>> current_dictionary,
@@ -70,11 +74,11 @@ class SharedDictionariesColumnProcessor {
 
   static size_t _calc_dictionary_memory_usage(const std::shared_ptr<const pmr_vector<T>> dictionary);
 
-  bool _should_merge(const double jaccard_index, const size_t current_dictionary_size,
+  bool _should_merge(const float jaccard_index, const size_t current_dictionary_size,
                      const size_t shared_dictionary_size,
                      const std::vector<SegmentChunkPair<T>>& shared_segment_chunk_pairs);
 
-  static double _calc_jaccard_index(const size_t union_size, const size_t intersection_size);
+  static float _calc_jaccard_index(const size_t union_size, const size_t intersection_size);
 
   static bool _increases_attribute_vector_width(const size_t shared_dictionary_size,
                                                 const size_t current_dictionary_size);
