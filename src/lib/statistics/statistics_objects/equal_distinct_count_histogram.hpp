@@ -106,7 +106,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * unsplittable intervals (interval from 1 to 1) or intervals that cannot be split in arbitrary ratios (integers),
    * the distinct_count of the bin differ from the specified distinct_count_target.
    * After calling this method, all iterators are advanced to the next unused interval and splitted intervals are
-   * adaped, such that their remaining part can be used by the next bin.
+   * adapted, such that their remaining part can be used by the next bin.
    * If @param is_last_bin is set, the method will add all remaining intervals, regardless of size.
    */
   static std::tuple<T, T, HistogramCountType> _create_one_bin(
@@ -131,7 +131,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * @param bin_count_with_extra_value the first bins might get an additional value to prevent a smaller last bin
    * @param domain the domain of the histogram
    */
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins(
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins_into_histogram(
       std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,
       std::vector<T>& interval_minima, std::vector<T>& interval_maxima, const HistogramCountType total_distinct_count,
       const BinID max_bin_count, const HistogramDomain<T> domain);

@@ -332,7 +332,8 @@ std::tuple<T, T, HistogramCountType> EqualDistinctCountHistogram<T>::_create_one
  * Therefore, string histograms are unmergeable.
  */
 template <>
-std::shared_ptr<EqualDistinctCountHistogram<pmr_string>> EqualDistinctCountHistogram<pmr_string>::_balance_bins(
+std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>
+EqualDistinctCountHistogram<pmr_string>::_balance_bins_into_histogram(
     std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,
     std::vector<pmr_string>& interval_minima, std::vector<pmr_string>& interval_maxima,
     const HistogramCountType total_distinct_count, const BinID max_bin_count,
@@ -341,7 +342,7 @@ std::shared_ptr<EqualDistinctCountHistogram<pmr_string>> EqualDistinctCountHisto
 }
 
 template <typename T>
-std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::_balance_bins(
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::_balance_bins_into_histogram(
     std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,
     std::vector<T>& interval_minima, std::vector<T>& interval_maxima, const HistogramCountType total_distinct_count,
     const BinID max_bin_count, const HistogramDomain<T> domain) {
@@ -558,8 +559,9 @@ std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> E
       std::accumulate(interval_distinct_counts.begin(), interval_distinct_counts.end(), HistogramCountType{0})};
 
   // Finally we need to create EqualDistinctHistogram from our interval bins, for that we need to balance them.
-  const auto merged_histogram = _balance_bins(interval_distinct_counts, interval_heights, interval_minima,
-                                              interval_maxima, total_distinct_count, max_bin_count, domain);
+  const auto merged_histogram =
+      _balance_bins_into_histogram(interval_distinct_counts, interval_heights, interval_minima, interval_maxima,
+                                   total_distinct_count, max_bin_count, domain);
 
   return std::make_pair(merged_histogram, max_estimation_error);
 }
