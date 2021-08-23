@@ -456,8 +456,9 @@ EqualDistinctCountHistogram<T>::_create_merged_intervals(
 
     // How many distinct elements fit into this interval.
     // E.g. 3 for the int interval 1-3 or some huge number for the same float interval.
-    const auto interval_max_distinct_capacity =
-        (static_cast<HistogramCountType>(interval_end - interval_start) / domain_value_step_size) + 1;
+    const auto interval_max_distinct_capacity = (static_cast<HistogramCountType>(interval_end - interval_start) /
+                                                 static_cast<HistogramCountType>(domain_value_step_size)) +
+                                                HistogramCountType{1.0f};
 
     auto combined_distinct_count = HistogramCountType{0};
     auto summed_distinct_count = HistogramCountType{0};
