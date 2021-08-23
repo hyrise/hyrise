@@ -835,7 +835,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
-    // Skip empty bins
+    // We generally do not want empty bins (unless specified)
     if (!allow_empty_bins && (estimate.first == Cardinality{0})) {
       continue;
     }
