@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <boost/heap/fibonacci_heap.hpp>
