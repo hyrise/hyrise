@@ -95,11 +95,11 @@ const std::string& JoinSortMerge::name() const {
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
-                       const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
-                       ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
-                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
-                       OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+  JoinSortMergeImpl(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
+                    const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
+                    ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
+                    const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
         _left_input_table{left_input_table},
         _right_input_table{right_input_table},
