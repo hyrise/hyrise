@@ -5,23 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
-
 #include "abstract_histogram.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class Table;
-
-// Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
-// defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
-// so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
-// where hashing is somewhat expensive.
-template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 /**
  * Distinct-balanced histogram.
@@ -39,18 +28,15 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const HistogramDomain<T>& domain = {});
 
-  const std::vector<T>& bin_minima() const;
-  const std::vector<T>& bin_maxima() const;
-
   /**
-   * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
+   * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table, const ColumnID column_id,
                                                                      const BinID max_bin_count,
                                                                      const HistogramDomain<T>& domain = {});
   /**
-   * Create an EqualDistinctCountHistogram for a segment of a Table
+   * Create an EqualDistinctCountHistogram for a segment of a table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(const Table& table, const ColumnID column_id,
@@ -58,14 +44,16 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                       const HistogramDomain<T>& domain = {});
 
   /**
-    * Merge all histograms in @param histograms into one new EqualDistinctCountHistogram with at most @param bin_count_target bins.
-    * Returns the merged histogram and the max_estimation_error. 
-    * Returns (nullptr, 0.0) if no valid histograms are given.
-    * The max_estimation_error is an upper bound on how much the total_distinct_count of the merged histogram might differ from the actual total_distinct_count
-    * one would get from building one single histogram from the underlying data of histograms.
-    */
+   * Merge all histograms in @param histograms into one new EqualDistinctCountHistogram with at
+   * most @param max_bin_count bins.
+   * Returns the merged histogram and the max_estimation_error. 
+   * Returns (nullptr, 0.0) if no valid histograms are given.
+   * The max_estimation_error is an upper bound on the difference between the total_distinct_count of the histogram
+   * calculated via merging chunk histograms and the total_distinct_count of the histogram calculated based on the
+   * whole column.
+   */
   static std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> merge(
-      const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms, BinID bin_count_target);
+      const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms, BinID max_bin_count);
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -89,18 +77,38 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
 
+  /**
+   * Generates an EqualDistinctCountHistogram from the @param value_distribution.
+   */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> _from_value_distribution(
-      const std::vector<std::pair<T, HistogramCountType>>& value_distribution_map, const BinID max_bin_count);
+      const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count);
 
-  static std::pair<std::vector<T>, std::vector<T>> _merge_splitted_bounds(
+  /**
+   * Splits the @param histograms and returns the combined bin_minima and bin_maxima.
+   */
+  static std::pair<std::vector<T>, std::vector<T>> _combine_bounds(
       const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
 
+  /**
+   * Takes the @param histograms and their combined_bounds, adds up their heights 
+   * and estimates their combined distinct_counts in each of the intervals given by the combined_bounds.
+   * Also filters out all empty intervals contained in the combined_bounds.
+   */
   static std::tuple<std::vector<HistogramCountType>, std::vector<HistogramCountType>, std::vector<T>, std::vector<T>,
                     HistogramCountType>
-  _create_merged_intervals(const std::vector<T>& splitted_bounds_minima, const std::vector<T>& splitted_bounds_maxima,
+  _create_merged_intervals(const std::vector<T>& combined_bounds_minima, const std::vector<T>& combined_bounds_maxima,
                            const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms,
                            const HistogramDomain<T>& domain);
 
+  /**
+   * Creates one bin with @param distinct_count_target many distinct values by combining as many intervals
+   * (given in the form of iterators) as necessary. It splits intervals if necessary and possible. If there are 
+   * unsplittable intervals (interval from 1 to 1) or intervals that cannot be split in arbitrary ratios (integers),
+   * the distinct_count of the bin differ from the specified distinct_count_target.
+   * After calling this method, all iterators are advanced to the next unused interval and splitted intervals are
+   * adaped, such that their remaining part can be used by the next bin.
+   * If @param is_last_bin is set, the method will add all remaining intervals, regardless of size.
+   */
   static std::tuple<T, T, HistogramCountType> _create_one_bin(
       typename std::vector<T>::iterator& interval_minima_begin, typename std::vector<T>::iterator& interval_minima_end,
       typename std::vector<T>::iterator& interval_maxima_begin, typename std::vector<T>::iterator& interval_maxima_end,
@@ -110,10 +118,23 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
       typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end, const int distinct_count_target,
       const HistogramDomain<T> domain, const bool is_last_bin);
 
+  /**
+   * Takes the values making up a histogram and reduces its bin count to the defined value. 
+   * The distinct counts are balanced afterwards, when possible (unsplittable intervals might cause imbalance).
+   * 
+   * @param interval_distinct_counts vector that contains the distinct counts of the input histogram
+   * @param interval_heights vector that contains the bin heights of the input histogram
+   * @param interval_minima vector that contains the bin minima of the input histogram
+   * @param interval_maxima vector that contains the bin maxima of the input histogram
+   * @param total_distinct_count sum of all bins distinct counts
+   * @param max_bin_count maximum number of bins the output histogram should have
+   * @param bin_count_with_extra_value the first bins might get an additional value to prevent a smaller last bin
+   * @param domain the domain of the histogram
+   */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins(
       std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,
-      std::vector<T>& interval_minima, std::vector<T>& interval_maxima, const int distinct_count_per_bin_target,
-      const BinID bin_count, const BinID bin_count_with_extra_value, const HistogramDomain<T> domain);
+      std::vector<T>& interval_minima, std::vector<T>& interval_maxima, const HistogramCountType total_distinct_count,
+      const BinID max_bin_count, const HistogramDomain<T> domain);
 
  private:
   /**

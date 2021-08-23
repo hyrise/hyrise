@@ -40,7 +40,6 @@ class TableStatistics {
   DataType column_data_type(const ColumnID column_id) const;
 
   const std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics;
-
   const std::vector<std::vector<std::shared_ptr<BaseAttributeStatistics>>> segment_statistics;
   Cardinality row_count;
 
@@ -48,7 +47,7 @@ class TableStatistics {
   template <typename ColumnDataType>
   static void _add_statistics_from_histogram(
       const std::shared_ptr<AttributeStatistics<ColumnDataType>> attribute_statistics,
-      const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram, const Table& table);
+      const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>& histogram, const Table& table);
 };
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics);

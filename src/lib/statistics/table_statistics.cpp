@@ -13,7 +13,7 @@ namespace opossum {
 template <typename ColumnDataType>
 void TableStatistics::_add_statistics_from_histogram(
     const std::shared_ptr<AttributeStatistics<ColumnDataType>> attribute_statistics,
-    const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram, const Table& table) {
+    const std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>& histogram, const Table& table) {
   if (histogram) {
     attribute_statistics->set_statistics_object(histogram);
 
@@ -63,13 +63,11 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         resolve_data_type(column_data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
           const auto chunk_count = table.chunk_count();
-          const auto should_generate_small_histograms = (chunk_count > 1) && (column_data_type != DataType::String);
+          const auto generate_segment_histograms = (chunk_count > 1) && (column_data_type != DataType::String);
           std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram = nullptr;
 
-          if (should_generate_small_histograms) {
-            // Generate the small histograms.
+          if (generate_segment_histograms) {
             // Per segment statistics will be twice as detailed.
             std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>> histograms;
             histograms.reserve(chunk_count);
@@ -86,11 +84,11 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             const auto merge_result =
                 EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
             histogram = merge_result.first;
-            // This gives us the maximum deviation of the total distinct count when compared to the full histogram.
-            // The error might be different when measured with respect to the individual unique values.
+
+            // This gives us the maximum deviation of the total distinct count when compared to the column histogram.
             const auto max_estimation_error = merge_result.second;
-            // Using the max_estimation_error, we can detect if the merged histogram is significantly too bad.
-            // In that case we generate the full histogram.
+            // Using the max_estimation_error, we can detect if the merged histogram is too bad.
+            // In that case we generate the column histogram.
             // Wasting time is better than using bad histograms.
             const auto error_percent_threshold = 0.05;
             if (max_estimation_error > histogram->total_distinct_count() * error_percent_threshold) {
@@ -101,6 +99,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             histogram =
                 EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
           }
+
+          const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
           _add_statistics_from_histogram(output_column_statistics, histogram, table);
 
