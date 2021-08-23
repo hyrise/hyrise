@@ -251,21 +251,21 @@ std::tuple<T, T, HistogramCountType> EqualDistinctCountHistogram<T>::_create_one
     typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_begin,
     typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end, const int distinct_count_target,
     const HistogramDomain<T> domain, const bool is_last_bin) {
-  const auto remainingIntervalCount = std::distance(interval_minima_begin, interval_minima_end);
-  DebugAssert(remainingIntervalCount == std::distance(interval_maxima_begin, interval_maxima_end),
+  const auto remaining_interval_count = std::distance(interval_minima_begin, interval_minima_end);
+  DebugAssert(remaining_interval_count == std::distance(interval_maxima_begin, interval_maxima_end),
               "All interval vectors need to have the same size.");
-  DebugAssert(remainingIntervalCount == std::distance(interval_heights_begin, interval_heights_end),
+  DebugAssert(remaining_interval_count == std::distance(interval_heights_begin, interval_heights_end),
               "All interval vectors need to have the same size.");
-  DebugAssert(remainingIntervalCount == std::distance(interval_distinct_counts_begin, interval_distinct_counts_end),
+  DebugAssert(remaining_interval_count == std::distance(interval_distinct_counts_begin, interval_distinct_counts_end),
               "All interval vectors need to have the same size.");
-  DebugAssert(remainingIntervalCount > 0, "RemainingIntervalCount has to be greater than zero.");
+  DebugAssert(remaining_interval_count > 0, "remaining_interval_count has to be greater than zero.");
 
   const auto bin_start = *interval_minima_begin;
   auto bin_end = bin_start;
   auto bin_height = HistogramCountType{0};
   auto bin_distinct_count = HistogramCountType{0};
 
-  for (auto interval_index = 0u; interval_index < remainingIntervalCount; interval_index++,
+  for (auto interval_index = 0u; interval_index < remaining_interval_count; interval_index++,
             std::advance(interval_minima_begin, 1), std::advance(interval_maxima_begin, 1),
             std::advance(interval_heights_begin, 1), std::advance(interval_distinct_counts_begin, 1)) {
     const auto interval_height = *interval_heights_begin;
@@ -457,7 +457,7 @@ EqualDistinctCountHistogram<T>::_create_merged_intervals(
     // How many distinct elements fit into this interval.
     // E.g. 3 for the int interval 1-3 or some huge number for the same float interval.
     const auto interval_max_distinct_capacity =
-        static_cast<HistogramCountType>(((interval_end - interval_start) / domain_value_step_size) + 1);
+        (static_cast<HistogramCountType>(interval_end - interval_start) / domain_value_step_size) + 1;
 
     auto combined_distinct_count = HistogramCountType{0};
     auto summed_distinct_count = HistogramCountType{0};
@@ -537,7 +537,7 @@ std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> E
     return !histogram || histogram->bin_count() == 0;
   });
 
-  if (histograms.size() == 0) {
+  if (histograms.empty()) {
     return std::make_pair(nullptr, HistogramCountType{0});
   }
   if (histograms.size() == 1) {
