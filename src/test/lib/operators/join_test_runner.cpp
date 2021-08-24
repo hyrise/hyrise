@@ -1,7 +1,11 @@
 #include <fstream>
 #include <set>
 
+#include <magic_enum.hpp>
+
 #include "base_test.hpp"
+#include "lib/storage/index/index_scope.hpp"
+
 #include "nlohmann/json.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
@@ -40,16 +44,6 @@ enum class InputTableType {
   // Input Tables are reference Tables with each Segment using a different PosList
   IndividualPosLists
 };
-
-enum class IndexScope { Table, Chunk };
-
-std::unordered_map<InputTableType, std::string> input_table_type_to_string{
-    {InputTableType::Data, "Data"},
-    {InputTableType::SharedPosList, "SharedPosList"},
-    {InputTableType::IndividualPosLists, "IndividualPosLists"}};
-
-std::unordered_map<IndexScope, std::string> input_table_scope_to_string{{IndexScope::Table, "Table"},
-                                                                        {IndexScope::Chunk, "Chunk"}};
 
 struct InputTableConfiguration {
   InputSide side{};
@@ -599,15 +593,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
 
       /**
-       * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index scope is either chunk based (AbstractIndex) or table based
-       * (AbstractTableIndex).
+       * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the
+       * configuration, indexes for the data table are created. The index scope is either chunk based or table based.
        */
       if (index_scope == IndexScope::Chunk) {
-        // The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-        // for non-dictionary segments.
+        // The index type is either GroupKeyIndex for dictionary segments or BTreeIndex for non-dictionary segments.
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
-          for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
+          for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
             if (encoding_type == EncodingType::Dictionary) {
               data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
             } else {
@@ -621,7 +613,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
           chunk_ids.push_back(chunk_id);
         }
-        for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
           data_table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
         }
       }
@@ -700,8 +692,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(left_input_table, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
-    std::cout << "Table type: " << input_table_type_to_string.at(configuration.left_input.table_type) << std::endl;
-    std::cout << "Index scope: " << input_table_scope_to_string.at(configuration.left_input.index_scope) << std::endl;
+    std::cout << "Table type: " << magic_enum::enum_name(configuration.left_input.table_type) << std::endl;
+    std::cout << "Index scope: " << magic_enum::enum_name(configuration.left_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
               << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: ["
@@ -712,8 +704,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(right_input_table, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
-    std::cout << "Table size: " << input_table_type_to_string.at(configuration.right_input.table_type) << std::endl;
-    std::cout << "Index scope: " << input_table_scope_to_string.at(configuration.right_input.index_scope) << std::endl;
+    std::cout << "Table size: " << magic_enum::enum_name(configuration.right_input.table_type) << std::endl;
+    std::cout << "Index scope: " << magic_enum::enum_name(configuration.right_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
               << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: ["
@@ -785,13 +777,13 @@ TEST_P(JoinTestRunner, TestJoin) {
     }
 
     if (indexed_input.index_scope == IndexScope::Table) {
-      if (indexed_input.table_type == InputTableType::Data && configuration.secondary_predicates.empty() &&
+      if (indexed_input.table_type == InputTableType::Data &&
           (configuration.predicate_condition == PredicateCondition::Equals ||
            configuration.predicate_condition == PredicateCondition::NotEquals)) {
-        // one table index is created over the complete chunk range, so it is only used once
+        // One table index is created over the complete chunk range, so it is only used once.
         indexed_used_count = 1;
       } else {
-        // if not supported by table indexes, no chunks are joined via index
+        // If not supported by table indexes, no chunks are joined via index.
         indexed_used_count = 0;
       }
     }

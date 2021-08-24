@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -15,7 +15,7 @@ size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOf
 }
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
-    : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
+    : AbstractChunkIndex{get_chunk_index_type_of<GroupKeyIndex>()},
       _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
                            ? nullptr              // but range check needed for accessing the first segment
                            : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {

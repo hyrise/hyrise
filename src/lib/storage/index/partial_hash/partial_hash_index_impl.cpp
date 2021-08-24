@@ -3,25 +3,66 @@
 
 namespace opossum {
 
+size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&,
+                                                const ColumnID) {
+  return 0;
+}
+
+size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>&) { return 0; }
+
+BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::cbegin() const {
+  return Iterator(std::make_shared<BaseTableIndexIterator>());
+}
+
+BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::cend() const {
+  return Iterator(std::make_shared<BaseTableIndexIterator>());
+}
+
+BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::null_cbegin() const {
+  return Iterator(std::make_shared<BaseTableIndexIterator>());
+}
+
+BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::null_cend() const {
+  return Iterator(std::make_shared<BaseTableIndexIterator>());
+}
+
+size_t BasePartialHashIndexImpl::memory_consumption() const { return 0; }
+
+BasePartialHashIndexImpl::IteratorPair BasePartialHashIndexImpl::range_equals(const AllTypeVariant& value) const {
+  return std::make_pair(Iterator(std::make_shared<BaseTableIndexIterator>()),
+                        Iterator(std::make_shared<BaseTableIndexIterator>()));
+}
+
+std::pair<BasePartialHashIndexImpl::IteratorPair, BasePartialHashIndexImpl::IteratorPair>
+BasePartialHashIndexImpl::range_not_equals(const AllTypeVariant& value) const {
+  return std::make_pair(range_equals(value), range_equals(value));
+}
+
+bool BasePartialHashIndexImpl::is_index_for(const ColumnID column_id) const { return false; }
+
+std::set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const { return std::set<ChunkID>(); }
+
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
     : BasePartialHashIndexImpl() {
-  add(chunks_to_index, column_id);
+  insert_entries(chunks_to_index, column_id);
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::add(
+size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
-    // do not allow multiple indexing of one chunk
+    // We do not allow multiple indexing of one chunk.
     if (_indexed_chunk_ids.contains(chunk.first)) continue;
 
     _indexed_chunk_ids.insert(chunk.first);
+    // Iterate over the segment to index and populate the index.
     auto indexed_segment = chunk.second->get_segment(column_id);
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
       auto row_id = RowID{chunk.first, position.chunk_offset()};
+      // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
         if (!_null_values.contains(true)) {
           _null_values[true] = std::vector<RowID>();
@@ -40,35 +81,49 @@ size_t PartialHashIndexImpl<DataType>::add(
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks_to_remove) {
+size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
   size_t size_before = _indexed_chunk_ids.size();
-  for (const auto& chunk_id : chunks_to_remove) {
+
+  auto chunks_to_unindex_filtered = std::set<ChunkID>{};
+  for (const auto& chunk_id : chunks_to_unindex) {
     if (!_indexed_chunk_ids.contains(chunk_id)) continue;
 
+    chunks_to_unindex_filtered.insert(chunk_id);
     _indexed_chunk_ids.erase(chunk_id);
-    auto map_iter = _map.begin();
-    while (map_iter != _map.end()) {
-      auto& values = _map.at(map_iter->first);
-      values.erase(std::remove_if(values.begin(), values.end(),
-                                  [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
-                   values.end());
-      if (values.empty()) {
-        map_iter = _map.erase(map_iter);
-      } else {
-        ++map_iter;
-      }
-    }
-    auto& nulls = _null_values[true];
-    nulls.erase(
-        std::remove_if(nulls.begin(), nulls.end(), [chunk_id](RowID& row_id) { return row_id.chunk_id == chunk_id; }),
-        nulls.end());
   }
+
+  // Iterate over all values stored in the index.
+  auto map_iter = _map.begin();
+  while (map_iter != _map.end()) {
+    // Remove every RowID entry of the value that references one of the chunks.
+    auto& entries_for_value = _map.at(map_iter->first);
+    entries_for_value.erase(std::remove_if(entries_for_value.begin(), entries_for_value.end(),
+                                           [chunks_to_unindex_filtered](RowID& row_id) {
+                                             return chunks_to_unindex_filtered.end() !=
+                                                    std::find(chunks_to_unindex_filtered.begin(),
+                                                              chunks_to_unindex_filtered.end(), row_id.chunk_id);
+                                           }),
+                            entries_for_value.end());
+    if (entries_for_value.empty()) {
+      map_iter = _map.erase(map_iter);
+    } else {
+      ++map_iter;
+    }
+  }
+  auto& nulls = _null_values[true];
+  nulls.erase(std::remove_if(nulls.begin(), nulls.end(),
+                             [chunks_to_unindex_filtered](RowID& row_id) {
+                               return chunks_to_unindex_filtered.end() != std::find(chunks_to_unindex_filtered.begin(),
+                                                                                    chunks_to_unindex_filtered.end(),
+                                                                                    row_id.chunk_id);
+                             }),
+              nulls.end());
 
   return size_before - _indexed_chunk_ids.size();
 }
 
 template <typename DataType>
-typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::equals(
+typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
   auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
@@ -82,15 +137,9 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
 
 template <typename DataType>
 std::pair<typename PartialHashIndexImpl<DataType>::IteratorPair, typename PartialHashIndexImpl<DataType>::IteratorPair>
-PartialHashIndexImpl<DataType>::not_equals(const AllTypeVariant& value) const {
-  auto eq_begin = _map.find(boost::get<DataType>(value));
-  auto eq_end = eq_begin;
-  if (eq_begin != _map.cend()) {
-    ++eq_end;
-  }
-  // (cbegin -> eq_begin) + (eq_end -> cend)
-  return std::make_pair(std::make_pair(cbegin(), Iterator(std::make_shared<TableIndexIterator<DataType>>(eq_begin))),
-                        std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(eq_end)), cend()));
+PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) const {
+  auto range_eq = range_equals(value);
+  return std::make_pair(std::make_pair(cbegin(), range_eq.first), std::make_pair(range_eq.second, cend()));
 }
 
 template <typename DataType>

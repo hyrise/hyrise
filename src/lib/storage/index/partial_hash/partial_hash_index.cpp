@@ -4,16 +4,16 @@
 
 namespace opossum {
 
-size_t PartialHashIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
-                                                     uint32_t value_bytes) {
+size_t PartialHashIndex::estimate_memory_consumption(const ChunkOffset row_count, const ChunkOffset distinct_count,
+                                                     const uint32_t value_bytes) {
   Fail("PartialHashIndex::estimate_memory_consumption() is not implemented yet");
 }
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
                                    const ColumnID column_id)
-    : AbstractTableIndex{get_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
+    : AbstractTableIndex{get_table_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
   if (!chunks_to_index.empty()) {
-    add(chunks_to_index);
+    insert_entries(chunks_to_index);
   } else {
     /**
      * Because 'chunks_to_index' is empty, we cannot determine the data type of the column and therefore construct
@@ -23,7 +23,8 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   }
 }
 
-size_t PartialHashIndex::add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
+size_t PartialHashIndex::insert_entries(
+    const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
   if (!_is_initialized) {
     resolve_data_type(chunks_to_index.front().second->get_segment(_column_id)->data_type(),
                       [&](const auto column_data_type) {
@@ -33,24 +34,24 @@ size_t PartialHashIndex::add(const std::vector<std::pair<ChunkID, std::shared_pt
     _is_initialized = true;
     return _impl->get_indexed_chunk_ids().size();
   } else {
-    return _impl->add(chunks_to_index, _column_id);
+    return _impl->insert_entries(chunks_to_index, _column_id);
   }
 }
 
-size_t PartialHashIndex::remove(const std::vector<ChunkID>& chunks_to_remove) {
+size_t PartialHashIndex::remove_entries(const std::vector<ChunkID>& chunks_to_remove) {
   if (!_is_initialized) {
     return 0;
   }
-  return _impl->remove(chunks_to_remove);
+  return _impl->remove_entries(chunks_to_remove);
 }
 
-PartialHashIndex::IteratorPair PartialHashIndex::_equals(const AllTypeVariant& value) const {
-  return _impl->equals(value);
+PartialHashIndex::IteratorPair PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
+  return _impl->range_equals(value);
 }
 
-std::pair<PartialHashIndex::IteratorPair, PartialHashIndex::IteratorPair> PartialHashIndex::_not_equals(
+std::pair<PartialHashIndex::IteratorPair, PartialHashIndex::IteratorPair> PartialHashIndex::_range_not_equals(
     const AllTypeVariant& value) const {
-  return _impl->not_equals(value);
+  return _impl->range_not_equals(value);
 }
 
 PartialHashIndex::Iterator PartialHashIndex::_cbegin() const { return _impl->cbegin(); }

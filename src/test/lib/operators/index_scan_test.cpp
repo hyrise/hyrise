@@ -30,7 +30,7 @@ template <typename DerivedIndex>
 class OperatorsIndexScanTest : public BaseTest {
  protected:
   void SetUp() override {
-    _index_type = get_index_type_of<DerivedIndex>();
+    _index_type = get_chunk_index_type_of<DerivedIndex>();
 
     auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
     auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", 5);
@@ -101,7 +101,7 @@ class OperatorsIndexScanTest : public BaseTest {
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
   std::vector<ColumnID> _column_ids;
-  SegmentIndexType _index_type;
+  ChunkIndexType _index_type;
 };
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
@@ -267,7 +267,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_column_ids,
+  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, ChunkIndexType::Invalid, this->_column_ids,
                                                    PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
@@ -282,7 +282,7 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
-  if (this->_index_type != SegmentIndexType::GroupKey) return;
+  if (this->_index_type != ChunkIndexType::GroupKey) return;
   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
 
   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);

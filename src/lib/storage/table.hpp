@@ -11,7 +11,8 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "storage/index/abstract_table_index.hpp"
-#include "storage/index/index_statistics.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
 #include "types.hpp"
@@ -183,20 +184,18 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
-  std::vector<IndexStatistics> indexes_statistics() const;
+  std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
   /**
    * Creates a subclass of AbstractTableIndex on a set of chunks of a specific column and adds the index to the
-   * table's index statistics.
-   * Table indexes can only be created on a set of immutable chunks.
+   * table's index statistics. Table indexes can only be created on a set of immutable chunks.
    */
   template <typename Index>
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
                           const std::string& name = "") {
     static_assert(std::is_base_of<AbstractTableIndex, Index>::value,
                   "'Index' template argument is not an AbstractTableIndex");
-
-    SegmentIndexType index_type = get_index_type_of<Index>();
+    TableIndexType table_index_type = get_table_index_type_of<Index>();
 
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
@@ -208,17 +207,16 @@ class Table : private Noncopyable {
     auto index = std::make_shared<Index>(chunks_to_index, column_id);
     _table_indexes.emplace_back(index);
 
-    // Currently, IndexStatistics only hold information about the indexed column but not the indexed chunks
-    // for both, table-based and chunk-based indexes.
-    IndexStatistics index_statistics = {{column_id}, name, index_type};
-    _index_statistics.emplace_back(index_statistics);
+    TableIndexStatistics table_indexes_statistics = {{column_id}, chunks_to_index, name, table_index_type};
+    _table_indexes_statistics.emplace_back(table_indexes_statistics);
   }
 
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    static_assert(std::is_base_of<AbstractIndex, Index>::value, "'Index' template argument is not an AbstractIndex");
+    static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
+                  "'Index' template argument is not an AbstractChunkIndex");
 
-    SegmentIndexType index_type = get_index_type_of<Index>();
+    ChunkIndexType chunk_index_type = get_chunk_index_type_of<Index>();
 
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -227,8 +225,8 @@ class Table : private Noncopyable {
 
       chunk->create_index<Index>(column_ids);
     }
-    IndexStatistics index_statistics = {column_ids, name, index_type};
-    _index_statistics.emplace_back(index_statistics);
+    ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
+    _chunk_indexes_statistics.emplace_back(indexes_statistics);
   }
 
   /**
@@ -288,7 +286,8 @@ class Table : private Noncopyable {
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexStatistics> _index_statistics;
+  std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
+  std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<AbstractTableIndex>> _table_indexes;
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all

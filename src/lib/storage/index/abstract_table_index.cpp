@@ -2,15 +2,15 @@
 
 namespace opossum {
 
-AbstractTableIndex::AbstractTableIndex(const SegmentIndexType type) : _type(type) {}
+AbstractTableIndex::AbstractTableIndex(const TableIndexType type) : _type(type) {}
 
-AbstractTableIndex::IteratorPair AbstractTableIndex::equals(const AllTypeVariant& value) const {
-  return _equals(value);
+AbstractTableIndex::IteratorPair AbstractTableIndex::range_equals(const AllTypeVariant& value) const {
+  return _range_equals(value);
 }
 
-std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> AbstractTableIndex::not_equals(
+std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> AbstractTableIndex::range_not_equals(
     const AllTypeVariant& value) const {
-  return _not_equals(value);
+  return _range_not_equals(value);
 }
 
 AbstractTableIndex::Iterator AbstractTableIndex::cbegin() const { return _cbegin(); }
@@ -21,7 +21,7 @@ AbstractTableIndex::Iterator AbstractTableIndex::null_cbegin() const { return _n
 
 AbstractTableIndex::Iterator AbstractTableIndex::null_cend() const { return _null_cend(); }
 
-SegmentIndexType AbstractTableIndex::type() const { return _type; }
+TableIndexType AbstractTableIndex::type() const { return _type; }
 
 size_t AbstractTableIndex::memory_consumption() const {
   size_t bytes{0u};

@@ -9,14 +9,14 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ChunkIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
@@ -114,8 +114,8 @@ void IndexScan::_validate_input() {
 RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = AbstractIndex::Iterator{};
-  auto range_end = AbstractIndex::Iterator{};
+  auto range_begin = AbstractChunkIndex::Iterator{};
+  auto range_end = AbstractChunkIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = RowIDPosList{};

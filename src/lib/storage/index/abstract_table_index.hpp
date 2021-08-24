@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "segment_index_type.hpp"
+#include "table_index_type.hpp"
 #include "types.hpp"
 
 #include "tsl/robin_map.h"
@@ -27,9 +27,7 @@ class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, c
   virtual bool operator==(const BaseTableIndexIterator& other) const { return true; }
   virtual bool operator!=(const BaseTableIndexIterator& other) const { return false; }
 
-  virtual std::shared_ptr<BaseTableIndexIterator> clone() const {
-    return std::make_shared<BaseTableIndexIterator>();
-  }
+  virtual std::shared_ptr<BaseTableIndexIterator> clone() const { return std::make_shared<BaseTableIndexIterator>(); }
 };
 
 /**
@@ -79,12 +77,13 @@ class TableIndexIterator : public BaseTableIndexIterator {
  * required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
  * codebase. It also provides copy construction and assignment facilities to easily duplicate other IteratorWrappers
  * including their underlying iterators. This is especially important, because the iterator type is a forward iterator
- * instead of a random access iterator, so if an iterator instance has to be retained before a manipulating call e.g.
+ * instead of a random access iterator, so if an iterator instance has to be retained before a manipulating call, e.g.,
  * when calling it on std::distance, a copy has to be made beforehand.
  */
 class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const RowID> {
  public:
-  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& ptr) : _impl(std::move(ptr)) {}
+  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
+      : _impl(std::move(table_index_iterator_ptr)) {}
 
   IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
   IteratorWrapper& operator=(const IteratorWrapper& other) {
@@ -105,10 +104,10 @@ class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const Ro
 };
 
 /**
- * This is a concept parallel to chunk based indexes superclass AbstractIndex.
+ * This is a concept parallel to chunk based indexes superclass AbstractChunkIndex.
  * It allows indexing multiple chunks of a table column.
- * It is assumed that all table index types support lookup queries, i.e. equals and not-equals queries.
- * The IteratorWrapper type is used as the return type for all query methods.
+ * It is assumed that all table index types support equality lookup queries (equals and not-equals queries).
+ * The IteratorWrapper type is used as the return type for all lookup types.
  */
 class AbstractTableIndex : private Noncopyable {
  public:
@@ -116,7 +115,7 @@ class AbstractTableIndex : private Noncopyable {
   using IteratorPair = std::pair<Iterator, Iterator>;
 
   AbstractTableIndex() = delete;
-  explicit AbstractTableIndex(const SegmentIndexType type);
+  explicit AbstractTableIndex(const TableIndexType type);
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
 
@@ -127,7 +126,7 @@ class AbstractTableIndex : private Noncopyable {
    * @param value used to query the index.
    * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the table index.
    */
-  IteratorPair equals(const AllTypeVariant& value) const;
+  IteratorPair range_equals(const AllTypeVariant& value) const;
 
   /**
    * Searches for all positions that do not equal to the entry in the table index.
@@ -136,7 +135,7 @@ class AbstractTableIndex : private Noncopyable {
    * @param value used to query the index.
    * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the first occurence of a value equals to the searched entry and the range from the end of the value until the end of the map.
    */
-  std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const;
+  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
 
   /**
    * Returns an Iterator to the position of the first indexed non-NULL element.
@@ -170,7 +169,7 @@ class AbstractTableIndex : private Noncopyable {
    */
   Iterator null_cend() const;
 
-  SegmentIndexType type() const;
+  TableIndexType type() const;
 
   /**
    * Returns the memory consumption of this Index in bytes
@@ -196,14 +195,14 @@ class AbstractTableIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual Iterator _null_cbegin() const = 0;
   virtual Iterator _null_cend() const = 0;
-  virtual IteratorPair _equals(const AllTypeVariant& value) const = 0;
-  virtual std::pair<IteratorPair, IteratorPair> _not_equals(const AllTypeVariant& value) const = 0;
+  virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
+  virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual size_t _memory_consumption() const = 0;
 
  private:
-  const SegmentIndexType _type;
+  const TableIndexType _type;
 };
 
 }  // namespace opossum

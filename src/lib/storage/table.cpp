@@ -322,7 +322,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const { return _index_statistics; }
+std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const { return _chunk_indexes_statistics; }
 
 const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 

@@ -78,7 +78,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   }
-  if (_config->indexes) {
+  if (_config->chunk_indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
   }

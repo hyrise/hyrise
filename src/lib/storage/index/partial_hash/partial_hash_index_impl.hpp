@@ -15,7 +15,7 @@ class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
- * Base class that holds a PartialHashIndexImpl object with the correct unboxed datatype.
+ * Base class that holds a PartialHashIndexImpl object with the correct resolved datatype.
  */
 class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
@@ -26,31 +26,25 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual ~BasePartialHashIndexImpl() = default;
 
-  virtual size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) { return 0; }
-  virtual size_t remove(const std::vector<ChunkID>&) { return 0; }
+  virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
+  virtual size_t remove_entries(const std::vector<ChunkID>&);
 
-  virtual Iterator cbegin() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
-  virtual Iterator cend() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
-  virtual Iterator null_cbegin() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
-  virtual Iterator null_cend() const { return Iterator(std::make_shared<BaseTableIndexIterator>()); }
-  virtual size_t memory_consumption() const { return 0; }
+  virtual Iterator cbegin() const;
+  virtual Iterator cend() const;
+  virtual Iterator null_cbegin() const;
+  virtual Iterator null_cend() const;
+  virtual size_t memory_consumption() const;
 
-  virtual IteratorPair equals(const AllTypeVariant& value) const {
-    return std::make_pair(Iterator(std::make_shared<BaseTableIndexIterator>()),
-                          Iterator(std::make_shared<BaseTableIndexIterator>()));
-  }
+  virtual IteratorPair range_equals(const AllTypeVariant& value) const;
 
-  virtual std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const {
-    return std::make_pair(equals(value), equals(value));
-  }
+  virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
 
-  virtual bool is_index_for(const ColumnID column_id) const { return false; }
-  virtual std::set<ChunkID> get_indexed_chunk_ids() const { return std::set<ChunkID>(); }
+  virtual bool is_index_for(const ColumnID column_id) const;
+  virtual std::set<ChunkID> get_indexed_chunk_ids() const;
 };
 
 /* Implementation of a partial hash index, that can index any chunk in a column. You can add and remove chunks to
- * the index using the add and remove methods. This index can drastically improve the performance of an IndexJoin
- * operation.
+ * the index using the insert_entries and remove_entries methods.
  */
 template <typename DataType>
 class PartialHashIndexImpl : public BasePartialHashIndexImpl {
@@ -60,8 +54,8 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) override;
-  size_t remove(const std::vector<ChunkID>&) override;
+  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) override;
+  size_t remove_entries(const std::vector<ChunkID>&) override;
 
   Iterator cbegin() const override;
   Iterator cend() const override;
@@ -69,8 +63,8 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   Iterator null_cend() const override;
   size_t memory_consumption() const override;
 
-  IteratorPair equals(const AllTypeVariant& value) const override;
-  std::pair<IteratorPair, IteratorPair> not_equals(const AllTypeVariant& value) const override;
+  IteratorPair range_equals(const AllTypeVariant& value) const override;
+  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;
 
   std::set<ChunkID> get_indexed_chunk_ids() const override;
 

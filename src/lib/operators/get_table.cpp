@@ -232,7 +232,6 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
-  // Also forward table indexes here.
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc(), stored_table->get_table_indexes());
 }

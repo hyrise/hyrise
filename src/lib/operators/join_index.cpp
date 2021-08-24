@@ -12,7 +12,7 @@
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -175,18 +175,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           // as we do not want to spend time on evaluating the best index inside of this join loop
           const auto& index = indexes.front();
 
-          // Scan all chunks from the probe side input
-          const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-          for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
-            const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
-            Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+          _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
+            _reference_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index,
+                                                     reference_segment_pos_list);
+          });
 
-            const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-            segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
-              _reference_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index,
-                                                       reference_segment_pos_list);
-            });
-          }
           index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
@@ -201,29 +194,34 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
+    // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
+    // Equals or NotEquals are requested, chunk indexes are used. If no chunk index exists, NestedLoopJoin is used as a
+    // fallback solution.
     const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
-    if (!table_indexes.empty() && _secondary_predicates.empty() &&
+    if (!table_indexes.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-      std::set<ChunkID> indexed_chunk_ids;
+      auto indexed_chunk_ids = std::set<ChunkID>{};
 
-      // We assume the first table index to be efficient for an indexed chunk
-      // as we do not want to spend time on evaluating the best index inside of this join loop.
-      // Thus, the first table index is selected and if a table index follows that indexes an already seen chunks, this
-      // table index is ignored.
+      // We assume the first table index to be efficient for an indexed chunk as we do not want to spend time evaluating
+      // the best index inside of this join loop. Thus, the first table index is selected and if a table index follows
+      // that indexes an already seen chunk, this table index is ignored.
       for (const auto& table_index : table_indexes) {
         const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
 
         if (!indexed_chunk_ids.empty()) {
-          auto indexed_chunk_ids_itr = indexed_chunk_ids.begin();
-          auto indexed_chunk_ids_in_index_itr = indexed_chunk_ids_in_index.begin();
-          while (indexed_chunk_ids_itr != indexed_chunk_ids.end() &&
-                 indexed_chunk_ids_in_index_itr != indexed_chunk_ids_in_index.end()) {
-            if (*indexed_chunk_ids_itr < *indexed_chunk_ids_in_index_itr) {
-              indexed_chunk_ids_itr++;
-            } else if (*indexed_chunk_ids_in_index_itr < *indexed_chunk_ids_itr) {
-              indexed_chunk_ids_in_index_itr++;
+          // We iterate through the sorted sets step-by-step until we find one entry that both sets share. If this is
+          // the case, we can stop the search early, because the sets are not disjoint. Using std::set_intersection is
+          // not optimal, because this method would not stop early and also create a collection of the intersection.
+          auto indexed_chunk_ids_iter = indexed_chunk_ids.begin();
+          auto indexed_chunk_ids_in_index_iter = indexed_chunk_ids_in_index.begin();
+          while (indexed_chunk_ids_iter != indexed_chunk_ids.end() &&
+                 indexed_chunk_ids_in_index_iter != indexed_chunk_ids_in_index.end()) {
+            if (*indexed_chunk_ids_iter < *indexed_chunk_ids_in_index_iter) {
+              indexed_chunk_ids_iter++;
+            } else if (*indexed_chunk_ids_in_index_iter < *indexed_chunk_ids_iter) {
+              indexed_chunk_ids_in_index_iter++;
             } else {
               // sets are not disjoint => at least one chunk would be indexed twice => do not use this table index
               continue;
@@ -233,27 +231,20 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
         indexed_chunk_ids.insert(indexed_chunk_ids_in_index.begin(), indexed_chunk_ids_in_index.end());
 
-        // Scan all chunks from the probe side input
-        const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-        for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
-          const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
-          Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+        _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
+          _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
+        });
 
-          const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-          segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
-            _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
-          });
-        }
         index_joining_duration += timer.lap();
         join_index_performance_data.chunks_scanned_with_index++;
       }
 
-      // Check if chunk was indexed in one of the table indexes, thus no need to join it again.
-      // Otherwise perform NestedLoopJoin on the not-indexed chunk.
-      auto indexed_chunk_ids_itr = indexed_chunk_ids.begin();
+      // Check if chunk was indexed in one of the table indexes, thus no need to join it again. Otherwise perform
+      // NestedLoopJoin on the not-indexed chunk.
+      auto indexed_chunk_ids_iter = indexed_chunk_ids.begin();
       for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
-        if (*indexed_chunk_ids_itr == index_side_chunk_id && indexed_chunk_ids_itr != indexed_chunk_ids.end()) {
-          indexed_chunk_ids_itr++;
+        if (*indexed_chunk_ids_iter == index_side_chunk_id && indexed_chunk_ids_iter != indexed_chunk_ids.end()) {
+          indexed_chunk_ids_iter++;
           continue;
         } else {
           _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
@@ -270,21 +261,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         const auto& indexes =
             index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
         if (!indexes.empty()) {
-          // We assume the first index to be efficient for our join
-          // as we do not want to spend time on evaluating the best index inside of this join loop
+          // We assume the first index to be efficient for our join as we do not want to spend time on evaluating the
+          // best index inside of this join loop.
           const auto& index = indexes.front();
 
-          // Scan all chunks from the probe side input
-          const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-          for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
-            const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
-            Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+          _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
+            _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
+          });
 
-            const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-            segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
-              _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
-            });
-          }
           index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
@@ -333,6 +317,20 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   return _build_output_table(std::move(chunks));
 }
 
+template <typename Functor>
+void JoinIndex::_scan_probe_side_input(const Functor& functor) {
+  // Scan all chunks from the probe side input
+  const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
+  for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+    const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+    const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
+    segment_with_iterators(
+        *probe_segment, [&](auto probe_iter, const auto probe_end) { functor(probe_iter, probe_end, probe_chunk_id); });
+  }
+}
+
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
@@ -369,8 +367,8 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   join_index_performance_data.chunks_scanned_without_index++;
 }
 
-// join loop that joins two segments of two columns using an iterator for the probe side,
-// and a table index for the index side
+// Join loop that joins two segments of two columns using an iterator for the probe side,
+// and a table index for the index side.
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                           const ChunkID probe_chunk_id,
@@ -379,6 +377,7 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
     const auto probe_side_position = *probe_iter;
 
     std::vector<TableIndexRange> index_ranges{};
+    // Index ranges can consist of a single range (e.g. Equals) or two independent ranges at max (e.g. NotEquals).
     index_ranges.reserve(2);
 
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
@@ -394,14 +393,15 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
           case PredicateCondition::Equals: {
-            const auto [index_begin, index_end] = table_index->equals(probe_side_position.value());
+            const auto [index_begin, index_end] = table_index->range_equals(probe_side_position.value());
             index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
             break;
           }
           case PredicateCondition::NotEquals: {
-            const auto [part1, part2] = table_index->not_equals(probe_side_position.value());
-            index_ranges.emplace_back(TableIndexRange{part1.first, part1.second});
-            index_ranges.emplace_back(TableIndexRange{part2.first, part2.second});
+            const auto [not_equals_range_left, not_equals_range_right] =
+                table_index->range_not_equals(probe_side_position.value());
+            index_ranges.emplace_back(TableIndexRange{not_equals_range_left.first, not_equals_range_left.second});
+            index_ranges.emplace_back(TableIndexRange{not_equals_range_right.first, not_equals_range_right.second});
             break;
           }
           default: {
@@ -416,12 +416,12 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
   }
 }
 
-// join loop that joins two segments of two columns using an iterator for the probe side,
-// and an index for the index side
+// Join loop that joins two segments of two columns using an iterator for the probe side,
+// and an index for the index side.
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                     const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                    const std::shared_ptr<AbstractIndex>& index) {
+                                                    const std::shared_ptr<AbstractChunkIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
@@ -434,7 +434,7 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractIndex>& index,
+    const std::shared_ptr<AbstractChunkIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     RowIDPosList index_scan_pos_list;
@@ -461,7 +461,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                           const std::shared_ptr<AbstractIndex>& index) const {
+                                                           const std::shared_ptr<AbstractChunkIndex>& index) const {
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
 
@@ -478,8 +478,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   }
 
   if (!probe_side_position.is_null()) {
-    auto range_begin = AbstractIndex::Iterator{};
-    auto range_end = AbstractIndex::Iterator{};
+    auto range_begin = AbstractChunkIndex::Iterator{};
+    auto range_end = AbstractChunkIndex::Iterator{};
 
     switch (_adjusted_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
@@ -527,9 +527,9 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   return index_ranges;
 }
 
-void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
-                                const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
-                                const ChunkID index_chunk_id) {
+void JoinIndex::_append_matches(const AbstractChunkIndex::Iterator& range_begin,
+                                const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {
@@ -539,14 +539,14 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  // Remember the matches for non-inner joins
+  // Remember the matches for non-inner joins.
   if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
 
   if (!is_semi_or_anti_join) {
-    // we replicate the probe side value for each index side value
+    // We replicate the probe side value for each index side value.
     std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
 
     std::transform(range_begin, range_end, std::back_inserter(*_index_pos_list),
@@ -576,14 +576,14 @@ void JoinIndex::_append_matches_table_index(const AbstractTableIndex::Iterator& 
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  // Remember the matches for non-inner joins
+  // Remember the matches for non-inner joins.
   if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
 
   if (!is_semi_or_anti_join) {
-    // we replicate the probe side value for each index side value
+    // We replicate the probe side value for each index side value.
     std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
 
     std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));

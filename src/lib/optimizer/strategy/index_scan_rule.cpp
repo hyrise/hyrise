@@ -47,7 +47,7 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
         const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
         const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
 
-        const auto indexes_statistics = stored_table_node->indexes_statistics();
+        const auto indexes_statistics = stored_table_node->chunk_indexes_statistics();
         for (const auto& index_statistics : indexes_statistics) {
           if (_is_index_scan_applicable(index_statistics, predicate_node)) {
             predicate_node->scan_type = ScanType::IndexScan;
@@ -60,11 +60,11 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
   });
 }
 
-bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_statistics,
+bool IndexScanRule::_is_index_scan_applicable(const ChunkIndexStatistics& index_statistics,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_segment_index(index_statistics)) return false;
 
-  if (index_statistics.type != SegmentIndexType::GroupKey) return false;
+  if (index_statistics.type != ChunkIndexType::GroupKey) return false;
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
@@ -88,7 +88,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
-bool IndexScanRule::_is_single_segment_index(const IndexStatistics& index_statistics) {
+bool IndexScanRule::_is_single_segment_index(const ChunkIndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
 }
 

@@ -2,18 +2,18 @@
 
 #include <string>
 
-#include "segment_index_type.hpp"
+#include "chunk_index_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-struct IndexStatistics {
+struct ChunkIndexStatistics {
   std::vector<ColumnID> column_ids;
   std::string name;
-  SegmentIndexType type;
+  ChunkIndexType type;
 };
 
 // For googletest
-bool operator==(const IndexStatistics& left, const IndexStatistics& right);
+bool operator==(const ChunkIndexStatistics& left, const ChunkIndexStatistics& right);
 
 }  // namespace opossum

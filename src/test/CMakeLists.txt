@@ -233,7 +233,7 @@ set(
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
-)
+    lib/storage/index/index_scope.hpp)
 
 set (
     SYSTEM_TEST_SOURCES
