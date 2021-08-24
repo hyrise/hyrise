@@ -61,20 +61,21 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 void Table::delete_column(ColumnID column_id) {
   const auto chunk_count = _chunks.size();
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = std::atomic_load(&_chunks[chunk_id]);
     if (!chunk) continue;
+
+    // before deleting a segment, we have to explicitly remove all indexes for this segment
+    //    for(auto index : chunk->get_indexes({column_id})) {
+    //        chunk->remove_index(index);
+    //      }
+    //
+    //    chunk->delete_segment(column_id);
+    //    }
     chunk->delete_segment(column_id);
   }
 
-  // Delete index if index refers column which will be deleted
-  const auto index_count = _indexes.size();
-  for (auto index_id = size_t{0}; index_id < index_count; ++index_id) {
-    auto index = _indexes.at(index_id);
-    if(std::find(index.column_ids.begin(), index.column_ids.end(), column_id) != index.column_ids.end()) {
-      _indexes.erase(_indexes.begin() + index_id);
-    }
-  }
   _column_definitions.erase(_column_definitions.begin() + column_id);
 }
 

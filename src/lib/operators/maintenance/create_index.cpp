@@ -22,7 +22,11 @@ CreateIndex::CreateIndex(const std::string& init_index_name,
       if_not_exists(init_if_not_exists),
       table_name(init_table_name),
       column_ids(init_column_ids)
-    {}
+    {
+  if(init_if_not_exists) {
+    Assert(!init_index_name.empty(), "An index name must be provided when create index is called with if not exists");
+  }
+}
 
 const std::string& CreateIndex::name() const {
   static const auto name = std::string{"CreateIndex"};

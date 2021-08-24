@@ -150,7 +150,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateIndex:        return _translate_create_index_node(node);
-    case LQPNodeType::AlterDropColumn:    return _translate_alter_drop_column_node(node);
+    case LQPNodeType::AlterTableDropColumn:    return _translate_alter_drop_column_node(node);
     case LQPNodeType::DropIndex:          return _translate_drop_index_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
@@ -527,7 +527,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_no
   const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterDropColumnNode>(node);
   const auto input_node = alter_drop_column_node->left_input();
 
-  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name, alter_drop_column_node->if_exists);
+  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name, alter_drop_column_node->if_column_exists);
 
 }
 
@@ -535,7 +535,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_index_node = std::dynamic_pointer_cast<DropIndexNode>(node);
 
-  return std::make_shared<DropIndex>(drop_index_node->index_name, drop_index_node->if_exists, drop_index_node->table_name);
+  return std::make_shared<DropIndex>(drop_index_node->index_name, drop_index_node->if_exists);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

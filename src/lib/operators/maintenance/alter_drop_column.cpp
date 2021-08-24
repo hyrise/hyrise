@@ -7,6 +7,8 @@
 #include "operators/insert.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 
 
 namespace opossum {
@@ -18,7 +20,7 @@ AlterDropColumn::AlterDropColumn(const std::string& init_table_name, const std::
     {}
 
 const std::string& AlterDropColumn::name() const {
-  static const auto name = std::string{"AlterDropColumn"};
+  static const auto name = std::string{"AlterTableDropColumn"};
   return name;
 }
 
@@ -29,14 +31,30 @@ std::string AlterDropColumn::description(DescriptionMode description_mode) const
 }
 
 std::shared_ptr<const Table> AlterDropColumn::_on_execute(std::shared_ptr<TransactionContext> context) {
-  if(if_exists) {
-    if(_column_exists_on_table(target_table_name, target_column_name)) {
-      Hyrise::get().storage_manager.drop_column_from_table(target_table_name, target_column_name);
-    } else {
-      std::cout << "Column " + target_column_name + " does not exist on Table " + target_table_name;
+
+  if(_column_exists_on_table(target_table_name, target_column_name)) {
+    auto target_table = Hyrise::get().storage_manager.get_table(target_table_name);
+    auto indexes = target_table->indexes_statistics();
+    auto target_column_id = target_table->column_id_by_name(target_column_name);
+
+    for(auto index : indexes) {
+      auto column_ids = index.column_ids;
+      if (std::find(column_ids.begin(), column_ids.end(), target_column_id) != column_ids.end()) {
+        // remove index if index is defined on column
+        target_table->remove_index(index.name);
+      }
     }
+
+    target_table->delete_column(target_column_id);
+    target_table->set_table_statistics(TableStatistics::from_table(*target_table));
+    generate_chunk_pruning_statistics(target_table);
+
   } else {
-    Hyrise::get().storage_manager.drop_column_from_table(target_table_name, target_column_name);
+    if(if_exists) {
+      std::cout << "Column " + target_column_name + " does not exist on Table " + target_table_name;
+    } else {
+      throw "No such column";
+    }
   }
 
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table

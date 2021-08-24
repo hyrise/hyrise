@@ -13,7 +13,7 @@ class AlterDropColumnNode : public EnableMakeForLQPNode<AlterDropColumnNode>, pu
 
   const std::string table_name;
   const std::string column_name;
-  const bool if_exists;
+  const bool if_column_exists;
 
  protected:
   size_t _on_shallow_hash() const override;

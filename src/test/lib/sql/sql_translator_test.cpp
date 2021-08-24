@@ -2538,21 +2538,21 @@ TEST_F(SQLTranslatorTest, DropTableIfExists) {
 }
 
 TEST_F(SQLTranslatorTest, DropIndex) {
-  const auto query = "DROP INDEX my_index ON int_int_int";
+  const auto query = "DROP INDEX my_index";
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = DropIndexNode::make("my_index", false, "int_int_int");
+  const auto expected_lqp = DropIndexNode::make("my_index", false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DropIndexIfExists) {
-  const auto query = "DROP INDEX IF EXISTS my_index ON int_int_int";
+  const auto query = "DROP INDEX IF EXISTS my_index";
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = DropIndexNode::make("my_index", true, "int_int_int");
+  const auto expected_lqp = DropIndexNode::make("my_index", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
