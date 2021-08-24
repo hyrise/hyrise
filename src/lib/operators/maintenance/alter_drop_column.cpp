@@ -55,7 +55,7 @@ void AlterDropColumn::_on_set_parameters(const std::unordered_map<ParameterID, A
 
 bool AlterDropColumn::_column_exists_on_table(const std::string& table_name, const std::string& column_name) {
   auto column_defs = Hyrise::get().storage_manager.get_table(table_name)->column_definitions();
-  for(auto col_def : column_defs) {
+  for(auto column_def : column_defs) {
     if(col_def.name == column_name) { return true; }
   }
   return false;
