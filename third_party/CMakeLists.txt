@@ -12,7 +12,8 @@ set(CMAKE_UNITY_BUILD "OFF")
 add_library(
     sqlparser
 
-        sql-parser/src/parser/flex_lexer.cpp
+    sql-parser/src/parser/bison_parser.cpp
+    sql-parser/src/parser/flex_lexer.cpp
     sql-parser/src/sql/Expr.cpp
     sql-parser/src/sql/PrepareStatement.cpp
     sql-parser/src/sql/SQLStatement.cpp
