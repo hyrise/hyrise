@@ -130,7 +130,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
     }
 
-    // Subtract the reference offset from the original offset (create "zig-zag" pattern).
+    // Subtract the reference offset from the original offsets.
     for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
 
@@ -155,7 +155,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
                                                      const PolymorphicAllocator<T>& allocator) {
     auto values = pmr_vector<T>{};
     auto null_values = pmr_vector<bool>{allocator};
-    std::optional<pmr_vector<bool>> null_values_optional = std::nullopt;
+    std::optional<pmr_vector<bool>> null_values_optional;
 
     // Fill values and null_values vector accordingly.
     bool has_null_values = _collect_values(segment_iterable, values, null_values);
@@ -181,7 +181,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // "shrink_to_fit" to the total size of the compressed strings.
     compressed_values.resize(aggregated_offset_sum);
 
-    // Create reference offsets as well as create the "zig-zag" pattern in offsets
+    // Create reference offsets and substract them from offsets
     // in order to achieve larger vector compression rates.
     uint8_t reference_offsets_size = 8;
     pmr_vector<uint64_t> reference_offsets{reference_offsets_size, 0, allocator};

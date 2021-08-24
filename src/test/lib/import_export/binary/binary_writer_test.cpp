@@ -75,11 +75,51 @@ TEST_F(BinaryWriterTest, FSSTSingleChunk) {
 
   EXPECT_TRUE(file_exists(filename));
 
-  // TODO(anyone): Cannot test BinaryWriter currently because FSST creates different symbol table in each run;
-  // make sure BinaryWriter produces constant results across different runs;
-  // use static file for the check (without parser).
+  // TODO(anyone): Cannot compare against pre-generated binary files currently because FSST creates a different
+  // symbol table in each run. Make sure BinaryWriter produces constant results across different runs.
   auto read_table = BinaryParser::parse(filename);
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
+}
 
+TEST_F(BinaryWriterTest, FSSTNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({opossum::NULL_VALUE});
+  table->append({"test"});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  auto read_table = BinaryParser::parse(filename);
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
+}
+
+TEST_F(BinaryWriterTest, FSSTMultipleChunks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  auto read_table = BinaryParser::parse(filename);
   EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }
 
