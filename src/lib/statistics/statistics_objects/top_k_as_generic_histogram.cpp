@@ -26,7 +26,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
   std::vector<T> top_k_names(k);
   std::vector<HistogramCountType> top_k_counts(k);
 
-  // Bring Top K values (with highest occurrences counts) to the front (first k elements) of the value distribution.
+  // Bring Top K values (with highest occurrences counts) to the front (first K elements) of the value distribution.
   auto top_k_front_value_distribution = value_distribution;
   std::nth_element(top_k_front_value_distribution.begin(), top_k_front_value_distribution.begin() + k,
                    top_k_front_value_distribution.end(),
@@ -41,15 +41,16 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
               return left_value_count.first < right_value_count.first;
             });
 
-  for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
-    top_k_names[top_k_index] = top_k_front_value_distribution[top_k_index].first;
-    top_k_counts[top_k_index] = top_k_front_value_distribution[top_k_index].second;
-  }
-
   // Remove Top K values from value distribution
   for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
+    const auto top_k_name = top_k_front_value_distribution[top_k_index].first;
+    const auto top_k_count = top_k_front_value_distribution[top_k_index].second;
+
+    top_k_names[top_k_index] = top_k_name;
+    top_k_counts[top_k_index] = top_k_count;
+
     const auto value_distribution_it = std::remove(value_distribution.begin(), value_distribution.end(),
-                                        std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
+                                        std::make_pair(top_k_name, top_k_count));
     value_distribution.erase(value_distribution_it, value_distribution.end());
   }
 
@@ -71,12 +72,9 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
 
   const auto non_top_k_distinct_count = value_distribution.size();
   const auto count_per_non_top_k_value =
-      non_top_k_distinct_count != 0 ? non_top_k_count / static_cast<float>(non_top_k_distinct_count) : BinID{0};
+      (non_top_k_distinct_count != 0) ? non_top_k_count / static_cast<float>(non_top_k_distinct_count) : BinID{0};
 
   // Construct Generic Histogram with single bins for Top K Values.
-  // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,
-  // using the calculated estimation of count_per_non_top_k_value.
-
   auto current_minimum_index = 0u;
   auto current_maximum_index = non_top_k_distinct_count - 1;
 
@@ -89,8 +87,6 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
 
 
     const auto prev_position = std::prev(value_dist_lower_bound) - value_distribution.begin();
-    // For each Top K value a Non-Top K values bin between the previous Top K value and itself,
-    // as well as a Top K value bin are created.
 
     // We can skip creating a Non-Top K value bin,
     // if there are no Non-Top K values between the previous and the current Top K value.
