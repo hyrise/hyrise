@@ -275,6 +275,56 @@ TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
+TEST_F(BinaryParserTest, FSSTSingleChunk) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({"test"});
+
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, FSSTNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({"test"});
+  expected_table->append({opossum::NULL_VALUE});
+
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, FSSTMultipleChunks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({"test"});
+
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
 TEST_F(BinaryParserTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
