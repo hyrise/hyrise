@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "storage/chunk.hpp"
 #include "table_index_type.hpp"
 #include "types.hpp"
 
