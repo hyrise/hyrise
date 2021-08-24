@@ -1,10 +1,6 @@
 #include "generic_histogram.hpp"
 
-#include <memory>
 #include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
 namespace opossum {
 
