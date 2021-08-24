@@ -5,6 +5,7 @@
 #include <iterator>
 #include <numeric>
 
+#include "equal_distinct_count_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 
 namespace opossum {
