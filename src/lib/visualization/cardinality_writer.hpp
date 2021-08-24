@@ -17,7 +17,7 @@
 namespace opossum {
 
 /**
- * Class for writing the estimated output cardinalities cardinalities of each node in a LQP
+ * Class for writing the estimated output cardinalities of each node in a LQP
  * and its corresponding PQP's observed output cardinalities into a CSV file.
  * The cardinality writer currently hooks into the lqp and pqp visualization workflow.
  * For cardinality estimation therefore the visualization flag needs to be set when running the benchmark.
