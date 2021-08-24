@@ -1328,7 +1328,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql
 
   Assert(Hyrise::get().storage_manager.has_table(drop_statement.name), "table not existent");
 
-  return DropIndexNode::make(drop_statement.index_name, drop_statement.ifExists, drop_statement.name);
+  return DropIndexNode::make(drop_statement.indexName, drop_statement.ifExists, drop_statement.name);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
@@ -1409,7 +1409,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     auto table = Table::create_dummy_table(column_definitions);
     input_node = StaticTableNode::make(table);
 
-    for (auto tableKeyConstraint : *create_statement.tableKeyConstraints) {
+    for (auto tableKeyConstraint : *create_statement.tableConstraints) {
       std::unordered_set<ColumnID> column_ids;
       for(auto name : *tableKeyConstraint->columnNames) {
         auto column_id = table->column_id_by_name(std::basic_string<char>{name});
@@ -1449,7 +1449,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_alter(const hsql::AlterStatement& alter_statement) {
   switch (alter_statement.type) {
     case hsql::AlterType::kAlterDropColumn:
-      return AlterDropColumnNode::make(alter_statement.name, alter_statement.column_name, alter_statement.if_exists);
+      return AlterDropColumnNode::make(alter_statement.name, alter_statement.columnName, alter_statement.ifExists);
   }
   Fail("Invalid enum value");
 }
