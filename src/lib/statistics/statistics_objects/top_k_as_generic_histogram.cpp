@@ -94,7 +94,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
 
     // We can skip creating a Non-Top K value bin,
     // if there are no Non-Top K values between the previous and the current Top K value.
-    if (value_dist_lower_bound == value_distribution.begin() &&
+    if (value_dist_lower_bound != value_distribution.begin() &&
           prev_position >= current_minimum_index) {
       // Create Non-Top K values bin
       current_maximum_index = prev_position;
