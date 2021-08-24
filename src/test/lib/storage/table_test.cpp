@@ -170,7 +170,6 @@ TEST_F(StorageTableTest, DeleteColumn) {
   EXPECT_EQ(t->column_count(), 2u);
   t->delete_column(ColumnID{0});
   EXPECT_EQ(t->column_count(), 1u);
-  EXPECT_EQ(t->column_count(), 1u);
 }
 
 TEST_F(StorageTableTest, DeleteColumnAndIndex) {
@@ -181,7 +180,6 @@ TEST_F(StorageTableTest, DeleteColumnAndIndex) {
 
   t->delete_column(ColumnID{0});
 
-  EXPECT_EQ(t->column_count(), 1u);
   EXPECT_EQ(t->column_count(), 1u);
 
   EXPECT_EQ(t->indexes_statistics().size(), 0u);

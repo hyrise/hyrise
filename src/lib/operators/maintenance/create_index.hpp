@@ -7,6 +7,7 @@
 namespace opossum {
 
 // maintenance operator for the "CREATE INDEX" sql statement
+// used index types: GroupKeyIndex, CompositeGroupKeyIndex
 class CreateIndex : public AbstractReadWriteOperator {
  public:
   CreateIndex(const std::string& init_index_name,

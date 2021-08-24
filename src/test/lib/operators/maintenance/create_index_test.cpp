@@ -59,8 +59,7 @@ TEST_F(CreateIndexTest, Execute) {
   check_index_exists_correctly(create_index, test_table);
 }
 
-TEST_F(CreateIndexTest, TableExists) {
-  // TODO: is this test really doing what we think it does?
+TEST_F(CreateIndexTest, TableIsNotCompressed) {
   create_index = std::make_shared<CreateIndex>(index_name, true, table_name, column_ids);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -143,6 +142,7 @@ TEST_F(CreateIndexTest, ExecuteMultipleColumns) {
   check_index_exists_correctly(create_index, test_table);
 }
 
-TEST_F(CreateIndexTest, ExecuteWithIfNotExistsWithoutName) {}
-  // TODO implement test case
+TEST_F(CreateIndexTest, ExecuteWithIfNotExistsWithoutName) {
+  EXPECT_THROW(std::make_shared<CreateIndex>("", true, table_name, column_ids), std::logic_error);
+}
 }  // namespace opossum

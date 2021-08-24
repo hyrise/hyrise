@@ -31,11 +31,11 @@ std::shared_ptr<AbstractLQPNode> CreateIndexNode::_on_shallow_copy(LQPNodeMappin
 }
 
 bool CreateIndexNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto& create_Index_node = static_cast<const CreateIndexNode&>(rhs);
-  return index_name == create_Index_node.index_name &&
-         if_not_exists == create_Index_node.if_not_exists &&
-         table_name == create_Index_node.table_name &&
-         *column_ids == *(create_Index_node.column_ids);
+  const auto& create_index_node = static_cast<const CreateIndexNode&>(rhs);
+  return index_name == create_index_node.index_name &&
+         if_not_exists == create_index_node.if_not_exists &&
+         table_name == create_index_node.table_name &&
+         *column_ids == *(create_index_node.column_ids);
 }
 
 }  // namespace opossum

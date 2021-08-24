@@ -199,13 +199,16 @@ class Table : private Noncopyable {
     _indexes.emplace_back(index_statistics);
   }
 
-  void delete_index_by_name(const std::string& name, const bool if_exists) {
+  // Removes index with index_name from all segments of all chunks of the table
+  // Returns true if the index with name index_name exists and was deleted
+  // Returns false if there is no index with name index_name and nothing was deleted
+  bool remove_index(const std::string& index_name) {
     const auto chunk_count = _chunks.size();
 
     // find index statistics
     auto index_stats = std::find_if(
         _indexes.begin(), _indexes.end(),
-        [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
+        [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name;});
 
     if(index_stats != std::end(_indexes)){
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -219,21 +222,11 @@ class Table : private Noncopyable {
       // remove index statistics
       auto new_end = std::remove_if(
           _indexes.begin(), _indexes.end(),
-          [&name](const IndexStatistics& index_statistics) { return index_statistics.name == name;});
+          [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name;});
       _indexes.erase(new_end, _indexes.end());
-
-    } else {
-      Assert(if_exists, "No index with name " + name);
-      std::cout << "No index with name '" << name << "' exists.";
-
-      //if(if_exists) {
-      //  std::cout << "No index with name '" << name << "' exists.";
-      //} else {
-      //  Fail("No index with name " + name);
-      //}
-
-      //if_exists ? std::cout << "No index with name '" << name << "' exists." : throw("No index with name " + name);
+      return true;
     }
+    return false;
   }
 
   /**

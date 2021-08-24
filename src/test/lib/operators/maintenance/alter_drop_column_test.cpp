@@ -36,8 +36,8 @@ class AlterTableColumnTest : public BaseTest {
 };
 
 TEST_F(AlterTableColumnTest, NameAndDescription) {
-  EXPECT_EQ(alter_drop_column->name(), "AlterDropColumn");
-  EXPECT_EQ(alter_drop_column->description(DescriptionMode::SingleLine), "AlterDropColumn 'TestTable'('b')");
+  EXPECT_EQ(alter_drop_column->name(), "AlterTableDropColumn");
+  EXPECT_EQ(alter_drop_column->description(DescriptionMode::SingleLine), "AlterTableDropColumn 'TestTable'('b')");
 }
 
 TEST_F(AlterTableColumnTest, Execute) {

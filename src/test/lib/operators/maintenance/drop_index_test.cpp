@@ -48,14 +48,14 @@ class DropIndexTest: public BaseTest {
 };
 
 TEST_F(DropIndexTest, NameAndDescription) {
-  auto drop_index = std::make_shared<DropIndex>(index_name, true, table_name);
+  auto drop_index = std::make_shared<DropIndex>(index_name, true);
   EXPECT_EQ(drop_index->name(), "DropIndex");
-  EXPECT_EQ(drop_index->description(DescriptionMode::SingleLine), "DropIndex 'IF EXISTS' 'TestIndex' ON 'TestTable'");
+  EXPECT_EQ(drop_index->description(DescriptionMode::SingleLine), "DropIndex 'IF EXISTS' 'TestIndex'");
 }
 
 TEST_F(DropIndexTest, IndexStatisticsEmpty) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
-  auto drop_index = std::make_shared<DropIndex>(index_name, false, table_name);
+  auto drop_index = std::make_shared<DropIndex>(index_name, false);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   drop_index->set_transaction_context(context);
@@ -69,13 +69,12 @@ TEST_F(DropIndexTest, FailOnWrongIndexName) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
-  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", false, table_name);
+  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", false);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   drop_index->set_transaction_context(context);
 
-  // TODO: come up with way to test this without aborting test execution
-  // EXPECT_THROW(drop_index->execute(), std::logic_error);
+  EXPECT_THROW(drop_index->execute(), std::logic_error);
   context->rollback(RollbackReason::Conflict);
 }
 
@@ -83,7 +82,7 @@ TEST_F(DropIndexTest, NoFailOnWrongIndexNameWithExistsFlag) {
   EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
-  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", true, table_name);
+  auto drop_index = std::make_shared<DropIndex>("WrongIndexName", true);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   drop_index->set_transaction_context(context);

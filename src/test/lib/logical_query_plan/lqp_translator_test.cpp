@@ -1100,7 +1100,7 @@ TEST_F(LQPTranslatorTest, DropTable) {
 }
 
 TEST_F(LQPTranslatorTest, DropIndex) {
-  const auto lqp = DropIndexNode::make("myindex", false, "t");
+  const auto lqp = DropIndexNode::make("myindex", false);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
@@ -1110,7 +1110,6 @@ TEST_F(LQPTranslatorTest, DropIndex) {
   const auto drop_table = std::dynamic_pointer_cast<DropIndex>(pqp);
   EXPECT_EQ(drop_table->index_name, "myindex");
   EXPECT_EQ(drop_table->if_exists, false);
-  EXPECT_EQ(drop_table->table_name, "t");
 
 }
 

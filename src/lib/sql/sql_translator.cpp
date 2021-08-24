@@ -1326,9 +1326,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
 
-  Assert(Hyrise::get().storage_manager.has_table(drop_statement.name), "table not existent");
-
-  return DropIndexNode::make(drop_statement.indexName, drop_statement.ifExists, drop_statement.name);
+  return DropIndexNode::make(drop_statement.index_name, drop_statement.ifExists);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
