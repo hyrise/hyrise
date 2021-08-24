@@ -44,7 +44,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   // Open debug CSV file for PQP and LQP node number information, which can be used to identify possible
   // benchmark items with mismatched nodes and for manual correction of the matching.
   std::ofstream output_debug;
-  output_debug.open("./benchmark_cardinality_estimation_debug_info.csv", std::ios_base::app);
+  output_debug.open("./benchmark_cardinality_estimation_mismatch_info.csv", std::ios_base::app);
 
   // If files are empty, write CSV headers.
   // Use semicolon as seperator instead of comma to be able to work with database values containing commas
