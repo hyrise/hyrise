@@ -4,6 +4,10 @@
 #include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
+ 
+
+ // This node type represents the ALTER TABLE DROP COLUMN management command.
+ 
 
 class AlterDropColumnNode : public EnableMakeForLQPNode<AlterDropColumnNode>, public AbstractNonQueryNode {
  public:
