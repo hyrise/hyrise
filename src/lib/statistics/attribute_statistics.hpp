@@ -7,7 +7,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
-#include "statistics/statistics_objects/top_k_as_generic_histogram.hpp"
 #include "types.hpp"
 
 namespace opossum {

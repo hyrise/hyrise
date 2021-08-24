@@ -3,13 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
-#include <memory>
 #include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "equal_distinct_count_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 
 namespace opossum {
@@ -52,16 +47,16 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
 
   // Remove Top K values from value distribution
   for (auto top_k_index = 0u; top_k_index < k; top_k_index++) {
-    auto value_distribution_it = remove(value_distribution.begin(), value_distribution.end(),
+    const auto value_distribution_it = std::remove(value_distribution.begin(), value_distribution.end(),
                                         std::make_pair(top_k_names[top_k_index], top_k_counts[top_k_index]));
     value_distribution.erase(value_distribution_it, value_distribution.end());
   }
 
-  // Each Top K value is modeled as one bin with height as its stored count.
+  // Each Top K value is represented by a single bin whose height refers to the value's occurrences.
   // Between two Top K value bins, one bin is created for the Non-Top K values between them.
   // Together with a potential last bin after the last Top K value we have a maximum bin count of 2 * K + 1.
   // If there are no more values stored in value_distribution after the Top K values have been removed,
-  // we only have Top K values and therefore need exactly k bins.
+  // we only have Top K values and therefore need exactly K bins.
   const auto bin_count = value_distribution.empty() ? BinID{k} : BinID{2 * top_k_names.size() + 1};
 
   GenericHistogramBuilder<T> builder{bin_count, domain};
@@ -73,33 +68,35 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
                         return current_count + value_count.second;
                       });
 
-  const auto bin_distinct_count = value_distribution.size();
+  const auto non_top_k_distinct_count = value_distribution.size();
   const auto count_per_non_top_k_value =
-      bin_distinct_count != 0 ? non_top_k_count / static_cast<float>(bin_distinct_count) : BinID{0};
+      non_top_k_distinct_count != 0 ? non_top_k_count / static_cast<float>(non_top_k_distinct_count) : BinID{0};
 
   // Construct Generic Histogram with single bins for Top K Values.
   // For Non-Top K Values, one bin is created for all Non-Top K values between two Top K bins,
   // using the calculated estimation of count_per_non_top_k_value.
 
   auto current_minimum_index = 0u;
-  auto current_maximum_index = value_distribution.size() - 1;
+  auto current_maximum_index = non_top_k_distinct_count - 1;
 
-  for (auto top_k_index = 0ul, top_k_size = top_k_names.size(); top_k_index < top_k_size; top_k_index++) {
+  for (auto top_k_index = 0ul, top_k_size = k; top_k_index < top_k_size; top_k_index++) {
     const auto current_top_k_value = top_k_names[top_k_index];
 
-    auto value_dist_lower_bound = std::lower_bound(
+    const auto value_dist_lower_bound = std::lower_bound(
         value_distribution.begin() + current_minimum_index, value_distribution.end(), current_top_k_value,
         [](const auto value_count_pair, auto value) { return value_count_pair.first < value; });
 
+
+    const auto prev_position = std::prev(value_dist_lower_bound) - value_distribution.begin();
     // For each Top K value a Non-Top K values bin between the previous Top K value and itself,
     // as well as a Top K value bin are created.
 
     // We can skip creating a Non-Top K value bin,
     // if there are no Non-Top K values between the previous and the current Top K value.
-    if (!(value_dist_lower_bound == value_distribution.begin() ||
-          std::prev(value_dist_lower_bound) - value_distribution.begin() < current_minimum_index)) {
+    if (value_dist_lower_bound == value_distribution.begin() &&
+          prev_position >= current_minimum_index) {
       // Create Non-Top K values bin
-      current_maximum_index = std::prev(value_dist_lower_bound) - value_distribution.begin();
+      current_maximum_index = prev_position;
       const auto current_distinct_values = current_maximum_index - current_minimum_index + 1;
       const auto current_bin_height = static_cast<float>(current_distinct_values) * count_per_non_top_k_value;
 
