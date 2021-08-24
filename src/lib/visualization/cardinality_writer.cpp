@@ -1,12 +1,7 @@
 #include "cardinality_writer.hpp"
 
 #include <fstream>
-#include <iomanip>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
@@ -39,9 +34,8 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
 
   // We assume that when we traverse LQP and PQP the same way, we will get the same nodes.
   // All nodes that don't match up are ignored. This works well for the majority of tested LQPs and PQPs.
-  const auto number_nodes = std::min(_lqp_nodes.size(), _pqp_nodes.size());
+  const auto number_nodes = std::min(lqp_nodes_size, pqp_nodes_size);
 
-  // Open estimation CSV file
   // APPEND mode is necessary, since the method will be called multiple times during benchmark execution
   // and the previous results shouldn't be erased.
   std::ofstream output_estimations;
@@ -70,7 +64,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   }
   csv_file.close();
 
-  csv_file.open("./benchmark_cardinality_estimation_debug_info.csv");
+  csv_file.open("./benchmark_cardinality_estimation_mismatch_info.csv");
   if (csv_file.peek() == std::ifstream::traits_type::eof()) {
     output_debug << "Benchmark Item ID"
                  << ";"
@@ -82,11 +76,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
   csv_file.close();
 
   for (auto node = 0u; node < number_nodes; node++) {
-    // Get lqp and pqp node descriptions (for first two columns)
-    const auto lqp_description = _lqp_nodes[node]->description();
-    const auto pqp_description = _pqp_nodes[node]->description();
-
-    // Get estimated and actual output cardinalities (for next columns)
+    // Get estimated and actual output cardinalities
     const auto lqp_row_count = _cardinality_estimator.estimate_cardinality(_lqp_nodes[node]);
 
     auto pqp_row_count = NAN;
@@ -98,14 +88,14 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
 
     // Write benchmark id, node descriptions and cardinalities in CSV
     // Use semicolon as seperator instead of comma to be able to work with database values containing commas
-    output_estimations << benchmark_item_id << ";" << lqp_description << ";" << pqp_description << ";" << lqp_row_count
+    output_estimations << benchmark_item_id << ";" << _lqp_nodes[node]->description() << ";"
+                       << _pqp_nodes[node]->description() << ";" << lqp_row_count
                        << ";" << pqp_row_count << "\n";
   }
 
   // Write debug information about possible different numbers of lqp and pqp nodes
   output_debug << benchmark_item_id << ";" << lqp_nodes_size << ";" << pqp_nodes_size << "\n";
 
-  // Close file handles
   output_estimations.close();
   output_debug.close();
 }
@@ -125,16 +115,15 @@ void CardinalityWriter::_build_lqp_subtree(const std::shared_ptr<AbstractLQPNode
   if (visited_nodes.find(node) != visited_nodes.end()) return;
   visited_nodes.insert(node);
 
-  // Add current node to our container
   _lqp_nodes.push_back(node);
 
   if (node->left_input()) {
-    auto left_input = node->left_input();
+    const auto left_input = node->left_input();
     _build_lqp_subtree(left_input, visited_nodes, visited_sub_queries);
   }
 
   if (node->right_input()) {
-    auto right_input = node->right_input();
+    const auto right_input = node->right_input();
     _build_lqp_subtree(right_input, visited_nodes, visited_sub_queries);
   }
 
@@ -166,16 +155,15 @@ void CardinalityWriter::_build_pqp_subtree(const std::shared_ptr<const AbstractO
   if (visited_ops.find(op) != visited_ops.end()) return;
   visited_ops.insert(op);
 
-  // Add current node to our container
   _pqp_nodes.push_back(op);
 
   if (op->left_input()) {
-    auto left = op->left_input();
+    const auto left = op->left_input();
     _build_pqp_subtree(left, visited_ops);
   }
 
   if (op->right_input()) {
-    auto right = op->right_input();
+    const auto right = op->right_input();
     _build_pqp_subtree(right, visited_ops);
   }
 

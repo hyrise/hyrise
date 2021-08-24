@@ -170,7 +170,7 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
 void BenchmarkSQLExecutor::_write_cardinalities(SQLPipeline& pipeline) {
   const auto& lqps = pipeline.get_optimized_logical_plans();
   const auto& pqps = pipeline.get_physical_plans();
-  auto prefix = *_visualize_prefix;
+  const auto prefix = *_visualize_prefix;
   CardinalityWriter{}.write_cardinalities(lqps, pqps, prefix);
 }
 

@@ -17,7 +17,8 @@
 namespace opossum {
 
 /**
- * Class for writing the output cardinalities of each node in a LQP and its corresponding PQP into a CSV file.
+ * Class for writing the estimated output cardinalities cardinalities of each node in a LQP
+ * and its corresponding PQP's observed output cardinalities into a CSV file.
  * The cardinality writer currently hooks into the lqp and pqp visualization workflow.
  * For cardinality estimation therefore the visualization flag needs to be set when running the benchmark.
  */
@@ -28,16 +29,13 @@ class CardinalityWriter {
 
   /**
    * Writes output cardinalities of each node in PQP rooted at pqp_roots and LQP rooted at lqp_roots into a CSV file 
-   * and adds column which states benchmark_item_id.
+   * and adds a column which states the benchmark_item_id.
    */
   void write_cardinalities(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,
                            const std::vector<std::shared_ptr<AbstractOperator>>& pqp_roots,
                            const std::string& benchmark_item_id);
 
  protected:
-  /**
-   * Methods for traversing LQP and PQP trees.
-   */
   void _build_lqp_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots);
 
   void _build_pqp_graph(const std::vector<std::shared_ptr<AbstractOperator>>& pqp_roots);
