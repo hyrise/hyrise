@@ -294,7 +294,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       // Notes on casting:
       //  As stated in expression_common_type, the division of integer types will result in an integer result as well.
       //  Since COUNT results are always of type integer, the calculated average depends on the data type of SUM,
-      //  which can be floating type or integer. To guarantee correct results, we thus must use a CastExpression.
+      //  which can be floating type or integer. To guarantee correct results, we thus cast to type double.
       replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
     }
   }
