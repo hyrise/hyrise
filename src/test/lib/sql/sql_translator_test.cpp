@@ -10,14 +10,14 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/create_prepared_plan_node.hpp"
-#include "logical_query_plan/create_index_node.hpp"
-#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/alter_drop_column_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
+#include "logical_query_plan/create_index_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -2494,9 +2494,9 @@ TEST_F(SQLTranslatorTest, CreateTableWithTableKeyConstraints) {
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   auto table_key_constraints = std::make_shared<TableKeyConstraints>();
-  std::unordered_set<ColumnID> column_ids {static_table_node->table->column_id_by_name("a_int"), static_table_node->table->column_id_by_name("a_float")};
-  table_key_constraints->push_back(
-      {column_ids, KeyConstraintType::PRIMARY_KEY});
+  std::unordered_set<ColumnID> column_ids{static_table_node->table->column_id_by_name("a_int"),
+                                          static_table_node->table->column_id_by_name("a_float")};
+  table_key_constraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
   table_key_constraints->push_back(
       {{static_table_node->table->column_id_by_name("a_double")}, KeyConstraintType::UNIQUE});
   const auto expected_lqp = CreateTableNode::make("a_table", false, table_key_constraints, static_table_node);
@@ -2506,14 +2506,16 @@ TEST_F(SQLTranslatorTest, CreateTableWithTableKeyConstraints) {
 
 TEST_F(SQLTranslatorTest, CreateTableWithColumnConstraints) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT UNIQUE, a_double DOUBLE NULL PRIMARY KEY, a_string VARCHAR(10) NOT "
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT UNIQUE, a_double DOUBLE NULL PRIMARY KEY, "
+      "a_string VARCHAR(10) NOT "
       "NULL)");
 
-  const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
-                                                         {"a_long", DataType::Long, false},
-                                                         {"a_float", DataType::Float, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::UNIQUE})},
-                                                         {"a_double", DataType::Double, true, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})},
-                                                         {"a_string", DataType::String, false}};
+  const auto column_definitions = TableColumnDefinitions{
+      {"a_int", DataType::Int, false},
+      {"a_long", DataType::Long, false},
+      {"a_float", DataType::Float, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::UNIQUE})},
+      {"a_double", DataType::Double, true, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})},
+      {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
@@ -2682,14 +2684,26 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 }
 
 TEST_F(SQLTranslatorTest, IntLimitsAndUnaryMinus) {
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2").first, ProjectionNode::make(expression_vector(add_(1, 2)), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + -2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + - 2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 +-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-2").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, static_cast<int64_t>(9223372036854775807ll))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775807").first, ProjectionNode::make(expression_vector(add_(1, unary_minus_(static_cast<int64_t>(9223372036854775807ll)))), DummyTableNode::make()));  // NOLINT
-  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775808").first, ProjectionNode::make(expression_vector(add_(1, std::numeric_limits<int64_t>::min())), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + 2").first,
+                ProjectionNode::make(expression_vector(add_(1, 2)), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + -2").first,
+                ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 + - 2").first,
+                ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1 +-2").first,
+                ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-2").first,
+                ProjectionNode::make(expression_vector(add_(1, unary_minus_(2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+9223372036854775807").first,
+                ProjectionNode::make(expression_vector(add_(1, static_cast<int64_t>(9223372036854775807ll))),
+                                     DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(
+      sql_to_lqp_helper("SELECT 1+-9223372036854775807").first,
+      ProjectionNode::make(expression_vector(add_(1, unary_minus_(static_cast<int64_t>(9223372036854775807ll)))),
+                           DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(sql_to_lqp_helper("SELECT 1+-9223372036854775808").first,
+                ProjectionNode::make(expression_vector(add_(1, std::numeric_limits<int64_t>::min())),
+                                     DummyTableNode::make()));  // NOLINT
   EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 9223372036854775808"));
   EXPECT_ANY_THROW(sql_to_lqp_helper("SELECT 1-9223372036854775808"));
 }

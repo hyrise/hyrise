@@ -6,9 +6,14 @@
 
 namespace opossum {
 
-CreateIndexNode::CreateIndexNode(const std::string& init_index_name, const bool init_if_not_exists, const std::string& init_table_name, std::shared_ptr<std::vector<ColumnID>> init_column_ids)
-    : AbstractNonQueryNode(LQPNodeType::CreateIndex), index_name(init_index_name),
-      if_not_exists(init_if_not_exists), table_name(init_table_name), column_ids(init_column_ids) {}
+CreateIndexNode::CreateIndexNode(const std::string& init_index_name, const bool init_if_not_exists,
+                                 const std::string& init_table_name,
+                                 std::shared_ptr<std::vector<ColumnID>> init_column_ids)
+    : AbstractNonQueryNode(LQPNodeType::CreateIndex),
+      index_name(init_index_name),
+      if_not_exists(init_if_not_exists),
+      table_name(init_table_name),
+      column_ids(init_column_ids) {}
 
 std::string CreateIndexNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -32,10 +37,8 @@ std::shared_ptr<AbstractLQPNode> CreateIndexNode::_on_shallow_copy(LQPNodeMappin
 
 bool CreateIndexNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& create_index_node = static_cast<const CreateIndexNode&>(rhs);
-  return index_name == create_index_node.index_name &&
-         if_not_exists == create_index_node.if_not_exists &&
-         table_name == create_index_node.table_name &&
-         *column_ids == *(create_index_node.column_ids);
+  return index_name == create_index_node.index_name && if_not_exists == create_index_node.if_not_exists &&
+         table_name == create_index_node.table_name && *column_ids == *(create_index_node.column_ids);
 }
 
 }  // namespace opossum

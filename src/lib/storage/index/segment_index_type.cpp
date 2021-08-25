@@ -1,6 +1,5 @@
 #include "segment_index_type.hpp"
 
-
 namespace opossum {
 
 std::string segment_index_type_to_string(SegmentIndexType type) {

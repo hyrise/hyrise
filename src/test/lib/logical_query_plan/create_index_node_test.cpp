@@ -22,7 +22,6 @@ class CreateIndexNodeTest : public BaseTest {
   std::string table_name = "t_a";
   std::shared_ptr<CreateIndexNode> create_index_node;
   std::shared_ptr<std::vector<ColumnID>> column_ids = std::make_shared<std::vector<ColumnID>>();
-
 };
 
 TEST_F(CreateIndexNodeTest, Description) {
@@ -37,22 +36,21 @@ TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*create_index_node, *deep_copy_node);
 
   const auto different_create_index_node_a = CreateIndexNode::make("some_index1", false, table_name, column_ids);
-  const auto different_create_index_node_b = CreateIndexNode::make("some_index",  true, table_name, column_ids);
+  const auto different_create_index_node_b = CreateIndexNode::make("some_index", true, table_name, column_ids);
 
   auto different_column_ids = std::make_shared<std::vector<ColumnID>>();
   different_column_ids->emplace_back(0);
   different_column_ids->emplace_back(3);
-  const auto different_create_index_node_c = CreateIndexNode::make("some_index", false, table_name, different_column_ids);
+  const auto different_create_index_node_c =
+      CreateIndexNode::make("some_index", false, table_name, different_column_ids);
 
   EXPECT_NE(*different_create_index_node_a, *create_index_node);
   EXPECT_NE(*different_create_index_node_b, *create_index_node);
   EXPECT_NE(*different_create_index_node_c, *create_index_node);
 
-
   EXPECT_NE(different_create_index_node_a->hash(), create_index_node->hash());
   EXPECT_NE(different_create_index_node_b->hash(), create_index_node->hash());
   EXPECT_NE(different_create_index_node_c->hash(), create_index_node->hash());
-
 }
 
 TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }

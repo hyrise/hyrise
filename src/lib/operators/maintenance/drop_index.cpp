@@ -5,18 +5,14 @@
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
-#include "storage/table.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
-
 
 namespace opossum {
 
 DropIndex::DropIndex(const std::string& init_index_name, const bool init_if_exists)
-    : AbstractReadWriteOperator(OperatorType::DropIndex),
-      index_name(init_index_name),
-      if_exists(init_if_exists)
-    {}
+    : AbstractReadWriteOperator(OperatorType::DropIndex), index_name(init_index_name), if_exists(init_if_exists) {}
 
 const std::string& DropIndex::name() const {
   static const auto name = std::string{"DropIndex"};
@@ -27,7 +23,7 @@ std::string DropIndex::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
 
   stream << AbstractOperator::description(description_mode);
-  if(if_exists) stream << " 'IF EXISTS'";
+  if (if_exists) stream << " 'IF EXISTS'";
   stream << " '" << index_name << "'";
 
   return stream.str();
@@ -37,19 +33,19 @@ std::shared_ptr<const Table> DropIndex::_on_execute(std::shared_ptr<TransactionC
   auto tables = Hyrise::get().storage_manager.tables();
   auto deleted = false;
 
-  for(auto table_pair : tables) {
+  for (auto table_pair : tables) {
     auto table = table_pair.second;
-    for(auto index : table->indexes_statistics()) {
-      if(index.name == index_name) {
+    for (auto index : table->indexes_statistics()) {
+      if (index.name == index_name) {
         deleted = table->remove_index(index.name);
         // break nested loop
         goto end;
       }
     }
   }
-  end:
+end:
 
-  if(!if_exists) {
+  if (!if_exists) {
     Assert(deleted, "No index with name " + index_name);
   }
 

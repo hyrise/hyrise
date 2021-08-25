@@ -45,7 +45,7 @@ TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {
 
   auto key_constraints = std::make_shared<TableKeyConstraints>();
   key_constraints->push_back({{input_node->table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
-  const auto different_create_table_node_d = CreateTableNode::make("some_table", false,key_constraints, input_node);
+  const auto different_create_table_node_d = CreateTableNode::make("some_table", false, key_constraints, input_node);
 
   EXPECT_NE(*different_create_table_node_a, *create_table_node);
   EXPECT_NE(*different_create_table_node_b, *create_table_node);

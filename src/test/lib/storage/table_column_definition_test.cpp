@@ -18,7 +18,8 @@ TEST_F(TableColumnDefinitionTest, HashingAndEqualityCheck) {
   TableColumnDefinition different_column_definition_a{"c", DataType::Int, false};
   TableColumnDefinition different_column_definition_b{"a", DataType::Double, false};
   TableColumnDefinition different_column_definition_c{"a", DataType::Int, true};
-  TableColumnDefinition different_column_definition_d{"a", DataType::Int, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})};
+  TableColumnDefinition different_column_definition_d{
+      "a", DataType::Int, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})};
 
   EXPECT_EQ(column_definition, equal_column_definition);
   // `operator!=` is not implemented for TableColumnDefinition,

@@ -28,8 +28,7 @@ std::shared_ptr<AbstractLQPNode> DropIndexNode::_on_shallow_copy(LQPNodeMapping&
 
 bool DropIndexNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& drop_index_node = static_cast<const DropIndexNode&>(rhs);
-  return index_name == drop_index_node.index_name &&
-      if_exists == drop_index_node.if_exists;
+  return index_name == drop_index_node.index_name && if_exists == drop_index_node.if_exists;
 }
 
 }  // namespace opossum

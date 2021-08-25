@@ -5,19 +5,19 @@
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "statistics/table_statistics.hpp"
-#include "statistics/generate_pruning_statistics.hpp"
-
 
 namespace opossum {
 
-AlterDropColumn::AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists)
+AlterDropColumn::AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name,
+                                 const bool init_if_exists)
     : AbstractReadWriteOperator(OperatorType::AlterTableDropColumn),
-      target_table_name(init_table_name), target_column_name(init_column_name),
-      if_exists(init_if_exists)
-    {}
+      target_table_name(init_table_name),
+      target_column_name(init_column_name),
+      if_exists(init_if_exists) {}
 
 const std::string& AlterDropColumn::name() const {
   static const auto name = std::string{"AlterTableDropColumn"};
@@ -26,18 +26,18 @@ const std::string& AlterDropColumn::name() const {
 
 std::string AlterDropColumn::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
-  stream << AbstractOperator::description(description_mode) << " '" + target_table_name << "'" << "('" << target_column_name << "')";
+  stream << AbstractOperator::description(description_mode) << " '" + target_table_name << "'"
+         << "('" << target_column_name << "')";
   return stream.str();
 }
 
 std::shared_ptr<const Table> AlterDropColumn::_on_execute(std::shared_ptr<TransactionContext> context) {
-
-  if(_column_exists_on_table(target_table_name, target_column_name)) {
+  if (_column_exists_on_table(target_table_name, target_column_name)) {
     auto target_table = Hyrise::get().storage_manager.get_table(target_table_name);
     auto indexes = target_table->indexes_statistics();
     auto target_column_id = target_table->column_id_by_name(target_column_name);
 
-    for(auto index : indexes) {
+    for (auto index : indexes) {
       auto column_ids = index.column_ids;
       if (std::find(column_ids.begin(), column_ids.end(), target_column_id) != column_ids.end()) {
         // remove index if index is defined on column
@@ -50,7 +50,7 @@ std::shared_ptr<const Table> AlterDropColumn::_on_execute(std::shared_ptr<Transa
     generate_chunk_pruning_statistics(target_table);
 
   } else {
-    if(if_exists) {
+    if (if_exists) {
       std::cout << "Column " + target_column_name + " does not exist on Table " + target_table_name;
     } else {
       throw std::logic_error("No such column");
@@ -73,8 +73,10 @@ void AlterDropColumn::_on_set_parameters(const std::unordered_map<ParameterID, A
 
 bool AlterDropColumn::_column_exists_on_table(const std::string& table_name, const std::string& column_name) {
   auto column_defs = Hyrise::get().storage_manager.get_table(table_name)->column_definitions();
-  for(auto column_def : column_defs) {
-    if(column_def.name == column_name) { return true; }
+  for (auto column_def : column_defs) {
+    if (column_def.name == column_name) {
+      return true;
+    }
   }
   return false;
 }

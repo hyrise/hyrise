@@ -15,7 +15,7 @@ CreateTable::CreateTable(const std::string& init_table_name, const bool init_if_
     : AbstractReadWriteOperator(OperatorType::CreateTable, input_operator),
       table_name(init_table_name),
       if_not_exists(init_if_not_exists),
-      key_constraints(init_key_constraints){}
+      key_constraints(init_key_constraints) {}
 
 const std::string& CreateTable::name() const {
   static const auto name = std::string{"CreateTable"};
@@ -64,7 +64,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
   if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-    for (const TableKeyConstraint& table_key_constraint : *key_constraints){
+    for (const TableKeyConstraint& table_key_constraint : *key_constraints) {
       table->Table::add_soft_key_constraint(table_key_constraint);
     }
 

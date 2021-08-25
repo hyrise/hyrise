@@ -1,10 +1,10 @@
 #include <memory>
 #include "base_test.hpp"
-#include "utils/assert.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/maintenance/create_index.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -29,7 +29,7 @@ class CreateIndexTest : public BaseTest {
 
 void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, std::shared_ptr<Table> table) {
   auto chunk_count = table->chunk_count();
-  for(ChunkID id=ChunkID{0}; id < chunk_count; id+=1) {
+  for (ChunkID id = ChunkID{0}; id < chunk_count; id += 1) {
     auto current_chunk = table->get_chunk(id);
     auto applied_indices = current_chunk->get_indexes(*created_index->column_ids);
     EXPECT_TRUE(applied_indices.size() == 1);
@@ -38,7 +38,8 @@ void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, st
 
 TEST_F(CreateIndexTest, NameAndDescription) {
   EXPECT_EQ(create_index->name(), "CreateIndex");
-  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine), "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('b',)");
+  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine),
+            "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('b',)");
 }
 
 TEST_F(CreateIndexTest, Execute) {
@@ -49,7 +50,6 @@ TEST_F(CreateIndexTest, Execute) {
 
   create_index->execute();
   context->commit();
-
 
   auto actual_index = test_table->indexes_statistics().at(0);
 

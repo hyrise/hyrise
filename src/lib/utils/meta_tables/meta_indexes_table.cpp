@@ -6,11 +6,12 @@
 namespace opossum {
 
 MetaIndexesTable::MetaIndexesTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"index_name", DataType::String, false},
-                                               {"index_type", DataType::String, false},
-                                               {"table_name", DataType::String, false},
-                                               {"column_names", DataType::String, false},
-                                               }) {}
+    : AbstractMetaTable(TableColumnDefinitions{
+          {"index_name", DataType::String, false},
+          {"index_type", DataType::String, false},
+          {"table_name", DataType::String, false},
+          {"column_names", DataType::String, false},
+      }) {}
 
 const std::string& MetaIndexesTable::name() const {
   static const auto name = std::string{"indexes"};
@@ -22,14 +23,16 @@ std::shared_ptr<Table> MetaIndexesTable::_on_generate() const {
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto index : table->indexes_statistics()) {
-      std::string column_names ("");
+      std::string column_names("");
       for (auto col_id : index.column_ids) {
         column_names += " " + table->column_name(col_id);
       }
-      output_table->append({pmr_string{index.name}, static_cast<pmr_string>(segment_index_type_to_string(index.type)),
-                            static_cast<pmr_string>(table_name),
-                            static_cast<pmr_string>(column_names),
-                            });
+      output_table->append({
+          pmr_string{index.name},
+          static_cast<pmr_string>(segment_index_type_to_string(index.type)),
+          static_cast<pmr_string>(table_name),
+          static_cast<pmr_string>(column_names),
+      });
     }
   }
   return output_table;

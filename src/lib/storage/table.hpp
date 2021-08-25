@@ -208,9 +208,9 @@ class Table : private Noncopyable {
     // find index statistics
     auto index_stats = std::find_if(
         _indexes.begin(), _indexes.end(),
-        [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name;});
+        [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name; });
 
-    if(index_stats != _indexes.end()){
+    if (index_stats != _indexes.end()) {
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto chunk = std::atomic_load(&_chunks[chunk_id]);
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -222,7 +222,7 @@ class Table : private Noncopyable {
       // remove index statistics
       auto new_end = std::remove_if(
           _indexes.begin(), _indexes.end(),
-          [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name;});
+          [&index_name](const IndexStatistics& index_statistics) { return index_statistics.name == index_name; });
       _indexes.erase(new_end, _indexes.end());
       return true;
     }

@@ -10,9 +10,7 @@ namespace opossum {
 // used index types: GroupKeyIndex, CompositeGroupKeyIndex
 class CreateIndex : public AbstractReadWriteOperator {
  public:
-  CreateIndex(const std::string& init_index_name,
-              const bool init_if_not_exists,
-              const std::string& init_table_name,
+  CreateIndex(const std::string& init_index_name, const bool init_if_not_exists, const std::string& init_table_name,
               const std::shared_ptr<const std::vector<ColumnID>>& init_column_ids);
 
   const std::string& name() const override;

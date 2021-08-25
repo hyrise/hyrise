@@ -4,14 +4,13 @@
 #include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
- 
 
- // This node type represents the ALTER TABLE DROP COLUMN management command.
- 
+// This node type represents the ALTER TABLE DROP COLUMN management command.
 
 class AlterDropColumnNode : public EnableMakeForLQPNode<AlterDropColumnNode>, public AbstractNonQueryNode {
  public:
-  AlterDropColumnNode(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists);
+  AlterDropColumnNode(const std::string& init_table_name, const std::string& init_column_name,
+                      const bool init_if_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

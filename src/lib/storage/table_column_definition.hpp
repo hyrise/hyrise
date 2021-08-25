@@ -2,14 +2,15 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
-#include "types.hpp"
 #include "table_key_constraint.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, std::vector<hsql::ConstraintType>* init_constraints = new std::vector<hsql::ConstraintType>());
+  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable,
+                        std::vector<hsql::ConstraintType>* init_constraints = new std::vector<hsql::ConstraintType>());
 
   bool operator==(const TableColumnDefinition& rhs) const;
   size_t hash() const;

@@ -8,6 +8,7 @@
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_indexes_table.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
@@ -16,7 +17,6 @@
 #include "utils/meta_tables/meta_system_information_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
-#include "utils/meta_tables/meta_indexes_table.hpp"
 
 namespace opossum {
 

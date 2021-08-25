@@ -518,8 +518,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_index_node = std::dynamic_pointer_cast<CreateIndexNode>(node);
 
-  return std::make_shared<CreateIndex>(create_index_node->index_name, create_index_node->if_not_exists, create_index_node->table_name, create_index_node->column_ids);
-
+  return std::make_shared<CreateIndex>(create_index_node->index_name, create_index_node->if_not_exists,
+                                       create_index_node->table_name, create_index_node->column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_node(
@@ -527,8 +527,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_no
   const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterDropColumnNode>(node);
   const auto input_node = alter_drop_column_node->left_input();
 
-  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name, alter_drop_column_node->if_column_exists);
-
+  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name,
+                                           alter_drop_column_node->if_column_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(

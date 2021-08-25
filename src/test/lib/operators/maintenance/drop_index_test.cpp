@@ -4,13 +4,13 @@
 #include "base_test.hpp"
 #include "utils/assert.hpp"
 
-#include "operators/maintenance/drop_index.hpp"
-#include "operators/maintenance/create_index.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
+#include "operators/maintenance/create_index.hpp"
+#include "operators/maintenance/drop_index.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -21,7 +21,7 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-class DropIndexTest: public BaseTest {
+class DropIndexTest : public BaseTest {
  public:
   void SetUp() override {
     test_table = load_table("resources/test_data/tbl/string_int_index.tbl", 3);

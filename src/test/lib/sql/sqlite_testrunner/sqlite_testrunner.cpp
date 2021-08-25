@@ -169,7 +169,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto [query_pair, encoding_type] = GetParam();
   const auto& [line, sql] = query_pair;
 
-  if(query_pair.first == 95) {
+  if (query_pair.first == 95) {
     auto x = 1;
     x++;
   }

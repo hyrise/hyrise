@@ -20,8 +20,8 @@
 #include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
-#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_index_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
@@ -48,8 +48,8 @@
 #include "operators/maintenance/create_index.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
-#include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_index.hpp"
+#include "operators/maintenance/drop_table.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -1110,7 +1110,6 @@ TEST_F(LQPTranslatorTest, DropIndex) {
   const auto drop_table = std::dynamic_pointer_cast<DropIndex>(pqp);
   EXPECT_EQ(drop_table->index_name, "myindex");
   EXPECT_EQ(drop_table->if_exists, false);
-
 }
 
 TEST_F(LQPTranslatorTest, CreateIndex) {
@@ -1128,8 +1127,8 @@ TEST_F(LQPTranslatorTest, CreateIndex) {
   EXPECT_EQ(create_index->table_name, "t");
   EXPECT_EQ(create_index->index_name, "i");
 
-   // CreateTable input must be executed to enable access to column definitions
-   EXPECT_EQ(*(create_index->column_ids), *column_ids);
+  // CreateTable input must be executed to enable access to column definitions
+  EXPECT_EQ(*(create_index->column_ids), *column_ids);
 }
 
 TEST_F(LQPTranslatorTest, CreatePreparedPlan) {

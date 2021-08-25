@@ -34,13 +34,14 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/alter_drop_column_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
-#include "logical_query_plan/drop_index_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -60,7 +61,6 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "logical_query_plan/alter_drop_column_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -1292,7 +1292,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hsql::CreateStatement& create_statement) {
-
   Assert(Hyrise::get().storage_manager.has_table(create_statement.tableName), "Table not existent");
 
   auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
@@ -1304,17 +1303,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
     auto column_id = target_table->column_id_by_name(column_name);
     column_name_string += "_";
     column_name_string += column_name;
-    if(column_id != INVALID_COLUMN_ID) {
+    if (column_id != INVALID_COLUMN_ID) {
       column_ids->emplace_back(column_id);
     } else {
-      FailInput("Column " + std::string(column_name) +
-                " does not exist on table " + std::string(create_statement.tableName) +
-                "." );
+      FailInput("Column " + std::string(column_name) + " does not exist on table " +
+                std::string(create_statement.tableName) + ".");
     }
   }
 
   auto index_name = std::string("");
-  if(create_statement.indexName) {
+  if (create_statement.indexName) {
     index_name = create_statement.indexName;
   } else {
     Assert(create_statement.ifNotExists == false, "Index name has to be provided when using 'if not exists' flag.");
@@ -1325,7 +1323,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
-
   return DropIndexNode::make(drop_statement.indexName, drop_statement.ifExists);
 }
 
@@ -1397,7 +1394,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
     for (auto tableKeyConstraint : *create_statement.tableConstraints) {
       std::unordered_set<ColumnID> column_ids;
-      for(auto name : *tableKeyConstraint->columnNames) {
+      for (auto name : *tableKeyConstraint->columnNames) {
         auto column_id = table->column_id_by_name(std::basic_string<char>{name});
         column_ids.insert(column_id);
       }
