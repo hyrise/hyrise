@@ -33,10 +33,8 @@ class CreateIndex : public AbstractReadWriteOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  // Commit happens in Insert operator
   void _on_commit_records(const CommitID cid) override {}
 
-  // Rollback happens in Insert operator
   void _on_rollback_records() override {}
 
   bool _index_already_exists(std::string new_index_name, std::shared_ptr<Table> table);

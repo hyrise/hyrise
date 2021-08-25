@@ -37,12 +37,14 @@ std::string CreateIndex::description(DescriptionMode description_mode) const {
 
   std::ostringstream stream;
 
+  auto target_table = Hyrise::get().storage_manager.get_table(table_name);
+
   stream << AbstractOperator::description(description_mode);
   if(if_not_exists) stream << " 'IF NOT EXISTS'";
   stream << " '" << index_name << "' ON";
   stream << " '" << table_name << "' column_ids(";
   for(auto column_id: *column_ids) {
-    stream << "'" << column_id << "',";
+    stream << "'" << target_table->column_name(column_id) << "',";
   }
 
   stream << ")";

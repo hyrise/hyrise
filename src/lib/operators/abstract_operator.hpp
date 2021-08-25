@@ -21,7 +21,7 @@ class TransactionContext;
 enum class OperatorType {
   Aggregate,
   Alias,
-  AlterDropColumn,
+  AlterTableDropColumn,
   ChangeMetaTable,
   CreateTable,
   CreateIndex,

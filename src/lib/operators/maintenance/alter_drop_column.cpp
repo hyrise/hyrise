@@ -14,7 +14,7 @@
 namespace opossum {
 
 AlterDropColumn::AlterDropColumn(const std::string& init_table_name, const std::string& init_column_name, const bool init_if_exists)
-    : AbstractReadWriteOperator(OperatorType::AlterDropColumn),
+    : AbstractReadWriteOperator(OperatorType::AlterTableDropColumn),
       target_table_name(init_table_name), target_column_name(init_column_name),
       if_exists(init_if_exists)
     {}

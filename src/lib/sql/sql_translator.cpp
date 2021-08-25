@@ -1298,7 +1298,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
   auto target_table = Hyrise::get().storage_manager.get_table(create_statement.tableName);
 
   auto column_ids = std::make_shared<std::vector<ColumnID>>();
-  std::string column_name_string;
+  auto column_name_string = std::string("");
 
   for (auto column_name : *(create_statement.indexColumns)) {
     auto column_id = target_table->column_id_by_name(column_name);
@@ -1313,7 +1313,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
     }
   }
 
-  std::string index_name;
+  auto index_name = std::string("");
   if(create_statement.indexName) {
     index_name = create_statement.indexName;
   } else {
@@ -1332,7 +1332,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
-  std::shared_ptr<AbstractLQPNode> input_node;
+  auto input_node = std::shared_ptr<AbstractLQPNode>();
   auto tableConstraints = std::make_shared<TableKeyConstraints>();
 
   if (create_statement.select) {
@@ -1350,6 +1350,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           column_definition.data_type = DataType::Int;
           break;
         case hsql::DataType::SMALLINT:
+          std::cout << "WARNING: Implicitly converting SMALLINT to INT";
           column_definition.data_type = DataType::Int;
           break;
         case hsql::DataType::LONG:
@@ -1373,7 +1374,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::VARCHAR:
         case hsql::DataType::VARCHAR_VARYING:
           std::cout << "WARNING: Implicitly converting VARCHAR_VARYING to STRING";
-          __TBB_fallthrough;
+          [[fallthrough]];
         case hsql::DataType::TEXT:
         case hsql::DataType::DATE:
         case hsql::DataType::DATETIME:

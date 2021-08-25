@@ -10,7 +10,7 @@
 namespace opossum {
 
 /**
- * This node type represents the DROP INDEX management command.
+ * This node type represents the DROP INDEX sql statement.
  */
 class DropIndexNode : public EnableMakeForLQPNode<DropIndexNode>, public AbstractNonQueryNode {
  public:

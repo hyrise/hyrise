@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * This is a class for showing all stored columns via a meta table.
+ * This is a class for showing all indexes via a meta table.
  */
 class MetaIndexesTable : public AbstractMetaTable {
  public:
