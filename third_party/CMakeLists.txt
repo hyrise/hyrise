@@ -45,7 +45,7 @@ add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
 add_subdirectory(tpch-dbgen)
 
-## Build fsst
+# Fsst library requires position independent code
 set_property(TARGET fsst PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 ## Build lz4

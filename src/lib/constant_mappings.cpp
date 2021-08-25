@@ -38,8 +38,8 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::RunLength, "RunLength"},
     {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
-    {EncodingType::LZ4, "LZ4"},
     {EncodingType::FSST, "FSST"},
+    {EncodingType::LZ4, "LZ4"},
     {EncodingType::Unencoded, "Unencoded"},
 });
 

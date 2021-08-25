@@ -63,20 +63,20 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
-  pmr_vector<pmr_string> values{"This", "is", "a", "test", "for", "the", "FSST", "segment"};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "a", "test", "for", "the", "FSST", "segment"};
   for (const auto& value : values) {
     vs_str->append(value);
   }
-  auto segment = create_fsst_segment(vs_str, DataType::String);
+  const auto segment = create_fsst_segment(vs_str, DataType::String);
 
-  for (size_t index = 0; index < values.size(); ++index) {
+  for (auto index = 0UL; index < values.size(); ++index) {
     std::optional<pmr_string> value = segment->get_typed_value(static_cast<ChunkOffset>(index));
     ASSERT_EQ(*value, values[index]);
   }
 }
 
 TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
-  pmr_vector<pmr_string> values = {"This", "is", "data"};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "data"};
 
   for (const auto& value : values) {
     vs_str->append(value);
@@ -85,8 +85,9 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
   auto resource = FSSTSimpleTrackingMemoryResource{};
   const auto allocator = PolymorphicAllocator<size_t>(&resource);
 
-  auto segment = create_fsst_segment(vs_str, DataType::String);
-  auto copied_segment = std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
+  const auto segment = create_fsst_segment(vs_str, DataType::String);
+  const auto copied_segment =
+      std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
 
   ASSERT_EQ(copied_segment->size(), values.size());
   for (size_t index = 0; index < values.size(); ++index) {
@@ -98,21 +99,21 @@ TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
   vs_str->append("This");
   vs_str->append("is");
   vs_str->append(NULL_VALUE);
-  auto segment = create_fsst_segment(vs_str, DataType::String);
+  const auto segment = create_fsst_segment(vs_str, DataType::String);
 
   std::optional<pmr_string> value = segment->get_typed_value(ChunkOffset{2});
   ASSERT_EQ(std::nullopt, value);
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
-  pmr_vector<pmr_string> values{"This", "is", "data"};
-  pmr_vector<bool> expected_null_values = {false, false, true};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "data"};
+  const auto expected_null_values = pmr_vector<bool>{false, false, true};
 
-  for (size_t index = 0; index < values.size(); ++index) {
+  for (auto index = 0UL; index < values.size(); ++index) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
-  auto segment = create_fsst_segment(vs_str, DataType::String);
+  const auto segment = create_fsst_segment(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
   auto segment_iterable = FSSTSegmentIterable(*segment);
@@ -124,7 +125,7 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
     }
   });
 
-  for (size_t index = 0; index < values.size(); ++index) {
+  for (auto index = 0UL; index < values.size(); ++index) {
     auto segment_position = collected_values.at(index);
     ASSERT_EQ(expected_null_values.at(index), segment_position.is_null());
     if (!expected_null_values.at(index)) {
@@ -134,14 +135,14 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
-  pmr_vector<pmr_string> values{"Two", "values", ""};
-  pmr_vector<bool> expected_null_values = {false, false, true};
+  const auto values = pmr_vector<pmr_string>{"Two", "values", ""};
+  const auto expected_null_values = pmr_vector<bool>{false, false, true};
 
-  for (size_t index = 0; index < values.size(); ++index) {
+  for (auto index = 0UL; index < values.size(); ++index) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
   }
 
-  auto segment = create_fsst_segment(vs_str, DataType::String);
+  const auto segment = create_fsst_segment(vs_str, DataType::String);
   pmr_vector<SegmentPosition<pmr_string>> collected_values;
 
   auto segment_iterable = FSSTSegmentIterable(*segment);
@@ -158,10 +159,10 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
     }
   });
 
-  for (size_t index = 0; index < position_filter->size(); ++index) {
-    auto position = (*position_filter)[index];
-    auto real_chunk_offset = position.chunk_offset;
-    auto segment_position = collected_values.at(index);
+  for (auto index = 0UL; index < position_filter->size(); ++index) {
+    const auto position = (*position_filter)[index];
+    const auto real_chunk_offset = position.chunk_offset;
+    const auto segment_position = collected_values.at(index);
 
     ASSERT_EQ(expected_null_values.at(real_chunk_offset), segment_position.is_null());
     if (!expected_null_values.at(real_chunk_offset)) {

@@ -235,7 +235,7 @@ class BinaryWriter {
    * Compressed values           | vector<unsigned char>               | Compressed values size * 1
    * Vector compress. bit width  | uint8_t                             | 1
    * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     |  rounded up to next multiple of word (8 byte)
    * Reference offsets size      | uint32_t                            | 4
    * Reference offsets           | vector<uint64_t>                    | 64
    * NULL values size            | uint32_t                            | 4
@@ -250,7 +250,7 @@ class BinaryWriter {
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
-   * ¹: This field is only written if NULL values' size is not 0
+   * ¹: This field is only written when the optional NULL values are stored
    */
   template <typename T>
   static void _write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream);
