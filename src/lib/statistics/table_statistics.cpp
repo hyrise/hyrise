@@ -82,14 +82,27 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             }
 
             const auto merge_result =
-                EqualDistinctCountHistogram<ColumnDataType>::merge(histograms, histogram_bin_count);
+                EqualDistinctCountHistogram<ColumnDataType>::merge_histograms(histograms, histogram_bin_count);
             histogram = merge_result.first;
 
-            // This gives us the maximum deviation of the total distinct count when compared to the column histogram.
+            /**
+             * The max_estimation_error gives us the maximum deviation of the total distinct count
+             * when compared to the column histogram.
+             * Using the max_estimation_error, we can detect if the merged histogram is too bad.
+             * In that case we generate the column histogram.
+             * Wasting time is better than using bad histograms.
+             */
             const auto max_estimation_error = merge_result.second;
-            // Using the max_estimation_error, we can detect if the merged histogram is too bad.
-            // In that case we generate the column histogram.
-            // Wasting time is better than using bad histograms.
+
+            /**
+             * The threshold is somewhat arbitrary and more testing would be required to find a good value
+             * for a certain use-case. The reason why this threshold exists is that, in theory,
+             * the merge algorithm could in certain cases create a histogram with an arbitrarily large error,
+             * so having some (even arbitrary) bound for it is necessary.
+             * For example, consider N histograms that all contain a bin from 1 to 1000, which contains the values
+             * 1, 42, 1000. The merge method will estimate the distinct counts by adding them up, so the
+             * merged cardinality for this bin is min(3*N, 1000) instead of 3.
+             */
             const auto error_percent_threshold = 0.05;
             if (max_estimation_error > histogram->total_distinct_count() * error_percent_threshold) {
               histogram =

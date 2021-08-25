@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_histogram.hpp"
+#include "gtest/gtest.h"
 #include "types.hpp"
 
 namespace opossum {
@@ -52,7 +53,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * calculated via merging chunk histograms and the total_distinct_count of the histogram calculated based on the
    * whole column.
    */
-  static std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> merge(
+  static std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> merge_histograms(
       const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms, BinID max_bin_count);
 
   std::string name() const override;
@@ -83,8 +84,17 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   static std::shared_ptr<EqualDistinctCountHistogram<T>> _from_value_distribution(
       const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count);
 
+  FRIEND_TEST(EqualDistinctCountHistogramTest, CombineBounds);
   /**
    * Splits the @param histograms and returns the combined bin_minima and bin_maxima.
+   * The result should be a fine grained set of bounds
+   * such that each bin edge of the input histograms is a bin edge of the combined bins.
+   * Note that this introduces some bins that are empty in all input histograms (e.g. (4; 9) in the example below).
+   *
+   * Example: We have two histograms with different bounds:
+   *    Histogram 1: (0; 3), (10; 20)
+   *    Histogram 2: (15; 30), (31; 40) 
+   *    Combined:    (0; 3), (4; 9), (10; 14), (15; 20), (21; 30), (31; 40)
    */
   static std::pair<std::vector<T>, std::vector<T>> _combine_bounds(
       const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& histograms);
@@ -104,7 +114,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * Creates one bin with @param distinct_count_target many distinct values by combining as many intervals
    * (given in the form of iterators) as necessary. It splits intervals if necessary and possible. If there are 
    * unsplittable intervals (interval from 1 to 1) or intervals that cannot be split in arbitrary ratios (integers),
-   * the distinct_count of the bin differ from the specified distinct_count_target.
+   * the distinct_count of the bin might differ from the specified distinct_count_target.
    * After calling this method, all iterators are advanced to the next unused interval and splitted intervals are
    * adapted, such that their remaining part can be used by the next bin.
    * If @param is_last_bin is set, the method will add all remaining intervals, regardless of size.
@@ -118,18 +128,22 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
       typename std::vector<HistogramCountType>::iterator& interval_distinct_counts_end, const int distinct_count_target,
       const HistogramDomain<T> domain, const bool is_last_bin);
 
+  FRIEND_TEST(EqualDistinctCountHistogramTest, IntBalanceBins);
+  FRIEND_TEST(EqualDistinctCountHistogramTest, FloatBalanceBins);
   /**
    * Takes the values making up a histogram and reduces its bin count to the defined value. 
    * The distinct counts are balanced afterwards, when possible (unsplittable intervals might cause imbalance).
-   * 
-   * @param interval_distinct_counts vector that contains the distinct counts of the input histogram
-   * @param interval_heights vector that contains the bin heights of the input histogram
-   * @param interval_minima vector that contains the bin minima of the input histogram
-   * @param interval_maxima vector that contains the bin maxima of the input histogram
-   * @param total_distinct_count sum of all bins distinct counts
-   * @param max_bin_count maximum number of bins the output histogram should have
-   * @param bin_count_with_extra_value the first bins might get an additional value to prevent a smaller last bin
-   * @param domain the domain of the histogram
+   *
+   * Note that the input vectors might change during the balancing process.
+   *
+   * @param interval_distinct_counts    vector that contains the distinct counts of the input histogram
+   * @param interval_heights            vector that contains the bin heights of the input histogram
+   * @param interval_minima             vector that contains the bin minima of the input histogram
+   * @param interval_maxima             vector that contains the bin maxima of the input histogram
+   * @param total_distinct_count        sum of all bins distinct counts
+   * @param max_bin_count               maximum number of bins the output histogram should have
+   * @param bin_count_with_extra_value  the first bins might get an additional value to prevent a smaller last bin
+   * @param domain                      the domain of the histogram
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> _balance_bins_into_histogram(
       std::vector<HistogramCountType>& interval_distinct_counts, std::vector<HistogramCountType>& interval_heights,

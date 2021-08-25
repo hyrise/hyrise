@@ -136,7 +136,9 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Derive a Histogram from this histograms splitting its bins so that both the current bounds as well as the bounds
    * specified in @param additional_bin_edges are present.
-   * If @param allow_empty_bins, the resulting histogram may contain bins with cardinality zero.
+   * If @param allow_empty_bins, the resulting histogram may contain bins with cardinality zero. This can be helpful
+   * for float histograms, where this method would otherwise remove some bins when these appear to contain zero elements
+   * due to going from e.g. 1.0 to 1.0.
    *
    * E.g., for a histogram with bins {[0, 10], [15, 20]}, split_at_bin_bounds({{-4, 5}, {16, 18}}) returns
    * a histogram with bins {[0, 5], [6, 10], [15, 15], [16, 18], [19, 20]}

@@ -28,7 +28,7 @@ TEST_F(TableStatisticsTest, FromTableColumnStatistics) {
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics.at(0));
   ASSERT_TRUE(column_statistics_a);
 
-  const auto histogram_a = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
+  const auto histogram_a = column_statistics_a->histogram;
   ASSERT_TRUE(histogram_a);
 
   // The 24 nulls values should be represented in the compact statistics as well
@@ -39,7 +39,7 @@ TEST_F(TableStatisticsTest, FromTableColumnStatistics) {
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics.at(1));
   ASSERT_TRUE(column_statistics_b);
 
-  const auto histogram_b = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_b->histogram);
+  const auto histogram_b = column_statistics_b->histogram;
   ASSERT_TRUE(histogram_b);
 
   // The 24 nulls values should be represented in the compact statistics as well
@@ -58,7 +58,7 @@ TEST_F(TableStatisticsTest, FromTableSegmentStatistics) {
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(0).at(0));
   ASSERT_TRUE(segment_statistics_a0);
 
-  const auto histogram_a0 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_a0->histogram);
+  const auto histogram_a0 = segment_statistics_a0->histogram;
   ASSERT_TRUE(histogram_a0);
 
   EXPECT_FLOAT_EQ(histogram_a0->total_count(), 18);
@@ -69,7 +69,7 @@ TEST_F(TableStatisticsTest, FromTableSegmentStatistics) {
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(0).at(1));
   ASSERT_TRUE(segment_statistics_a1);
 
-  const auto histogram_a1 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_a1->histogram);
+  const auto histogram_a1 = segment_statistics_a1->histogram;
   ASSERT_TRUE(histogram_a1);
 
   EXPECT_FLOAT_EQ(histogram_a1->total_count(), 17);
@@ -80,7 +80,7 @@ TEST_F(TableStatisticsTest, FromTableSegmentStatistics) {
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->segment_statistics.at(1).at(0));
   ASSERT_TRUE(segment_statistics_b0);
 
-  const auto histogram_b0 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(segment_statistics_b0->histogram);
+  const auto histogram_b0 = segment_statistics_b0->histogram;
   ASSERT_TRUE(histogram_b0);
 
   EXPECT_FLOAT_EQ(histogram_b0->total_count(), 20);

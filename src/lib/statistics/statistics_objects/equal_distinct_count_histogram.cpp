@@ -206,6 +206,22 @@ std::pair<std::vector<T>, std::vector<T>> EqualDistinctCountHistogram<T>::_combi
                                                        std::vector<HistogramCountType>{1}, HistogramCountType{1}, 0);
 
   for (const auto& hist : histograms) {
+    /**
+     * We need to use the split_at_bin_bounds method with allow_empty_bins = true.
+     * This is due to some problems with float histograms. Suppose we have these float histograms:
+     *   Histogram 1: (1; 1), (2; 2)
+     *   Histogram 2: (3; 3), (4; 4)
+     *
+     * With allow_empty_bins = false, we get:
+     *   (1; 1), (1; 2), (2; 3), (3; 3), (3; 4)
+     * (Note that the float values are rounded, the bin (1; 2) actually starts at 1+epsilon, etc.)
+     * Yet there are no elements from 1 to 2, from 2 to 3, or from 3 to 4, but there is exactly one element at 2.
+     * So we'd rather have a more precise bin from 2 to 2.
+     *
+     * With allow_empty_bins = true, we get:
+     *   (1; 1), (1; 2), (2; 2), (2; 3), (3; 3), (3; 4), (4; 4)
+     * Here we get a bin from 2 to 2.
+     */
     split_helper_histogram = split_helper_histogram->split_at_bin_bounds(hist->bin_bounds(), true);
   }
 
@@ -265,9 +281,9 @@ std::tuple<T, T, HistogramCountType> EqualDistinctCountHistogram<T>::_create_one
   auto bin_height = HistogramCountType{0};
   auto bin_distinct_count = HistogramCountType{0};
 
-  for (auto interval_index = 0u; interval_index < remaining_interval_count; interval_index++,
-            std::advance(interval_minima_begin, 1), std::advance(interval_maxima_begin, 1),
-            std::advance(interval_heights_begin, 1), std::advance(interval_distinct_counts_begin, 1)) {
+  for (auto interval_index = int64_t{0}; interval_index < remaining_interval_count; interval_index++,
+            ++interval_minima_begin, ++interval_maxima_begin, ++interval_heights_begin,
+            ++interval_distinct_counts_begin) {
     const auto interval_height = *interval_heights_begin;
     const auto interval_distinct_count = *interval_distinct_counts_begin;
     const auto interval_start = *interval_minima_begin;
@@ -291,10 +307,10 @@ std::tuple<T, T, HistogramCountType> EqualDistinctCountHistogram<T>::_create_one
       bin_distinct_count += interval_distinct_count;
 
       // Increment the passed iterators so that the next call starts with the next interval.
-      std::advance(interval_minima_begin, 1);
-      std::advance(interval_maxima_begin, 1);
-      std::advance(interval_heights_begin, 1);
-      std::advance(interval_distinct_counts_begin, 1);
+      ++interval_minima_begin;
+      ++interval_maxima_begin;
+      ++interval_heights_begin;
+      ++interval_distinct_counts_begin;
 
       // As the bin is now full, we don't want to add more intervals.
       break;
@@ -523,13 +539,14 @@ EqualDistinctCountHistogram<T>::_create_merged_intervals(
  */
 template <>
 std::pair<std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>, HistogramCountType>
-EqualDistinctCountHistogram<pmr_string>::merge(
+EqualDistinctCountHistogram<pmr_string>::merge_histograms(
     const std::vector<std::shared_ptr<EqualDistinctCountHistogram<pmr_string>>>& histograms, BinID bin_count_target) {
   throw std::invalid_argument("Cannot merge string histograms.");
 }
 
 template <typename T>
-std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType> EqualDistinctCountHistogram<T>::merge(
+std::pair<std::shared_ptr<EqualDistinctCountHistogram<T>>, HistogramCountType>
+EqualDistinctCountHistogram<T>::merge_histograms(
     const std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>& input_histograms, const BinID max_bin_count) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero");
 

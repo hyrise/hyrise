@@ -138,7 +138,7 @@ TEST_F(EqualDistinctCountHistogramTest, IntHistogramMerging) {
     histograms.push_back(hist);
   }
 
-  const auto [merged_hist, max_estimation_error] = HistogramType::merge(histograms, max_bin_count);
+  const auto [merged_hist, max_estimation_error] = HistogramType::merge_histograms(histograms, max_bin_count);
 
   ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
   EXPECT_EQ(max_estimation_error, 0.0);
@@ -166,7 +166,7 @@ TEST_F(EqualDistinctCountHistogramTest, FloatSingleBinHistogramMerging) {
     histograms.push_back(hist);
   }
 
-  const auto [merged_hist, max_estimation_error] = HistogramType::merge(histograms, max_bin_count);
+  const auto [merged_hist, max_estimation_error] = HistogramType::merge_histograms(histograms, max_bin_count);
 
   ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
   EXPECT_EQ(max_estimation_error, 0.0);
@@ -191,7 +191,7 @@ TEST_F(EqualDistinctCountHistogramTest, IntSingleBinHistogramMerging) {
     histograms.push_back(hist);
   }
 
-  const auto [merged_hist, max_estimation_error] = HistogramType::merge(histograms, max_bin_count);
+  const auto [merged_hist, max_estimation_error] = HistogramType::merge_histograms(histograms, max_bin_count);
 
   ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
   EXPECT_EQ(merged_hist->total_distinct_count(), 5.0);
@@ -219,12 +219,92 @@ TEST_F(EqualDistinctCountHistogramTest, IntLargeBinHistogramMerging) {
     histograms.push_back(hist);
   }
 
-  const auto [merged_hist, max_estimation_error] = HistogramType::merge(histograms, max_bin_count);
+  const auto [merged_hist, max_estimation_error] = HistogramType::merge_histograms(histograms, max_bin_count);
 
   ASSERT_EQ(merged_hist->bin_count(), max_bin_count);
   EXPECT_EQ(merged_hist->total_distinct_count(), 12);
   EXPECT_EQ(max_estimation_error, 8);
   EXPECT_EQ(merged_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(1, 100, 12, 12));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, IntBalanceBins) {
+  using HistogramDataType = int32_t;
+  using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
+
+  auto interval_distinct_counts = std::vector<HistogramCountType>{2, 2, 8, 2, 4, 1};
+  auto interval_heights = std::vector<HistogramCountType>{42, 42, 42, 42, 42, 42};
+  auto interval_minima = std::vector<HistogramDataType>{10, 16, 20, 50, 56, 70};
+  auto interval_maxima = std::vector<HistogramDataType>{15, 19, 39, 55, 59, 70};
+
+  const auto total_distinct_count = HistogramCountType{19};
+  const auto max_bin_count = BinID{5};
+  const auto domain = HistogramDomain<HistogramDataType>();
+
+  const auto balanced_hist =
+      HistogramType::_balance_bins_into_histogram(interval_distinct_counts, interval_heights, interval_minima,
+                                                  interval_maxima, total_distinct_count, max_bin_count, domain);
+
+  ASSERT_EQ(balanced_hist->bin_count(), max_bin_count);
+  EXPECT_EQ(balanced_hist->total_distinct_count(), total_distinct_count);
+  EXPECT_EQ(balanced_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(10, 19, 84, 4));
+  EXPECT_EQ(balanced_hist->bin(BinID{1}), HistogramBin<HistogramDataType>(20, 29, 21, 4));
+  EXPECT_EQ(balanced_hist->bin(BinID{2}), HistogramBin<HistogramDataType>(30, 39, 21, 4));
+  EXPECT_EQ(balanced_hist->bin(BinID{3}), HistogramBin<HistogramDataType>(50, 57, 63, 4));
+  EXPECT_EQ(balanced_hist->bin(BinID{4}), HistogramBin<HistogramDataType>(58, 70, 63, 3));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, FloatBalanceBins) {
+  using HistogramDataType = float;
+  using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
+
+  auto interval_distinct_counts = std::vector<HistogramCountType>{2};
+  auto interval_heights = std::vector<HistogramCountType>{40};
+  auto interval_minima = std::vector<HistogramDataType>{0.1f};
+  auto interval_maxima = std::vector<HistogramDataType>{0.5f};
+
+  const auto total_distinct_count = HistogramCountType{2};
+  const auto max_bin_count = BinID{2};
+  const auto domain = HistogramDomain<HistogramDataType>();
+
+  const auto balanced_hist =
+      HistogramType::_balance_bins_into_histogram(interval_distinct_counts, interval_heights, interval_minima,
+                                                  interval_maxima, total_distinct_count, max_bin_count, domain);
+
+  ASSERT_EQ(balanced_hist->bin_count(), max_bin_count);
+  EXPECT_EQ(balanced_hist->total_distinct_count(), total_distinct_count);
+  EXPECT_EQ(balanced_hist->bin(BinID{0}), HistogramBin<HistogramDataType>(0.1f, 0.3f, 20, 1));
+  EXPECT_EQ(balanced_hist->bin(BinID{1}),
+            HistogramBin<HistogramDataType>(domain.next_value_clamped(0.3f), 0.5f, 20, 1));
+}
+
+TEST_F(EqualDistinctCountHistogramTest, CombineBounds) {
+  using HistogramDataType = int32_t;
+  using HistogramType = EqualDistinctCountHistogram<HistogramDataType>;
+
+  const auto domain = HistogramDomain<HistogramDataType>();
+
+  auto histograms = std::vector<std::shared_ptr<HistogramType>>();
+  histograms.push_back(std::make_shared<HistogramType>(std::vector<HistogramDataType>{0, 10},    // bin_minima
+                                                       std::vector<HistogramDataType>{3, 20},    // bin_maxima
+                                                       std::vector<HistogramCountType>{42, 42},  // bin_heights
+                                                       4, 0, domain));
+
+  histograms.push_back(
+      std::make_shared<HistogramType>(std::vector<HistogramDataType>{15, 31, 50, 52, 53},   // bin_minima
+                                      std::vector<HistogramDataType>{30, 40, 51, 52, 54},   // bin_maxima
+                                      std::vector<HistogramCountType>{10, 20, 10, 10, 20},  // bin_heights
+                                      4, 0, domain));
+
+  const auto combined_bounds = HistogramType::_combine_bounds(histograms);
+  const auto combined_bounds_minima = combined_bounds.first;
+  const auto combined_bounds_maxima = combined_bounds.second;
+
+  const auto minima = std::vector<HistogramDataType>{0, 4, 10, 15, 21, 31, 41, 50, 52, 53};
+  const auto maxima = std::vector<HistogramDataType>{3, 9, 14, 20, 30, 40, 49, 51, 52, 54};
+
+  EXPECT_EQ(combined_bounds_minima.size(), combined_bounds_maxima.size());
+  EXPECT_EQ(combined_bounds_minima, minima);
+  EXPECT_EQ(combined_bounds_maxima, maxima);
 }
 
 }  // namespace opossum
