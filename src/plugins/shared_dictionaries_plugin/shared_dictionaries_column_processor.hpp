@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Finds and merges dictionaries with shared data for the given column of a table.
  * Each dictionary segment is compared based on its similarity with all other existing shared dictionaries.
- * If the similarity (e.g. jaccard-index) is above the threshold it merges the dictionaries.
+ * If the similarity (i.e. jaccard-index) is above the threshold it merges the dictionaries.
  * If none of the existing shared dictionaries meet the threshold it compares the current dictionary with the
  * previous dictionary and eventually merges them to create a new shared dictionary.
  */
