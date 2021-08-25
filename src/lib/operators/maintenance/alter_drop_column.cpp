@@ -53,7 +53,7 @@ std::shared_ptr<const Table> AlterDropColumn::_on_execute(std::shared_ptr<Transa
     if(if_exists) {
       std::cout << "Column " + target_column_name + " does not exist on Table " + target_table_name;
     } else {
-      throw "No such column";
+      throw std::logic_error("No such column");
     }
   }
 

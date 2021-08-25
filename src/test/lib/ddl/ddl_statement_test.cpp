@@ -148,7 +148,7 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsWithoutName) {
 TEST_F(DDLStatementTest, DropIndex) {
   create_index(_create_index_single_column);
 
-  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON table_a"}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex"}.create_pipeline();
 
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -160,14 +160,14 @@ TEST_F(DDLStatementTest, DropIndex) {
 }
 
 TEST_F(DDLStatementTest, DropIndexNotExistsNoFlag) {
-  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON table_a"}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON"}.create_pipeline();
 
   // TODO: come up with way to test this without aborting test execution
   // EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 
 TEST_F(DDLStatementTest, DropIndexNotExistsWithFlag) {
-  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex ON table_a"}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex ON"}.create_pipeline();
 
   EXPECT_NO_THROW(sql_pipeline.get_result_table());
 }
@@ -217,8 +217,8 @@ TEST_F(DDLStatementTest, CreateTableWithColumnConstraints) {
 
   const TableColumnDefinitions& column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
                                                                             {"a_long", DataType::Long, false},
-                                                                            {"a_float", DataType::Float, false, KeyConstraintType::UNIQUE},
-                                                                            {"a_double", DataType::Double, true, KeyConstraintType::PRIMARY_KEY},
+                                                                            {"a_float", DataType::Float, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::UNIQUE})},
+                                                                            {"a_double", DataType::Double, true, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})},
                                                                             {"a_string", DataType::String, false}};
 
   std::shared_ptr<const Table> table = Table::create_dummy_table(column_definitions);

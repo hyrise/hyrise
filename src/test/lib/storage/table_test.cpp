@@ -172,15 +172,12 @@ TEST_F(StorageTableTest, DeleteColumn) {
   EXPECT_EQ(t->column_count(), 1u);
 }
 
-TEST_F(StorageTableTest, DeleteColumnAndIndex) {
-  EXPECT_EQ(t->column_count(), 2u);
+TEST_F(StorageTableTest, DeleteIndex) {
   const auto test_column_ids = std::vector<ColumnID>{ColumnID{0}};
 
   t->create_index<GroupKeyIndex>(test_column_ids, "TestIndex");
 
-  t->delete_column(ColumnID{0});
-
-  EXPECT_EQ(t->column_count(), 1u);
+  t->remove_index("TestIndex");
 
   EXPECT_EQ(t->indexes_statistics().size(), 0u);
 }

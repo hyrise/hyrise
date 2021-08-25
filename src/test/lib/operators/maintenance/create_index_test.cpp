@@ -38,7 +38,7 @@ void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, st
 
 TEST_F(CreateIndexTest, NameAndDescription) {
   EXPECT_EQ(create_index->name(), "CreateIndex");
-  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine), "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('0',)");
+  EXPECT_EQ(create_index->description(DescriptionMode::SingleLine), "CreateIndex 'IF NOT EXISTS' 'TestIndex' ON 'TestTable' column_ids('b',)");
 }
 
 TEST_F(CreateIndexTest, Execute) {

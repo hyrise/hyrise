@@ -231,14 +231,20 @@ TEST_F(StorageChunkTest, DeleteSegment) {
   EXPECT_EQ(abstract_segment->size(), 4u);
 }
 
-TEST_F(StorageChunkTest, DeleteSegmentAndIndex) {
+TEST_F(StorageChunkTest, DeleteSegmentWithIndex) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
   auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
 
-  chunk->delete_segment(ColumnID{0});
+  EXPECT_THROW(chunk->delete_segment(ColumnID{0}), std::logic_error);
+}
+
+TEST_F(StorageChunkTest, DeleteIndex) {
+  chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
+  auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int});
+
+  chunk->remove_index(index_int);
   auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
-  EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
-            indexes_for_segment_0.cend());
+  EXPECT_TRUE(indexes_for_segment_0.empty());
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationSingle) {
