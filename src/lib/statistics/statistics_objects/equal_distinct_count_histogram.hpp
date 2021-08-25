@@ -5,8 +5,9 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest_prod.h"
+
 #include "abstract_histogram.hpp"
-#include "gtest/gtest.h"
 #include "types.hpp"
 
 namespace opossum {
