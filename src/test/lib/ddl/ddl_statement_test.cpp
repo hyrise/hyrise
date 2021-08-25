@@ -161,14 +161,14 @@ TEST_F(DDLStatementTest, DropIndex) {
 }
 
 TEST_F(DDLStatementTest, DropIndexNotExistsNoFlag) {
-  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON"}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex"}.create_pipeline();
 
   // TODO(anyone): come up with way to test this without aborting test execution
   // EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 
 TEST_F(DDLStatementTest, DropIndexNotExistsWithFlag) {
-  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex ON"}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX IF EXISTS myindex"}.create_pipeline();
 
   EXPECT_NO_THROW(sql_pipeline.get_result_table());
 }

@@ -1392,13 +1392,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     auto table = Table::create_dummy_table(column_definitions);
     input_node = StaticTableNode::make(table);
 
-    for (auto tableKeyConstraint : *create_statement.tableConstraints) {
+    for (auto tableConstraint : *create_statement.tableConstraints) {
       std::unordered_set<ColumnID> column_ids;
-      for (auto name : *tableKeyConstraint->columnNames) {
+      for (auto name : *tableConstraint->columnNames) {
         auto column_id = table->column_id_by_name(std::basic_string<char>{name});
         column_ids.insert(column_id);
       }
-      switch (tableKeyConstraint->type) {
+      switch (tableConstraint->type) {
         case hsql::ConstraintType::PRIMARY_KEY:
           tableConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
           break;
@@ -1810,6 +1810,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprHint:
       FailInput("Hints are not yet supported");
+
+    case hsql::kExprLiteralDate:
+      FailInput("Literal dates are not yet supported");
 
     case hsql::kExprCast:
       FailInput("Explicit casts are not yet supported");

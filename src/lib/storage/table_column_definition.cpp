@@ -3,13 +3,11 @@
 namespace opossum {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& init_name, const DataType init_data_type,
-                                             const bool init_nullable,
-                                             std::vector<hsql::ConstraintType>* init_constraints)
-    : name(init_name), data_type(init_data_type), nullable(init_nullable), constraints(init_constraints) {}
+                                             const bool init_nullable, std::vector<hsql::ConstraintType>* init_constraints)
+    : name(init_name), data_type(init_data_type), nullable(init_nullable), constraints(init_constraints){}
 
 bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
-  return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable &&
-         *constraints == *(rhs.constraints);
+  return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable && *constraints == *(rhs.constraints);
 }
 
 size_t TableColumnDefinition::hash() const {
