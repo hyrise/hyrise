@@ -9,7 +9,7 @@ namespace opossum {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, const KeyConstraintType init_constraint = KeyConstraintType::NOT_SET);
+  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, std::vector<hsql::ConstraintType>* init_constraints = new std::vector<hsql::ConstraintType>());
 
   bool operator==(const TableColumnDefinition& rhs) const;
   size_t hash() const;
@@ -17,7 +17,7 @@ struct TableColumnDefinition final {
   std::string name;
   DataType data_type{DataType::Int};
   bool nullable{false};
-  KeyConstraintType constraint;
+  std::vector<hsql::ConstraintType>* constraints;
 };
 
 // So that google test, e.g., prints readable error messages

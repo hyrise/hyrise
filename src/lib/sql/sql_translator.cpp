@@ -1326,14 +1326,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_index(const hs
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop_index(const hsql::DropStatement& drop_statement) {
 
-  return DropIndexNode::make(drop_statement.index_name, drop_statement.ifExists);
+  return DropIndexNode::make(drop_statement.indexName, drop_statement.ifExists);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
   std::shared_ptr<AbstractLQPNode> input_node;
-  auto tableKeyConstraints = std::make_shared<TableKeyConstraints>();
+  auto tableConstraints = std::make_shared<TableKeyConstraints>();
 
   if (create_statement.select) {
     input_node = _translate_select_statement(*create_statement.select);
@@ -1388,20 +1388,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
-
-
-        switch (parser_column_definition->constraintType) {
-          case hsql::ConstraintType::PRIMARY_KEY:
-            column_definition.constraint = KeyConstraintType::PRIMARY_KEY;
-            break;
-          case hsql::ConstraintType::UNIQUE:
-            column_definition.constraint = KeyConstraintType::UNIQUE;
-            break;
-          case hsql::ConstraintType::NOT_SET:
-          default:
-            column_definition.constraint = KeyConstraintType::NOT_SET;
-            break;
-      }
+      column_definition.constraints = parser_column_definition->column_constraints;
     }
 
     auto table = Table::create_dummy_table(column_definitions);
@@ -1415,17 +1402,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       }
       switch (tableKeyConstraint->type) {
         case hsql::ConstraintType::PRIMARY_KEY:
-          tableKeyConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
+          tableConstraints->push_back({column_ids, KeyConstraintType::PRIMARY_KEY});
           break;
         case hsql::ConstraintType::UNIQUE:
-          tableKeyConstraints->push_back({column_ids, KeyConstraintType::UNIQUE});
+          tableConstraints->push_back({column_ids, KeyConstraintType::UNIQUE});
           break;
         default:
           std::cout << "keyType not supported";
       }
     }
   }
-  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, tableKeyConstraints, input_node);
+  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, tableConstraints, input_node);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
