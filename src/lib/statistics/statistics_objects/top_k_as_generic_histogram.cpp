@@ -76,7 +76,7 @@ std::shared_ptr<GenericHistogram<T>> TopKAsGenericHistogram<T>::from_column(cons
 
   // Construct Generic Histogram with single bins for Top K Values.
   auto current_minimum_index = 0u;
-  auto current_maximum_index = non_top_k_distinct_count - 1;
+  size_t current_maximum_index = non_top_k_distinct_count - 1;
 
   for (auto top_k_index = 0ul, top_k_size = k; top_k_index < top_k_size; top_k_index++) {
     const auto current_top_k_value = top_k_names[top_k_index];

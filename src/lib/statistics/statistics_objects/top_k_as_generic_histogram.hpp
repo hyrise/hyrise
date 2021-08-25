@@ -17,7 +17,9 @@ class Table;
 
 /**
  *  Top K histogram. 
- *  This histogram saves the TOP_K_DEFAULT most common values as single bins in a GenericHistogram and all Non-Top K values as bins in between.
+ *  This histogram saves the TOP_K_DEFAULT most common values as single bins in a GenericHistogram
+ *  and all Non-Top K values as bins in between using an uniform distribution assumption.
+ *  For more detailed documentation regarding histogram creation see the top_k_as_generic_histogram.cpp.
  */
 template <typename T>
 class TopKAsGenericHistogram {

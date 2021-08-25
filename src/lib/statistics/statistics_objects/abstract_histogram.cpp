@@ -20,7 +20,6 @@
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
