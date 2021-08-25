@@ -20,8 +20,6 @@ class DropIndexNode : public EnableMakeForLQPNode<DropIndexNode>, public Abstrac
 
   const std::string index_name;
   const bool if_exists;
-  const std::string table_name;
-
 
  protected:
   size_t _on_shallow_hash() const override;
