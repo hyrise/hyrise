@@ -86,7 +86,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     [[maybe_unused]] size_t number_compressed_strings =
         fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), compressed_values.size(),
                       compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
-     
+
     DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not large enough");
 
     fsst_decoder_t decoder = fsst_decoder(encoder);
@@ -101,7 +101,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // Calculate global offset based on compressed value lengths.
     offsets[0] = 0;
     auto aggregated_offset_sum = uint64_t{0};
-    for(auto index = size_t{1}; index <= compressed_values_size; ++index) {
+    for (auto index = size_t{1}; index <= compressed_values_size; ++index) {
       aggregated_offset_sum += compressed_value_lengths[index - 1];
       offsets[index] = aggregated_offset_sum;
     }
@@ -185,7 +185,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     // Hardcode BitPacking as vector compression type.
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {max_offset});
 
-     if (has_null_values) {
+    if (has_null_values) {
       null_values_optional = std::make_optional(null_values);
     }
 

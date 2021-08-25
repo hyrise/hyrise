@@ -63,7 +63,7 @@ TEST_F(StorageFSSTSegmentTest, MemoryUsageSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
-  const auto values = pmr_vector<pmr_string> {"This", "is", "a", "test", "for", "the", "FSST", "segment"};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "a", "test", "for", "the", "FSST", "segment"};
   for (const auto& value : values) {
     vs_str->append(value);
   }
@@ -76,7 +76,7 @@ TEST_F(StorageFSSTSegmentTest, DecompressFSSTSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
-  const auto values = pmr_vector<pmr_string> {"This", "is", "data"};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "data"};
 
   for (const auto& value : values) {
     vs_str->append(value);
@@ -86,7 +86,8 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
   const auto allocator = PolymorphicAllocator<size_t>(&resource);
 
   const auto segment = create_fsst_segment(vs_str, DataType::String);
-  const auto copied_segment = std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
+  const auto copied_segment =
+      std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
 
   ASSERT_EQ(copied_segment->size(), values.size());
   for (auto index = size_t{0}; index < values.size(); ++index) {
@@ -105,8 +106,8 @@ TEST_F(StorageFSSTSegmentTest, DecompressNullFSSTSegmentTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
-  const auto values = pmr_vector<pmr_string> {"This", "is", "data"};
-  const auto expected_null_values =  pmr_vector<bool> {false, false, true};
+  const auto values = pmr_vector<pmr_string>{"This", "is", "data"};
+  const auto expected_null_values = pmr_vector<bool>{false, false, true};
 
   for (auto index = size_t{0}; index < values.size(); ++index) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
@@ -134,8 +135,8 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentIterableTest) {
 }
 
 TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
-  const auto values = pmr_vector<pmr_string> {"Two", "values", ""};
-  const auto expected_null_values = pmr_vector<bool> {false, false, true};
+  const auto values = pmr_vector<pmr_string>{"Two", "values", ""};
+  const auto expected_null_values = pmr_vector<bool>{false, false, true};
 
   for (auto index = size_t{0}; index < values.size(); ++index) {
     vs_str->append((expected_null_values[index]) ? NULL_VALUE : values[index]);
