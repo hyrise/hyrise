@@ -109,7 +109,7 @@ class BinaryWriter {
    * Dictionary Values^          | std::string                         | Sum of all string lengths
    * Vector compress. bit width¹ | uint8_t                             | 1
    * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -136,7 +136,7 @@ class BinaryWriter {
    * Dictionary Values           | char array                          | Dictionary size * FixedString length
    * Vector compress. bit width¹ | uint8_t                             | 1
    * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -179,7 +179,7 @@ class BinaryWriter {
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
    * Vector compress. bit width² | uint8_t                             | 1
    * Offset values²              | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Offset values³              | uint(8|16|32)_t                     | Rows * width of offset vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -235,7 +235,7 @@ class BinaryWriter {
    * Compressed values           | vector<unsigned char>               | Compressed values size * 1
    * Vector compress. bit width  | uint8_t                             | 1
    * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
-   *                             |                                     |  rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Reference offsets size      | uint32_t                            | 4
    * Reference offsets           | vector<uint64_t>                    | 64
    * NULL values size            | uint32_t                            | 4

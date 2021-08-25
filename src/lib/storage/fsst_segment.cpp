@@ -82,7 +82,6 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 
   const auto output_size_after_decompression =
       fsst_decompress(&_decoder, compressed_length, compressed_pointer, max_output_size, output_buffer.data());
-
   output_buffer.resize(output_size_after_decompression);
 
   return {pmr_string{output_buffer.begin(), output_buffer.end()}};
