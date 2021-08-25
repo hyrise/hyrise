@@ -1,7 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 #include <boost/functional/hash_fwd.hpp>
+#include <unordered_map>
 
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
