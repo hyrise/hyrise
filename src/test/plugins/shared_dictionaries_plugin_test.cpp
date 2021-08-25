@@ -135,11 +135,11 @@ TEST_F(SharedDictionariesPluginTest, ProcessColumn) {
       _get_customer_table(), "customer", _market_column_id, _market_column_name, 0.1f, stats};
   column_processor.process();
 
-  EXPECT_GT(stats.total_bytes_saved, 0);
-  EXPECT_GT(stats.total_previous_bytes, 0);
-  EXPECT_GT(stats.modified_previous_bytes, 0);
-  EXPECT_GT(stats.num_merged_dictionaries, 0);
-  EXPECT_GT(stats.num_shared_dictionaries, 0);
+  EXPECT_EQ(stats.total_bytes_saved, 2048);
+  EXPECT_EQ(stats.total_previous_bytes, 3470);
+  EXPECT_EQ(stats.modified_previous_bytes, 3470);
+  EXPECT_EQ(stats.num_merged_dictionaries, 10);
+  EXPECT_EQ(stats.num_shared_dictionaries, 1);
   EXPECT_EQ(stats.num_existing_shared_dictionaries, 0);
   EXPECT_EQ(stats.num_existing_merged_dictionaries, 0);
 
