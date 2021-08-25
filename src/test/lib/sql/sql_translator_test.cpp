@@ -2511,8 +2511,8 @@ TEST_F(SQLTranslatorTest, CreateTableWithColumnConstraints) {
 
   const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
                                                          {"a_long", DataType::Long, false},
-                                                         {"a_float", DataType::Float, false, KeyConstraintType::UNIQUE},
-                                                         {"a_double", DataType::Double, true, KeyConstraintType::PRIMARY_KEY},
+                                                         {"a_float", DataType::Float, false, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::UNIQUE})},
+                                                         {"a_double", DataType::Double, true, new std::vector<hsql::ConstraintType>({hsql::ConstraintType::PRIMARY_KEY})},
                                                          {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));

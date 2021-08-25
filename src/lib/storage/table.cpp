@@ -66,13 +66,6 @@ void Table::delete_column(ColumnID column_id) {
     auto chunk = std::atomic_load(&_chunks[chunk_id]);
     if (!chunk) continue;
 
-    // before deleting a segment, we have to explicitly remove all indexes for this segment
-    //    for(auto index : chunk->get_indexes({column_id})) {
-    //        chunk->remove_index(index);
-    //      }
-    //
-    //    chunk->delete_segment(column_id);
-    //    }
     chunk->delete_segment(column_id);
   }
 

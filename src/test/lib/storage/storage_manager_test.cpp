@@ -86,14 +86,6 @@ TEST_F(StorageManagerTest, DropTable) {
   EXPECT_TRUE(sm.has_table("first_table"));
 }
 
-TEST_F(StorageManagerTest, DropColumn) {
-  auto& sm = Hyrise::get().storage_manager;
-  sm.drop_column_from_table("first_table", "a");
-
-  auto table = sm.get_table("first_table");
-  EXPECT_EQ(table->table_statistics()->column_statistics.size(), 0u);
-}
-
 TEST_F(StorageManagerTest, DoesNotHaveTable) {
   auto& sm = Hyrise::get().storage_manager;
   EXPECT_EQ(sm.has_table("third_table"), false);
