@@ -64,13 +64,13 @@ class FSSTSegment : public AbstractEncodedSegment {
   const fsst_decoder_t& decoder() const;
 
  private:
-  pmr_vector<unsigned char> _compressed_values;
-  std::unique_ptr<const BaseCompressedVector> _compressed_offsets;
-  pmr_vector<uint64_t> _reference_offsets;
-  std::optional<pmr_vector<bool>> _null_values;
+  const pmr_vector<unsigned char> _compressed_values;
+  const std::unique_ptr<const BaseCompressedVector> _compressed_offsets;
+  const pmr_vector<uint64_t> _reference_offsets;
+  const std::optional<pmr_vector<bool>> _null_values;
   const uint32_t _number_elements_per_reference_bucket;
   mutable fsst_decoder_t _decoder;
-  std::unique_ptr<BaseVectorDecompressor> _offset_decompressor;
+  const std::unique_ptr<BaseVectorDecompressor> _offset_decompressor;
 };
 
 extern template class FSSTSegment<pmr_string>;

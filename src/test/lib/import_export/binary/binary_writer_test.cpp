@@ -41,6 +41,7 @@ auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> i
   return string;
 };
 
+// Intentionally left out FSST encoding because of non-deterministic behaviour.
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),

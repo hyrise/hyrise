@@ -65,8 +65,7 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
 
     SegmentPosition<T> dereference() const {
       std::optional<T> value = _segment.get_typed_value(_chunk_offset);
-      bool has_value = value.has_value();
-      return SegmentPosition<T>(has_value ? *value : T{}, !has_value, _chunk_offset);
+      return SegmentPosition<T>(value ? *value : T{}, !value, _chunk_offset);
     }
 
    private:
@@ -91,8 +90,7 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
       std::optional<T> value = _segment.get_typed_value(chunk_offsets.offset_in_referenced_chunk);
-      bool has_value = value.has_value();
-      return SegmentPosition<T>(has_value ? *value : T{}, !has_value, chunk_offsets.offset_in_poslist);
+      return SegmentPosition<T>(value ? *value : T{}, !value, chunk_offsets.offset_in_poslist);
     }
 
    private:

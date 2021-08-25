@@ -31,18 +31,15 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
         return;
       }
 
-      const auto segment_size = static_cast<size_t>(std::distance(it, end));
+      const auto segment_size = std::distance(it, end);
       values.reserve(segment_size);
       null_values.reserve(segment_size);
-
-      T current_value;
-      bool is_current_null;
 
       for (; it != end; ++it) {
         auto segment_value = *it;
 
-        current_value = segment_value.value();
-        is_current_null = segment_value.is_null();
+        T current_value = segment_value.value();
+        auto is_current_null = segment_value.is_null();
         if (is_current_null) {
           values.emplace_back("");
           has_null_values = true;
@@ -76,11 +73,10 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     auto total_length = uint64_t{0};
 
-    for (pmr_string& value : values) {
+    for (auto& value : values) {
       total_length += value.size();
       row_lengths.push_back(value.size());
-      // TODO(anybody): refactor the cast
-      row_pointers.push_back(reinterpret_cast<unsigned char*>(const_cast<char*>(value.data())));
+      row_pointers.push_back(reinterpret_cast<unsigned char*>(value.data()));
     }
 
     // 7 + 2 * total_length -> See fsst_compress interface in fsst.h description.
@@ -90,7 +86,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     [[maybe_unused]] size_t number_compressed_strings =
         fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), compressed_values.size(),
                       compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
-
+     
     DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not large enough");
 
     fsst_decoder_t decoder = fsst_decoder(encoder);
@@ -99,13 +95,13 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     return decoder;
   }
 
-  uint64_t _create_offsets(pmr_vector<uint64_t>& compressed_value_lengths, pmr_vector<uint32_t>& offsets) {
-    size_t compressed_values_size = compressed_value_lengths.size();
+  uint64_t _create_offsets(const pmr_vector<uint64_t>& compressed_value_lengths, pmr_vector<uint32_t>& offsets) {
+    const auto compressed_values_size = compressed_value_lengths.size();
 
     // Calculate global offset based on compressed value lengths.
     offsets[0] = 0;
-    uint64_t aggregated_offset_sum = 0;
-    for (size_t index{1}; index <= compressed_values_size; ++index) {
+    auto aggregated_offset_sum = uint64_t{0};
+    for(auto index = size_t{1}; index <= compressed_values_size; ++index) {
       aggregated_offset_sum += compressed_value_lengths[index - 1];
       offsets[index] = aggregated_offset_sum;
     }
@@ -114,7 +110,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   }
 
   uint32_t _create_reference_offsets(pmr_vector<uint32_t>& offsets, pmr_vector<uint64_t>& reference_offsets) {
-    auto reference_offsets_size = reference_offsets.size();
+    const auto reference_offsets_size = reference_offsets.size();
     auto offsets_size = offsets.size();
     // Since the first reference offset (which is always 0) is not saved,
     // there are reference_offsets_size + 1 reference buckets.
@@ -123,15 +119,15 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       return 0;
     }
 
-    uint32_t n_elements_in_reference_bucket = offsets_size / (reference_offsets_size + 1);
+    const auto n_elements_in_reference_bucket = static_cast<uint32_t>(offsets_size / (reference_offsets_size + 1));
 
     // Calculate start offset of each reference bucket.
-    for (size_t index = 0; index < reference_offsets_size; ++index) {
+    for (auto index = size_t{0}; index < reference_offsets_size; ++index) {
       reference_offsets[index] = offsets[(index + 1) * n_elements_in_reference_bucket];
     }
 
     // Subtract the reference offset from the original offsets.
-    for (size_t index{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
+    for (auto index = size_t{n_elements_in_reference_bucket}; index < offsets_size; ++index) {
       auto reference_offset_index = (index / n_elements_in_reference_bucket) - 1;
 
       // Move last unmatched elements to the last bucket.
@@ -158,14 +154,10 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     std::optional<pmr_vector<bool>> null_values_optional;
 
     // Fill values and null_values vector accordingly.
-    bool has_null_values = _collect_values(segment_iterable, values, null_values);
+    const auto has_null_values = _collect_values(segment_iterable, values, null_values);
 
-    if (has_null_values) {
-      null_values_optional = std::make_optional(null_values);
-    }
-
-    pmr_vector<unsigned char> compressed_values{allocator};
-    pmr_vector<uint64_t> compressed_value_lengths;
+    auto compressed_values = pmr_vector<unsigned char>{allocator};
+    auto compressed_value_lengths = pmr_vector<uint64_t>{};
     fsst_decoder_t decoder;
 
     if (values.size() != 0) {
@@ -174,9 +166,9 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     }
 
     // Create an offsets container (aggregated_offset_sum is the total size of the compressed values).
-    pmr_vector<uint32_t> offsets{allocator};
+    auto offsets = pmr_vector<uint32_t>{allocator};
     offsets.resize(values.size() + 1);
-    uint64_t aggregated_offset_sum = _create_offsets(compressed_value_lengths, offsets);
+    auto aggregated_offset_sum = _create_offsets(compressed_value_lengths, offsets);
 
     // "shrink_to_fit" to the total size of the compressed strings.
     compressed_values.resize(aggregated_offset_sum);
@@ -188,10 +180,14 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
     uint32_t n_elements_in_reference_bucket = _create_reference_offsets(offsets, reference_offsets);
 
     // Find maximum value in offsets in order to use it in later vector compression.
-    uint32_t max_offset = *std::max_element(offsets.cbegin(), offsets.cend());
+    const auto max_offset = *std::max_element(offsets.cbegin(), offsets.cend());
 
     // Hardcode BitPacking as vector compression type.
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {max_offset});
+
+     if (has_null_values) {
+      null_values_optional = std::make_optional(null_values);
+    }
 
     return std::make_shared<FSSTSegment<T>>(compressed_values, compressed_offsets, reference_offsets,
                                             null_values_optional, n_elements_in_reference_bucket, decoder);
