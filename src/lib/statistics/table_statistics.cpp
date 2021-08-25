@@ -68,7 +68,11 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>> histogram = nullptr;
 
           if (generate_segment_histograms) {
-            // Per segment statistics will be twice as detailed.
+            /**
+             * Per segment statistics will be twice as detailed. This is an arbitrary choice
+             * and further investigations could yield a better value.
+             * The idea is that having more detailled small histograms makes the merging less error-prone.
+             */
             std::vector<std::shared_ptr<EqualDistinctCountHistogram<ColumnDataType>>> histograms;
             histograms.reserve(chunk_count);
 
