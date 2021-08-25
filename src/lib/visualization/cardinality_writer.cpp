@@ -48,7 +48,7 @@ void CardinalityWriter::write_cardinalities(const std::vector<std::shared_ptr<Ab
 
   // If files are empty, write CSV headers.
   // Use semicolon as seperator instead of comma to be able to work with database values containing commas
-  const auto seperator = ";";
+  const auto *const seperator = ";";
   std::ifstream csv_file;
   csv_file.open("./benchmark_cardinality_estimation.csv");
   if (csv_file.peek() == std::ifstream::traits_type::eof()) {
