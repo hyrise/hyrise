@@ -32,7 +32,7 @@ void check_index_exists_correctly(std::shared_ptr<CreateIndex> created_index, st
   for (ChunkID id = ChunkID{0}; id < chunk_count; id += 1) {
     auto current_chunk = table->get_chunk(id);
     auto applied_indices = current_chunk->get_indexes(*created_index->column_ids);
-    EXPECT_TRUE(applied_indices.size() == 1);
+    EXPECT_EQ(applied_indices.size(), 1);
   }
 }
 

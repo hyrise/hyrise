@@ -54,7 +54,7 @@ TEST_F(DropIndexTest, NameAndDescription) {
 }
 
 TEST_F(DropIndexTest, IndexStatisticsEmpty) {
-  EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
+  EXPECT_EQ(test_table->indexes_statistics().size(), 1);
   auto drop_index = std::make_shared<DropIndex>(index_name, false);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -62,11 +62,11 @@ TEST_F(DropIndexTest, IndexStatisticsEmpty) {
 
   drop_index->execute();
   context->commit();
-  EXPECT_TRUE(test_table->indexes_statistics().size() == 0);
+  EXPECT_EQ(test_table->indexes_statistics().size(), 0);
 }
 
 TEST_F(DropIndexTest, FailOnWrongIndexName) {
-  EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
+  EXPECT_EQ(test_table->indexes_statistics().size(), 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
   auto drop_index = std::make_shared<DropIndex>("WrongIndexName", false);
@@ -79,7 +79,7 @@ TEST_F(DropIndexTest, FailOnWrongIndexName) {
 }
 
 TEST_F(DropIndexTest, NoFailOnWrongIndexNameWithExistsFlag) {
-  EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
+  EXPECT_EQ(test_table->indexes_statistics().size(), 1);
   auto table_wrapper = std::make_shared<TableWrapper>(test_table);
   table_wrapper->execute();
   auto drop_index = std::make_shared<DropIndex>("WrongIndexName", true);
@@ -89,7 +89,7 @@ TEST_F(DropIndexTest, NoFailOnWrongIndexNameWithExistsFlag) {
 
   EXPECT_NO_THROW(drop_index->execute());
   context->commit();
-  EXPECT_TRUE(test_table->indexes_statistics().size() == 1);
+  EXPECT_EQ(test_table->indexes_statistics().size(), 1);
 }
 
 }  // namespace opossum

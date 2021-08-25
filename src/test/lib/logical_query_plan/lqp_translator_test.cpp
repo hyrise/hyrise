@@ -1,15 +1,10 @@
 #include <memory>
-#include <operators/maintenance/create_index.hpp>
-#include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "base_test.hpp"
-#include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
@@ -56,7 +51,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"

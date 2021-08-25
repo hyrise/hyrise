@@ -51,7 +51,7 @@ void check_if_index_exists_correctly(std::shared_ptr<std::vector<ColumnID>> colu
   for (ChunkID id = ChunkID{0}; id < chunk_count; id += 1) {
     auto current_chunk = table->get_chunk(id);
     auto actual_indices = current_chunk->get_indexes(*column_ids);
-    EXPECT_TRUE(actual_indices.size() == static_cast<unsigned long>(index_count));
+    EXPECT_EQ(actual_indices.size(), static_cast<size_t>(index_count));
   }
 }
 
@@ -63,8 +63,8 @@ TEST_F(DDLStatementTest, CreateIndexSingleColumn) {
 
   auto actual_index = _table_a->indexes_statistics().at(0);
 
-  EXPECT_TRUE(actual_index.name == "myindex");
-  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+  EXPECT_EQ(actual_index.name, "myindex");
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
 
   check_if_index_exists_correctly(column_ids, _table_a);
 }
@@ -78,8 +78,8 @@ TEST_F(DDLStatementTest, CreateIndexMultiColumn) {
 
   auto actual_index = _table_a->indexes_statistics().at(0);
 
-  EXPECT_TRUE(actual_index.name == "myindex");
-  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+  EXPECT_EQ(actual_index.name, "myindex");
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
 
   check_if_index_exists_correctly(column_ids, _table_a);
 }
@@ -92,8 +92,8 @@ TEST_F(DDLStatementTest, CreateIndexWithoutName) {
 
   auto actual_index = _table_a->indexes_statistics().at(0);
 
-  EXPECT_TRUE(actual_index.name == "table_a_a");
-  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+  EXPECT_EQ(actual_index.name, "table_a_a");
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
 
   check_if_index_exists_correctly(column_ids, _table_a);
 }
@@ -106,8 +106,8 @@ TEST_F(DDLStatementTest, CreateIndexIfNotExistsFirstTime) {
 
   auto actual_index = _table_a->indexes_statistics().at(0);
 
-  EXPECT_TRUE(actual_index.name == "myindex");
-  EXPECT_TRUE(actual_index.column_ids == *column_ids);
+  EXPECT_EQ(actual_index.name, "myindex");
+  EXPECT_EQ(actual_index.column_ids, *column_ids);
 
   check_if_index_exists_correctly(column_ids, _table_a);
 }
@@ -132,7 +132,7 @@ TEST_F(DDLStatementTest, CreateIndexExistsFlagNotSet) {
 
   auto second_sql_pipeline = SQLPipelineBuilder{"CREATE INDEX myindex ON table_a (a, b)"}.create_pipeline();
 
-  // TODO: come up with way to test this without aborting test execution
+  // TODO(anyone): come up with way to test this without aborting test execution
   // EXPECT_THROW(second_sql_pipeline.get_result_table(), std::exception);
 
   auto single_column_col_ids = std::make_shared<std::vector<ColumnID>>();
@@ -163,7 +163,7 @@ TEST_F(DDLStatementTest, DropIndex) {
 TEST_F(DDLStatementTest, DropIndexNotExistsNoFlag) {
   auto sql_pipeline = SQLPipelineBuilder{"DROP INDEX myindex ON"}.create_pipeline();
 
-  // TODO: come up with way to test this without aborting test execution
+  // TODO(anyone): come up with way to test this without aborting test execution
   // EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 

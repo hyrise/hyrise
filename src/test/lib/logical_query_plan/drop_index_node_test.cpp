@@ -1,12 +1,9 @@
 #include "base_test.hpp"
-
-#include "base_test.hpp"
 #include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/drop_index_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
-#include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tasks/chunk_compression_task.hpp"
 #include "utils/assert.hpp"
@@ -22,7 +19,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
-#include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {
 
