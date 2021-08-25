@@ -500,7 +500,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("data_preparation_cores", "Specify the number of cores used by the scheduler for the data preparation steps, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores. This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.", cxxopts::value<uint32_t>()->default_value("0")); // NOLINT
   // clang-format on
 
   return cli_options;
@@ -538,6 +539,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_scheduler", config.enable_scheduler},
       {"cores", config.cores},
       {"clients", config.clients},
+      {"data_preparation_cores", config.data_preparation_cores},
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
