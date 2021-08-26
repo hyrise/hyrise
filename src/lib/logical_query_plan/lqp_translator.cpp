@@ -354,7 +354,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
 
   // comment in if JoinIndex should be tested in benchmarks
-  /*
+
   const auto& left_input_type = join_node->left_input()->type;
   const auto& right_input_type = join_node->right_input()->type;
 
@@ -381,7 +381,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
                            index_side})) {
     return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
                                        primary_join_predicate, std::move(secondary_join_predicates), *index_side);
-  }*/
+  }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
