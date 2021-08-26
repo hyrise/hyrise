@@ -176,8 +176,13 @@ void BenchmarkRunner::run() {
   // Stop the thread that tracks the system utilization
   track_system_utilization = false;
   system_utilization_tracker.join();
-  Hyrise::get().plugin_manager.load_plugin(
-      "/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so");
+
+  // This should be adjusted according to your build folder, e.g.:
+  // /home/ExampleUser/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so
+  constexpr auto plugin_path = "";
+  Assert(plugin_path != std::string{""}, "plugin_path cannot be empty, set it accordingly!");
+
+  Hyrise::get().plugin_manager.load_plugin(plugin_path);
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
