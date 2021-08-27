@@ -184,14 +184,16 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
+          Fail("Fallback would be used.");
+          // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+          //                       secondary_predicate_evaluator);
+          // nested_loop_joining_duration += timer.lap();
         }
       } else {
-        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                              secondary_predicate_evaluator);
-        nested_loop_joining_duration += timer.lap();
+        Fail("Fallback would be used.");
+        // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+        //                       secondary_predicate_evaluator);
+        // nested_loop_joining_duration += timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -237,7 +239,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
 
         indexed_chunk_ids.insert(indexed_chunk_ids_in_index.begin(), indexed_chunk_ids_in_index.end());
-
         _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
           _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
         });
@@ -254,9 +255,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           indexed_chunk_ids_iter++;
           continue;
         } else {
-          _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
+          Fail("Fallback would be used.");
+          // _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+          //                       secondary_predicate_evaluator);
+          // nested_loop_joining_duration += timer.lap();
         }
       }
     } else {  // chunk-based index join
@@ -279,9 +281,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
+          Fail("Fallback would be used.");
+          // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+          //                       secondary_predicate_evaluator);
+          // nested_loop_joining_duration += timer.lap();
         }
       }
     }
