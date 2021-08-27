@@ -28,6 +28,7 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class GetTable;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -264,6 +265,8 @@ class Table : private Noncopyable {
   const std::vector<ColumnID>& value_clustered_by() const;
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
+  std::optional<std::string> name() const;
+
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
@@ -289,6 +292,8 @@ class Table : private Noncopyable {
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<AbstractTableIndex>> _table_indexes;
+  // The name is only set if the table was retrieved from the StorageManager.
+  std::optional<std::string> _name;
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
   // chunks more than once.

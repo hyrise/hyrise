@@ -398,6 +398,8 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   _value_clustered_by = value_clustered_by;
 }
 
+std::optional<std::string> name() const { return _name; }
+
 pmr_vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes() const { return _table_indexes; }
 
 std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(const ColumnID column_id) const {
