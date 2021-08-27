@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
