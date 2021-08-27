@@ -197,7 +197,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
     // Equals or NotEquals are requested, chunk indexes are used. If no chunk index exists, NestedLoopJoin is used as a
     // fallback solution.
-    const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
+
+    const auto indexed_table_name = *_index_input_table->name();
+    const auto indexed_column_name = _index_input_table->column_name(_adjusted_primary_predicate.column_ids.second);
+    const auto stored_table_indexed_column_id =
+        Hyrise::get().storage_manager.get_table(indexed_table_name)->column_id_by_name(indexed_column_name);
+    const auto& table_indexes = _index_input_table->get_table_indexes(stored_table_indexed_column_id);
+
     if (!table_indexes.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
