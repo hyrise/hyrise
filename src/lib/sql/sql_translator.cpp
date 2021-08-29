@@ -34,7 +34,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/alter_drop_column_node.hpp"
+#include "logical_query_plan/alter_table_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -61,6 +61,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/drop_column_action.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -1433,7 +1434,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_alter(const hsql::Alt
   switch (alter_statement.action->type) {
     case hsql::ActionType::DROPCOLUMN:
       auto drop_action = dynamic_cast<hsql::DropColumnAction*>(alter_statement.action);
-      return AlterDropColumnNode::make(alter_statement.name, drop_action->columnName, drop_action->ifExists);
+      auto drop_column_action = std::make_shared<DropColumnAction>(*drop_action);
+      return AlterTableNode::make(alter_statement.name, drop_column_action);
   }
   Fail("Invalid enum value");
 }

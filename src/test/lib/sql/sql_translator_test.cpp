@@ -10,7 +10,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/alter_drop_column_node.hpp"
+#include "logical_query_plan/alter_table_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_index_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -2314,7 +2314,7 @@ TEST_F(SQLTranslatorTest, AlterTableDropColumn) {
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = AlterDropColumnNode::make("int_int_int", "a", false);
+  const auto expected_lqp = AlterTableNode::make("int_int_int", "a", false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2324,7 +2324,7 @@ TEST_F(SQLTranslatorTest, AlterTableDropColumnIfNotExists) {
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = AlterDropColumnNode::make("int_int_int", "a", true);
+  const auto expected_lqp = AlterTableNode::make("int_int_int", "a", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

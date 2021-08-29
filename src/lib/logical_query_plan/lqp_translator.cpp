@@ -10,7 +10,7 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
-#include "alter_drop_column_node.hpp"
+#include "alter_table_node.hpp"
 #include "change_meta_table_node.hpp"
 #include "create_index_node.hpp"
 #include "create_prepared_plan_node.hpp"
@@ -524,7 +524,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterDropColumnNode>(node);
+  const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterTableNode>(node);
   const auto input_node = alter_drop_column_node->left_input();
 
   return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, alter_drop_column_node->column_name,

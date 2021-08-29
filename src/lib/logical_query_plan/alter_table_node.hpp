@@ -2,21 +2,20 @@
 
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "abstract_alter_table_action.hpp"
+#include "drop_column_action.hpp"
 
 namespace opossum {
 
-// This node type represents the ALTER TABLE DROP COLUMN management command.
 
-class AlterDropColumnNode : public EnableMakeForLQPNode<AlterDropColumnNode>, public AbstractNonQueryNode {
+class AlterTableNode : public EnableMakeForLQPNode<AlterTableNode>, public AbstractNonQueryNode {
  public:
-  AlterDropColumnNode(const std::string& init_table_name, const std::string& init_column_name,
-                      const bool init_if_exists);
+  AlterTableNode(const std::string& init_table_name, const std::shared_ptr<AbstractAlterTableAction>& init_alter_action);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string table_name;
-  const std::string column_name;
-  const bool if_column_exists;
+  const std::shared_ptr<AbstractAlterTableAction> alter_action;
 
  protected:
   size_t _on_shallow_hash() const override;
