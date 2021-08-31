@@ -62,7 +62,6 @@ void DependencyValidator::start() {
     Timer candidate_timer;
     std::stringstream my_out;
     my_out << "[" << _id << "] Check candidate: ";
-    // std::cout << "Check candidate: ";
     candidate.output_to_stream(my_out, DescriptionMode::MultiLine);
     my_out << std::endl;
     switch (candidate.type) {
@@ -110,6 +109,7 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const auto num_random_rows = size_t{100};
 
+  // validate on sample to avoid full sorting
   if (candidate.determinants.size() == 1 && candidate.dependents.size() == 1 &&
       size_t{table->row_count()} > num_random_rows) {
     const auto determinant_column_id = candidate.determinants[0].column_id;
@@ -158,38 +158,6 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
       out << "    INVALID (shortcut sample)" << std::endl;
       return false;
     }
-
-    /*std::vector<ColumnID> determinant_pruned_columns;
-    std::vector<ColumnID> dependent_pruned_columns;
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      if (column_id != determinant_column_id) {
-        determinant_pruned_columns.emplace_back(column_id);
-      }
-      if (column_id != dependent_column_id) {
-        dependent_pruned_columns.emplace_back(column_id);
-      }
-    }
-    const auto get_table_determinants =
-        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, determinant_pruned_columns);
-    get_table_determinants->never_clear_output();
-    get_table_determinants->execute();
-    const auto get_table_dependents =
-        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, dependent_pruned_columns);
-    get_table_dependents->never_clear_output();
-    get_table_dependents->execute();
-    const auto determinants_aggregate =
-        std::make_shared<AggregateHash>(get_table_determinants, std::vector<std::shared_ptr<AggregateExpression>>{},
-                                        std::vector<ColumnID>{ColumnID{0}});
-    determinants_aggregate->never_clear_output();
-    const auto dependents_aggregate = std::make_shared<AggregateHash>(
-        get_table_dependents, std::vector<std::shared_ptr<AggregateExpression>>{}, std::vector<ColumnID>{ColumnID{0}});
-    dependents_aggregate->never_clear_output();
-    determinants_aggregate->execute();
-    dependents_aggregate->execute();
-    if (determinants_aggregate->get_output()->row_count() < dependents_aggregate->get_output()->row_count()) {
-      out << "    INVALID (shortcut column sizes)" << std::endl;
-      return false;
-    }*/
   }
 
   const auto column_sorted = [](const auto& sorted_table, const auto column_id) {
@@ -233,25 +201,11 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
     if (column_id == det_column_id || column_id == dep_column_id) continue;
     pruned_column_ids.emplace_back(column_id);
   }
-  /*std::vector<ChunkID> pruned_chunk_ids;
-  pruned_chunk_ids.reserve(table->chunk_count() - 1);
-  for (auto chunk_id = ChunkID{1}; chunk_id < table->chunk_count(); ++chunk_id) {
-    pruned_chunk_ids.emplace_back(chunk_id);
-  }
-  auto get_table = std::make_shared<GetTable>(table_name, pruned_chunk_ids, pruned_column_ids);*/
+
   const auto sort_column_id = det_column_id < dep_column_id ? ColumnID{0} : ColumnID{1};
   const auto target_column_id = det_column_id < dep_column_id ? ColumnID{1} : ColumnID{0};
   std::vector<SortColumnDefinition> sort_columns;
   sort_columns.emplace_back(sort_column_id, SortMode::Ascending);
-  /*auto sort_operator = std::make_shared<Sort>(get_table, sort_columns);
-  get_table->execute();
-  sort_operator->execute();
-
-  if (!column_sorted(sort_operator->get_output(), target_column_id)) {
-    out << "    INVALID (shortcut sample)" << std::endl;
-      return false;
-  }*/
-
   const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
   const auto sort_operator = std::make_shared<Sort>(get_table, sort_columns);
   get_table->execute();

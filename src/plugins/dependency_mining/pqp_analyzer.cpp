@@ -78,9 +78,7 @@ void PQPAnalyzer::run() {
               if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
                 continue;
               }
-              // std::cout << " " << input->description() << "\t" << expression->description() << std::endl;
               const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
-              // std::cout << "    " << expression->description() << std::endl;
               const auto join_column_id = _resolve_column_expression(expression);
               if (join_column_id == INVALID_TABLE_COLUMN_ID) {
                 continue;
@@ -112,14 +110,12 @@ void PQPAnalyzer::run() {
                         const auto scan_inputs = predicate_expression->arguments;
                         for (const auto& scan_input : scan_inputs) {
                           if (scan_input->type == ExpressionType::LQPColumn) {
-                            // std::cout << "equals scan column id" << std::endl;
                             const auto scan_column_id = _resolve_column_expression(scan_input);
                             if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                               continue;
                             }
                             further_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{},
                                                             DependencyType::Unique, prio);
-                            // std::cout << "        added " << scan_input->description()  << " UCC" << std::endl;
                           }
                         }
                       }
@@ -127,7 +123,6 @@ void PQPAnalyzer::run() {
                         const auto scan_inputs = predicate_expression->arguments;
                         for (const auto& scan_input : scan_inputs) {
                           if (scan_input->type == ExpressionType::LQPColumn) {
-                            // std::cout << "between scan column id" << std::endl;
                             const auto scan_column_id = _resolve_column_expression(scan_input);
                             if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                               continue;
@@ -135,7 +130,6 @@ void PQPAnalyzer::run() {
                             further_candidates.emplace_back(TableColumnIDs{scan_column_id},
                                                             TableColumnIDs{join_column_id}, DependencyType::Order,
                                                             prio);
-                            // std::cout << "        added " << scan_input->description() << " OD" << std::endl;
                           }
                         }
                       }
@@ -186,8 +180,6 @@ void PQPAnalyzer::run() {
           }
 
           // for now, use UCC candidates instead of FD candidates
-          // auto candidate = DependencyCandidate{columns, {}, DependencyType::Functional, prio};
-          // _add_if_new(candidate);
           for (const auto& column : columns) {
             auto candidate = DependencyCandidate{TableColumnIDs{column}, {}, DependencyType::Unique, prio};
             _add_if_new(candidate);
