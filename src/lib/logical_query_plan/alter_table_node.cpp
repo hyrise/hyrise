@@ -19,7 +19,7 @@ size_t AlterTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> AlterTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return AlterTableNode::make(table_name, alter_action->on_shallow_copy());
+  return AlterTableNode::make(table_name, alter_action);
 }
 
 bool AlterTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {

@@ -16,24 +16,24 @@ class CreateIndexNodeTest : public BaseTest {
 
     column_ids->emplace_back(0);
     column_ids->emplace_back(1);
-    create_index_node = CreateIndexNode::make("some_index", false, table_name, column_ids);
+    alter_table_node = CreateIndexNode::make("some_index", false, table_name, column_ids);
   }
 
   std::string table_name = "t_a";
-  std::shared_ptr<CreateIndexNode> create_index_node;
+  std::shared_ptr<CreateIndexNode> alter_table_node;
   std::shared_ptr<std::vector<ColumnID>> column_ids = std::make_shared<std::vector<ColumnID>>();
 };
 
 TEST_F(CreateIndexNodeTest, Description) {
-  EXPECT_EQ(create_index_node->description(), "[CreateIndex] Name: 'some_index' On Table: 't_a'");
+  EXPECT_EQ(alter_table_node->description(), "[CreateIndex] Name: 'some_index' On Table: 't_a'");
   auto create_index_node_2 = CreateIndexNode::make("some_index2", true, table_name, column_ids);
   EXPECT_EQ(create_index_node_2->description(), "[CreateIndex] IfNotExists Name: 'some_index2' On Table: 't_a'");
 }
-TEST_F(CreateIndexNodeTest, NodeExpressions) { ASSERT_EQ(create_index_node->node_expressions.size(), 0u); }
+TEST_F(CreateIndexNodeTest, NodeExpressions) { ASSERT_EQ(alter_table_node->node_expressions.size(), 0u); }
 
 TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
-  const auto deep_copy_node = create_index_node->deep_copy();
-  EXPECT_EQ(*create_index_node, *deep_copy_node);
+  const auto deep_copy_node = alter_table_node->deep_copy();
+  EXPECT_EQ(*alter_table_node, *deep_copy_node);
 
   const auto different_create_index_node_a = CreateIndexNode::make("some_index1", false, table_name, column_ids);
   const auto different_create_index_node_b = CreateIndexNode::make("some_index", true, table_name, column_ids);
@@ -44,15 +44,15 @@ TEST_F(CreateIndexNodeTest, HashingAndEqualityCheck) {
   const auto different_create_index_node_c =
       CreateIndexNode::make("some_index", false, table_name, different_column_ids);
 
-  EXPECT_NE(*different_create_index_node_a, *create_index_node);
-  EXPECT_NE(*different_create_index_node_b, *create_index_node);
-  EXPECT_NE(*different_create_index_node_c, *create_index_node);
+  EXPECT_NE(*different_create_index_node_a, *alter_table_node);
+  EXPECT_NE(*different_create_index_node_b, *alter_table_node);
+  EXPECT_NE(*different_create_index_node_c, *alter_table_node);
 
-  EXPECT_NE(different_create_index_node_a->hash(), create_index_node->hash());
-  EXPECT_NE(different_create_index_node_b->hash(), create_index_node->hash());
-  EXPECT_NE(different_create_index_node_c->hash(), create_index_node->hash());
+  EXPECT_NE(different_create_index_node_a->hash(), alter_table_node->hash());
+  EXPECT_NE(different_create_index_node_b->hash(), alter_table_node->hash());
+  EXPECT_NE(different_create_index_node_c->hash(), alter_table_node->hash());
 }
 
-TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*create_index_node, *create_index_node->deep_copy()); }
+TEST_F(CreateIndexNodeTest, Copy) { EXPECT_EQ(*alter_table_node, *alter_table_node->deep_copy()); }
 
 }  // namespace opossum

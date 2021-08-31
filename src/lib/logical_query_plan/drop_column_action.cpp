@@ -24,10 +24,6 @@ std::string DropColumnAction::description() {
   return stream.str();
 }
 
-std::shared_ptr<AbstractAlterTableAction> DropColumnAction::on_shallow_copy() {
-  return std::make_shared<DropColumnAction>(drop_column_action);
-}
-
 bool DropColumnAction::on_shallow_equals(AbstractAlterTableAction& rhs) {
   if(action.type == rhs.type) {
     auto& concrete_action = static_cast<DropColumnAction&>(rhs);

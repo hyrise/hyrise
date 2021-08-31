@@ -15,7 +15,6 @@ class DropColumnAction : public AbstractAlterTableAction {
   hsql::DropColumnAction drop_column_action;
 
   size_t on_shallow_hash() override;
-  std::shared_ptr<AbstractAlterTableAction> on_shallow_copy() override;
   bool on_shallow_equals(AbstractAlterTableAction& rhs) override;
   std::string description() override;
 };

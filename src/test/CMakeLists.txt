@@ -42,6 +42,7 @@ set(
     lib/logical_query_plan/create_prepared_plan_node_test.cpp
     lib/logical_query_plan/create_table_node_test.cpp
     lib/logical_query_plan/create_index_node_test.cpp
+    lib/logical_query_plan/alter_table_node_test.cpp
     lib/logical_query_plan/drop_index_node_test.cpp
     lib/logical_query_plan/create_view_node_test.cpp
     lib/logical_query_plan/delete_node_test.cpp
