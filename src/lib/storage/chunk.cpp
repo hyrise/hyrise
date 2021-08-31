@@ -50,8 +50,7 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegm
 void Chunk::delete_segment(size_t column_id) {
   const auto col_vec = new std::vector<ColumnID>();
   col_vec->emplace_back(ColumnID{static_cast<uint16_t>(column_id)});
-  Assert(get_indexes(*col_vec).empty(),
-         "Can't delete Segment if index exists");
+  Assert(get_indexes(*col_vec).empty(), "Can't delete Segment if index exists");
   _segments.erase(_segments.begin() + column_id);
 }
 

@@ -2311,7 +2311,7 @@ TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
 
 TEST_F(SQLTranslatorTest, AlterTableDropColumn) {
   const auto query = "ALTER TABLE int_int_int DROP COLUMN a;";
-  char column_name[] = {'a','\0'};
+  char column_name[] = {'a', '\0'};
   auto alter_table_action = hsql::DropColumnAction(column_name);
   auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
 
@@ -2324,7 +2324,7 @@ TEST_F(SQLTranslatorTest, AlterTableDropColumn) {
 
 TEST_F(SQLTranslatorTest, AlterTableDropColumnIfExists) {
   const auto query = "ALTER TABLE int_int_int DROP COLUMN IF EXISTS a;";
-  char column_name[] = {'a','\0'};
+  char column_name[] = {'a', '\0'};
   auto alter_table_action = hsql::DropColumnAction(column_name);
   alter_table_action.ifExists = true;
   auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);

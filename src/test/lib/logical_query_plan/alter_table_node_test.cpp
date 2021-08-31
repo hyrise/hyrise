@@ -14,7 +14,7 @@ class AlterTableNodeTest : public BaseTest {
   void SetUp() override {
     Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
 
-    char column_name[] = {'a','\0'};
+    char column_name[] = {'a', '\0'};
     auto alter_table_action = hsql::DropColumnAction(column_name);
     auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
 
@@ -28,7 +28,7 @@ class AlterTableNodeTest : public BaseTest {
 TEST_F(AlterTableNodeTest, Description) {
   EXPECT_EQ(alter_table_node->description(), "[AlterTable] Table: 't_a'; [DropColumn] column: 'a'");
 
-  char column_name[] = {'a','\0'};
+  char column_name[] = {'a', '\0'};
   auto alter_table_action = hsql::DropColumnAction(column_name);
   alter_table_action.ifExists = true;
   auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
@@ -43,18 +43,18 @@ TEST_F(AlterTableNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = alter_table_node->deep_copy();
   EXPECT_EQ(*alter_table_node, *deep_copy_node);
 
-  char column_name[] = {'b','\0'};
+  char column_name[] = {'b', '\0'};
   auto alter_table_action = hsql::DropColumnAction(column_name);
   auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
   const auto different_alter_table_node_a = AlterTableNode::make(table_name, drop_column_action);
 
-  char other_column_name[] = {'a','\0'};
+  char other_column_name[] = {'a', '\0'};
   auto other_alter_table_action = hsql::DropColumnAction(other_column_name);
   other_alter_table_action.ifExists = true;
   auto other_drop_column_action = std::make_shared<DropColumnAction>(other_alter_table_action);
   const auto different_alter_table_node_b = AlterTableNode::make(table_name, other_drop_column_action);
 
-  char different_column_name[] = {'a','\0'};
+  char different_column_name[] = {'a', '\0'};
   auto different_alter_table_action = hsql::DropColumnAction(different_column_name);
   auto different_drop_column_action = std::make_shared<DropColumnAction>(different_alter_table_action);
   const auto different_alter_table_node_c = AlterTableNode::make("some_other_table_name", different_drop_column_action);

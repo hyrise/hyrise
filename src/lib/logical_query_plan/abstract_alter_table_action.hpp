@@ -7,7 +7,7 @@ namespace opossum {
 
 class AbstractAlterTableAction {
  public:
-  AbstractAlterTableAction(hsql::AlterAction init_action);
+  explicit AbstractAlterTableAction(hsql::AlterAction init_action);
   virtual ~AbstractAlterTableAction();
   virtual size_t on_shallow_hash() = 0;
   virtual bool on_shallow_equals(AbstractAlterTableAction& rhs) = 0;

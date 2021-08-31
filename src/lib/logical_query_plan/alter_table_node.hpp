@@ -1,16 +1,16 @@
 #pragma once
 
-#include "abstract_non_query_node.hpp"
-#include "enable_make_for_lqp_node.hpp"
 #include "abstract_alter_table_action.hpp"
+#include "abstract_non_query_node.hpp"
 #include "drop_column_action.hpp"
+#include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
 
-
 class AlterTableNode : public EnableMakeForLQPNode<AlterTableNode>, public AbstractNonQueryNode {
  public:
-  AlterTableNode(const std::string& init_table_name, const std::shared_ptr<AbstractAlterTableAction>& init_alter_action);
+  AlterTableNode(const std::string& init_table_name,
+                 const std::shared_ptr<AbstractAlterTableAction>& init_alter_action);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

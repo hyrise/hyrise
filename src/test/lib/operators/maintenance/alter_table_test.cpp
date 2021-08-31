@@ -8,6 +8,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/drop_column_action.hpp"
 #include "operators/get_table.hpp"
 #include "operators/maintenance/alter_table.hpp"
 #include "operators/projection.hpp"
@@ -15,8 +16,6 @@
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
 #include "tasks/chunk_compression_task.hpp"
-#include "logical_query_plan/drop_column_action.hpp"
-
 
 namespace opossum {
 

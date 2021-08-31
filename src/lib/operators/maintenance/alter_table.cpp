@@ -3,17 +3,18 @@
 #include <sstream>
 
 #include "constant_mappings.hpp"
+#include "drop_column_impl.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "drop_column_impl.hpp"
 
 namespace opossum {
 
-AlterTable::AlterTable(const std::string& init_table_name, const std::shared_ptr<AbstractAlterTableAction>& init_alter_action)
+AlterTable::AlterTable(const std::string& init_table_name,
+                       const std::shared_ptr<AbstractAlterTableAction>& init_alter_action)
     : AbstractReadWriteOperator(OperatorType::AlterTable),
       target_table_name(init_table_name),
       action(init_alter_action) {
@@ -27,7 +28,6 @@ const std::string& AlterTable::name() const {
 
 std::string AlterTable::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
-  //TODO:
   stream << AbstractOperator::description(description_mode) << " '" + target_table_name << "' " << _impl->description();
   return stream.str();
 }
@@ -49,7 +49,7 @@ void AlterTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
 }
 
 std::shared_ptr<AbstractAlterTableImpl> AlterTable::_create_impl() {
-  switch(action->type) {
+  switch (action->type) {
     case hsql::ActionType::DROPCOLUMN:
       return std::make_shared<DropColumnImpl>(target_table_name, action);
   }

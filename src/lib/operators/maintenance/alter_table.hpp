@@ -1,10 +1,10 @@
 #pragma once
 
+#include "abstract_alter_table_impl.hpp"
+#include "logical_query_plan/abstract_alter_table_action.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/insert.hpp"
 #include "storage/table_column_definition.hpp"
-#include "logical_query_plan/abstract_alter_table_action.hpp"
-#include "abstract_alter_table_impl.hpp"
 
 namespace opossum {
 

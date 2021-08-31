@@ -1,12 +1,14 @@
-#include "abstract_alter_table_impl.hpp"
 #include "drop_column_impl.hpp"
+#include "abstract_alter_table_impl.hpp"
 #include "hyrise.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
-DropColumnImpl::DropColumnImpl(std::string init_table_name, const std::shared_ptr<AbstractAlterTableAction> init_alter_action) : AbstractAlterTableImpl(init_table_name, init_alter_action){
+DropColumnImpl::DropColumnImpl(std::string init_table_name,
+                               const std::shared_ptr<AbstractAlterTableAction> init_alter_action)
+    : AbstractAlterTableImpl(init_table_name, init_alter_action) {
   drop_column_action = std::static_pointer_cast<DropColumnAction>(_action);
 }
 
@@ -37,7 +39,9 @@ void DropColumnImpl::on_execute(std::shared_ptr<TransactionContext> context) {
   }
 }
 
-std::string DropColumnImpl::description() { return std::string("DropColumn '" + drop_column_action->column_name + "'"); }
+std::string DropColumnImpl::description() {
+  return std::string("DropColumn '" + drop_column_action->column_name + "'");
+}
 
 bool DropColumnImpl::_column_exists_on_table(const std::string& table_name, std::string& column_name) {
   auto column_defs = Hyrise::get().storage_manager.get_table(table_name)->column_definitions();
