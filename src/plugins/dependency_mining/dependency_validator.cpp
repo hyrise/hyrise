@@ -1,5 +1,8 @@
 #include "dependency_validator.hpp"
 
+#include <numeric>
+#include <random>
+
 #include <boost/algorithm/string.hpp>
 #include <magic_enum.hpp>
 
@@ -7,11 +10,41 @@
 #include "operators/get_table.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
-#include "operators/get_table.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/segment_iterate.hpp"
 #include "ucc_validator.hpp"
 #include "utils/timer.hpp"
+
+namespace {
+
+template <typename T, typename Compare>
+std::vector<std::size_t> sort_permutation(const std::vector<T>& vec, Compare& compare) {
+  std::vector<std::size_t> p(vec.size());
+  std::iota(p.begin(), p.end(), 0);
+  std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j) { return compare(vec[i], vec[j]); });
+  return p;
+}
+
+template <typename T>
+void apply_permutation_in_place(std::vector<T>& vec, const std::vector<std::size_t>& p) {
+  std::vector<bool> done(vec.size());
+  for (std::size_t i = 0; i < vec.size(); ++i) {
+    if (done[i]) {
+      continue;
+    }
+    done[i] = true;
+    std::size_t prev_j = i;
+    std::size_t j = p[i];
+    while (i != j) {
+      std::swap(vec[prev_j], vec[j]);
+      done[j] = true;
+      prev_j = j;
+      j = p[j];
+    }
+  }
+}
+
+}  // namespace
 
 namespace opossum {
 
@@ -29,7 +62,6 @@ void DependencyValidator::start() {
     Timer candidate_timer;
     std::stringstream my_out;
     my_out << "[" << _id << "] Check candidate: ";
-    // std::cout << "Check candidate: ";
     candidate.output_to_stream(my_out, DescriptionMode::MultiLine);
     my_out << std::endl;
     switch (candidate.type) {
@@ -75,44 +107,60 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
   }
   const auto table_name = *table_names.begin();
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto num_random_rows = size_t{100};
 
-  if (candidate.determinants.size() == 1 && candidate.dependents.size() == 1) {
+  // validate on sample to avoid full sorting
+  if (candidate.determinants.size() == 1 && candidate.dependents.size() == 1 &&
+      size_t{table->row_count()} > num_random_rows) {
     const auto determinant_column_id = candidate.determinants[0].column_id;
     const auto dependent_column_id = candidate.dependents[0].column_id;
-    std::vector<ColumnID> determinant_pruned_columns;
-    std::vector<ColumnID> dependent_pruned_columns;
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      if (column_id != determinant_column_id) {
-        determinant_pruned_columns.emplace_back(column_id);
-      }
-      if (column_id != dependent_column_id) {
-        dependent_pruned_columns.emplace_back(column_id);
-      }
+
+    const uint64_t range_from{0};
+    const uint64_t range_to{table->row_count() - 1};
+    std::mt19937 generator(1337);
+    std::uniform_int_distribution<uint64_t> distr(range_from, range_to);
+    std::unordered_set<size_t> random_rows;
+    while (random_rows.size() < num_random_rows) {
+      random_rows.emplace(size_t{distr(generator)});
     }
-    const auto get_table_determinants =
-        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, determinant_pruned_columns);
-    get_table_determinants->never_clear_output();
-    get_table_determinants->execute();
-    const auto get_table_dependents =
-        std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, dependent_pruned_columns);
-    get_table_dependents->never_clear_output();
-    get_table_dependents->execute();
-    const auto determinants_aggregate =
-        std::make_shared<AggregateHash>(get_table_determinants, std::vector<std::shared_ptr<AggregateExpression>>{},
-                                        std::vector<ColumnID>{ColumnID{0}});
-    determinants_aggregate->never_clear_output();
-    const auto dependents_aggregate = std::make_shared<AggregateHash>(
-        get_table_dependents, std::vector<std::shared_ptr<AggregateExpression>>{}, std::vector<ColumnID>{ColumnID{0}});
-    dependents_aggregate->never_clear_output();
-    determinants_aggregate->execute();
-    dependents_aggregate->execute();
-    if (determinants_aggregate->get_output()->row_count() < dependents_aggregate->get_output()->row_count()) {
-      out << "    INVALID (shortcut column sizes)" << std::endl;
+    bool invalid = false;
+    resolve_data_type(table->column_definitions().at(determinant_column_id).data_type, [&](auto determinant_type) {
+      using DeterminantDataType = typename decltype(determinant_type)::type;
+      resolve_data_type(table->column_definitions().at(dependent_column_id).data_type, [&](auto dependent_type) {
+        using DependentDataType = typename decltype(dependent_type)::type;
+        std::vector<DependentDataType> random_dependents;
+        std::vector<DeterminantDataType> random_determinants;
+        random_determinants.reserve(num_random_rows);
+        random_dependents.reserve(num_random_rows);
+        for (const auto& random_row : random_rows) {
+          random_determinants.emplace_back(*table->get_value<DeterminantDataType>(determinant_column_id, random_row));
+          random_dependents.emplace_back(*table->get_value<DependentDataType>(dependent_column_id, random_row));
+        }
+        const auto compare = [](const DeterminantDataType& a, const DeterminantDataType& b) { return a < b; };
+        auto p = sort_permutation(random_determinants, compare);
+        apply_permutation_in_place(random_dependents, p);
+        bool is_init = false;
+        DependentDataType last_value{};
+        for (const auto& current_value : random_dependents) {
+          if (is_init) {
+            invalid = last_value > current_value;
+          } else {
+            is_init = true;
+          }
+          if (invalid) {
+            break;
+          }
+          last_value = current_value;
+        }
+      });
+    });
+    if (invalid) {
+      out << "    INVALID (shortcut sample)" << std::endl;
       return false;
     }
   }
 
-  const auto column_sorted = [](const auto& sorted_table, const auto column_id){
+  const auto column_sorted = [](const auto& sorted_table, const auto column_id) {
     const auto column_type = sorted_table->column_definitions().at(column_id).data_type;
     bool is_valid = true;
     resolve_data_type(column_type, [&](auto type) {
@@ -153,27 +201,13 @@ bool DependencyValidator::_validate_od(const DependencyCandidate& candidate, std
     if (column_id == det_column_id || column_id == dep_column_id) continue;
     pruned_column_ids.emplace_back(column_id);
   }
-  std::vector<ChunkID> pruned_chunk_ids;
-  pruned_chunk_ids.reserve(table->chunk_count() - 1);
-  for (auto chunk_id = ChunkID{1}; chunk_id < table->chunk_count(); ++chunk_id) {
-    pruned_chunk_ids.emplace_back(chunk_id);
-  }
-  auto get_table = std::make_shared<GetTable>(table_name, pruned_chunk_ids, pruned_column_ids);
+
   const auto sort_column_id = det_column_id < dep_column_id ? ColumnID{0} : ColumnID{1};
   const auto target_column_id = det_column_id < dep_column_id ? ColumnID{1} : ColumnID{0};
   std::vector<SortColumnDefinition> sort_columns;
   sort_columns.emplace_back(sort_column_id, SortMode::Ascending);
-  auto sort_operator = std::make_shared<Sort>(get_table, sort_columns);
-  get_table->execute();
-  sort_operator->execute();
-
-  if (!column_sorted(sort_operator->get_output(), target_column_id)) {
-    out << "    INVALID (shortcut sample)" << std::endl;
-      return false;
-  }
-
-  get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
-  sort_operator = std::make_shared<Sort>(get_table, sort_columns);
+  const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
+  const auto sort_operator = std::make_shared<Sort>(get_table, sort_columns);
   get_table->execute();
   sort_operator->execute();
 

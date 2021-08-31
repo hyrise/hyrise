@@ -23,8 +23,7 @@ std::string LikeSplitUpRule::name() const {
   return name;
 }
 
-void LikeSplitUpRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void LikeSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
@@ -36,7 +35,8 @@ void LikeSplitUpRule::_apply_to_plan_without_subqueries(
   });
 }
 
-void LikeSplitUpRule::split_up_like(std::shared_ptr<AbstractLQPNode> sub_node, std::shared_ptr<AbstractExpression>& input_expression) {
+void LikeSplitUpRule::split_up_like(std::shared_ptr<AbstractLQPNode> sub_node,
+                                    std::shared_ptr<AbstractExpression>& input_expression) {
   // Continue only if the expression is a LIKE/NOT LIKE expression
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
   if (!binary_predicate) {
@@ -70,7 +70,8 @@ void LikeSplitUpRule::split_up_like(std::shared_ptr<AbstractLQPNode> sub_node, s
   // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
   // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
   // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
-  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 || std::count(pattern.cbegin(), pattern.cend(), '%') != 2) {
+  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
+      std::count(pattern.cbegin(), pattern.cend(), '%') != 2) {
     // std::cout << 74 << std::endl;
     return;
   }
@@ -78,8 +79,10 @@ void LikeSplitUpRule::split_up_like(std::shared_ptr<AbstractLQPNode> sub_node, s
   const auto first_pattern = pattern.substr(0, multi_char_wildcard_pos) + "%";
   const auto second_pattern = pattern.substr(multi_char_wildcard_pos);
 
-  const auto new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(first_pattern)));
-  const auto new_2 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern)));
+  const auto new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(first_pattern)));
+  const auto new_2 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern)));
 
   // std::cout << "Found for " << pattern << std::endl;
 

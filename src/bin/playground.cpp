@@ -2,13 +2,13 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "types.hpp"
-#include "sql/sql_translator.hpp"
-#include "tpcds/tpcds_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "operators/import.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_translator.hpp"
+#include "tpcds/tpcds_table_generator.hpp"
+#include "types.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -18,7 +18,10 @@ int main() {
   std::cout << "Hello world!!" << std::endl;
   auto config = BenchmarkConfig::get_default_config();
   config.cache_binary_tables = true;
-  const std::unordered_map<std::string, std::vector<std::string>> table_keys = {{"catalog_sales", {"cs_item_sk", "cs_order_number"}}, {"date_dim", {"d_date_sk"}}, {"customer_demographics", {"cd_demo_sk"}}};
+  const std::unordered_map<std::string, std::vector<std::string>> table_keys = {
+      {"catalog_sales", {"cs_item_sk", "cs_order_number"}},
+      {"date_dim", {"d_date_sk"}},
+      {"customer_demographics", {"cd_demo_sk"}}};
   const std::string table_path = "/home/Daniel.Lindner/hyrise/tpcds_cached_tables/sf-10/";
   const std::string file_extension = ".bin";
   const size_t num_union_tuples = 1000;
@@ -49,11 +52,12 @@ int main() {
   //const auto inv_table = Hyrise::get().storage_manager.get_table("inventory");
   //std::cout << inv_table->last_chunk()->size() << std::endl;
 
-
   std::vector<std::chrono::nanoseconds> runtimes;
   runtimes.reserve(num_repetitions);
   //const std::string query = "SELECT mk.movie_id FROM keyword AS k, movie_keyword AS mk WHERE k.keyword IS NOT NULL AND k.keyword IN ('murder', 'murder-in-title', 'blood', 'violence') AND k.id = mk.keyword_id";
-  const std::string query = "SELECT cs_item_sk FROM   catalog_sales, customer_demographics WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
+  const std::string query =
+      "SELECT cs_item_sk FROM   catalog_sales, customer_demographics WHERE cs_bill_cdemo_sk = cd_demo_sk  AND "
+      "cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
 
   std::cout << std::endl << "JoinToSemi OFF" << std::endl;
 
@@ -87,7 +91,6 @@ int main() {
   std::cout << avg << std::endl;
   std::cout << format_duration(sum) << std::endl;
   std::cout << static_cast<double>(avg) / 1'000'000.0 << std::endl;
-
 
   std::cout << std::endl << std::endl << "JoinToSemi ON" << std::endl;
   runtimes.clear();
@@ -136,14 +139,16 @@ int main() {
   pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
-
-  const auto new_table = std::make_shared<Table>(m_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  const auto new_table =
+      std::make_shared<Table>(m_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   auto num_qualifying_tuples = static_cast<int32_t>(std::round((27'440.0 / 1'920'800.0) * num_union_tuples));
   std::cout << num_qualifying_tuples << " qualifying tuples" << std::endl;
 
   for (int32_t i = 0; i < static_cast<int32_t>(num_union_tuples); ++i) {
     pmr_string gender = i < num_qualifying_tuples ? "F" : "M";
-    std::vector<AllTypeVariant> row = {i, gender, pmr_string{"W"}, pmr_string{"Secondary"}, int32_t{500}, pmr_string{"Good"}, int32_t{0}, int32_t{0}, int32_t{0}};
+    std::vector<AllTypeVariant> row = {
+        i,          gender,     pmr_string{"W"}, pmr_string{"Secondary"}, int32_t{500}, pmr_string{"Good"},
+        int32_t{0}, int32_t{0}, int32_t{0}};
     new_table->append(row);
   }
 
@@ -151,12 +156,15 @@ int main() {
   new_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(new_table);
   const auto new_table_name = measurement_table + "_new";
-  std::cout << "add " << new_table_name << " with " << new_table->chunk_count() << " chunks and " << new_table->row_count() << " rows" << std::endl;
+  std::cout << "add " << new_table_name << " with " << new_table->chunk_count() << " chunks and "
+            << new_table->row_count() << " rows" << std::endl;
   Hyrise::get().storage_manager.add_table(new_table_name, new_table);
 
-
   //const std::string query2 = query + " UNION ALL SELECT cs_item_sk FROM   catalog_sales, " + new_table_name + " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
-  const std::string query2 = "SELECT cs_item_sk FROM   catalog_sales, " + new_table_name + " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary' and catalog_sales.cs_bill_cdemo_sk BETWEEN 0 AND " + std::to_string(num_qualifying_tuples);
+  const std::string query2 = "SELECT cs_item_sk FROM   catalog_sales, " + new_table_name +
+                             " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  "
+                             "AND cd_education_status = 'Secondary' and catalog_sales.cs_bill_cdemo_sk BETWEEN 0 AND " +
+                             std::to_string(num_qualifying_tuples);
 
   std::cout << std::endl << query2 << std::endl;
   for (size_t current_repetition = 0; current_repetition <= num_repetitions; ++current_repetition) {
@@ -186,7 +194,6 @@ int main() {
   std::cout << avg << std::endl;
   std::cout << format_duration(sum3) << std::endl;
   std::cout << static_cast<double>(avg) / 1'000'000.0 << std::endl;
-
 
   return 0;
 }
