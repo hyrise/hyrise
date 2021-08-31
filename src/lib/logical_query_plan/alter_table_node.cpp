@@ -4,7 +4,7 @@
 namespace opossum {
 
 AlterTableNode::AlterTableNode(const std::string& init_table_name, const std::shared_ptr<AbstractAlterTableAction>& init_alter_action)
-    : AbstractNonQueryNode(LQPNodeType::AlterTableDropColumn),
+    : AbstractNonQueryNode(LQPNodeType::AlterTable),
       table_name(init_table_name),
       alter_action(init_alter_action) {}
 

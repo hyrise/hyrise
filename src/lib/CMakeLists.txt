@@ -229,8 +229,12 @@ set(
     operators/join_verification.hpp
     operators/limit.cpp
     operators/limit.hpp
-    operators/maintenance/alter_drop_column.cpp
-    operators/maintenance/alter_drop_column.hpp
+    operators/maintenance/alter_table.cpp
+    operators/maintenance/alter_table.hpp
+    operators/maintenance/drop_column_impl.cpp
+    operators/maintenance/drop_column_impl.hpp
+    operators/maintenance/abstract_alter_table_impl.cpp
+    operators/maintenance/abstract_alter_table_impl.hpp
     operators/maintenance/create_prepared_plan.cpp
     operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/create_index.cpp

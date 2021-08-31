@@ -99,7 +99,7 @@ set(
     lib/operators/maintenance/create_prepared_plan_test.cpp
     lib/operators/maintenance/create_table_test.cpp
     lib/operators/maintenance/create_index_test.cpp
-    lib/operators/maintenance/alter_drop_column_test.cpp
+    lib/operators/maintenance/alter_table_test.cpp
     lib/operators/maintenance/drop_index_test.cpp
     lib/operators/maintenance/create_view_test.cpp
     lib/operators/maintenance/drop_table_test.cpp

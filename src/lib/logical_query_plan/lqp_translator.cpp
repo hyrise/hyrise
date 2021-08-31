@@ -49,7 +49,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
-#include "operators/maintenance/alter_drop_column.hpp"
+#include "operators/maintenance/alter_table.hpp"
 #include "operators/maintenance/create_index.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -150,7 +150,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateIndex:        return _translate_create_index_node(node);
-    case LQPNodeType::AlterTableDropColumn:    return _translate_alter_drop_column_node(node);
+    case LQPNodeType::AlterTable:    return _translate_alter_table_node(node);
     case LQPNodeType::DropIndex:          return _translate_drop_index_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
@@ -522,13 +522,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_index_node(
                                        create_index_node->table_name, create_index_node->column_ids);
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_drop_column_node(
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alter_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto alter_drop_column_node = std::dynamic_pointer_cast<AlterTableNode>(node);
-  const auto input_node = alter_drop_column_node->left_input();
-  //TODO:
-  return std::make_shared<AlterDropColumn>(alter_drop_column_node->table_name, "alter_drop_column_node->column_name",
-                                           false);
+  const auto alter_table_node = std::dynamic_pointer_cast<AlterTableNode>(node);
+  return std::make_shared<AlterTable>(alter_table_node->table_name, alter_table_node->alter_action);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_index_node(
