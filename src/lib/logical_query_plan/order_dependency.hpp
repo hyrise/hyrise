@@ -41,13 +41,13 @@ std::vector<OrderDependency> deflate_ods(const std::vector<OrderDependency>& ods
  * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
  *         expressions are merged into single objects by merging their dependent expressions.
  */
-std::vector<OrderDependency> union_fds(const std::vector<OrderDependency>& ods_a,
+std::vector<OrderDependency> union_ods(const std::vector<OrderDependency>& ods_a,
                                        const std::vector<OrderDependency>& ods_b);
 
 /**
  * @return Returns FDs that are included in both of the given vectors.
  */
-std::vector<OrderDependency> intersect_fds(const std::vector<OrderDependency>& ods_a,
+std::vector<OrderDependency> intersect_ods(const std::vector<OrderDependency>& ods_a,
                                            const std::vector<OrderDependency>& ods_b);
 
 /**

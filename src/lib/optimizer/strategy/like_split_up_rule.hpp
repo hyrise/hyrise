@@ -14,7 +14,8 @@ class LikeSplitUpRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  static void split_up_like(std::shared_ptr<AbstractLQPNode> sub_node, std::shared_ptr<AbstractExpression>& input_expression);
+  static void split_up_like(std::shared_ptr<AbstractLQPNode> sub_node,
+                            std::shared_ptr<AbstractExpression>& input_expression);
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

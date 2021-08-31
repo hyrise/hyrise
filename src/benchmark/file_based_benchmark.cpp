@@ -18,12 +18,13 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
     return;
   }
   const auto& date_dim_table = table_info_by_name.at("date_dim").table;
-    date_dim_table->add_soft_order_constraint(
-        {{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
-    date_dim_table->add_soft_order_constraint(
-        {{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
-    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date")}, KeyConstraintType::UNIQUE});
-    date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
+  date_dim_table->add_soft_order_constraint(
+      {{date_dim_table->column_id_by_name("d_date_sk")}, {date_dim_table->column_id_by_name("d_date")}});
+  date_dim_table->add_soft_order_constraint(
+      {{date_dim_table->column_id_by_name("d_date")}, {date_dim_table->column_id_by_name("d_date_sk")}});
+  date_dim_table->add_soft_key_constraint({{date_dim_table->column_id_by_name("d_date")}, KeyConstraintType::UNIQUE});
+  date_dim_table->add_soft_key_constraint(
+      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
   std::cout << "added order constraint date_dim: d_date_sk <-> d_date" << std::endl;
 }
 

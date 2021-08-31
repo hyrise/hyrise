@@ -22,8 +22,8 @@ class PQPAnalyzer {
 
   // switches for mining specific optimizations
   constexpr static bool _enable_groupby_reduction = true;
-  constexpr static bool _enable_join_to_semi = true;
-  constexpr static bool _enable_join_to_predicate = true;
+  constexpr static bool _enable_join_to_semi = false;
+  constexpr static bool _enable_join_to_predicate = false;
 };
 
 }  // namespace opossum

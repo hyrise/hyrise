@@ -336,7 +336,6 @@ void try_join_to_scan_rewrite(
     }
   };
 
-
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
   const auto target_column_id = join_column_expression->original_column_id;
 
@@ -526,10 +525,9 @@ void try_join_to_semi_rewrite(
       //}
       //std::cout << std::endl;
     }
-
   }
   if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
-      return;
+    return;
   }
   if (_join_to_predicate_off) return;
   if (!left_input_is_used) {
@@ -539,8 +537,8 @@ void try_join_to_semi_rewrite(
     return;
   }
   if (!right_input_is_used) {
-      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
-                               LQPInputSide::Left, required_expressions_by_node);
+    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
+                             LQPInputSide::Left, required_expressions_by_node);
   }
 }
 

@@ -5,7 +5,6 @@
 #include "dependency_mining/util.hpp"
 #include "utils/abstract_plugin.hpp"
 
-
 /* Dependency Mining / Optimization doc
  *
  *  for enabling specific optimizations: - check switches at lib/optimizer/strategy/column_pruning_rule.hpp for Join2Semi and Join2Predciate
@@ -28,6 +27,7 @@ class DependencyMiningPlugin : public AbstractPlugin {
   void stop() final;
 
   constexpr static size_t NUM_VALIDATORS = 1;
+  constexpr static bool DO_VALIDATE = true;
 
  protected:
   std::shared_ptr<DependencyCandidateQueue> _queue;
