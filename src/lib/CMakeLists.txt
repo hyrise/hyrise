@@ -99,17 +99,18 @@ set(
     import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
-    logical_query_plan/abstract_alter_table_action.hpp
     logical_query_plan/abstract_alter_table_action.cpp
-    logical_query_plan/drop_column_action.hpp
+    logical_query_plan/abstract_alter_table_action.hpp
     logical_query_plan/drop_column_action.cpp
+    logical_query_plan/drop_column_action.hpp
+    logical_query_plan/abstract_non_query_node.cpp
     logical_query_plan/abstract_non_query_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/alias_node.cpp
     logical_query_plan/alias_node.hpp
-        logical_query_plan/alter_table_node.cpp
-        logical_query_plan/alter_table_node.hpp
+    logical_query_plan/alter_table_node.cpp
+    logical_query_plan/alter_table_node.hpp
     logical_query_plan/change_meta_table_node.cpp
     logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp

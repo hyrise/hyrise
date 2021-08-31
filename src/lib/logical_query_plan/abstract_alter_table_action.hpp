@@ -7,10 +7,14 @@ namespace opossum {
 
 class AbstractAlterTableAction {
  public:
+  AbstractAlterTableAction(hsql::AlterAction init_action);
   virtual ~AbstractAlterTableAction();
-  virtual size_t on_shallow_hash();
-  virtual std::shared_ptr<AbstractAlterTableAction> on_shallow_copy();
-  virtual bool on_shallow_equals(const AbstractAlterTableAction& rhs);
+  virtual size_t on_shallow_hash() = 0;
+  virtual std::shared_ptr<AbstractAlterTableAction> on_shallow_copy() = 0;
+  virtual bool on_shallow_equals(AbstractAlterTableAction& rhs) = 0;
+  virtual std::string description() = 0;
+  hsql::ActionType type;
+  hsql::AlterAction action;
 };
 
 }  // namespace opossum

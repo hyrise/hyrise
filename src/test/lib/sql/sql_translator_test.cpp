@@ -2311,20 +2311,27 @@ TEST_F(SQLTranslatorTest, CreateIndexNoNameGiven) {
 
 TEST_F(SQLTranslatorTest, AlterTableDropColumn) {
   const auto query = "ALTER TABLE int_int_int DROP COLUMN a;";
+  char column_name[] = {'a','\0'};
+  auto alter_table_action = hsql::DropColumnAction(column_name);
+  auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = AlterTableNode::make("int_int_int", "a", false);
+  const auto expected_lqp = AlterTableNode::make("int_int_int", drop_column_action);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, AlterTableDropColumnIfNotExists) {
+TEST_F(SQLTranslatorTest, AlterTableDropColumnIfExists) {
   const auto query = "ALTER TABLE int_int_int DROP COLUMN IF EXISTS a;";
+  char column_name[] = {'a','\0'};
+  auto alter_table_action = hsql::DropColumnAction(column_name);
+  alter_table_action.ifExists = true;
+  auto drop_column_action = std::make_shared<DropColumnAction>(alter_table_action);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
 
-  const auto expected_lqp = AlterTableNode::make("int_int_int", "a", true);
+  const auto expected_lqp = AlterTableNode::make("int_int_int", drop_column_action);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

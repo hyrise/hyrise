@@ -9,24 +9,22 @@ AlterTableNode::AlterTableNode(const std::string& init_table_name, const std::sh
       alter_action(init_alter_action) {}
 
 std::string AlterTableNode::description(const DescriptionMode mode) const {
-  // return std::string("[DropColumn] Table: '") + table_name + "'" + "; Column: " + column_name + "'";
-  return std::string("");
+  return std::string("[AlterTable] Table: '") + table_name + "'" + "; " + alter_action->description();
 }
 
 size_t AlterTableNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(table_name);
-  boost::hash_combine(hash, alter_action);
+  boost::hash_combine(hash, alter_action->on_shallow_hash());
   return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> AlterTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return AlterTableNode::make(table_name, alter_action);
+  return AlterTableNode::make(table_name, alter_action->on_shallow_copy());
 }
 
 bool AlterTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto& alter_drop_column_node = static_cast<const AlterTableNode&>(rhs);
-  //TODO
-  return table_name == alter_drop_column_node.table_name
+  const auto& alter_table_node = static_cast<const AlterTableNode&>(rhs);
+  return table_name == alter_table_node.table_name && alter_action->on_shallow_equals(*alter_table_node.alter_action);
 }
 
 }  // namespace opossum
