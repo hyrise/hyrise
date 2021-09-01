@@ -8,11 +8,9 @@
 
 namespace opossum {
 
-INDValidationRule::INDValidationRule(
-    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes)
-    : AbstractDependencyValidationRule(DependencyType::Inclusion, table_constraint_mutexes) {}
+INDValidationRule::INDValidationRule() : AbstractDependencyValidationRule(DependencyType::Inclusion) {}
 
-ValidationResult INDValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+std::shared_ptr<ValidationResult> INDValidationRule::_on_validate(const DependencyCandidate& candidate) const {
   Assert(candidate.determinants.size() == 1, "Invalid determinats for IND");
   Assert(candidate.dependents.size() == 1, "Invalid dependents for IND");
 
@@ -70,7 +68,7 @@ ValidationResult INDValidationRule::_on_validate(const DependencyCandidate& cand
     out << "    VALID (bidirectional)" << std::endl;
     return true;
   }*/
-  return {DependencyValidationStatus::Valid, {}};
+  return std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);
 }
 
 }  // namespace opossum

@@ -2,6 +2,8 @@
 
 #include "abstract_table_constraint.hpp"
 
+#include <tbb/concurrent_vector.h>
+
 namespace opossum {
 
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
@@ -23,6 +25,6 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 };
 
-using TableKeyConstraints = std::vector<TableKeyConstraint>;
+using TableKeyConstraints = tbb::concurrent_vector<TableKeyConstraint>;
 
 }  // namespace opossum

@@ -7,10 +7,10 @@ namespace opossum {
 
 class UCCValidationRule : public AbstractDependencyValidationRule {
  public:
-  UCCValidationRule(tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes);
+  UCCValidationRule();
 
  protected:
-  ValidationResult _on_validate(const DependencyCandidate& candidate) const final override;
+  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final override;
 
   template <typename AggregateKey>
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,

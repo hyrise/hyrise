@@ -23,12 +23,12 @@ void DependencyMiningPlugin::start() {
   _pqp_analyzer.run();
   if (DO_VALIDATE) {
     std::vector<std::thread> validator_threads;
-    auto table_constraint_mutexes = tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>{};
+    //auto table_constraint_mutexes = tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>{};
     for (size_t validator_id{0}; validator_id < NUM_VALIDATORS; ++validator_id) {
       //_dependency_validators.emplace_back(std::make_unique<DependencyValidator>(_queue));
       validator_threads.emplace_back(
           [&](size_t i) {
-            const auto validator = std::make_unique<DependencyValidator>(_queue, table_constraint_mutexes, i);
+            const auto validator = std::make_unique<DependencyValidator>(_queue, i);
             validator->start();
           },
           validator_id);

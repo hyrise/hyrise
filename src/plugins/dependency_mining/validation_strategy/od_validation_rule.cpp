@@ -42,11 +42,9 @@ void apply_permutation_in_place(std::vector<T>& vec, const std::vector<std::size
 
 namespace opossum {
 
-ODValidationRule::ODValidationRule(
-    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes)
-    : AbstractDependencyValidationRule(DependencyType::Order, table_constraint_mutexes) {}
+ODValidationRule::ODValidationRule() : AbstractDependencyValidationRule(DependencyType::Order) {}
 
-ValidationResult ODValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+std::shared_ptr<ValidationResult> ODValidationRule::_on_validate(const DependencyCandidate& candidate) const {
   Assert(candidate.dependents.size() == 1, "Currently, OD Validation supports only one dependent column.");
 
   const auto table_name = candidate.determinants[0].table_name;
@@ -156,9 +154,9 @@ ValidationResult ODValidationRule::_on_validate(const DependencyCandidate& candi
     auto table_order_constraint =
         std::make_shared<TableOrderConstraint>(std::vector<ColumnID>{candidate.determinants[0].column_id},
                                                std::vector<ColumnID>{candidate.dependents[0].column_id});
-    std::pair<std::string, std::shared_ptr<AbstractTableConstraint>> constraint{table_name,
-                                                                                std::move(table_order_constraint)};
-    return {DependencyValidationStatus::Valid, {constraint}};
+    const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);
+    result->constraints[table_name].emplace_back(table_order_constraint);
+    return result;
   }
 
   return INVALID_VALIDATION_RESULT;

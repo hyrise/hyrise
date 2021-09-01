@@ -2,6 +2,8 @@
 
 #include "abstract_table_constraint.hpp"
 
+#include <tbb/concurrent_vector.h>
+
 namespace opossum {
 
 /**
@@ -22,6 +24,6 @@ class TableOrderConstraint final : public AbstractTableConstraint {
   std::vector<ColumnID> _dependents;
 };
 
-using TableOrderConstraints = std::vector<TableOrderConstraint>;
+using TableOrderConstraints = tbb::concurrent_vector<TableOrderConstraint>;
 
 }  // namespace opossum

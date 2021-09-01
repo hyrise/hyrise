@@ -4,21 +4,24 @@
 
 namespace opossum {
 
-FDValidationRule::FDValidationRule(
-    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes)
-    : AbstractDependencyValidationRule(DependencyType::Functional, table_constraint_mutexes),
-      _ucc_rule(std::make_unique<UCCValidationRule>(table_constraint_mutexes)) {}
+FDValidationRule::FDValidationRule()
+    : AbstractDependencyValidationRule(DependencyType::Functional), _ucc_rule(std::make_unique<UCCValidationRule>()) {}
 
-ValidationResult FDValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+std::shared_ptr<ValidationResult> FDValidationRule::_on_validate(const DependencyCandidate& candidate) const {
   Assert(candidate.dependents.empty(), "Invalid dependents for FD");
-  bool has_ucc = false;
+  const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Uncertain);
   for (const auto& determinant : candidate.determinants) {
-    has_ucc |= _ucc_rule->is_valid({TableColumnIDs{determinant}, {}, DependencyType::Unique, 0}) ==
-               DependencyValidationStatus::Valid;
+    const auto my_result = _ucc_rule->validate({TableColumnIDs{determinant}, {}, DependencyType::Unique, 0});
+    if (my_result->status != DependencyValidationStatus::Valid) continue;
+    result->status = DependencyValidationStatus::Valid;
+    for (const auto& [table_name, constraints] : my_result->constraints) {
+      auto& result_constraints = result->constraints[table_name];
+      result_constraints.insert(result_constraints.end(), std::make_move_iterator(constraints.cbegin()),
+                                std::make_move_iterator(constraints.cend()));
+    }
   }
-  // UCCs have been set by UCC rule, no need for returning constraints
-  if (has_ucc) return {DependencyValidationStatus::Valid, {}};
-  return UNCERTAIN_VALIDATION_RESULT;
+
+  return result;
 }
 
 }  // namespace opossum

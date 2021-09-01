@@ -13,7 +13,7 @@
  *  when mining plugins/to turn off all optimizations: - comment out benchmarklib/abstract_table_generator.cpp L188 _add_constraints(table_info_by_name);
  *      --> otherwise, UCC mining will notice that dependency is already set and do early-out
  *  extra TPC-DS queries are shipped at <project_root>/tpcds_extra_queries
- *  plugin is loaded at benchmarklib/benchmark_runner.cpp L182 --> make sure so set correct path there
+ *  plugin is loaded by using CLI option --dep_mining_plugin <plugin_path>
  */
 namespace opossum {
 

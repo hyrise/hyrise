@@ -126,11 +126,9 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
 namespace opossum {
 
-UCCValidationRule::UCCValidationRule(
-    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes)
-    : AbstractDependencyValidationRule(DependencyType::Unique, table_constraint_mutexes) {}
+UCCValidationRule::UCCValidationRule() : AbstractDependencyValidationRule(DependencyType::Unique) {}
 
-ValidationResult UCCValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+std::shared_ptr<ValidationResult> UCCValidationRule::_on_validate(const DependencyCandidate& candidate) const {
   std::vector<std::pair<std::string, std::shared_ptr<AbstractTableConstraint>>> constraints;
   Assert(candidate.dependents.empty(), "Invalid dependents for UCC");
 
@@ -150,7 +148,7 @@ ValidationResult UCCValidationRule::_on_validate(const DependencyCandidate& cand
       const auto segment = chunk->get_segment(column_id);
       if (const auto dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(segment)) {
         if (dictionary_segment->unique_values_count() != dictionary_segment->size()) {
-          return {DependencyValidationStatus::Invalid, {}};
+          return INVALID_VALIDATION_RESULT;
         }
       }
     }
@@ -192,11 +190,11 @@ ValidationResult UCCValidationRule::_on_validate(const DependencyCandidate& cand
       break;
   }
 
-  if (status == DependencyValidationStatus::Valid) {
-    constraints.emplace_back(table_name,
-                             std::make_shared<TableKeyConstraint>(candidate_columns, KeyConstraintType::UNIQUE));
-  }
-  return {status, constraints};
+  if (status == DependencyValidationStatus::Invalid) return INVALID_VALIDATION_RESULT;
+  const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);
+  result->constraints[table_name].emplace_back(
+      std::make_shared<TableKeyConstraint>(candidate_columns, KeyConstraintType::UNIQUE));
+  return result;
 }
 
 /*

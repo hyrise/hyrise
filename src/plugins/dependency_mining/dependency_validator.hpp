@@ -1,6 +1,5 @@
 #pragma once
 
-#include <tbb/concurrent_unordered_map.h>
 #include <atomic>
 #include <mutex>
 
@@ -11,9 +10,7 @@ namespace opossum {
 
 class DependencyValidator {
  public:
-  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue,
-                      tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes,
-                      size_t id);
+  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id);
 
  protected:
   friend class DependencyMiningPlugin;
@@ -22,6 +19,8 @@ class DependencyValidator {
   void add_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
 
  private:
+  void _add_constraints(const std::string& table_name,
+                        const std::vector<std::shared_ptr<AbstractTableConstraint>>& constraints) const;
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
   std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _rules;
   std::atomic_bool _running = false;
