@@ -12,7 +12,17 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
-num_mt_clients=50
+warmup_seconds=2
+runs=100
+
+# Setting the number of clients used for the multi-threaded scenario to the machine's core count.
+# This only works for macOS and Linux.
+output="$(uname -s)"
+case "${output}" in
+    Linux*)     num_mt_clients="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | wc -l)";;
+    Darwin*)    num_mt_clients="$(sysctl -n hw.ncpu)";;
+    *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
+esac
 
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
 start_commit_reference=$1
@@ -74,17 +84,14 @@ do
   for benchmark in $benchmarks
   do
     echo "Running $benchmark for $commit... (single-threaded)"
-    ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( "${build_folder}"/"$benchmark" -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (single-threaded, SF 1.0)"
-      ( "${build_folder}"/"$benchmark" -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
-
-      echo "Running $benchmark for $commit... (multi-threaded, clustered for pruning)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -s 10 --dont_cache_binary_tables --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -s 10 -m Shuffled --dont_cache_binary_tables -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded)"
