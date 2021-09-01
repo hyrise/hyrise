@@ -6,6 +6,8 @@
 
 namespace opossum {
 
+enum class TableConstraintType { Key, Order };
+
 /**
  * Abstract container class for the definition of table constraints based on a set of column ids.
  * Subclasses should leverage the OOP structure to add additional fields. In case of CHECK and FOREIGN KEY constraint
@@ -13,7 +15,7 @@ namespace opossum {
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(std::unordered_set<ColumnID> init_columns);
+  explicit AbstractTableConstraint(const TableConstraintType init_type, std::unordered_set<ColumnID> init_columns);
 
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
@@ -23,6 +25,8 @@ class AbstractTableConstraint {
   virtual ~AbstractTableConstraint() = default;
 
   const std::unordered_set<ColumnID>& columns() const;
+
+  TableConstraintType type() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
   bool operator!=(const AbstractTableConstraint& rhs) const;
@@ -35,6 +39,7 @@ class AbstractTableConstraint {
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
  private:
+  TableConstraintType _type;
   std::unordered_set<ColumnID> _columns;
 };
 

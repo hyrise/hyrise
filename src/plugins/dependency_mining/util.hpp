@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -35,7 +36,7 @@ struct DependencyCandidate {
   DependencyType type;
   size_t priority;
   // tell tbb's concurrent_prioroty_queue which parameter should be used for ranking
-  void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const;
+  void output_to_stream(std::ostream& stream) const;
   bool operator<(const DependencyCandidate& other) const;
 };
 
@@ -43,6 +44,9 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate);
 
 using DependencyCandidateQueue = tbb::concurrent_priority_queue<DependencyCandidate>;
+
+TableColumnID resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression);
+
 }  // namespace opossum
 
 namespace std {

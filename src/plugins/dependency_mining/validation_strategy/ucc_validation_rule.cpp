@@ -1,4 +1,4 @@
-#include "ucc_validator.hpp"
+#include "ucc_validation_rule.hpp"
 
 #include <cmath>
 #include <memory>
@@ -12,6 +12,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
+#include "operators/get_table.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -125,7 +126,78 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
 namespace opossum {
 
-UCCValidator::UCCValidator(const std::shared_ptr<const Table>& table) : _table(table) {}
+UCCValidationRule::UCCValidationRule(
+    tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& table_constraint_mutexes)
+    : AbstractDependencyValidationRule(DependencyType::Unique, table_constraint_mutexes) {}
+
+ValidationResult UCCValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+  std::vector<std::pair<std::string, std::shared_ptr<AbstractTableConstraint>>> constraints;
+  Assert(candidate.dependents.empty(), "Invalid dependents for UCC");
+
+  const auto table_name = candidate.determinants[0].table_name;
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+
+  // Shortcut: if any dictionary is smaller than chunk, column cannot be unique
+  if (candidate.determinants.size() == 1) {
+    Assert(table->type() == TableType::Data, "Expected Data table");
+    const auto column_id = candidate.determinants[0].column_id;
+    const auto num_chunks = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+      const auto segment = chunk->get_segment(column_id);
+      if (const auto dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(segment)) {
+        if (dictionary_segment->unique_values_count() != dictionary_segment->size()) {
+          return {DependencyValidationStatus::Invalid, {}};
+        }
+      }
+    }
+  }
+
+  std::unordered_set<ColumnID> candidate_columns;
+  std::vector<ColumnID> pruned_columns;
+  for (const auto& determinant : candidate.determinants) {
+    candidate_columns.emplace(determinant.column_id);
+  }
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    if (!candidate_columns.count(column_id)) {
+      pruned_columns.emplace_back(column_id);
+    }
+  }
+
+  const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_columns);
+  get_table->execute();
+  const auto pruned_table = get_table->get_output();
+  const auto num_columns = pruned_table->column_count();
+  std::vector<ColumnID> groupby_column_ids;
+  groupby_column_ids.reserve(num_columns);
+  for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+    groupby_column_ids.emplace_back(column_id);
+  }
+
+  Assert(groupby_column_ids.size() > 0, "Expected group columns");
+  DependencyValidationStatus status;
+  switch (groupby_column_ids.size()) {
+    case 1:
+      // No need for a complex data structure if we only have one entry
+      status = _aggregate<AggregateKeyEntry>(pruned_table, groupby_column_ids);
+      break;
+    case 2:
+      status = _aggregate<std::array<AggregateKeyEntry, 2>>(pruned_table, groupby_column_ids);
+      break;
+    default:
+      status = _aggregate<AggregateKeySmallVector>(pruned_table, groupby_column_ids);
+      break;
+  }
+
+  if (status == DependencyValidationStatus::Valid) {
+    constraints.emplace_back(table_name,
+                             std::make_shared<TableKeyConstraint>(candidate_columns, KeyConstraintType::UNIQUE));
+  }
+  return {status, constraints};
+}
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
@@ -164,11 +236,12 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
  */
 template <typename AggregateKey>
-KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
+KeysPerChunk<AggregateKey> UCCValidationRule::_partition_by_groupby_keys(
+    const std::shared_ptr<const Table>& input_table, const std::vector<ColumnID>& groupby_column_ids,
+    std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut) const {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-    const auto& input_table = _table;
     const auto chunk_count = input_table->chunk_count();
 
     // Create the actual data structure
@@ -178,7 +251,7 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
       if (!chunk) continue;
 
       if constexpr (std::is_same_v<AggregateKey, AggregateKeySmallVector>) {
-        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(groupby_column_ids.size()));
       } else {
         keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
       }
@@ -209,12 +282,13 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
     //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
     //     require all strings in the given column to be that short.
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    jobs.reserve(_groupby_column_ids.size());
+    jobs.reserve(groupby_column_ids.size());
 
-    for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
+    for (size_t group_column_index = 0; group_column_index < groupby_column_ids.size(); ++group_column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                   this]() {
-        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
+                                                   &expected_result_size, &use_immediate_key_shortcut,
+                                                   &groupby_column_ids]() {
+        const auto groupby_column_id = groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
         resolve_data_type(data_type, [&](auto type) {
@@ -283,8 +357,8 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
               if (max_key > 0 &&
                   static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
                 // Include space for min, max, and NULL
-                _expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
-                _use_immediate_key_shortcut = true;
+                expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
+                use_immediate_key_shortcut = true;
 
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
                 // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
@@ -310,6 +384,7 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
             Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
             */
+            use_immediate_key_shortcut = false;
 
             // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
             // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
@@ -426,11 +501,11 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
             // for the results. Estimating the number of groups for multiple GROUP BY columns is somewhat hard, so we
             // simply take the number of groups created by the GROUP BY column with the highest number of distinct
             // values.
-            auto previous_max = _expected_result_size.load();
+            auto previous_max = expected_result_size.load();
             while (previous_max < id_map.size()) {
               // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
               // parallel. How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
-              if (_expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
+              if (expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
                 break;
               }
             }
@@ -446,11 +521,13 @@ KeysPerChunk<AggregateKey> UCCValidator::_partition_by_groupby_keys() {
 }
 
 template <typename AggregateKey>
-bool UCCValidator::_aggregate() {
-  const auto& input_table = _table;
+DependencyValidationStatus UCCValidationRule::_aggregate(const std::shared_ptr<const Table>& input_table,
+                                                         const std::vector<ColumnID>& groupby_column_ids) const {
+  std::atomic_size_t expected_result_size{};
+  bool use_immediate_key_shortcut{};
 
   if constexpr (HYRISE_DEBUG) {
-    for (const auto& groupby_column_id : _groupby_column_ids) {
+    for (const auto& groupby_column_id : groupby_column_ids) {
       Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
     }
   }
@@ -458,7 +535,8 @@ bool UCCValidator::_aggregate() {
   /**
    * PARTITIONING STEP
    */
-  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
+  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table, groupby_column_ids, expected_result_size,
+                                                                 use_immediate_key_shortcut);
 
   /**
    * AGGREGATION STEP
@@ -470,7 +548,7 @@ bool UCCValidator::_aggregate() {
     The template parameters (int32_t, AggregateFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
   auto context =
-      std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(_expected_result_size);
+      std::make_shared<AggregateContext<int32_t, AggregateFunction::Min, AggregateKey>>(expected_result_size);
 
   // Process Chunks and perform aggregations
   const auto chunk_count = input_table->chunk_count();
@@ -484,7 +562,7 @@ bool UCCValidator::_aggregate() {
     /**
        * DISTINCT implementation
        *
-       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
@@ -497,14 +575,14 @@ bool UCCValidator::_aggregate() {
 
     // Add value or combination of values is added to the list of distinct value(s). This is done by calling
     // get_or_add_result, which adds the corresponding entry in the list of GROUP BY values.
-    if (_use_immediate_key_shortcut) {
+    if (use_immediate_key_shortcut) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
         // is enabled in get_or_add_result.
         if (!get_or_add_result(std::true_type{}, result_ids, results,
                                get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                RowID{chunk_id, chunk_offset})) {
-          return false;
+          return DependencyValidationStatus::Invalid;
         }
       }
     } else {
@@ -514,31 +592,12 @@ bool UCCValidator::_aggregate() {
         if (!get_or_add_result(std::false_type{}, result_ids, results,
                                get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                RowID{chunk_id, chunk_offset})) {
-          return false;
+          return DependencyValidationStatus::Invalid;
         }
       }
     }
   }
-  return true;
+  return DependencyValidationStatus::Valid;
 }  // NOLINT(readability/fn_size)
-
-bool UCCValidator::is_unique() {
-  const auto num_columns = _table->column_count();
-  _groupby_column_ids.reserve(num_columns);
-  for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-    _groupby_column_ids.emplace_back(column_id);
-  }
-
-  Assert(_groupby_column_ids.size() > 0, "Expected group columns");
-  switch (_groupby_column_ids.size()) {
-    case 1:
-      // No need for a complex data structure if we only have one entry
-      return _aggregate<AggregateKeyEntry>();
-    case 2:
-      return _aggregate<std::array<AggregateKeyEntry, 2>>();
-    default:
-      return _aggregate<AggregateKeySmallVector>();
-  }
-}
 
 }  // namespace opossum

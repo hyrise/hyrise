@@ -4,7 +4,7 @@ namespace opossum {
 
 TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID> init_determinants,
                                            std::vector<ColumnID> init_dependents)
-    : AbstractTableConstraint({}),
+    : AbstractTableConstraint(TableConstraintType::Order, {}),
       _determinants(std::move(init_determinants)),
       _dependents(std::move(init_dependents)) {}
 

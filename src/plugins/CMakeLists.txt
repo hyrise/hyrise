@@ -48,14 +48,30 @@ add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_p
 add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining_plugin.cpp
     dependency_mining_plugin.hpp
+    dependency_mining/dependency_validator.cpp
+    dependency_mining/dependency_validator.hpp
+    dependency_mining/candidate_strategy/abstract_dependency_candidate_rule.cpp
+    dependency_mining/candidate_strategy/abstract_dependency_candidate_rule.hpp
+    dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.cpp
+    dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.hpp
+    dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.cpp
+    dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.hpp
+    dependency_mining/candidate_strategy/join_to_semi_candidate_rule.cpp
+    dependency_mining/candidate_strategy/join_to_semi_candidate_rule.hpp
     dependency_mining/pqp_analyzer.cpp
     dependency_mining/pqp_analyzer.hpp
     dependency_mining/util.cpp
     dependency_mining/util.hpp
-    dependency_mining/dependency_validator.cpp
-    dependency_mining/dependency_validator.hpp
-    dependency_mining/ucc_validator.cpp
-    dependency_mining/ucc_validator.hpp
+    dependency_mining/validation_strategy/abstract_dependency_validation_rule.cpp
+    dependency_mining/validation_strategy/abstract_dependency_validation_rule.hpp
+    dependency_mining/validation_strategy/fd_validation_rule.cpp
+    dependency_mining/validation_strategy/fd_validation_rule.hpp
+    dependency_mining/validation_strategy/ind_validation_rule.cpp
+    dependency_mining/validation_strategy/ind_validation_rule.hpp
+    dependency_mining/validation_strategy/od_validation_rule.cpp
+    dependency_mining/validation_strategy/od_validation_rule.hpp
+    dependency_mining/validation_strategy/ucc_validation_rule.cpp
+    dependency_mining/validation_strategy/ucc_validation_rule.hpp
 )
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)

@@ -4,7 +4,8 @@
 #include <atomic>
 #include <mutex>
 
-#include "dependency_mining/util.hpp"
+#include "util.hpp"
+#include "validation_strategy/abstract_dependency_validation_rule.hpp"
 
 namespace opossum {
 
@@ -18,15 +19,12 @@ class DependencyValidator {
   friend class DependencyMiningPlugin;
   void start();
   void stop();
+  void add_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
 
  private:
-  bool _validate_od(const DependencyCandidate& candidate, std::ostream& out);
-  bool _validate_fd(const DependencyCandidate& candidate, std::ostream& out);
-  bool _validate_ucc(const DependencyCandidate& candidate, std::ostream& out);
-  bool _validate_ind(const DependencyCandidate& candidate, std::ostream& out);
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
+  std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _rules;
   std::atomic_bool _running = false;
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>& _table_constraint_mutexes;
   const size_t _id;
 };
 

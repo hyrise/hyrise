@@ -138,10 +138,14 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     dependency_mining_plugin_path = dep_mining_plugin_path_str;
   }
 
-  return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, metrics, dependency_mining_plugin_path};
+  return BenchmarkConfig{benchmark_mode,   chunk_size,
+                         *encoding_config, indexes,
+                         max_runs,         timeout_duration,
+                         warmup_duration,  output_file_path,
+                         enable_scheduler, cores,
+                         clients,          enable_visualization,
+                         verify,           cache_binary_tables,
+                         metrics,          dependency_mining_plugin_path};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

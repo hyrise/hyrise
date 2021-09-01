@@ -3,7 +3,7 @@
 namespace opossum {
 
 TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type)
-    : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type) {}
+    : AbstractTableConstraint(TableConstraintType::Key, std::move(init_columns)), _key_type(init_key_type) {}
 
 KeyConstraintType TableKeyConstraint::key_type() const { return _key_type; }
 
