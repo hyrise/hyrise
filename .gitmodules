@@ -19,9 +19,6 @@
 [submodule "flat_hash_map"]
 	path = third_party/flat_hash_map
 	url = https://github.com/skarupke/flat_hash_map.git
-[submodule "third_party/fsst"]
-	path = third_party/fsst
-	url = https://github.com/caustt/fsst
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/abseil/googletest.git
@@ -59,3 +56,6 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/fsst"]
+	path = third_party/fsst
+	url = https://github.com/caustt/fsst
