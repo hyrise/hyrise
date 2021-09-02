@@ -35,6 +35,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
   desc << AbstractOperator::description(description_mode) << separator;
   desc << "GroupBy {";
   auto group_by_count = _groupby_column_ids.size();
+  if (group_by_count > 1 && description_mode == DescriptionMode::MultiLine) desc << separator;
   for (auto groupby_column_idx = size_t{0}; groupby_column_idx < group_by_count; ++groupby_column_idx) {
     if (groupby_column_idx > 0) {
       desc << "," << separator;
@@ -45,6 +46,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
       desc << "Column #" + std::to_string(_groupby_column_ids[groupby_column_idx]);
     }
   }
+  if (group_by_count > 1 && description_mode == DescriptionMode::MultiLine) desc << separator;
   desc << "}" << separator;
   auto aggregate_count = _aggregates.size();
   for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
