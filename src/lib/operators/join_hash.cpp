@@ -45,15 +45,6 @@ const std::string& JoinHash::name() const {
   return name;
 }
 
-std::string JoinHash::description(DescriptionMode description_mode) const {
-  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  std::ostringstream stream;
-  stream << AbstractJoinOperator::description(description_mode) << separator;
-  stream << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
-
-  return stream.str();
-}
-
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
