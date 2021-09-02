@@ -21,7 +21,7 @@
 	url = https://github.com/skarupke/flat_hash_map.git
 [submodule "third_party/fsst"]
 	path = third_party/fsst
-	url = https://github.com/cwida/fsst
+	url = https://github.com/caust/fsst
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/abseil/googletest.git
