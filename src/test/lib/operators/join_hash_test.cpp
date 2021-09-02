@@ -86,10 +86,8 @@ TEST_F(OperatorsJoinHashTest, DescriptionAndName) {
             "JoinHash (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinHash (Inner) a = a AND a != a");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash (Inner)\na = a\nAND a != a");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinHash (Inner) a = a AND a != a");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinHash (Inner)\na = a\nAND a != a");
 
   EXPECT_EQ(join_operator->name(), "JoinHash");
 }
