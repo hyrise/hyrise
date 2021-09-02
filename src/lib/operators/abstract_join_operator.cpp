@@ -57,7 +57,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     return "Column #"s + std::to_string(column_id);
   };
 
-  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
   stream << AbstractOperator::description(description_mode) << " (" << _mode << ")" << separator;
   stream << column_name(true, _primary_predicate.column_ids.first) << " ";

@@ -65,7 +65,7 @@ const std::string& JoinIndex::name() const {
 }
 
 std::string JoinIndex::description(DescriptionMode description_mode) const {
-  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   const auto* const index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
 
   std::ostringstream stream(AbstractJoinOperator::description(description_mode), std::ios_base::ate);

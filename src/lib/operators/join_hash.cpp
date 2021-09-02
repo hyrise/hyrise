@@ -46,7 +46,7 @@ const std::string& JoinHash::name() const {
 }
 
 std::string JoinHash::description(DescriptionMode description_mode) const {
-  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode) << separator;
   stream << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
@@ -578,7 +578,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   stream << separator << "Radix bits: " << radix_bits << ".";
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
