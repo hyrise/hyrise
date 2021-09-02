@@ -19,8 +19,8 @@ runs=100
 # This only works for macOS and Linux.
 output="$(uname -s)"
 case "${output}" in
-    Linux*)     num_mt_clients="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | wc -l)";;
-    Darwin*)    num_mt_clients="$(sysctl -n hw.ncpu)";;
+    Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | wc -l)";;
+    Darwin*)    num_phy_cores="$(sysctl -n hw.ncpu)";;
     *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
@@ -90,12 +90,12 @@ do
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (multi-threaded, shuffled)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -s 10 -m Shuffled --dont_cache_binary_tables -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_clustered.log"
+      echo "Running $benchmark for $commit... (multi-threaded, ordered)"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --core ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
-    echo "Running $benchmark for $commit... (multi-threaded)"
-    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    echo "Running $benchmark for $commit... (multi-threaded, shuffled)"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --core ${num_phy_cores} -m Shuffled -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
@@ -164,14 +164,13 @@ do
       case "${config}" in
         "st") echo -n "single-threaded, SF 10.0" ;;
         "st_s01") echo -n "single-threaded, SF 0.01" ;;
-        "st_s1") echo -n "single-threaded, SF 1.0" ;;
-        "mt_clustered") echo -n "multi-threaded, clustering config 'Pruning', SF 10.0" ;;
-        "mt") echo -n "multi-threaded (${num_mt_clients} clients), SF 10.0" ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} clients,  SF 10.0" ;;
+        "mt_ordered") echo -n "multi-threaded, ordered, ${num_phy_cores} clients, ${num_phy_cores} clients,  SF 10.0" ;;
       esac
     else
       case "${config}" in
         "st") echo -n "single-threaded" ;;
-        "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} clients," ;;
       esac
     fi
     
