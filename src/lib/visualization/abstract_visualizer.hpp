@@ -250,7 +250,7 @@ class AbstractVisualizer {
     std::vector<std::string> lines;
     boost::split(lines, label, boost::is_any_of("\n"));
     const auto line_count = lines.size();
-    for (size_t line_idx = 0; line_idx < line_count; ++line_idx) {
+    for (auto line_idx = size_t{0}; line_idx < line_count; ++line_idx) {
       if (line_idx > 0) label_stream << '\n';
       const auto& line = lines[line_idx];
       if (line.length() <= MAX_LABEL_WIDTH) {
