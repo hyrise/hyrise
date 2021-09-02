@@ -176,14 +176,14 @@ TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
   dummy_input->execute();
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner) a = a AND a != a) Index side: Left");
+            "JoinIndex (Inner) a = a AND a != a Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex (Inner)\na = a\nAND a != a)\nIndex side: Left");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner) a = a AND a != a) Index side: Right");
+            "JoinIndex (Inner) a = a AND a != a Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex (Inner)\na = a\nAND a != a)\nIndex side: Right");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Right");
 
   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
 }
