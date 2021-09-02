@@ -272,7 +272,7 @@ class AbstractVisualizer {
         line_length++;  // include whitespace
         word_idx++;
         auto next_line_length = line_length + line_words.at(word_idx).length();
-        if (next_line_length < MAX_LABEL_WIDTH) {
+        if (next_line_length <= MAX_LABEL_WIDTH) {
           label_stream << ' ';
         } else {
           label_stream << '\n';
