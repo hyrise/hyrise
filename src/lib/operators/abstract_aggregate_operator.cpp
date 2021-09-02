@@ -40,14 +40,12 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
       desc << "," << separator;
     }
     if (lqp_node) {
-      desc << lqp_node->left_input()->output_expressions()[groupby_column_idx]->as_column_name();
+      desc << " " << lqp_node->left_input()->output_expressions()[groupby_column_idx]->as_column_name();
     } else {
       desc << "Column #" + std::to_string(_groupby_column_ids[groupby_column_idx]);
     }
   }
-  desc << "}" << separator;
-  // Add additional newline for clear separation of group-by and aggregate expressions in query plans
-  if (group_by_count > 1 && description_mode == DescriptionMode::MultiLine) desc << separator;
+  desc << " }" << separator;
   auto aggregate_count = _aggregates.size();
   for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
     if (aggregate_idx > 0) {
