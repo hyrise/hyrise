@@ -39,10 +39,11 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
     if (groupby_column_idx > 0) {
       desc << "," << separator;
     }
+    const size_t group_by_column_id = _groupby_column_ids[groupby_column_idx];
     if (lqp_node) {
-      desc << lqp_node->left_input()->output_expressions()[groupby_column_idx]->as_column_name();
-    } else {
-      desc << "Column #" + std::to_string(_groupby_column_ids[groupby_column_idx]);
+      desc << lqp_node->left_input()->output_expressions()[group_by_column_id];
+    } else { 
+      desc << "Column #" + std::to_string(group_by_column_id);
     }
   }
   desc << "}" << separator;
