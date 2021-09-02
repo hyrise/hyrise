@@ -247,7 +247,7 @@ class AbstractVisualizer {
     std::stringstream label_stream;
 
     // 1. Split label into lines
-    std::vector<std::string> lines;
+    auto lines = std::vector<std::string>();
     boost::split(lines, label, boost::is_any_of("\n"));
     const auto line_count = lines.size();
     for (auto line_idx = size_t{0}; line_idx < line_count; ++line_idx) {
@@ -258,10 +258,10 @@ class AbstractVisualizer {
         continue;
       }
       // 2. Split line into words, so we don't break a line in the middle of a word
-      std::vector<std::string> line_words;
+      auto line_words = std::vector<std::string>();
       boost::split(line_words, line, boost::is_any_of(" "));
-      size_t line_length = 0;
-      size_t word_idx = 0;
+      auto line_length = size_t{0};
+      auto word_idx = size_t{0};
       while (true) {
         label_stream << line_words.at(word_idx);
         line_length += line_words.at(word_idx).length();
@@ -270,7 +270,8 @@ class AbstractVisualizer {
         if (word_idx == line_words.size() - 1) break;
 
         line_length++;  // include whitespace
-        size_t next_line_length = line_length + line_words.at(++word_idx).length();
+        word_idx++;
+        auto next_line_length = line_length + line_words.at(word_idx).length();
         if (next_line_length < MAX_LABEL_WIDTH) {
           label_stream << ' ';
         } else {

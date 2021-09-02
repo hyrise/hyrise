@@ -26,9 +26,7 @@ std::string AliasOperator::description(DescriptionMode description_mode) const {
   std::stringstream stream;
 
   stream << AbstractOperator::description(description_mode) << separator;
-  stream << "[";
-  stream << boost::algorithm::join(_aliases, ", ");
-  stream << "]";
+  stream << "[" << boost::algorithm::join(_aliases, ", ") << "]";
   return stream.str();
 }
 

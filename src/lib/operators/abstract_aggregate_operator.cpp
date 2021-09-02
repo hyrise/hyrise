@@ -34,19 +34,21 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
   std::stringstream desc;
   desc << AbstractOperator::description(description_mode) << separator;
   desc << "GroupBy ColumnIDs: {";
-  for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
-    desc << _groupby_column_ids[groupby_column_idx];
-
-    if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
+  auto group_by_count = _groupby_column_ids.size();
+  for (auto groupby_column_idx = size_t{0}; groupby_column_idx < group_by_count; ++groupby_column_idx) {
+    if (groupby_column_idx > 0) {
       desc << ", ";
     }
+    desc << _groupby_column_ids[groupby_column_idx];
   }
   desc << "}" << separator;
-  for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
-    const auto& aggregate = _aggregates[expression_idx];
+  auto aggregate_count = _aggregates.size();
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
+    if (aggregate_idx > 0) {
+      desc << ", " << separator;
+    }
+    const auto& aggregate = _aggregates[aggregate_idx];
     desc << aggregate->as_column_name();
-
-    if (expression_idx + 1 < _aggregates.size()) desc << ", " << separator;
   }
   return desc.str();
 }
