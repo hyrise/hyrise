@@ -33,13 +33,17 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
 
   std::stringstream desc;
   desc << AbstractOperator::description(description_mode) << separator;
-  desc << "GroupBy ColumnIDs: {";
+  desc << "GroupBy {";
   auto group_by_count = _groupby_column_ids.size();
   for (auto groupby_column_idx = size_t{0}; groupby_column_idx < group_by_count; ++groupby_column_idx) {
     if (groupby_column_idx > 0) {
-      desc << ", ";
+      desc << "," << separator;
     }
-    desc << _groupby_column_ids[groupby_column_idx];
+    if (lqp_node) {
+      desc << lqp_node->left_input()->output_expressions()[groupby_column_idx]->as_column_name();
+    } else {
+      desc << "Column #" + std::to_string(_groupby_column_ids[groupby_column_idx]);
+    }
   }
   desc << "}" << separator;
   auto aggregate_count = _aggregates.size();
