@@ -60,7 +60,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   const char separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
   stream << AbstractOperator::description(description_mode);
-  stream << " (" <<_mode << ")" << separator;
+  stream << " (" << _mode << ")" << separator;
   stream << column_name(true, _primary_predicate.column_ids.first) << " ";
   stream << _primary_predicate.predicate_condition << " ";
   stream << column_name(false, _primary_predicate.column_ids.second);

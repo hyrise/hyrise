@@ -27,15 +27,13 @@ TEST_F(OperatorsJoinNestedLoopTest, DescriptionAndName) {
                                        std::vector<OperatorJoinPredicate>{secondary_predicate});
 
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinNestedLoop (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
+            "JoinNestedLoop (Inner) Column #0 = Column #0 AND Column #0 != Column #0)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinNestedLoop\n(Inner Join where Column #0 = Column #0\nAND Column #0 != Column #0)");
+            "JoinNestedLoop (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0)");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinNestedLoop (Inner Join where a = a AND a != a)");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinNestedLoop\n(Inner Join where a = a\nAND a != a)");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinNestedLoop (Inner) a = a AND a != a)");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinNestedLoop (Inner)\na = a\nAND a != a)");
 
   EXPECT_EQ(join_operator->name(), "JoinNestedLoop");
 }
