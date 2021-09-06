@@ -1,7 +1,6 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
-#include <thread>
 
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"

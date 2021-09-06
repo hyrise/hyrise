@@ -37,10 +37,9 @@ void AbstractTableGenerator::generate_and_store() {
 
   // Encoding table data and generating table statistics are time consuming processes. To reduce
   // the required execution time, we execute these data preparation steps in a multithreaded way.
-  const auto& initial_scheduler = Hyrise::get().scheduler();
+  const auto initial_scheduler = Hyrise::get().scheduler();
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
-  const auto data_generation_scheduler = std::make_shared<NodeQueueScheduler>();
-  Hyrise::get().set_scheduler(data_generation_scheduler);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::cout << "- Loading/Generating tables " << std::endl;
   auto table_info_by_name = generate();
