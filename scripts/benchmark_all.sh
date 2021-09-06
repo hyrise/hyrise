@@ -4,7 +4,7 @@ set -e
 
 if [ $# -ne 2 ]
 then
-  echo 'This script is used to compare the performance impact of a change. Running it takes more than an hour.'
+  echo 'This script is used to compare the performance impact of a change. Running it takes a few hours.'
   echo '  It compares two git revisions using various benchmarks (see below) and prints the result in a format'
   echo '  that is copyable to Github.'
   echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh origin/master HEAD'
@@ -12,7 +12,8 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
-warmup_seconds=2
+# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
+warmup_seconds=1
 runs=100
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count.
@@ -20,7 +21,7 @@ runs=100
 output="$(uname -s)"
 case "${output}" in
     Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
-    Darwin*)    num_mt_clients="$(($(sysctl -n hw.ncpu) / 2))";;
+    Darwin*)    num_phy_cores="$(($(sysctl -n hw.ncpu) / 2))";;
     *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
@@ -90,11 +91,11 @@ do
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (multi-threaded, ordered)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --core ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      echo "Running $benchmark for $commit... (multi-threaded, ordered, single client)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --core ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
-    echo "Running $benchmark for $commit... (multi-threaded, shuffled)"
+    echo "Running $benchmark for $commit... (multi-threaded, shuffled, multiple clients)"
     ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --core ${num_phy_cores} -m Shuffled -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
@@ -151,7 +152,7 @@ for benchmark in $benchmarks
 do
   configs="st mt"
   if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 st_s1 mt_clustered mt"
+    configs="st st_s01 mt_ordered mt"
   fi
 
   for config in $configs
@@ -164,13 +165,13 @@ do
       case "${config}" in
         "st") echo -n "single-threaded, SF 10.0" ;;
         "st_s01") echo -n "single-threaded, SF 0.01" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} clients,  SF 10.0" ;;
-        "mt_ordered") echo -n "multi-threaded, ordered, ${num_phy_cores} clients, ${num_phy_cores} clients,  SF 10.0" ;;
+        "mt") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt_ordered") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
       esac
     else
       case "${config}" in
         "st") echo -n "single-threaded" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} clients," ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
       esac
     fi
     
