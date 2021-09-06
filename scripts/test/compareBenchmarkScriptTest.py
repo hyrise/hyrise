@@ -45,7 +45,7 @@ class CompareBenchmarkScriptTest:
 
     # Checks the contents of context table which is printed above the results.
     def check_context_table(self):
-        assert self.script_output.startswith("+Configuration Overview----")
+        assert self.script_output.startswith("+Configuration Overview---+")
 
         horizontal_table_separators = [
             i for i, line in enumerate(self.script_output_lines) if line.startswith("+-------")
