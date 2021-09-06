@@ -91,11 +91,11 @@ do
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (multi-threaded, ordered, single client)"
+      echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
       ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
-    echo "Running $benchmark for $commit... (multi-threaded, shuffled, multiple clients)"
+    echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
     ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
