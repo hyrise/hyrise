@@ -165,8 +165,8 @@ do
       case "${config}" in
         "st") echo -n "single-threaded, SF 10.0" ;;
         "st_s01") echo -n "single-threaded, SF 0.01" ;;
-        "mt") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
-        "mt_ordered") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
       esac
     else
       case "${config}" in
