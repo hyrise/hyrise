@@ -84,8 +84,14 @@ do
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
   for benchmark in $benchmarks
   do
-    echo "Running $benchmark for $commit... (single-threaded)"
-    ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
+      echo "Running $benchmark for $commit... (single-threaded)"
+      # Warming up does not work properly for TPCC.
+      ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    else
+      echo "Running $benchmark for $commit... (single-threaded)"
+      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
