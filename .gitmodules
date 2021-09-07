@@ -58,4 +58,4 @@
 	url = https://github.com/facebook/zstd.git
 [submodule "third_party/fsst"]
 	path = third_party/fsst
-	url = https://github.com/caustt/fsst
+	url = https://github.com/cwida/fsst
