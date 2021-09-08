@@ -14,6 +14,7 @@ fi
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
 warmup_seconds=1
+mt_shuffled_runtime=1200
 runs=100
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count.
@@ -86,7 +87,7 @@ do
   do
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (single-threaded)"
-      # Warming up does not work properly for TPCC.
+      # Warming up does not make sense/much of a difference for TPCC.
       ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
     else
       echo "Running $benchmark for $commit... (single-threaded)"
@@ -102,7 +103,7 @@ do
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
-    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
