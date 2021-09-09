@@ -347,9 +347,9 @@ if github_format:
         + "```diff\n"
     )
     for line in table_string.splitlines():
-        if (green_control_sequence + "+" in line) or ("| Sum " in line and green_control_sequence in line):
+        if (green_control_sequence in line) or ("| Sum " in line and green_control_sequence in line):
             table_string_reformatted += "+"
-        elif (red_control_sequence + "-" in line) or ("| Sum " in line and red_control_sequence in line):
+        elif (red_control_sequence in line) or ("| Sum " in line and red_control_sequence in line):
             table_string_reformatted += "-"
         else:
             table_string_reformatted += " "
