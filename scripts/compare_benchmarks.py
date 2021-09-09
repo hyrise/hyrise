@@ -12,6 +12,7 @@ from scipy.stats import ttest_ind
 p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
+min_iterations_disabling_min_runtime = 100
 
 
 def format_diff(diff):
@@ -46,7 +47,7 @@ def calculate_and_format_p_value(old_durations, new_durations):
 
     old_runtime = sum(runtime for runtime in old_durations)
     new_runtime = sum(runtime for runtime in new_durations)
-    if old_runtime < min_runtime_ns or new_runtime < min_runtime_ns:
+    if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns) and (len(old_durations) < min_iterations_disabling_min_runtime or len(new_durations) < min_iterations_disabling_min_runtime):
         is_significant = False
         return "(run time too short)"
     elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
