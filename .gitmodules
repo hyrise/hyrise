@@ -49,10 +49,12 @@
 	url = https://github.com/Tessil/robin-map.git
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
-	url = https://github.com/hyrise/sql-parser
+	url = https://github.com/dey4ss/sql-parser.git
+	branch = date-interval
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+
