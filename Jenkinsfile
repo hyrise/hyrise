@@ -308,7 +308,7 @@ try {
           }, tpcdsQueryPlansAndVerification: {
             stage("tpcdsQueryPlansAndVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
