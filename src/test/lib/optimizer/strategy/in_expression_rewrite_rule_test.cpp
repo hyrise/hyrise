@@ -24,6 +24,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
     single_element_in_expression = in_(col_a, list_(1));
     five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
+    eleven_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11));
     five_element_not_in_expression = not_in_(col_a, list_(1, 2, 3, 4, 5));
     duplicate_element_in_expression = in_(col_a, list_(1, 2, 1));
     different_types_on_left_and_right_side_expression = in_(col_b, list_(1, 2));
@@ -38,7 +39,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
  public:
   std::shared_ptr<MockNode> node;
-  std::shared_ptr<AbstractExpression> col_a, col_b, single_element_in_expression, five_element_in_expression,
+  std::shared_ptr<AbstractExpression> col_a, col_b, single_element_in_expression, five_element_in_expression, eleven_element_in_expression,
       five_element_not_in_expression, hundred_element_in_expression, duplicate_element_in_expression,
       different_types_on_left_and_right_side_expression, different_types_on_right_side_expression, null_in_expression;
 };
@@ -269,12 +270,12 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 
   {
-    // ExpressionEvaluator for five elements
-    const auto input_lqp = PredicateNode::make(five_element_in_expression, node);
+    // ExpressionEvaluator for eleven elements
+    const auto input_lqp = PredicateNode::make(eleven_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     EXPECT_EQ(result_lqp, input_lqp);
 
-    // No cardinality check here, as an IN expression with 5 elements will not be touched (see
+    // No cardinality check here, as an IN expression with 11 elements will not be touched (see
     // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
     // CardinalityEstimator.
   }

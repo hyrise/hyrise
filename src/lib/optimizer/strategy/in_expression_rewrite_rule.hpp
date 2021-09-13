@@ -22,7 +22,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   // With the auto strategy, IN expressions with up to MAX_ELEMENTS_FOR_DISJUNCTION on the right side are rewritten
   // into disjunctive predicates. This value was chosen conservatively, also to keep the LQPs easy to read.
-  constexpr static auto MAX_ELEMENTS_FOR_DISJUNCTION = 3;
+  constexpr static auto MAX_ELEMENTS_FOR_DISJUNCTION = 10;
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
