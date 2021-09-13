@@ -17,12 +17,11 @@ warmup_seconds=1
 mt_shuffled_runtime=1200
 runs=100
 
-# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count.
-# This only works for macOS and Linux. For macOS, we simply divide the CPU count by 2.
+# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
 output="$(uname -s)"
 case "${output}" in
     Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
-    Darwin*)    num_phy_cores="$(($(sysctl -n hw.ncpu) / 2))";;
+    Darwin*)    num_phy_cores="$(sysctl -n hw.physicalcpu)";;
     *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
