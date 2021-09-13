@@ -1,10 +1,13 @@
 #include "table_statistics.hpp"
 
+#include <algorithm>
 #include <numeric>
 #include <thread>
 
 #include "attribute_statistics.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -20,57 +23,47 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
    */
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
-  auto next_column_id = std::atomic_size_t{0u};
-  auto threads = std::vector<std::thread>{};
-
   /**
-   * Parallely create statistics objects for the Table's columns. Do not use JobTask as we want this to be parallel
-   * even if Hyrise is running without a scheduler.
+   * We highly recommend setting up a multithreaded scheduler before the following procedure is executed to parallelly
+   * create statistics objects for the table's columns.
    */
-  for (auto thread_id = 0u;
-       thread_id < std::min(static_cast<uint>(table.column_count()), std::thread::hardware_concurrency() + 1);
-       ++thread_id) {
-    threads.emplace_back([&] {
-      while (true) {
-        auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
-        if (static_cast<ColumnCount>(my_column_id) >= table.column_count()) return;
 
-        const auto column_data_type = table.column_data_type(my_column_id);
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table.column_count());
 
-        resolve_data_type(column_data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
+  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
+    const auto generate_column_statistics = [&, column_id]() {
+      const auto column_data_type = table.column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
 
-          const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+        const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
-          const auto histogram =
-              EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
+        const auto histogram =
+            EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
 
-          if (histogram) {
-            output_column_statistics->set_statistics_object(histogram);
+        if (histogram) {
+          output_column_statistics->set_statistics_object(histogram);
 
-            // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-            // property
-            const auto null_value_ratio =
-                table.row_count() == 0
-                    ? 0.0f
-                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
-            output_column_statistics->set_statistics_object(
-                std::make_shared<NullValueRatioStatistics>(null_value_ratio));
-          } else {
-            // Failure to generate a histogram currently only stems from all-null segments.
-            // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-            output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
-          }
+          // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
+          // property
+          const auto null_value_ratio =
+              table.row_count() == 0
+                  ? 0.0f
+                  : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
+          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+        } else {
+          // Failure to generate a histogram currently only stems from all-null segments.
+          // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+        }
 
-          column_statistics[my_column_id] = output_column_statistics;
-        });
-      }
-    });
+        column_statistics[column_id] = output_column_statistics;
+      });
+    };
+    jobs.emplace_back(std::make_shared<JobTask>(generate_column_statistics));
   }
-
-  for (auto& thread : threads) {
-    thread.join();
-  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }

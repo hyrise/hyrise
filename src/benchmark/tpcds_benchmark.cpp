@@ -55,12 +55,6 @@ int main(int argc, char* argv[]) {
 
   config = std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_cli_options(cli_parse_result));
 
-  const auto valid_scale_factors = std::array{1, 1000, 3000, 10000, 30000, 100000};
-
-  const auto& find_result = std::find(valid_scale_factors.begin(), valid_scale_factors.end(), scale_factor);
-  Assert(find_result != valid_scale_factors.end(),
-         "TPC-DS benchmark only supports scale factor 1 (qualification only), 1000, 3000, 10000, 30000 and 100000.");
-
   std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
 
   std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";

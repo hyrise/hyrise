@@ -50,7 +50,8 @@ std::string VizRecordLayout::escape(const std::string& input) {
       case ']':
         stream << "\\";
         break;
-      default: {}
+      default: {
+      }
     }
     stream << c;
   }
