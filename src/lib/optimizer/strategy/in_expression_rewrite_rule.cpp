@@ -1,5 +1,6 @@
 #include "in_expression_rewrite_rule.hpp"
 
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/in_expression.hpp"
@@ -12,6 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
@@ -111,6 +113,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
     return;
   }
 
+  const auto cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type != LQPNodeType::Predicate) {
       // This rule only rewrites IN if it is part of a predicate (not, e.g., `SELECT a IN (1, 2) AS foo`)
@@ -162,8 +166,9 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       Assert(!in_expression->is_negated(), "Disjunctions cannot handle NOT IN");
       rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
     } else if (strategy == Strategy::Auto) {
-      if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION && !in_expression->is_negated() &&
-          !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
+      if ((right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION ||
+           cardinality_estimator->estimate_cardinality(sub_node->left_input()) > 1'000'000.0f) &&
+          !in_expression->is_negated() && !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
         rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
       } else if (common_data_type && right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
         rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
