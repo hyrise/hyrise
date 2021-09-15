@@ -166,13 +166,13 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       Assert(!in_expression->is_negated(), "Disjunctions cannot handle NOT IN");
       rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
     } else if (strategy == Strategy::Auto) {
-      if ((right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION ||
+      if (common_data_type && right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
+        rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
+                        in_expression->is_negated());
+      } else if ((right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION ||
            cardinality_estimator->estimate_cardinality(sub_node->left_input()) > 1'000'000.0f) &&
           !in_expression->is_negated() && !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
         rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
-      } else if (common_data_type && right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
-        rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
-                        in_expression->is_negated());
       } else {
         // Stick with the ExpressionEvaluator
       }
