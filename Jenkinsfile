@@ -15,7 +15,7 @@ try {
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
             env.PR_CREATED_BY = pullRequest.createdBy
             sh '''
-              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "204"
+              curl -s -I -u "${GITHUB_USERNAME}:${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "204"
             '''
           }
         } catch (error) {
