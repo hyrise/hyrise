@@ -16,7 +16,8 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
     // col_a has 1000 entries across 200 values linearly distributed between 1 and 200
     node = create_mock_node_with_statistics(
-        MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}, {DataType::String, "col_c"}}, 1000,
+        MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}, {DataType::String, "col_c"}},
+        1000,
         {{GenericHistogram<int32_t>::with_single_bin(1, 200, 1000, 200),
           GenericHistogram<float>::with_single_bin(1.0f, 50.0f, 100, 10),
           GenericHistogram<pmr_string>::with_single_bin("a", "z", 1, 1000)}});
@@ -24,8 +25,9 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     col_b = node->get_column("col_b");
     col_c = node->get_column("col_c");
 
-    many_row_node = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "col_large"}}, 10'000'000,
-                                              {GenericHistogram<int32_t>::with_single_bin(1, 10'000'000, 1, 10'000'000)});
+    many_row_node =
+        create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "col_large"}}, 10'000'000,
+                                         {GenericHistogram<int32_t>::with_single_bin(1, 10'000'000, 1, 10'000'000)});
     col_large = many_row_node->get_column("col_large");
 
     single_element_in_expression = in_(col_a, list_(1));
@@ -41,18 +43,18 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
     hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
                                                                    std::make_shared<ListExpression>(hundred_elements));
-    hundred_element_in_expression_large_input = std::make_shared<InExpression>(PredicateCondition::In, col_large,
-                                                                   std::make_shared<ListExpression>(hundred_elements));
-
+    hundred_element_in_expression_large_input = std::make_shared<InExpression>(
+        PredicateCondition::In, col_large, std::make_shared<ListExpression>(hundred_elements));
   }
 
  public:
-
-  // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces a non-deterministic order of predicates
+  // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces
+  // a non-deterministic order of predicates
   bool check_disjunction(std::shared_ptr<AbstractLQPNode> result_lqp, std::vector<int> expected_values) {
     auto values_found_in_predicates = std::vector<int>{};
 
     // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
+    // values_found_in_predicates
     const auto verify_predicate_node = [&](const auto& node) {
       EXPECT_EQ(node->type, LQPNodeType::Predicate);
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
@@ -65,7 +67,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
           boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
     };
 
-    for (auto union_node_idx = 0; union_node_idx < 4; ++union_node_idx) {
+    for (auto union_node_idx = size_t{0}; union_node_idx < expected_values.size() - 1; ++union_node_idx) {
       EXPECT_EQ(result_lqp->type, LQPNodeType::Union);
       auto union_node = std::dynamic_pointer_cast<UnionNode>(result_lqp);
       EXPECT_TRUE(union_node);
@@ -75,20 +77,20 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
       result_lqp = union_node->left_input();
     }
-    // After checking four union nodes, the last node has predicates on both sides
+    // After checking expected_values.size() - 1 union nodes, the last node has predicates on both sides
     verify_predicate_node(result_lqp);
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
-    // const auto expected_values = std::vector<int>{1, 2, 3, 4, 5};
-    // EXPECT_EQ(values_found_in_predicates, expected_values);
+
     if (values_found_in_predicates == expected_values) return true;
 
     return false;
   }
 
   std::shared_ptr<MockNode> node, many_row_node;
-  std::shared_ptr<AbstractExpression> col_a, col_b, col_c, col_large, single_element_in_expression, two_element_functional_in_expression, five_element_in_expression,
-      five_element_not_in_expression, hundred_element_in_expression, hundred_element_in_expression_large_input, duplicate_element_in_expression,
+  std::shared_ptr<AbstractExpression> col_a, col_b, col_c, col_large, single_element_in_expression,
+      two_element_functional_in_expression, five_element_in_expression, five_element_not_in_expression,
+      hundred_element_in_expression, hundred_element_in_expression_large_input, duplicate_element_in_expression,
       different_types_on_left_and_right_side_expression, different_types_on_right_side_expression, null_in_expression;
 };
 
@@ -330,7 +332,8 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     for (auto i = 0; i < 100; ++i) table->append({i});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
-    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_large, right_col), many_row_node, static_table_node);
+    const auto expected_lqp =
+        JoinNode::make(JoinMode::Semi, equals_(col_large, right_col), many_row_node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -364,8 +367,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     EXPECT_EQ(result_lqp, input_lqp);
   }
-
-
 }
 
 }  // namespace opossum
