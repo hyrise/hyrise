@@ -3013,4 +3013,63 @@ TEST_F(SQLTranslatorTest, ImportStatement) {
   }
 }
 
+TEST_F(SQLTranslatorTest, DateLiteral) {
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-35';"), InvalidInputException);
+
+  const auto value_expression = expression_vector(value_(pmr_string{"2000-01-31"}));
+  // clang-format off
+  const auto expected_lqp =
+    AliasNode::make(value_expression, std::vector<std::string>{"2000-01-31"},
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make()));
+  // clang-format on
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DATE '2000-01-31';");
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, IntervalLiteral) {
+  EXPECT_THROW(sql_to_lqp_helper("SELECT INTERVAL '3' day from int_string;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * from int_string WHERE b = INTERVAL '3' day;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT 'abc' + 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT 1 + 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT '2001-01-01' / 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT '2001-01-01' + 1 second;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT 1 day + 1 day;"), InvalidInputException);
+
+  // clang-format off
+  const auto expected_lqp =
+    ProjectionNode::make(expression_vector(value_(pmr_string{"2000-01-31"})),
+      DummyTableNode::make());
+  // clang-format on
+
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2000-01-01' + INTERVAL '30' day;");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2002-01-31' - INTERVAL '2 years';");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2000-01-01' + 30 days;");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(SQLTranslatorTest, CastStatement) {
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('abc' AS DATE)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(1 AS DATE)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(a AS DATE) FROM int_string"), InvalidInputException);
+
+  const auto cast_expression = expression_vector(cast_(value_(pmr_string{'1'}), DataType::Int));
+  // clang-format off
+  const auto expected_lqp =
+    AliasNode::make(cast_expression, std::vector<std::string>{"CAST"},
+      ProjectionNode::make(cast_expression,
+        DummyTableNode::make()));
+  // clang-format on
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('1' as INT);");
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum

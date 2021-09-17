@@ -227,6 +227,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail(
           "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
           "without instantiating it first?");
+
+    case ExpressionType::Interval:
+      Fail("IntervalExpression should have been resolved by SQLTranslator");
   }
 
   // Store the result in the cache

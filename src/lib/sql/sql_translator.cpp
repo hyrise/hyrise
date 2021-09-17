@@ -22,6 +22,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
+#include "expression/interval_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
@@ -60,6 +61,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "utils/date_utils.hpp"
 #include "utils/meta_table_manager.hpp"
 
 #include "SQLParser.h"
@@ -101,6 +103,12 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
 const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
     {hsql::kOrderAsc, SortMode::Ascending},
     {hsql::kOrderDesc, SortMode::Descending},
+};
+
+const std::unordered_map<hsql::DataType, DataType> supported_hsql_data_types = {
+    {hsql::DataType::INT, DataType::Int},     {hsql::DataType::LONG, DataType::Long},
+    {hsql::DataType::FLOAT, DataType::Float}, {hsql::DataType::DOUBLE, DataType::Double},
+    {hsql::DataType::TEXT, DataType::String},
 };
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
@@ -958,6 +966,8 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
   for (const auto& hsql_select_expr : select_list) {
     if (hsql_select_expr->type == hsql::kExprStar) {
       select_list_elements.emplace_back(SelectListElement{nullptr});
+    } else if (hsql_select_expr->type == hsql::kExprLiteralInterval) {
+      FailInput("Interval can only be added to or substracted from a date");
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
       select_list_elements.emplace_back(SelectListElement{expression});
@@ -1316,7 +1326,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::CHAR:
         case hsql::DataType::VARCHAR:
         case hsql::DataType::TEXT:
-          // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
+          // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise has no way of working with these
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::DATE:
@@ -1474,6 +1484,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
   const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
   const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver) : nullptr;
 
+  if (left) {
+    AssertInput(left->type != ExpressionType::Interval, "IntervalExpression must follow another expression");
+  }
+  if (right && right->type == ExpressionType::Interval) {
+    AssertInput(expr.type == hsql::kExprOperator && (expr.opType == hsql::kOpPlus || expr.opType == hsql::kOpMinus),
+                "Intervals can only be added or substracted");
+  }
+
   switch (expr.type) {
     case hsql::kExprColumnRef: {
       const auto table_name = expr.table ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
@@ -1505,6 +1523,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprLiteralNull:
       return std::make_shared<ValueExpression>(NullValue{});
+
+    case hsql::kExprLiteralDate: {
+      const auto date = string_to_date(name);
+      if (date) return value_(pmr_string{name});
+      FailInput("'" + name + "' is not a valid date");
+    }
 
     case hsql::kExprParameter: {
       Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
@@ -1639,7 +1663,22 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto arithmetic_operators_iter = hsql_arithmetic_operators.find(expr.opType);
       if (arithmetic_operators_iter != hsql_arithmetic_operators.end()) {
         Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary expression.");
-        return std::make_shared<ArithmeticExpression>(arithmetic_operators_iter->second, left, right);
+        const auto arithmetic_operator = arithmetic_operators_iter->second;
+        // Handle intervals
+        if (right->type == ExpressionType::Interval) {
+          AssertInput(left->type == ExpressionType::Value && left->data_type() == DataType::String,
+                      "Interval can only be applied to ValueExpression with String value");
+          const auto start_date_string =
+              std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
+          const auto start_date = string_to_date(start_date_string);
+          AssertInput(start_date, "'" + start_date_string + "' is not a valid date");
+          const auto& interval_expression = static_cast<IntervalExpression&>(*right);
+          int64_t sign = arithmetic_operator == ArithmeticOperator::Addition ? 1 : -1;
+          const auto end_date =
+              date_interval(*start_date, sign * interval_expression.duration(), interval_expression.unit());
+          return std::make_shared<ValueExpression>(pmr_string{date_to_string(end_date)});
+        }
+        return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
       }
 
       // Translate PredicateExpression
@@ -1722,8 +1761,35 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     case hsql::kExprHint:
       FailInput("Hints are not yet supported");
 
-    case hsql::kExprCast:
-      FailInput("Explicit casts are not yet supported");
+    case hsql::kExprCast: {
+      const auto source_data_type = left->data_type();
+      if (expr.columnType.data_type == hsql::DataType::DATE) {
+        AssertInput(source_data_type == DataType::String, "Cannot cast " + left->as_column_name() + " as Date");
+        if (left->type == ExpressionType::Value) {
+          const auto date_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
+          const auto date = string_to_date(date_string);
+          if (date) return left;
+          FailInput("'" + date_string + "' is not a valid date");
+        }
+        // We don't know if input actually contains dates, but maybe it is good enough that it cointains strings.
+        return left;
+      }
+      const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
+      if (data_type_iter == supported_hsql_data_types.cend()) {
+        FailInput("CAST to " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
+      }
+      const auto target_data_type = data_type_iter->second;
+      // omit unnecessary casts
+      if (source_data_type == target_data_type) return left;
+      return cast_(left, target_data_type);
+    }
+
+    case hsql::kExprLiteralInterval: {
+      const auto unit = hsql_datetime_field.at(expr.datetimeField);
+      AssertInput(unit == DatetimeComponent::Day || unit == DatetimeComponent::Month || unit == DatetimeComponent::Year,
+                  "Only date intervals are supported yet");
+      return interval_(expr.ival, unit);
+    }
   }
   Fail("Invalid enum value");
 }
