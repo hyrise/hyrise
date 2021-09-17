@@ -57,21 +57,20 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     return "Column #"s + std::to_string(column_id);
   };
 
-  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
-  stream << AbstractOperator::description(description_mode) << separator << "(" << _mode << " Join where "
-         << column_name(true, _primary_predicate.column_ids.first) << " " << _primary_predicate.predicate_condition
-         << " " << column_name(false, _primary_predicate.column_ids.second);
+  stream << AbstractOperator::description(description_mode) << " (" << _mode << ")" << separator;
+  stream << column_name(true, _primary_predicate.column_ids.first) << " ";
+  stream << _primary_predicate.predicate_condition << " ";
+  stream << column_name(false, _primary_predicate.column_ids.second);
 
-  // add information about secondary join predicates
+  // Add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
-    stream << " AND " << column_name(true, secondary_predicate.column_ids.first) << " "
-           << secondary_predicate.predicate_condition << " "
-           << column_name(false, secondary_predicate.column_ids.second);
+    stream << separator << "AND ";
+    stream << column_name(true, secondary_predicate.column_ids.first) << " ";
+    stream << secondary_predicate.predicate_condition << " ";
+    stream << column_name(false, secondary_predicate.column_ids.second);
   }
-
-  stream << ")";
 
   return stream.str();
 }

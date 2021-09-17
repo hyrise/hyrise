@@ -29,24 +29,31 @@ const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperat
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
   std::stringstream desc;
-  desc << AbstractOperator::description(description_mode) << separator << "GroupBy ColumnIDs: ";
-  for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
-    desc << _groupby_column_ids[groupby_column_idx];
-
-    if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
-      desc << ", ";
+  desc << AbstractOperator::description(description_mode) << separator;
+  desc << "GroupBy {";
+  auto group_by_count = _groupby_column_ids.size();
+  for (auto groupby_column_idx = size_t{0}; groupby_column_idx < group_by_count; ++groupby_column_idx) {
+    if (groupby_column_idx > 0) {
+      desc << "," << separator;
+    }
+    const size_t group_by_column_id = _groupby_column_ids[groupby_column_idx];
+    if (lqp_node) {
+      desc << lqp_node->left_input()->output_expressions()[group_by_column_id]->as_column_name();
+    } else {
+      desc << "Column #" + std::to_string(group_by_column_id);
     }
   }
-
-  desc << " Aggregates: ";
-  for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
-    const auto& aggregate = _aggregates[expression_idx];
+  desc << "}" << separator;
+  auto aggregate_count = _aggregates.size();
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
+    if (aggregate_idx > 0) {
+      desc << ", " << separator;
+    }
+    const auto& aggregate = _aggregates[aggregate_idx];
     desc << aggregate->as_column_name();
-
-    if (expression_idx + 1 < _aggregates.size()) desc << ", ";
   }
   return desc.str();
 }

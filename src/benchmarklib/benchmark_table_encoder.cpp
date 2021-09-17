@@ -1,11 +1,12 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
-#include <thread>
 
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
@@ -109,30 +110,21 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto encoding_performed = std::atomic_bool{false};
   const auto column_data_types = table->column_data_types();
 
-  // Encode chunks in parallel, using `hardware_concurrency + 1` workers
-  // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
-  auto next_chunk = std::atomic_uint{0};
-  const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
-  auto threads = std::vector<std::thread>{};
-  threads.reserve(thread_count);
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table->chunk_count());
 
-  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
-    threads.emplace_back([&] {
-      while (true) {
-        auto my_chunk = next_chunk++;
-        if (my_chunk >= table->chunk_count()) return;
-
-        const auto chunk = table->get_chunk(ChunkID{my_chunk});
-        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-        if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
-          ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
-          encoding_performed = true;
-        }
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto encode = [&, chunk_id]() {
+      const auto chunk = table->get_chunk(ChunkID{chunk_id});
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+      if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
+        ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
+        encoding_performed = true;
       }
-    });
+    };
+    jobs.emplace_back(std::make_shared<JobTask>(encode));
   }
-
-  for (auto& thread : threads) thread.join();
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   generate_chunk_pruning_statistics(table);
 
