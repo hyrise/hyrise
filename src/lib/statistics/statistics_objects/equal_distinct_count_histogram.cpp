@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <memory_resource>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -25,7 +26,7 @@ using namespace opossum;  // NOLINT
 template <typename T>
 using ValueDistributionMap =
     tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+                   std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
@@ -50,9 +51,31 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
-  // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
-  //               resources.
-  ValueDistributionMap<T> value_distribution_map;
+  // Since this function can be the main bottleneck for loading data in the benchmarks, we put some effort in
+  // optimizing it. For once, we try to get the distinct count in case we have dictionary-encoded data in place. This
+  // allows us to pre-size the robin_map which helps a lot with performance (no resizes for large maps) and memory
+  // consumption (as we can avoid pre-sizes all maps with the table size, which is often by far too large).
+
+  // The following values are defensive defaults in case we cannot get good estimates (i.e., no dictionary-encoded data).
+  auto estimated_distinct_value_count = size_t{1'024};
+  auto max_load_factor = 0.5f;  // Default of robin_map for cases where lack more information.
+  // To use a monotonic buffer pool, which can be advantegous for string maps.
+  auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
+
+  if (table.get_chunk(ChunkID{0})) {
+    // Check if first chunk is dictionary-encoded.
+    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
+      estimated_distinct_value_count = static_cast<size_t>(1.1 * static_cast<double>(table.chunk_count() * dictionary_segment->unique_values_count()));
+      // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
+      // resize will happen.
+      max_load_factor = 0.9f;
+      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
+    } else {
+      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(4'194'304);  // Always use 4 MB.
+    }
+  }
+  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, &*pool};
+  value_distribution_map.max_load_factor(max_load_factor);
 
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -64,8 +87,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-                    [&](const auto& l, const auto& r) { return l.first < r.first; });
+  value_distribution_map.clear();
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
+                       [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   return value_distribution;
 }
