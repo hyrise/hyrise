@@ -303,36 +303,20 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     return static_cast<const ValueExpression&>(expression).value;
   } else if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
-    if (cast_expression.argument()->type != ExpressionType::Value) {
-      return std::nullopt;
-    }
-    const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
-    const auto target_data_type = expression.data_type();
-
-    if (target_data_type == DataType::Null) {
-      // NULL_VALUE vs. NullValue{} ?
+    if (expression.data_type() == DataType::Null || cast_expression.argument()->data_type() == DataType::Null) {
       return NULL_VALUE;
     }
-
+    if (cast_expression.argument()->type != ExpressionType::Value) return std::nullopt;
+    const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
+    if (value_expression.data_type() == DataType::Null) return NULL_VALUE;
     std::optional<AllTypeVariant> result;
-    resolve_data_type(target_data_type, [&](auto type) {
+    resolve_data_type(expression.data_type(), [&](auto type) {
       using TargetDataType = typename decltype(type)::type;
-      try {
-        const auto casted_value = lossy_variant_cast<TargetDataType>(value_expression.value);
-        if (casted_value) {
-          result = casted_value;
-        } else {
-          result = NULL_VALUE;
-        }
-      } catch (boost::bad_lexical_cast&) {
-        // remove catch?
-        result = std::nullopt;
-      }
+      result = *lossy_variant_cast<TargetDataType>(value_expression.value);
     });
     return result;
   }
   return std::nullopt;
-
 }
 
 std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(

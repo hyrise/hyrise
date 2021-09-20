@@ -692,15 +692,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
       } else {
-        try {
-          values[chunk_offset] = *lossy_variant_cast<Result>({argument_value});
-        } catch (boost::bad_lexical_cast&) {
-          // Maybe remove catch
-          values[chunk_offset] = static_cast<Result>(0);
-        }
+        values[chunk_offset] = *lossy_variant_cast<Result>({argument_value});
       }
     }
-
     nulls = argument_result.nulls;
   });
 

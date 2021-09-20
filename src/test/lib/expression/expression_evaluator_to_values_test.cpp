@@ -794,10 +794,9 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
   EXPECT_TRUE(test_expression<pmr_string>(*cast_(5.5, DataType::String), {"5.5"}));
   EXPECT_TRUE(test_expression<int32_t>(*cast_(null_(), DataType::Int), {std::nullopt}));
 
-  // Following SQLite, CAST("Hello" AS INT) yields zero
-  // SHOULD THROW AN ERROR
-  EXPECT_TRUE(test_expression<int32_t>(*cast_("Hello", DataType::Int), {0}));
-  EXPECT_TRUE(test_expression<float>(*cast_("Hello", DataType::Float), {0.0f}));
+  // Following SQL standard, CAST("Hello" AS INT) errors
+  EXPECT_ANY_THROW(test_expression<int32_t>(*cast_("Hello", DataType::Int), {}));
+  EXPECT_ANY_THROW(test_expression<float>(*cast_("Hello", DataType::Float), {}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
