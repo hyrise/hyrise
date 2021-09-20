@@ -11,7 +11,7 @@ namespace opossum {
  */
 class IntervalExpression : public AbstractExpression {
  public:
-  IntervalExpression(const int64_t duration, const DatetimeComponent unit);
+  IntervalExpression(const int64_t init_duration, const DatetimeComponent init_unit);
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
@@ -19,17 +19,13 @@ class IntervalExpression : public AbstractExpression {
 
   DataType data_type() const override;
 
-  int64_t duration() const;
+  const int64_t duration;
 
-  DatetimeComponent unit() const;
+  const DatetimeComponent unit;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
-
- private:
-  const int64_t _duration;
-  const DatetimeComponent _unit;
 };
 
 }  // namespace opossum

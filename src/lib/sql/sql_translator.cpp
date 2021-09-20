@@ -1675,8 +1675,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
           int64_t sign = arithmetic_operator == ArithmeticOperator::Addition ? 1 : -1;
           const auto end_date =
-              date_interval(*start_date, sign * interval_expression.duration(), interval_expression.unit());
-          return std::make_shared<ValueExpression>(pmr_string{date_to_string(end_date)});
+              date_interval(*start_date, sign * interval_expression.duration, interval_expression.unit);
+          return value_(pmr_string{date_to_string(end_date)});
         }
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
       }
