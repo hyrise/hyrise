@@ -6,6 +6,7 @@
 
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
+#include "lossy_cast.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
@@ -306,47 +307,32 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
       return std::nullopt;
     }
     const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
-    const auto source_data_type = value_expression.data_type();
     const auto target_data_type = expression.data_type();
 
-    if (source_data_type == target_data_type) {
-      return value_expression.value;
-    }
-
-    if (source_data_type == DataType::Null || target_data_type == DataType::Null) {
+    if (target_data_type == DataType::Null) {
+      // NULL_VALUE vs. NullValue{} ?
       return NULL_VALUE;
     }
+
     std::optional<AllTypeVariant> result;
-
-    resolve_data_type(source_data_type, [&](auto source_type) {
-      using SourceDataType = typename decltype(source_type)::type;
-      const SourceDataType& source = boost::get<SourceDataType>(value_expression.value);
-      resolve_data_type(target_data_type, [&](auto target_type) {
-        using TargetDataType = typename decltype(target_type)::type;
-
-        if constexpr (std::is_same_v<TargetDataType, pmr_string>) {
-          // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
-          result = AllTypeVariant{boost::lexical_cast<TargetDataType>(source)};
-        } else if constexpr (std::is_same_v<SourceDataType, pmr_string>) {
-          // "String to Numeric" cast
-          // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
-          // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
-          // exception-as-flow-control thing.
-          TargetDataType value{};
-          if (!boost::conversion::try_lexical_convert(source, value)) {
-            result = std::nullopt;
-          } else
-            result = AllTypeVariant{value};
+    resolve_data_type(target_data_type, [&](auto type) {
+      using TargetDataType = typename decltype(type)::type;
+      try {
+        const auto casted_value = lossy_variant_cast<TargetDataType>(value_expression.value);
+        if (casted_value) {
+          result = casted_value;
         } else {
-          // "Numeric to Numeric" cast. Use static_cast<> as boost::conversion::try_lexical_convert() would fail for
-          // CAST(5.5 AS INT)
-          result = AllTypeVariant{static_cast<TargetDataType>(source)};
+          result = NULL_VALUE;
         }
-      });
+      } catch (boost::bad_lexical_cast&) {
+        // remove catch?
+        result = std::nullopt;
+      }
     });
     return result;
   }
   return std::nullopt;
+
 }
 
 std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expressions(
