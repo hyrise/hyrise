@@ -54,6 +54,8 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/candidate_strategy/abstract_dependency_candidate_rule.hpp
     dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.cpp
     dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.hpp
+    dependency_mining/candidate_strategy/join_elimination_candidate_rule.cpp
+    dependency_mining/candidate_strategy/join_elimination_candidate_rule.hpp
     dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.cpp
     dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.hpp
     dependency_mining/candidate_strategy/join_to_semi_candidate_rule.cpp

@@ -52,6 +52,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   std::vector<OrderDependency> order_dependencies() override;
 
+  std::vector<InclusionDependency> inclusion_dependencies() override;
+
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   JoinMode join_mode;

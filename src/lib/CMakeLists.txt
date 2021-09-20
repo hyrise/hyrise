@@ -128,6 +128,8 @@ set(
     logical_query_plan/export_node.hpp
     logical_query_plan/functional_dependency.cpp
     logical_query_plan/functional_dependency.hpp
+    logical_query_plan/inclusion_dependency.cpp
+    logical_query_plan/inclusion_dependency.hpp
     logical_query_plan/order_dependency.cpp
     logical_query_plan/order_dependency.hpp
     logical_query_plan/import_node.cpp
@@ -431,6 +433,10 @@ set(
     storage/base_value_segment.hpp
     storage/abstract_table_constraint.cpp
     storage/abstract_table_constraint.hpp
+    storage/table_column_id.cpp
+    storage/table_column_id.hpp
+    storage/table_inclusion_constraint.cpp
+    storage/table_inclusion_constraint.hpp
     storage/table_key_constraint.cpp
     storage/table_key_constraint.hpp
     storage/table_order_constraint.cpp

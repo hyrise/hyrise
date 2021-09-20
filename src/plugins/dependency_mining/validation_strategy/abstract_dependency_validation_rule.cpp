@@ -50,6 +50,16 @@ bool AbstractDependencyValidationRule::_is_known(const std::string& table_name,
       }
     }
       return false;
+    case TableConstraintType::Inclusion: {
+      const auto inclusion_constraint = dynamic_cast<const TableInclusionConstraint&>(constraint);
+      const auto& current_constraints = table->soft_inclusion_constraints();
+      for (const auto& current_constraint : current_constraints) {
+        if (current_constraint == inclusion_constraint) {
+          return true;
+        }
+      }
+    }
+      return false;
   }
 }
 

@@ -248,4 +248,6 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
 
 void remove_invalid_ods(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<OrderDependency>& ods);
 
+void remove_invalid_inds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<InclusionDependency>& inds);
+
 }  // namespace opossum

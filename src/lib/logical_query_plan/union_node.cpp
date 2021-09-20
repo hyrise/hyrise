@@ -115,6 +115,25 @@ std::vector<OrderDependency> UnionNode::order_dependencies() {
   return _order_dependencies;
 }
 
+std::vector<InclusionDependency> UnionNode::inclusion_dependencies() {
+  if (_retrieved_inds) return _inclusion_dependencies;
+
+  auto left_dependencies = left_input()->inclusion_dependencies();
+  auto right_dependencies = right_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), left_dependencies);
+  remove_invalid_inds(shared_from_this(), right_dependencies);
+
+  // intersect
+  std::vector<InclusionDependency> _inclusion_dependencies;
+  for (const auto& right_ind : right_dependencies) {
+    for (const auto& left_ind : left_dependencies) {
+      if (right_ind == left_ind) _inclusion_dependencies.emplace_back(right_ind);
+    }
+  }
+  _retrieved_inds = true;
+  return _inclusion_dependencies;
+}
+
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

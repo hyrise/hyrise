@@ -18,6 +18,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -355,6 +356,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 
   _table_key_constraints.push_back(table_key_constraint);
+  std::cout << "added " << magic_enum::enum_name(table_key_constraint.key_type()) << " constraint" << std::endl;
   //}
 }
 
@@ -381,6 +383,35 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   for (const auto& existing_constraint : _table_order_constraints) {
     if (existing_constraint == table_order_constraint) return;
     _table_order_constraints.push_back(table_order_constraint);
+  }
+  //}
+}
+
+const TableInclusionConstraints& Table::soft_inclusion_constraints() const { return _table_inclusion_constraints; }
+
+void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_inclusion_constraint) {
+  Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
+  std::cout << "add Inclusion constraint" << std::endl;
+  // Check validity of specified columns
+  for (const auto& [table_name, column_id] : table_inclusion_constraint.determinants()) {
+    Assert(Hyrise::get().storage_manager.has_table(table_name), "Invalid referenced table");
+    const auto table = Hyrise::get().storage_manager.get_table(table_name);
+    Assert(column_id < table->column_count(), "Referenced ColumnID out of range");
+    // OCs require non-nullable columns
+    // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+  }
+  for (const auto& column_id : table_inclusion_constraint.dependents()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    // OCs require non-nullable columns
+    // SKIP, TPC_DS's date_dim.d_date is nullable (stupid!)
+    // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
+  }
+
+  //{
+  //  auto scoped_lock = acquire_append_mutex();
+  for (const auto& existing_constraint : _table_inclusion_constraints) {
+    if (existing_constraint == table_inclusion_constraint) return;
+    _table_inclusion_constraints.push_back(table_inclusion_constraint);
   }
   //}
 }

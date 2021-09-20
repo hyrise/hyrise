@@ -12,6 +12,7 @@
 #include "chunk.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
+#include "table_inclusion_constraint.hpp"
 #include "table_key_constraint.hpp"
 #include "table_order_constraint.hpp"
 #include "types.hpp"
@@ -208,6 +209,9 @@ class Table : private Noncopyable {
   void add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
   const TableOrderConstraints& soft_order_constraints() const;
 
+  void add_soft_inclusion_constraint(const TableInclusionConstraint& table_inclusion_constraint);
+  const TableInclusionConstraints& soft_inclusion_constraints() const;
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
@@ -245,6 +249,7 @@ class Table : private Noncopyable {
 
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
+  TableInclusionConstraints _table_inclusion_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;

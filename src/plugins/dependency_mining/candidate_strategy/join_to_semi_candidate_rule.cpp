@@ -22,23 +22,15 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
     return {};
   }
 
-  // determine if we need to check both inputsa
-  std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-  inputs.emplace_back(join_node->right_input());
-  if (join_node->join_mode == JoinMode::Inner) {
-    inputs.emplace_back(join_node->left_input());
-  }
-
   const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
   const auto& predicate_arguments = predicate->arguments;
   std::vector<DependencyCandidate> candidates;
   // check for given inputs
-  for (const auto& input : inputs) {
+  for (const auto& input : {join_node->left_input(), join_node->right_input()}) {
     for (const auto& expression : predicate_arguments) {
       if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
         continue;
       }
-      const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
       const auto join_column_id = resolve_column_expression(expression);
       if (join_column_id == INVALID_TABLE_COLUMN_ID) {
         continue;

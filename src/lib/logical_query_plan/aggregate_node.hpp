@@ -40,6 +40,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
 
   std::vector<OrderDependency> order_dependencies() override;
 
+  std::vector<InclusionDependency> inclusion_dependencies() override;
+
  protected:
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

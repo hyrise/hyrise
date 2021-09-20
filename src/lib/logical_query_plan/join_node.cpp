@@ -251,6 +251,31 @@ std::vector<OrderDependency> JoinNode::order_dependencies() {
   return _order_dependencies;
 }
 
+std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
+  // even if tuples are discarded or multiplied, ODs still hold
+  // TO DO transitive ODs:
+  // A.a -> A.b, B.a -> B.b
+  // Join on A.b = B.a yields new dependency A.a -> B.b
+  if (_retrieved_inds) return _inclusion_dependencies;
+
+  auto left_dependencies = left_input()->inclusion_dependencies();
+  auto right_dependencies = right_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), left_dependencies);
+  remove_invalid_inds(shared_from_this(), right_dependencies);
+
+  // make sure not to have anything twice on self joins
+  _inclusion_dependencies = left_dependencies;
+  for (const auto& right_ind : right_dependencies) {
+    bool is_known = false;
+    for (const auto& left_ind : left_dependencies) {
+      is_known = is_known || right_ind == left_ind;
+    }
+    if (!is_known) _inclusion_dependencies.emplace_back(right_ind);
+  }
+  _retrieved_inds = true;
+  return _inclusion_dependencies;
+}
+
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }

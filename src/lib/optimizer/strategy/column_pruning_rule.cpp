@@ -234,10 +234,11 @@ void recursively_gather_required_expressions(
   }
 }
 
+// UCC and OD based rewrites from Joins to Scans
 // currently, does rewrite only using one possible predicate
 void try_join_to_scan_rewrite(
-    const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet equals_predicate_expressions_used_side,
-    ExpressionUnorderedSet equals_predicate_expressions_unused_side, LQPInputSide used_side,
+    const std::shared_ptr<JoinNode>& join, ExpressionUnorderedSet& equals_predicate_expressions_used_side,
+    ExpressionUnorderedSet& equals_predicate_expressions_unused_side, LQPInputSide used_side,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -430,10 +431,40 @@ void try_join_to_scan_rewrite(
   }
 }
 
+// IND and UCC-based elimination of Joins
+void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
+    ExpressionUnorderedSet& equals_predicate_expressions_used_side, ExpressionUnorderedSet& equals_predicate_expressions_unused_side, LQPInputSide unused_side) {
+  const auto unused_input = join->input(unused_side);
+  if (unused_input->output_count() > 1) return;
+  if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) return;
+  if (unused_input->type != LQPNodeType::StoredTable) return;
+  const auto& stored_table_node = static_cast<StoredTableNode&>(*unused_input);
+  const auto used_side = unused_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
+  const auto used_input = join->input(used_side);
+  const auto used_side_join_expression = *(equals_predicate_expressions_used_side.begin());
+  const auto used_side_join_column_expression = static_pointer_cast<LQPColumnExpression>(used_side_join_expression);
+  const auto unused_side_join_expression = *(equals_predicate_expressions_unused_side.begin());
+  const auto unused_side_join_column_expression = static_pointer_cast<LQPColumnExpression>(unused_side_join_expression);
+  const auto unused_side_table_name = stored_table_node.table_name;
+  const auto unused_side_column_id = unused_side_join_column_expression->original_column_id;
+  for (const auto& ind : used_input->inclusion_dependencies()) {
+    if (ind.determinants.size() != 1 || ind.dependents.size() != 1) continue;
+    const auto& determinant = ind.determinants.at(0);
+    const auto& dependent = ind.dependents.at(0);
+    if (*dependent != *used_side_join_column_expression) continue;
+    if (determinant.table_name == unused_side_table_name && determinant.column_id == unused_side_column_id) {
+      join->set_left_input(used_input);
+      join->set_right_input(nullptr);
+      lqp_remove_node(join);
+      return;
+    }
+  }
+}
+
 void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node,
-    const bool _join_to_semi_off, const bool _join_to_predicate_off) {
+    const bool enable_join_to_semi, const bool enable_join_to_predicate, const bool enable_join_elimination) {
   // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
@@ -488,7 +519,7 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
   bool flipped_inputs = false;
-  if (!_join_to_semi_off) {
+  if (enable_join_to_semi) {
     // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
     if (!left_input_is_used &&
         join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
@@ -518,16 +549,25 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
     return;
   }
-  if (_join_to_predicate_off) return;
-  if (!left_input_is_used) {
-    const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
-                             used_input_side, required_expressions_by_node);
-    return;
+  if (enable_join_to_semi) {
+    if (!left_input_is_used) {
+      const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
+      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
+                               used_input_side, required_expressions_by_node);
+    }
+    if (!right_input_is_used) {
+      try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
+                               LQPInputSide::Left, required_expressions_by_node);
+    }
   }
-  if (!right_input_is_used) {
-    try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
-                             LQPInputSide::Left, required_expressions_by_node);
+  if (enable_join_elimination) {
+    if (!left_input_is_used) {
+      const auto unused_input_side = flipped_inputs ? LQPInputSide::Right : LQPInputSide::Left;
+      try_eliminate_join(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left, unused_input_side);
+    }
+    if (!right_input_is_used) {
+      try_eliminate_join(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right, LQPInputSide::Right);
+    }
   }
 }
 
@@ -626,7 +666,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
-        try_join_to_semi_rewrite(node, required_expressions_by_node, _join_to_semi_off, _join_to_predicate_off);
+        try_join_to_semi_rewrite(node, required_expressions_by_node, _enable_join_to_semi, _enable_join_to_predicate, _enable_join_elimination);
       } break;
 
       case LQPNodeType::Projection: {

@@ -58,6 +58,9 @@ void DependencyValidator::_add_constraints(
       case TableConstraintType::Order:
         table->add_soft_order_constraint(dynamic_cast<const TableOrderConstraint&>(*constraint));
         break;
+      case TableConstraintType::Inclusion:
+        table->add_soft_inclusion_constraint(dynamic_cast<const TableInclusionConstraint&>(*constraint));
+        break;
     }
   }
 }

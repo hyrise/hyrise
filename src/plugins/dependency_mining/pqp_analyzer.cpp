@@ -3,6 +3,7 @@
 #include "candidate_strategy/dependent_group_by_candidate_rule.hpp"
 #include "candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "candidate_strategy/join_to_semi_candidate_rule.hpp"
+#include "candidate_strategy/join_elimination_candidate_rule.hpp"
 #include "hyrise.hpp"
 #include "operators/pqp_utils.hpp"
 #include "utils/timer.hpp"
@@ -13,6 +14,7 @@ PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue)
   if (_enable_groupby_reduction) add_rule(std::make_unique<DependentGroupByCandidateRule>());
   if (_enable_join_to_semi) add_rule(std::make_unique<JoinToSemiCandidateRule>());
   if (_enable_join_to_predicate) add_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  if (_enable_join_elimination) add_rule(std::make_unique<JoinEliminationCandidateRule>());
 }
 
 void PQPAnalyzer::run() {

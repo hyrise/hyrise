@@ -184,6 +184,51 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
   return _order_dependencies;
 }
 
+std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
+  if (_retrieved_inds) return _inclusion_dependencies;
+
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_inclusion_constraints = table->soft_inclusion_constraints();
+
+  for (const auto& table_inclusion_constraint : table_inclusion_constraints) {
+    // Discard inclusion constraints that involve pruned column id(s).
+    const auto& dependent_column_ids = table_inclusion_constraint.dependents();
+    const auto& determinant_column_id_pairs = table_inclusion_constraint.determinants();
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&dependent_column_ids](const auto& pruned_column_id) {
+                      return std::find(dependent_column_ids.begin(), dependent_column_ids.end(), pruned_column_id) !=
+                                 dependent_column_ids.end();
+                    })) {
+      continue;
+    }
+
+    // Search for expressions representing the IND's ColumnIDs
+    const auto& output_ex = output_expressions();
+    ExpressionList dependent_expressions;
+    dependent_expressions.reserve(dependent_column_ids.size());
+
+    for (const auto dependent_column_id : dependent_column_ids) {
+      for (const auto& output_expression : output_ex) {
+        const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+        if (!column_expression || *column_expression->original_node.lock() != *this) {
+          std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
+          continue;
+        }
+        if (dependent_column_id == column_expression->original_column_id) {
+          dependent_expressions.emplace_back(column_expression);
+        }
+      }
+    }
+
+    // Create InclusionDependency
+    // The existence of determinant tables and column ids has been checked by table
+    _inclusion_dependencies.emplace_back(InclusionDependency{determinant_column_id_pairs, dependent_expressions});
+  }
+  _retrieved_ods = true;
+
+  return _inclusion_dependencies;
+}
+
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 

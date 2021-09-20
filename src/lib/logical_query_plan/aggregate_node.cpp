@@ -167,6 +167,15 @@ std::vector<OrderDependency> AggregateNode::order_dependencies() {
   return _order_dependencies;
 }
 
+std::vector<InclusionDependency> AggregateNode::inclusion_dependencies() {
+  if (_retrieved_inds) return _inclusion_dependencies;
+  auto forward_inds = left_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), forward_inds);
+  _inclusion_dependencies = forward_inds;
+  _retrieved_inds = true;
+  return _inclusion_dependencies;
+}
+
 size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

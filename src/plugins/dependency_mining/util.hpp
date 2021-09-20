@@ -4,25 +4,10 @@
 #include <string>
 #include <vector>
 
-#include "expression/abstract_expression.hpp"
 #include "types.hpp"
+#include "storage/table_column_id.hpp"
 
 namespace opossum {
-
-struct TableColumnID {
-  TableColumnID(const std::string& init_table_name, const ColumnID init_column_id);
-  const std::string table_name;
-  const ColumnID column_id;
-  std::string description() const;
-  bool operator==(const TableColumnID& other) const;
-  bool operator!=(const TableColumnID& other) const;
-  std::string column_name() const;
-  size_t hash() const;
-};
-
-const static TableColumnID INVALID_TABLE_COLUMN_ID = TableColumnID{"", INVALID_COLUMN_ID};
-
-using TableColumnIDs = std::vector<TableColumnID>;
 
 enum class DependencyType { Order, Functional, Unique, Inclusion };
 
@@ -40,20 +25,8 @@ struct DependencyCandidate {
   bool operator<(const DependencyCandidate& other) const;
 };
 
-std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column_id);
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate);
 
 using DependencyCandidateQueue = tbb::concurrent_priority_queue<DependencyCandidate>;
 
-TableColumnID resolve_column_expression(const std::shared_ptr<AbstractExpression>& column_expression);
-
 }  // namespace opossum
-
-namespace std {
-
-template <>
-struct hash<opossum::TableColumnID> {
-  size_t operator()(const opossum::TableColumnID& table_column_id) const;
-};
-
-}  // namespace std

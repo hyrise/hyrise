@@ -13,7 +13,7 @@ JoinToPredicateCandidateRule::JoinToPredicateCandidateRule() : AbstractDependenc
 std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
-  if (!(join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Inner)) {
+  if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi) {
     return {};
   }
 

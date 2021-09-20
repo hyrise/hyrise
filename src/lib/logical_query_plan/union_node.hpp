@@ -38,6 +38,8 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
 
   std::vector<OrderDependency> order_dependencies() override;
 
+  std::vector<InclusionDependency> inclusion_dependencies() override;
+
   const SetOperationMode set_operation_mode;
 
  protected:
