@@ -1768,11 +1768,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         if (left->type == ExpressionType::Value) {
           const auto date_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
           const auto date = string_to_date(date_string);
-          if (date) return left;
+          if (date) return std::const_pointer_cast<AbstractExpression>(left);
           FailInput("'" + date_string + "' is not a valid date");
         }
-        // We don't know if input actually contains dates, but maybe it is good enough that it cointains strings.
-        return left;
+        // We don't know if input actually contains dates, but maybe it is good enough that it contains strings.
+        return std::const_pointer_cast<AbstractExpression>(left);
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       if (data_type_iter == supported_hsql_data_types.cend()) {
@@ -1780,7 +1780,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
       const auto target_data_type = data_type_iter->second;
       // omit unnecessary casts
-      if (source_data_type == target_data_type) return left;
+      if (source_data_type == target_data_type) return std::const_pointer_cast<AbstractExpression>(left);
       return cast_(left, target_data_type);
     }
 

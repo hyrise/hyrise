@@ -24,8 +24,8 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
 boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit) {
   switch (unit) {
     case DatetimeComponent::Year: {
-      // adding years * 12 months wraps differences with leap years
-      const boost::date_time::month_functor<boost::gregorian::date> interval(12 * offset);
+      // Feb 29 (leap year) + one year results in Feb 28, but NOT vice versa
+      const boost::date_time::year_functor<boost::gregorian::date> interval(offset);
       return start_date + interval.get_offset(start_date);
     }
     case DatetimeComponent::Month: {

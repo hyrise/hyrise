@@ -303,12 +303,15 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     return static_cast<const ValueExpression&>(expression).value;
   } else if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
+    // Casts from/to NULL are NULL
     if (expression.data_type() == DataType::Null || cast_expression.argument()->data_type() == DataType::Null) {
       return NULL_VALUE;
     }
+
+    // Casts from expression chains should be resolved by ExpressionEvaluator
     if (cast_expression.argument()->type != ExpressionType::Value) return std::nullopt;
+
     const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
-    if (value_expression.data_type() == DataType::Null) return NULL_VALUE;
     std::optional<AllTypeVariant> result;
     resolve_data_type(expression.data_type(), [&](auto type) {
       using TargetDataType = typename decltype(type)::type;
