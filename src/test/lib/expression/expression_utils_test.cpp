@@ -198,6 +198,7 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
   correlated_parameter_expression->set_value(expected_value);
   const auto cast_to_float = cast_(value_expression, DataType::Float);
   const auto cast_to_null = cast_(value_expression, DataType::Null);
+  const auto cast_column = cast_(a_a, DataType::Float);
 
   {
     const auto actual_value = expression_get_value_or_parameter(*value_expression);
@@ -218,6 +219,10 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
     const auto actual_value = expression_get_value_or_parameter(*cast_to_null);
     EXPECT_NE(actual_value, std::nullopt);
     EXPECT_TRUE(variant_is_null(*actual_value));
+  }
+  {
+    const auto actual_value = expression_get_value_or_parameter(*cast_column);
+    EXPECT_EQ(actual_value, std::nullopt);
   }
 }
 

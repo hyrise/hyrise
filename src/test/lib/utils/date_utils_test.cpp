@@ -11,6 +11,7 @@ TEST_F(DateUtilsTest, StringToDate) {
   EXPECT_EQ(string_to_date("2000-13-01"), std::nullopt);
   EXPECT_EQ(string_to_date("2000-04-31"), std::nullopt);
   EXPECT_EQ(string_to_date("2001-02-29"), std::nullopt);
+  EXPECT_EQ(string_to_date("-1-02-29"), std::nullopt);
   EXPECT_EQ(string_to_date("foo"), std::nullopt);
 
   const auto parsed_date = string_to_date("2000-01-31");
