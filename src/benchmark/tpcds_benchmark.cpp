@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1 ~ 1GB)", cxxopts::value<int32_t>()->default_value("1"));
+    ("s,scale", "Database scale factor (10 ~ 10GB)", cxxopts::value<int32_t>()->default_value("10"));
   // clang-format on
 
   auto config = std::shared_ptr<opossum::BenchmarkConfig>{};
