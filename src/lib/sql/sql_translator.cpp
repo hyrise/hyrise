@@ -1508,21 +1508,21 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprLiteralFloat:
-      return std::make_shared<ValueExpression>(expr.fval);
+      return value_(expr.fval);
 
     case hsql::kExprLiteralString:
       AssertInput(expr.name, "No value given for string literal");
-      return std::make_shared<ValueExpression>(pmr_string{name});
+      return value_(pmr_string{name});
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
-        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival));
+        return value_(static_cast<int32_t>(expr.ival));
       } else {
-        return std::make_shared<ValueExpression>(expr.ival);
+        return value_(expr.ival);
       }
 
     case hsql::kExprLiteralNull:
-      return std::make_shared<ValueExpression>(NullValue{});
+      return null_();
 
     case hsql::kExprLiteralDate: {
       const auto date = string_to_date(name);
@@ -1534,15 +1534,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
-      return std::make_shared<PlaceholderExpression>(
-          _parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
+      return placeholder_(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }
 
     case hsql::kExprExtract: {
       Assert(expr.datetimeField != hsql::kDatetimeNone, "No DatetimeField specified in EXTRACT. Bug in sqlparser?");
 
       auto datetime_component = hsql_datetime_field.at(expr.datetimeField);
-      return std::make_shared<ExtractExpression>(datetime_component, left);
+      return extract_(datetime_component, left);
     }
 
     case hsql::kExprFunctionRef: {

@@ -4,6 +4,7 @@
 #include <random>
 
 #include "tpch/tpch_queries.hpp"
+#include "utils/date_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
 
@@ -113,9 +114,10 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      // In some cases, we still need to do the date calculations that Hyrise does not support yet
-      const auto date = _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -std::stoi(raw_params_iter->at(0)));
-      parameters.emplace_back("'"s + date + "'");
+      // In some cases, we still need to do the date calculations that SQLite does not support yet
+      const auto date = date_interval(boost::gregorian::date{1998, 12, 01}, -std::stoi(raw_params_iter->at(0)),
+                                      DatetimeComponent::Day);
+      parameters.emplace_back("'"s + date_to_string(date) + "'");
       break;
     }
 
@@ -135,31 +137,30 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 4 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date_str = _calculate_date(begin_date, 3);
+      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      // Cannot use begin_date here, as we would have to convert it into a string first.
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
     case 5 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(1));
-      const auto end_date_str = _calculate_date(begin_date, 12);
+      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
     case 6 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date_str = _calculate_date(begin_date, 12);
+      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(2));
@@ -210,13 +211,13 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 12 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(2));
-      const auto end_date_str = _calculate_date(begin_date, 12);
+      const auto begin_date = *string_to_date(raw_params_iter->at(2));
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
@@ -226,19 +227,19 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 14 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date_str = _calculate_date(begin_date, 1);
+      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(0));
-      const auto end_date_str = _calculate_date(begin_date, 3);
+      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
       // By manually replacing the `?` from tpch_queries.cpp, we can keep all queries in a readable form there.
@@ -249,7 +250,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
                    std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),
                   "TPC-H 15 string has been modified");
       query_15.replace(BEGIN_DATE_OFFSET, 10, raw_params_iter->at(0));
-      query_15.replace(END_DATE_OFFSET, 10, end_date_str);
+      query_15.replace(END_DATE_OFFSET, 10, date_to_string(end_date));
 
       const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
       boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
@@ -303,12 +304,12 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 20 - 1: {
-      const auto begin_date = boost::gregorian::from_string(raw_params_iter->at(1));
-      const auto end_date_str = _calculate_date(begin_date, 12);
+      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + end_date_str + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
       break;
     }
