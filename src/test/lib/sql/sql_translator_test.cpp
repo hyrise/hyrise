@@ -1656,7 +1656,6 @@ TEST_F(SQLTranslatorTest, Extract) {
 
   std::shared_ptr<opossum::AbstractLQPNode> actual_lqp;
   std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;
-  ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Year, "1993-08-01")), DummyTableNode::make());
 
   for (const auto& component : components) {
     std::stringstream query_str;
@@ -3066,9 +3065,8 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     const auto cast_expression = expression_vector(cast_(value_(pmr_string{'1'}), DataType::Int));
     // clang-format off
     const auto expected_lqp =
-      AliasNode::make(cast_expression, std::vector<std::string>{"CAST"},
-        ProjectionNode::make(cast_expression,
-          DummyTableNode::make()));
+      ProjectionNode::make(cast_expression,
+        DummyTableNode::make());
     // clang-format on
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('1' as INT);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3077,9 +3075,8 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     const auto value_expression = expression_vector(value_(pmr_string{'1'}));
     // clang-format off
     const auto expected_lqp =
-      AliasNode::make(value_expression, std::vector<std::string>{"CAST"},
-        ProjectionNode::make(value_expression,
-          DummyTableNode::make()));
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make());
     // clang-format on
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('1' as TEXT);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3088,9 +3085,8 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     const auto value_expression = expression_vector(value_(pmr_string{"2000-01-01"}));
     // clang-format off
     const auto expected_lqp =
-      AliasNode::make(value_expression, std::vector<std::string>{"CAST"},
-        ProjectionNode::make(value_expression,
-          DummyTableNode::make()));
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make());
     // clang-format on
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('2000-01-01' as DATE);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
