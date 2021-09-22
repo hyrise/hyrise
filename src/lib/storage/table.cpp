@@ -356,7 +356,6 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 
   _table_key_constraints.push_back(table_key_constraint);
-  std::cout << "added " << magic_enum::enum_name(table_key_constraint.key_type()) << " constraint" << std::endl;
   //}
 }
 
