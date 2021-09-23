@@ -107,7 +107,8 @@ std::string InExpressionRewriteRule::name() const {
 }
 
 std::shared_ptr<AbstractCardinalityEstimator> InExpressionRewriteRule::_cardinality_estimator() const {
-  if (!_cardinality_estimator_internal) _cardinality_estimator_internal = cost_estimator->cardinality_estimator->new_instance();
+  if (!_cardinality_estimator_internal)
+    _cardinality_estimator_internal = cost_estimator->cardinality_estimator->new_instance();
 
   return _cardinality_estimator_internal;
 }
