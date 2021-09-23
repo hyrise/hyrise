@@ -216,11 +216,13 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
     EXPECT_FLOAT_EQ(boost::get<float>(*actual_value), 1.0);
   }
   {
+    // Casts as NULL should return a NULL value
     const auto actual_value = expression_get_value_or_parameter(*cast_to_null);
     EXPECT_NE(actual_value, std::nullopt);
     EXPECT_TRUE(variant_is_null(*actual_value));
   }
   {
+    // More complicated casts should be evaluated by ExpressionEvaluator
     const auto actual_value = expression_get_value_or_parameter(*cast_column);
     EXPECT_EQ(actual_value, std::nullopt);
   }

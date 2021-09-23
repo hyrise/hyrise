@@ -35,8 +35,10 @@ TEST_F(DateUtilsTest, DateInterval) {
   EXPECT_THROW(date_interval(date, 0, DatetimeComponent::Hour), std::logic_error);
   EXPECT_EQ(date_interval(date, 1, DatetimeComponent::Day), (boost::gregorian::date{2000, 2, 1}));
   EXPECT_EQ(date_interval(date, 1, DatetimeComponent::Month), leap_year_date);
+  EXPECT_EQ(date_interval(boost::gregorian::date{1999, 11, 30}, 2, DatetimeComponent::Month), date);
   EXPECT_EQ(date_interval(date, 1, DatetimeComponent::Year), (boost::gregorian::date{2001, 1, 31}));
   EXPECT_EQ(date_interval(leap_year_date, 1, DatetimeComponent::Year), (boost::gregorian::date{2001, 2, 28}));
+  EXPECT_EQ(date_interval(boost::gregorian::date{1999, 2, 28}, 1, DatetimeComponent::Year), leap_year_date);
 }
 
 TEST_F(DateUtilsTest, DateToString) {

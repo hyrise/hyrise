@@ -308,7 +308,8 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
       return NULL_VALUE;
     }
 
-    // Casts from expression chains should be resolved by ExpressionEvaluator
+    // Casts from expression chains should be resolved by ExpressionEvaluator.
+    // E.g., CAST(any_column AS INT) cannot and should not be evaluated here.
     if (cast_expression.argument()->type != ExpressionType::Value) return std::nullopt;
 
     const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());

@@ -734,7 +734,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
-    const auto column_expression = std::make_shared<LQPColumnExpression>(stored_table_node, column_id);
+    const auto column_expression = lqp_column_(stored_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -767,7 +767,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
     const auto& column_definition = meta_table->column_definitions()[column_id];
-    const auto column_expression = std::make_shared<LQPColumnExpression>(static_table_node, column_id);
+    const auto column_expression = lqp_column_(static_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -900,8 +900,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
       if (left_expression) {
         // Two columns match, let's join on them.
-        join_predicates.emplace_back(
-            std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
+        join_predicates.emplace_back(equals_(left_expression, right_expression));
         continue;
       }
 
@@ -1249,8 +1248,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
       const auto columns_meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
       const auto static_table_node = StaticTableNode::make(columns_meta_table);
       const auto table_name_column = lqp_column_(static_table_node, ColumnID{0});
-      const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
-                                                                         value_(show_statement.name));
+      const auto predicate = equals_(table_name_column, value_(show_statement.name));
       return PredicateNode::make(predicate, static_table_node);
     }
   }
@@ -1600,7 +1598,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               });
               Assert(leaf_node, "No leaf node found below COUNT(*)");
 
-              const auto column_expression = std::make_shared<LQPColumnExpression>(leaf_node, INVALID_COLUMN_ID);
+              const auto column_expression = lqp_column_(leaf_node, INVALID_COLUMN_ID);
 
               aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
@@ -1663,6 +1661,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (arithmetic_operators_iter != hsql_arithmetic_operators.end()) {
         Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary expression.");
         const auto arithmetic_operator = arithmetic_operators_iter->second;
+
         // Handle intervals
         if (right->type == ExpressionType::Interval) {
           AssertInput(left->type == ExpressionType::Value && left->data_type() == DataType::String,
@@ -1672,9 +1671,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto start_date = string_to_date(start_date_string);
           AssertInput(start_date, "'" + start_date_string + "' is not a valid date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
-          int64_t sign = arithmetic_operator == ArithmeticOperator::Addition ? 1 : -1;
-          const auto end_date =
-              date_interval(*start_date, sign * interval_expression.duration, interval_expression.unit);
+          const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
+                                                                                    : -interval_expression.duration;
+          const auto end_date = date_interval(*start_date, duration, interval_expression.unit);
           return value_(pmr_string{date_to_string(end_date)});
         }
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
@@ -1690,28 +1689,26 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
-          return std::make_shared<BetweenExpression>(
-              PredicateCondition::BetweenInclusive, left,
-              _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
-              _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
+          return between_inclusive_(left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
+                                    _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
         }
       }
 
       // Translate other expression types that can be expected at this point
       switch (expr.opType) {
         case hsql::kOpUnaryMinus:
-          return std::make_shared<UnaryMinusExpression>(left);
+          return unary_minus_(left);
         case hsql::kOpCase:
           return _translate_hsql_case(expr, sql_identifier_resolver);
         case hsql::kOpOr:
-          return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
+          return or_(left, right);
         case hsql::kOpAnd:
-          return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);
+          return and_(left, right);
         case hsql::kOpIn: {
           if (expr.select) {
             // `a IN (SELECT ...)`
             const auto subquery = _translate_hsql_subquery(*expr.select, sql_identifier_resolver);
-            return std::make_shared<InExpression>(PredicateCondition::In, left, subquery);
+            return in_(left, subquery);
 
           } else {
             // `a IN (x, y, z)`
@@ -1725,7 +1722,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             }
 
             const auto array = std::make_shared<ListExpression>(arguments);
-            return std::make_shared<InExpression>(PredicateCondition::In, left, array);
+            return in_(left, array);
           }
         }
 
@@ -1737,8 +1734,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         case hsql::kOpExists:
           AssertInput(expr.select, "Expected SELECT argument for EXISTS");
-          return std::make_shared<ExistsExpression>(_translate_hsql_subquery(*expr.select, sql_identifier_resolver),
-                                                    ExistsExpressionType::Exists);
+          return exists_(_translate_hsql_subquery(*expr.select, sql_identifier_resolver));
 
         default:
           Fail("Unexpected expression type");  // There are 19 of these, so we make an exception here and use default
@@ -1775,7 +1771,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       if (data_type_iter == supported_hsql_data_types.cend()) {
-        FailInput("CAST to " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
+        FailInput("CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
       }
       const auto target_data_type = data_type_iter->second;
       // omit unnecessary casts
@@ -1842,7 +1838,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
     current_case_expression = _translate_hsql_expr(*expr.expr2, sql_identifier_resolver);
   } else {
     // No ELSE specified, use NULL
-    current_case_expression = std::make_shared<ValueExpression>(NullValue{});
+    current_case_expression = null_();
   }
 
   for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
@@ -1851,11 +1847,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
 
     auto when = _translate_hsql_expr(*case_clause->expr, sql_identifier_resolver);
     if (simple_case_left_operand) {
-      when = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, simple_case_left_operand, when);
+      when = equals_(simple_case_left_operand, when);
     }
 
     const auto then = _translate_hsql_expr(*case_clause->expr2, sql_identifier_resolver);
-    current_case_expression = std::make_shared<CaseExpression>(when, then, current_case_expression);
+    current_case_expression = case_(when, then, current_case_expression);
   }
 
   return current_case_expression;

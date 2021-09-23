@@ -3050,7 +3050,7 @@ TEST_F(SQLTranslatorTest, IntervalLiteral) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2000-01-01' + 30 days;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '1999-12-31' + 1 month;");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
@@ -3072,6 +3072,7 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
+    // Omit the cast when source and target data type are identical
     const auto value_expression = expression_vector(value_(pmr_string{'1'}));
     // clang-format off
     const auto expected_lqp =
