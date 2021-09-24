@@ -2,8 +2,9 @@
 
 #if !defined(BOOST_NO_IOSTREAM)
 #include <iosfwd>  // for std::basic_ostream forward declare
+
 #include <boost/detail/templated_streams.hpp>
-#endif             // BOOST_NO_IOSTREAM
+#endif  // BOOST_NO_IOSTREAM
 
 #include <boost/container_hash/hash.hpp>
 #include <boost/mpl/bool.hpp>
