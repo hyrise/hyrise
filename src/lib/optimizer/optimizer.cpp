@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/like_rewrite_rule.hpp"
 #include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -73,6 +74,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
