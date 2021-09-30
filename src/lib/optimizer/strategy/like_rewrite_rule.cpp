@@ -100,13 +100,13 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
 
     const auto new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern)));
-    const auto new_2 = PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
+    const auto new_2 =
+        PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
 
     lqp_replace_node(sub_node, new_1);
     lqp_insert_node(new_1, LQPInputSide::Left, new_2);
 
-
-    // TODO: SQL TEST
+    // TODO(JK): SQL TEST
   }
 }
 
