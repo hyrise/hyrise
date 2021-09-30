@@ -91,13 +91,22 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
     const auto first_pattern = pattern.substr(0, multi_char_wildcard_pos) + "%";
     const auto second_pattern = pattern.substr(multi_char_wildcard_pos);
 
-    std::shared_ptr<AbstractLQPNode> new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-        PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(first_pattern)));
-    std::shared_ptr<AbstractLQPNode> new_2 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    // Todo: Use code above
+    const auto bounds = LikeMatcher::bounds(first_pattern);
+
+    Assert(bounds, std::string("Problem creating bounds for pattern " + first_pattern + " during Like Rewrite."));
+
+    const auto [lower_bound, upper_bound] = *bounds;
+
+    const auto new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern)));
+    const auto new_2 = PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
 
     lqp_replace_node(sub_node, new_1);
     lqp_insert_node(new_1, LQPInputSide::Left, new_2);
+
+
+    // TODO: SQL TEST
   }
 }
 

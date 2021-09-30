@@ -97,8 +97,8 @@ TEST_F(LikeRewriteRuleTest, RewriteLikePrefixWildcard) {
 
   auto new_predicate_node = root_node->left_input();
   ASSERT_NE(new_predicate_node, predicate_node);
-  EXPECT_EQ(*(new_predicate_node->node_expressions.at(0)), *like_(s, "RED%"));
-  EXPECT_EQ(*(new_predicate_node->left_input()->node_expressions.at(0)), *like_(s, "%E%"));
+  EXPECT_EQ(*(new_predicate_node->node_expressions.at(0)), *like_(s, "%E%"));
+  EXPECT_EQ(*(new_predicate_node->left_input()->node_expressions.at(0)), *between_upper_exclusive_(s, "RED", "REE"));
 
   // Test that non-LIKE expressions remain unaltered
   auto expression_i = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
@@ -117,7 +117,7 @@ TEST_F(LikeRewriteRuleTest, ApplyToLQP) {
   const auto input_lqp =
   PredicateNode::make(like_(s, "RED%"),
     PredicateNode::make(like_(s, "2009:%Japan%"),
-        mock_node));
+      mock_node));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
@@ -125,9 +125,9 @@ TEST_F(LikeRewriteRuleTest, ApplyToLQP) {
   // clang-format off
   const auto expected_lqp =
     PredicateNode::make(between_upper_exclusive_(s, "RED", "REE"),
-      PredicateNode::make(like_(s, "2009:%"),
-        PredicateNode::make(like_(s, "%Japan%"),
-        mock_node)));
+      PredicateNode::make(like_(s, "%Japan%"),
+        PredicateNode::make(between_upper_exclusive_(s, "2009:", "2009;"),
+          mock_node)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

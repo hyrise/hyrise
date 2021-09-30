@@ -23,6 +23,11 @@ class AbstractLQPNode;
  *   `<expression> NOT LIKE <pattern>` can be rewritten to a LessThan-Or-GreaterThanEquals scan if `<pattern>` is a
  *   prefix wildcard literal.
  *   E.g., `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`
+ *
+ * LIKE to two LIKEs
+ *   `<expression> LIKE <pattern>` can be rewritten into two more efficient LIKEs if `<pattern>` is a prefix wildcard
+ *   followed by a string and another wildcard.
+ *   E.g., `a LIKE 'abc%def%'` becomes `a LIKE BetweenUpperExclusive 'abc' AND 'abd'`
  */
 class LikeRewriteRule : public AbstractRule {
  public:
