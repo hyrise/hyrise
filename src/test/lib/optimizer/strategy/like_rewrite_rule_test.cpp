@@ -63,13 +63,13 @@ TEST_F(LikeRewriteRuleTest, RewriteLikePrefixWildcard) {
   LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_a);
   EXPECT_EQ(*expression_a, *between_upper_exclusive_(s, "RED", "REE"));
 
-  auto expression_i = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
-  LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_i);
-  EXPECT_EQ(*expression_i, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
-
-  auto expression_b = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
+  auto expression_b = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
   LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_b);
-  EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
+  EXPECT_EQ(*expression_b, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
+
+  auto expression_c = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
+  LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_c);
+  EXPECT_EQ(*expression_c, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
 
   auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "%"));
   LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_d);
@@ -88,24 +88,28 @@ TEST_F(LikeRewriteRuleTest, RewriteLikePrefixWildcard) {
   EXPECT_EQ(*expression_g, *like_(s, "RE\x7F%"));
 
   // LIKE patterns with two wildcards remove and insert PredicateNodes. Thus, we need PredicateNodes for such cases.
-  auto expression_c = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
-  auto predicate_node = PredicateNode::make(expression_c, mock_node);
+  auto expression_h = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
+  auto predicate_node = PredicateNode::make(expression_h, mock_node);
 
   const auto root_node = LogicalPlanRootNode::make();
   root_node->set_left_input(predicate_node);
-  LikeRewriteRule::rewrite_like_prefix_wildcard(predicate_node, expression_c);
+  LikeRewriteRule::rewrite_like_prefix_wildcard(predicate_node, expression_h);
 
   auto new_predicate_node = root_node->left_input();
   ASSERT_NE(new_predicate_node, predicate_node);
   EXPECT_EQ(*(new_predicate_node->node_expressions.at(0)), *like_(s, "RED%"));
   EXPECT_EQ(*(new_predicate_node->left_input()->node_expressions.at(0)), *like_(s, "%E%"));
 
-  // THREE ARE NOT GETTING REWRITTEN
-
   // Test that non-LIKE expressions remain unaltered
-  auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
-  LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_h);
-  EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
+  auto expression_i = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
+  LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_i);
+  EXPECT_EQ(*expression_i, *greater_than_(s, "RED%"));
+
+  // Test that more than two wildcards remain unaltered
+
+  auto expression_j = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%F%"));
+  LikeRewriteRule::rewrite_like_prefix_wildcard(nullptr, expression_j);
+  EXPECT_EQ(*expression_j, *like_(s, "RED%E%F%"));
 }
 
 TEST_F(LikeRewriteRuleTest, ApplyToLQP) {
