@@ -77,6 +77,8 @@ class BenchmarkRunner : public Noncopyable {
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
+  void _mine_dependencies();
+  
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;

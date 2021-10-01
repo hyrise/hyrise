@@ -26,7 +26,7 @@ class ColumnPruningRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
   constexpr static bool _enable_join_to_semi = false;
   constexpr static bool _enable_join_to_predicate = false;
-  constexpr static bool _enable_join_elimination = false;
+  constexpr static bool _enable_join_elimination = true;
 };
 
 }  // namespace opossum

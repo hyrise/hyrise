@@ -122,6 +122,12 @@ void BenchmarkRunner::run() {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
 
+  if (_config.dependency_mining_plugin_path) {
+    _mine_dependencies();
+  } else {
+    std::cout << "DependencyMiningPlugin not loaded because no path provided. See README.md for details." << std::endl;
+  }
+
   switch (_config.benchmark_mode) {
     case BenchmarkMode::Ordered: {
       _benchmark_ordered();
@@ -176,11 +182,6 @@ void BenchmarkRunner::run() {
   // Stop the thread that tracks the system utilization
   track_system_utilization = false;
   system_utilization_tracker.join();
-
-  if (_config.dependency_mining_plugin_path)
-    Hyrise::get().plugin_manager.load_plugin(*(_config.dependency_mining_plugin_path));
-  else
-    std::cout << "DependencyMiningPlugin not loaded because no path provided. See README.md for details." << std::endl;
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -596,6 +597,33 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
               << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
 
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+}
+
+void BenchmarkRunner::_mine_dependencies() {
+  std::cout << "- Mining Dependencies " << std::endl;
+  const auto& items = _benchmark_item_runner->items();
+  for (const auto& item_id : items) {
+    const auto& name = _benchmark_item_runner->item_name(item_id);
+    std::cout << "  - run " << name << std::endl;
+
+    auto& result = _results[item_id];
+
+    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+    const auto num_runs = size_t{1};
+
+    while ((result.successful_runs.size() + result.unsuccessful_runs.size()) < num_runs) {
+      // We want to only schedule as many items simultaneously as we have simulated clients
+      if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+        _schedule_item_run(item_id);
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+    }
+    Hyrise::get().scheduler()->wait_for_all_tasks();
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  }
+    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+    Hyrise::get().plugin_manager.load_plugin(*(_config.dependency_mining_plugin_path));
 }
 
 }  // namespace opossum
