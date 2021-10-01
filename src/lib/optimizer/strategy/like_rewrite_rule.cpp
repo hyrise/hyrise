@@ -107,6 +107,7 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
     lqp_insert_node(new_1, LQPInputSide::Left, new_2);
 
     // TODO(JK): SQL TEST
+    // TODO(JK): handle not like
   }
 }
 

@@ -40,6 +40,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
+  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
+
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
@@ -60,6 +62,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
+  // Run LikeRewrites after disjunctions have been split up.
+  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
+
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
@@ -74,8 +79,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-
-  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
