@@ -114,7 +114,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      // In some cases, we still need to do the date calculations that SQLite (used for verification) does not 
+      // In some cases, we still need to do the date calculations that SQLite (used for verification) does not
       // support yet. When parsing a date, we expect the generator to provide sound date strings and omit checks.
       const auto date = date_interval(boost::gregorian::date{1998, 12, 01}, -std::stoi(raw_params_iter->at(0)),
                                       DatetimeComponent::Day);
