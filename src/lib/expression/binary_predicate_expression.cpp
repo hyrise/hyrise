@@ -9,8 +9,10 @@ namespace opossum {
 
 BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition init_predicate_condition,
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
-                                                     const std::shared_ptr<AbstractExpression>& right_operand)
-    : AbstractPredicateExpression(init_predicate_condition, {left_operand, right_operand}) {
+                                                     const std::shared_ptr<AbstractExpression>& right_operand,
+                                                     const size_t init_skip_chars_for_like)
+    : AbstractPredicateExpression(init_predicate_condition, {left_operand, right_operand}),
+      skip_chars_for_like(init_skip_chars_for_like) {
   if constexpr (HYRISE_DEBUG) {
     const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                              PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
@@ -20,6 +22,8 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
         std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
     Assert(it != valid_predicate_conditions.end(),
            "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
+    DebugAssert(skip_chars_for_like > 0 ? predicate_condition == PredicateCondition::Like : true,
+                "_skip_chars_for_like should only be specified for LIKE predicates.");
   }
 }
 
@@ -30,7 +34,7 @@ const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_oper
 std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand()->deep_copy(copied_ops),
-                                                     right_operand()->deep_copy(copied_ops));
+                                                     right_operand()->deep_copy(copied_ops), skip_chars_for_like);
 }
 
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {

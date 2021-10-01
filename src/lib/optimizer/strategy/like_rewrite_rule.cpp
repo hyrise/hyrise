@@ -88,6 +88,7 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
                              greater_than_equals_(binary_predicate->left_operand(), upper_bound));
     }
   } else {  // number_wildcards == 2
+    if (binary_predicate->predicate_condition != PredicateCondition::Like) return;
     const auto first_pattern = pattern.substr(0, multi_char_wildcard_pos) + "%";
     const auto second_pattern = pattern.substr(multi_char_wildcard_pos);
 
@@ -99,15 +100,14 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
     const auto [lower_bound, upper_bound] = *bounds;
 
     const auto new_1 = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-        PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern)));
+        PredicateCondition::Like, binary_predicate->left_operand(), std::make_shared<ValueExpression>(second_pattern),
+        first_pattern.size()));
     const auto new_2 =
         PredicateNode::make(between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound));
 
     lqp_replace_node(sub_node, new_1);
     lqp_insert_node(new_1, LQPInputSide::Left, new_2);
-
-    // TODO(JK): SQL TEST
-    // TODO(JK): handle not like
+    // TODO(JK): test like matcher special case
   }
 }
 

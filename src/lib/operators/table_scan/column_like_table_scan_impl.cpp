@@ -21,9 +21,9 @@ namespace opossum {
 
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition init_predicate_condition,
-                                                 const pmr_string& pattern)
+                                                 const pmr_string& pattern, const size_t skip_chars_for_like)
     : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
-      _matcher{pattern},
+      _matcher{pattern, skip_chars_for_like},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
 std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; }

@@ -451,6 +451,11 @@ SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'do
 SELECT * FROM mixed WHERE d LIKE 'a%';
 SELECT * FROM mixed WHERE d NOT LIKE 'a%';
 SELECT * FROM mixed WHERE d LIKE '%';
+SELECT * FROM mixed WHERE d LIKE 'a%a%';
+SELECT * FROM mixed WHERE d LIKE 'aev%a%';
+SELECT * FROM mixed WHERE d NOT LIKE 'a%a%';
+SELECT * FROM mixed WHERE d LIKE 'a%a%a';
+SELECT * FROM mixed WHERE d NOT LIKE 'a%a%a';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;
