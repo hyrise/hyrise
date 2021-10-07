@@ -65,10 +65,10 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   if (table.get_chunk(ChunkID{0})) {
     // Check if first chunk is dictionary-encoded.
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
-      //estimated_distinct_value_count = static_cast<size_t>(1.1 * static_cast<double>(table.chunk_count() * dictionary_segment->unique_values_count()));
+      estimated_distinct_value_count = static_cast<size_t>(1.1 * static_cast<double>(table.chunk_count() * dictionary_segment->unique_values_count()));
       // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
       // resize will happen.
-      //max_load_factor = 0.9f;
+      max_load_factor = 0.9f;
       pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
     } else {
       pool = std::make_unique<std::pmr::monotonic_buffer_resource>(4'194'304);  // Always use 4 MB.
