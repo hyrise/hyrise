@@ -60,7 +60,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   auto estimated_distinct_value_count = size_t{1'024};
   auto max_load_factor = 0.5f;  // Default of robin_map for cases where lack more information.
   // To use a monotonic buffer pool, which can be advantegous for string maps.
-  //auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
+  auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
 
   if (table.get_chunk(ChunkID{0})) {
     // Check if first chunk is dictionary-encoded.
@@ -69,12 +69,12 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
       // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
       // resize will happen.
       max_load_factor = 0.9f;
-      //pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
+      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
     } else {
-      //pool = std::make_unique<std::pmr::monotonic_buffer_resource>(4'194'304);  // Always use 4 MB.
+      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(4'194'304);  // Always use 4 MB.
     }
   }
-  ValueDistributionMap<T> value_distribution_map(estimated_distinct_value_count);//, &*pool};
+  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, &*pool};
   value_distribution_map.max_load_factor(max_load_factor);
 
   const auto chunk_count = table.chunk_count();
