@@ -88,10 +88,8 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   value_distribution_map.clear();
-  std::sort(value_distribution.begin(), value_distribution.end(),
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
                        [&](const auto& l, const auto& r) { return l.first < r.first; });
-  //boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-  //                     [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   return value_distribution;
 }
