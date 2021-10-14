@@ -88,29 +88,21 @@ std::shared_ptr<ValidationResult> INDValidationRule::_on_validate(const Dependen
   const auto group_by_column = std::vector<ColumnID>{ColumnID{0}};
   const auto determinant_aggregate = std::make_shared<AggregateHash>(determinant_get_table, std::vector<std::shared_ptr<AggregateExpression>>{}, group_by_column);
   const auto dependent_aggregate = std::make_shared<AggregateHash>(dependent_get_table, std::vector<std::shared_ptr<AggregateExpression>>{}, group_by_column);
+
+  determinant_get_table->execute();
+  dependent_get_table->execute();
+  determinant_aggregate->execute();
+  dependent_aggregate->execute();
+  if (determinant_aggregate->get_output()->row_count() < dependent_aggregate->get_output()->row_count()) return INVALID_VALIDATION_RESULT;
+
   const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
   const auto determinant_sort = std::make_shared<Sort>(determinant_aggregate, sort_definition);
   const auto dependent_sort = std::make_shared<Sort>(dependent_aggregate, sort_definition);
 
-  std::cout << "        p " << timer.lap_formatted() << std::endl;
-  const auto execute_pqp = [](const std::shared_ptr<AbstractOperator>& root_node) {
-    std::vector<std::shared_ptr<AbstractOperator>> operators;
-    visit_pqp(root_node, [&operators](const auto& node){
-      operators.emplace_back(node);
-      return PQPVisitation::VisitInputs;
-    });
-    for(auto it = operators.rbegin(); it != operators.rend(); ++it) {
-      const auto& op = *it;
-      op->execute();
-    }
-  };
-  execute_pqp(determinant_sort);
-  execute_pqp(dependent_sort);
-  std::cout << "        e " << timer.lap_formatted() << std::endl;
-  if (determinant_sort->get_output()->row_count() < dependent_sort->get_output()->row_count()) return INVALID_VALIDATION_RESULT;
-  auto determinant_rows = determinant_sort->get_output()->get_rows();
+  determinant_sort->execute();
+  dependent_sort->execute();
+  const auto determinant_rows = determinant_sort->get_output()->get_rows();
   const auto dependent_rows = dependent_sort->get_output()->get_rows();
-  std::cout << "        r " << timer.lap_formatted() << std::endl;
   determinant_sort->clear_output();
   dependent_sort->clear_output();
 
@@ -128,10 +120,10 @@ std::shared_ptr<ValidationResult> INDValidationRule::_on_validate(const Dependen
       is_bidirect = false;
       continue;
     }
-    std::cout << "        i(i) " << timer.lap_formatted() << std::endl;
+    // std::cout << "        i(i) " << timer.lap_formatted() << std::endl;
     return INVALID_VALIDATION_RESULT;
   }
-  std::cout << "        i(ii) " << timer.lap_formatted() << std::endl;
+  // std::cout << "        i(ii) " << timer.lap_formatted() << std::endl;
   if (dependent_iter != dependent_rows.cend()) return INVALID_VALIDATION_RESULT;
 
   const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);

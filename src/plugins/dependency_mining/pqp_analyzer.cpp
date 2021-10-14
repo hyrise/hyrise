@@ -65,7 +65,7 @@ void PQPAnalyzer::run() {
     }
   }
 
-  std::cout << "PQPAnalyzer finished in " << timer.lap_formatted() << std::endl;
+  std::cout << "PQPAnalyzer generated " << _known_candidates.size() << " candidates in " << timer.lap_formatted() << std::endl;
 }
 
 void PQPAnalyzer::add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
@@ -85,6 +85,15 @@ void PQPAnalyzer::_add_if_new(DependencyCandidate& candidate) {
     }
   }
   _known_candidates.emplace_back(std::move(candidate));
+  /*auto it = _known_candidates.find(candidate);
+  if (it == _known_candidates.end()) {
+    _known_candidates.emplace(std::move(candidate));
+    return;
+  }
+  auto& known_candidate = *it;
+  if (known_candidate.priority < candidate.priority) {
+    known_candidate.priority = candidate.priority;
+  }*/
 }
 
 }  // namespace opossum

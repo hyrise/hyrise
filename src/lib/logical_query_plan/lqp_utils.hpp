@@ -138,7 +138,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
     const std::shared_ptr<AbstractLQPNode>& begin,
     const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt);
 
-enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
+enum class LQPVisitation { VisitInputs, DoNotVisitInputs, VisitLeftInput, VisitRightInput };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries.
@@ -163,9 +163,12 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
     node_queue.pop();
 
     if (!visited_nodes.emplace(node).second) continue;
+    const auto result = visitor(node);
 
-    if (visitor(node) == LQPVisitation::VisitInputs) {
+    if (result == LQPVisitation::VisitInputs || result == LQPVisitation::VisitLeftInput) {
       if (node->left_input()) node_queue.push(node->left_input());
+    }
+    if (result == LQPVisitation::VisitInputs || result == LQPVisitation::VisitRightInput) {
       if (node->right_input()) node_queue.push(node->right_input());
     }
   }

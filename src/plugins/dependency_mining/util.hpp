@@ -19,10 +19,12 @@ struct DependencyCandidate {
   TableColumnIDs determinants;
   TableColumnIDs dependents;
   DependencyType type;
-  size_t priority;
+  mutable size_t priority;
   // tell tbb's concurrent_prioroty_queue which parameter should be used for ranking
   void output_to_stream(std::ostream& stream) const;
   bool operator<(const DependencyCandidate& other) const;
+  bool operator==(const DependencyCandidate& other) const;
+  size_t hash() const;
 };
 
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate);
@@ -30,3 +32,12 @@ std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& depend
 using DependencyCandidateQueue = tbb::concurrent_priority_queue<DependencyCandidate>;
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::DependencyCandidate> {
+  size_t operator()(const opossum::DependencyCandidate& dependency_candidate) const;
+};
+
+}  // namespace std

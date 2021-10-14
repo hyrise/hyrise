@@ -11,6 +11,8 @@ DependencyCandidate::DependencyCandidate(const TableColumnIDs& init_determinants
 
 bool DependencyCandidate::operator<(const DependencyCandidate& other) const { return priority < other.priority; }
 
+bool DependencyCandidate::operator==(const DependencyCandidate& other) const { return type == other.type && determinants == other.determinants && dependents == other.dependents; }
+
 void DependencyCandidate::output_to_stream(std::ostream& stream) const {
   stream << "Type " << magic_enum::enum_name(type) << ", Priority " << priority << ", Columns ";
   std::vector<std::string> determinants_printable;
@@ -27,9 +29,26 @@ void DependencyCandidate::output_to_stream(std::ostream& stream) const {
   }
 }
 
+size_t DependencyCandidate::hash() const {
+  auto hash = static_cast<size_t>(type);
+  boost::hash_combine(hash, determinants.size());
+  for (const auto& table_column_id : determinants) {
+    boost::hash_combine(hash, table_column_id.hash());
+  }
+  boost::hash_combine(hash, dependents.size());
+  for (const auto& table_column_id : dependents) {
+    boost::hash_combine(hash, table_column_id.hash());
+  }
+  return hash;
+}
+
 std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& dependency_candidate) {
   dependency_candidate.output_to_stream(stream);
   return stream;
 }
 
 }  // namespace opossum
+
+namespace std {
+  size_t hash<opossum::DependencyCandidate>::operator()(const opossum::DependencyCandidate& dependency_candidate) const { return dependency_candidate.hash(); };
+}  // namespace std

@@ -2,11 +2,11 @@
 
 #include <magic_enum.hpp>
 
-#include "expression/abstract_predicate_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
@@ -34,71 +34,47 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     return {};
   }
 
-  // determine if we need to check both inputs
-  std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-  inputs.emplace_back(join_node->right_input());
-  if (join_node->join_mode == JoinMode::Inner) {
-    inputs.emplace_back(join_node->left_input());
-  }
-
-  const auto& predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicates[0]);
+  const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[0]);
   if (!predicate) {
     return {};
   }
+  const auto inputs = std::vector<std::shared_ptr<AbstractExpression>>{predicate->left_operand(), predicate->right_operand()};
   //std::cout << std::endl << lqp_node->description() << std::endl;
-  const auto& predicate_arguments = predicate->arguments;
-  if (predicate_arguments.size() != 2) return {};
+  for (const auto& expression : inputs) {
+    if (expression->type != ExpressionType::LQPColumn) return {};
+  }
+  const auto table_columns = TableColumnIDs{resolve_column_expression(predicate->left_operand()), resolve_column_expression(predicate->right_operand())};
+  if (table_columns[0] == INVALID_TABLE_COLUMN_ID || table_columns[1] == INVALID_TABLE_COLUMN_ID) return {};
+
   std::vector<DependencyCandidate> candidates;
-  std::vector<std::shared_ptr<const AbstractExpression>> input_expressions(inputs.size());
-  //input_expressions.reserve(inputs.size());
-  for (auto i = size_t{0}; i < inputs.size(); ++i) {
-    // std::cout << "    " << i << std::endl;
-    const auto& input = inputs[i];
-    for (const auto& expression : predicate_arguments) {
-      if (expression->type != ExpressionType::LQPColumn) return {};
-      if (!expression_evaluable_on_lqp(expression, *input)) {
-        continue;
-      }
-      input_expressions[i] = expression;
-    }
-  }
-  for (const auto& ex : input_expressions) {
-    if (ex->type != ExpressionType::LQPColumn) {
-
-      return {};
-    }
-  }
-
-  if (input_expressions.size() != 2) {
-    //std::cout << "    abort size" << std::endl;
-    return {};
-  }
-
+  auto inputs_to_visit = std::vector<uint8_t>{1};
+  if (join_node->join_mode == JoinMode::Inner) inputs_to_visit.emplace_back(0);
   // check for given inputs
-  for (auto i = size_t{0}; i < inputs.size(); ++i) {
-    const auto& input = inputs[i];
+  for (const auto& i : inputs_to_visit) {
     // find StoredTableNode, ensure that the table is not modified
-    std::shared_ptr<AbstractLQPNode> actual_input;
+    std::shared_ptr<StoredTableNode> actual_input;
+    const auto& determinant = table_columns[i];
     bool abort = false;
-    const auto& mutable_expression = std::const_pointer_cast<AbstractExpression>(input_expressions[i]);
-    visit_lqp(input, [&](const auto& node){
-      // second can only happen if this is a SemiJoin reducer, ignore subplan
-      if (abort || !expression_evaluable_on_lqp(mutable_expression, *node)) {
-        return LQPVisitation::DoNotVisitInputs;
-      }
+    bool found_input = false;
+    const auto input_node = i == 0 ? join_node->left_input() : join_node->right_input();
+    visit_lqp(input_node, [&](const auto& node){
+      if (abort) return LQPVisitation::DoNotVisitInputs;
       switch (node->type) {
         case LQPNodeType::StoredTable: {
-          if (actual_input) {
+          const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
+          if (stored_table_node->table_name != determinant.table_name) return LQPVisitation::DoNotVisitInputs;
+          if (found_input) {
             abort = true;
+            return LQPVisitation::DoNotVisitInputs;
           }
-          actual_input = node;
+          found_input = true;
         } return LQPVisitation::DoNotVisitInputs;
         case LQPNodeType::Validate: return LQPVisitation::VisitInputs;
         case LQPNodeType::Join: {
           // only allow that table is reduced
           const auto& my_join_node = static_cast<const JoinNode&>(*node);
-          if (my_join_node.join_mode == JoinMode::Semi && expression_evaluable_on_lqp(mutable_expression, *my_join_node.left_input())) {
-            return LQPVisitation::VisitInputs;
+          if (my_join_node.join_mode == JoinMode::Semi) {
+            return LQPVisitation::VisitLeftInput;
           }
           abort = true;
         } return LQPVisitation::DoNotVisitInputs;
@@ -107,18 +83,12 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
           return LQPVisitation::DoNotVisitInputs;
       }
     });
-    if (abort || !actual_input) continue;
-    // std::cout << " a " << actual_input->description() << std::endl;
-    // std::cout << "StoredTable: " << input_expressions[i]->description() << "    " << input_expressions[i == 1 ? 0 : 1]->description()  << std::endl;
-    //std::cout << "resolve" << std::endl;
-    const auto determinant_column_id = resolve_column_expression(input_expressions.at(i));
-    const auto dependent_column_id = resolve_column_expression(input_expressions.at(i == 1 ? 0 : 1));
-    if (determinant_column_id == INVALID_TABLE_COLUMN_ID || dependent_column_id == INVALID_TABLE_COLUMN_ID) {
-      continue;
-    }
+
+    if (abort || !found_input) continue;
+    const auto& dependent = table_columns[i == 1 ? 0 : 1];
     //std::cout << "add " <<  determinant_column_id << " --> " << dependent_column_id << std::endl;
-    candidates.emplace_back(TableColumnIDs{determinant_column_id}, TableColumnIDs{dependent_column_id}, DependencyType::Inclusion, priority);
-    candidates.emplace_back(TableColumnIDs{determinant_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
+    candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{dependent}, DependencyType::Inclusion, priority);
+    candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{}, DependencyType::Unique, priority);
   }
   return candidates;
 }
