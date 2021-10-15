@@ -13,9 +13,9 @@ namespace opossum {
 std::optional<boost::gregorian::date> string_to_date(const std::string& date_string);
 
 /**
- * This handles edge cases with days that are the end of a month.
+ * This also handles edge cases with days that are the end of a month.
  * E.g., March 31 + one month == April 30, and vice versa.
- * This includes also applies to leap years.
+ * This also applies to leap years.
  */
 boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit);
 

@@ -1671,6 +1671,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto start_date = string_to_date(start_date_string);
           AssertInput(start_date, "'" + start_date_string + "' is not a valid date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
+          // We already ensured to have either Addition or Substraction right at the beginning
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
                                                                                     : -interval_expression.duration;
           const auto end_date = date_interval(*start_date, duration, interval_expression.unit);
@@ -1766,15 +1767,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           if (date) return std::const_pointer_cast<AbstractExpression>(left);
           FailInput("'" + date_string + "' is not a valid date");
         }
-        // We don't know if input actually contains dates, but maybe it is good enough that it contains strings.
+        // We do not know if the expression to be casted actually contains dates, but we cannot check this later due to
+        // the lack of a Date DataType. Though this is a weak assumption, maybe containing string values is sufficient.
         return std::const_pointer_cast<AbstractExpression>(left);
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
-      if (data_type_iter == supported_hsql_data_types.cend()) {
-        FailInput("CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
-      }
+      AssertInput(data_type_iter != supported_hsql_data_types.cend(),
+             "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
       const auto target_data_type = data_type_iter->second;
-      // omit unnecessary casts
+      // Omit redundant casts
       if (source_data_type == target_data_type) return std::const_pointer_cast<AbstractExpression>(left);
       return cast_(left, target_data_type);
     }

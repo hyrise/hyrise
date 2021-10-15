@@ -3027,13 +3027,14 @@ TEST_F(SQLTranslatorTest, DateLiteral) {
 }
 
 TEST_F(SQLTranslatorTest, IntervalLiteral) {
+  // Though most of these queries are valid SQL, we want to ensure to reject expressions Hyrise cannot handle
   EXPECT_THROW(sql_to_lqp_helper("SELECT INTERVAL '3' day from int_string;"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT * from int_string WHERE b = INTERVAL '3' day;"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT 'abc' + 3 days;"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT 1 + 3 days;"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT '2001-01-01' / 3 days;"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT '2001-01-01' + 1 second;"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT 1 day + 1 day;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-01' / 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-01' + 1 second;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT INTERVAL '1' day + INTERVAL '1' day;"), InvalidInputException);
 
   // clang-format off
   const auto expected_lqp =
@@ -3059,6 +3060,7 @@ TEST_F(SQLTranslatorTest, CastStatement) {
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('abc' AS DATE)"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(1 AS DATE)"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(a AS DATE) FROM int_string"), InvalidInputException);
+  // This is valid SQL, but we do not have a DateTime type
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01 00:00:00' AS DATETIME)"), InvalidInputException);
 
   {
@@ -3083,6 +3085,7 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
+    // Dates need to be resolved, as we do not have a Date DataType
     const auto value_expression = expression_vector(value_(pmr_string{"2000-01-01"}));
     // clang-format off
     const auto expected_lqp =
