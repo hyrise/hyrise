@@ -1773,7 +1773,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       AssertInput(data_type_iter != supported_hsql_data_types.cend(),
-             "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
+                  "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
       if (source_data_type == target_data_type) return std::const_pointer_cast<AbstractExpression>(left);

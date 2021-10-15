@@ -27,8 +27,10 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
       const boost::date_time::month_functor<boost::gregorian::date> interval(offset);
       return start_date + interval.get_offset(start_date);
     }
-    case DatetimeComponent::Day:
-      return start_date + boost::gregorian::date_duration(offset);
+    case DatetimeComponent::Day: {
+      const boost::date_time::day_functor<boost::gregorian::date> interval(offset);
+      return start_date + interval.get_offset(start_date);
+    }
     default:
       Fail("Invalid time unit for date interval: " + std::string{magic_enum::enum_name(unit)});
   }
