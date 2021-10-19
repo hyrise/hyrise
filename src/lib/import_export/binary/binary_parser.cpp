@@ -11,7 +11,6 @@
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
@@ -27,23 +26,8 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
-  auto chunk_data_stash = std::vector<std::tuple<std::shared_ptr<Segments>, std::shared_ptr<MvccData>, uint32_t, std::vector<SortColumnDefinition>>>(chunk_count);
-
-  // First, collect the data for each chunk.
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto load_chunk = [&, table = table, chunk_id]() {
-      chunk_data_stash[chunk_id] = _import_chunk(file, table);
-    };
-    jobs.emplace_back(std::make_shared<JobTask>(load_chunk));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-  for (auto& chunk_data : chunk_data_stash) {
-    table->append_chunk(*std::get<0>(chunk_data), std::get<1>(chunk_data));
-    table->last_chunk()->finalize();
-    if (std::get<2>(chunk_data) > 0) table->last_chunk()->set_individually_sorted_by(std::get<3>(chunk_data));
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    _import_chunk(file, table);
   }
 
   return table;
@@ -121,7 +105,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
   return std::make_pair(table, chunk_count);
 }
 
-std::tuple<const std::shared_ptr<Segments>, std::shared_ptr<MvccData>, uint32_t, std::vector<SortColumnDefinition>> BinaryParser::_import_chunk(std::ifstream& file, const std::shared_ptr<Table>& table) {
+void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
   // Import sort column definitions
@@ -139,8 +123,10 @@ std::tuple<const std::shared_ptr<Segments>, std::shared_ptr<MvccData>, uint32_t,
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
 
-  return {std::make_shared<Segments>(std::move(output_segments)),
-          std::make_shared<MvccData>(row_count, CommitID{0}), num_sorted_columns, std::move(sorted_columns)};
+  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+  table->append_chunk(output_segments, mvcc_data);
+  table->last_chunk()->finalize();
+  if (num_sorted_columns > 0) table->last_chunk()->set_individually_sorted_by(sorted_columns);
 }
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
@@ -343,4 +329,3 @@ std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std
 }
 
 }  // namespace opossum
-

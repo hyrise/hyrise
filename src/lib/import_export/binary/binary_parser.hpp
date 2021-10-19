@@ -59,7 +59,7 @@ class BinaryParser {
    *
    * ¹Number of columns is provided in the binary header
    */
-  static std::tuple<const std::shared_ptr<Segments>, std::shared_ptr<MvccData>, uint32_t, std::vector<SortColumnDefinition>> _import_chunk(std::ifstream& file, const std::shared_ptr<Table>& table); 
+  static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count,
