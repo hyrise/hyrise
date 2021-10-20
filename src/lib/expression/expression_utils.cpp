@@ -303,20 +303,24 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     return static_cast<const ValueExpression&>(expression).value;
   } else if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
-    // Casts from/to NULL are NULL
-    if (expression.data_type() == DataType::Null || cast_expression.argument()->data_type() == DataType::Null) {
-      return NULL_VALUE;
-    }
-
-    // Casts from expression chains should be resolved by ExpressionEvaluator.
+    Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");
+    // More complicated casts  should be resolved by ExpressionEvaluator.
     // E.g., CAST(any_column AS INT) cannot and should not be evaluated here.
     if (cast_expression.argument()->type != ExpressionType::Value) return std::nullopt;
-
     const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
+
+    // Casts from NULL are NULL
+    if (variant_is_null(value_expression.value)) return NULL_VALUE;
     std::optional<AllTypeVariant> result;
     resolve_data_type(expression.data_type(), [&](auto type) {
       using TargetDataType = typename decltype(type)::type;
-      result = *lossy_variant_cast<TargetDataType>(value_expression.value);
+      try {
+        // lossy_variant_cast returns std::nullopt when it casts from a NULL value. We have handled this above.
+        result = *lossy_variant_cast<TargetDataType>(value_expression.value);
+      } catch (boost::bad_lexical_cast&) {
+        Fail("Cannot cast " + cast_expression.argument()->as_column_name() + " as " +
+             std::string{magic_enum::enum_name(expression.data_type())});
+      }
     });
     return result;
   }

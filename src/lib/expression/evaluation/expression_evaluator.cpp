@@ -668,6 +668,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_expression(
     const CastExpression& cast_expression) {
+  Assert(cast_expression.data_type() != DataType::Null, "Cast as NULL is undefined");
+  resolve_data_type(cast_expression.data_type(), [](auto type) {
+    using CastDataType = typename decltype(type)::type;
+    if constexpr (!std::is_same_v<Result, CastDataType>) {
+      Fail("Cast data types are ambiguous");
+    }
+  });
   /**
    * Implements SQL's CAST with the following semantics
    *    Float/Double -> Int/Long:           Value gets floor()ed
@@ -683,16 +690,18 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
     using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
 
     const auto result_size = _result_size(argument_result.size());
-
     values.resize(result_size);
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
       const auto& argument_value = argument_result.value(chunk_offset);
 
-      if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
-        // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else {
-        values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+      // "NULL to <Something>" cast is handled by the `nulls` vector
+      if constexpr (!std::is_same_v<ArgumentDataType, NullValue>) {
+        try {
+          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+        } catch (boost::bad_lexical_cast&) {
+          Fail("Cannot cast as " + std::string{magic_enum::enum_name(cast_expression.data_type())});
+        }
       }
     }
     nulls = argument_result.nulls;

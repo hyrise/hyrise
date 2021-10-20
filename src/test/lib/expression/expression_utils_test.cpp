@@ -196,9 +196,15 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
   const auto value_expression = value_(expected_value);
   const auto correlated_parameter_expression = correlated_parameter_(ParameterID{0}, value_expression);
   correlated_parameter_expression->set_value(expected_value);
-  const auto cast_to_float = cast_(value_expression, DataType::Float);
-  const auto cast_to_null = cast_(value_expression, DataType::Null);
+  const auto invalid_cast = cast_(value_(pmr_string{"1.2"}), DataType::Int);
+  const auto cast_as_null = cast_(expected_value, DataType::Null);
+  const auto cast_as_float = cast_(value_expression, DataType::Float);
+  const auto cast_from_null = cast_(null_(), DataType::Int);
   const auto cast_column = cast_(a_a, DataType::Float);
+
+  EXPECT_THROW(expression_get_value_or_parameter(*invalid_cast), std::logic_error);
+  // Casts as NULL are undefined
+  EXPECT_THROW(expression_get_value_or_parameter(*cast_as_null), std::logic_error);
 
   {
     const auto actual_value = expression_get_value_or_parameter(*value_expression);
@@ -211,13 +217,13 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
     EXPECT_EQ(*actual_value, expected_value);
   }
   {
-    const auto actual_value = expression_get_value_or_parameter(*cast_to_float);
+    const auto actual_value = expression_get_value_or_parameter(*cast_as_float);
     EXPECT_NE(actual_value, std::nullopt);
     EXPECT_FLOAT_EQ(boost::get<float>(*actual_value), 1.0);
   }
   {
-    // Casts as NULL should return a NULL value
-    const auto actual_value = expression_get_value_or_parameter(*cast_to_null);
+    // Casts from NULL should return a NULL value
+    const auto actual_value = expression_get_value_or_parameter(*cast_from_null);
     EXPECT_NE(actual_value, std::nullopt);
     EXPECT_TRUE(variant_is_null(*actual_value));
   }

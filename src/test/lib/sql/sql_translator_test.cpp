@@ -3060,6 +3060,8 @@ TEST_F(SQLTranslatorTest, CastStatement) {
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('abc' AS DATE)"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(1 AS DATE)"), InvalidInputException);
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(a AS DATE) FROM int_string"), InvalidInputException);
+  // We do not have a real Date type, so we cannot pass this cast anywhere else.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(b AS DATE) FROM int_string"), InvalidInputException);
   // This is valid SQL, but we do not have a DateTime type
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01 00:00:00' AS DATETIME)"), InvalidInputException);
 

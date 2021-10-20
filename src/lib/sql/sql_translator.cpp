@@ -1761,15 +1761,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto source_data_type = left->data_type();
       if (expr.columnType.data_type == hsql::DataType::DATE) {
         AssertInput(source_data_type == DataType::String, "Cannot cast " + left->as_column_name() + " as Date");
-        if (left->type == ExpressionType::Value) {
-          const auto date_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
-          const auto date = string_to_date(date_string);
-          if (date) return std::const_pointer_cast<AbstractExpression>(left);
-          FailInput("'" + date_string + "' is not a valid date");
-        }
-        // We do not know if the expression to be casted actually contains dates, but we cannot check this later due to
-        // the lack of a Date DataType. Though this is a weak assumption, maybe containing string values is sufficient.
-        return std::const_pointer_cast<AbstractExpression>(left);
+        // We do not know if an expression to be casted other than a ValueExpression actually contains dates, and we
+        // cannot check this later due to the lack of a Date DataType
+        AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as Date");
+        const auto date_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
+        const auto date = string_to_date(std::string{date_string});
+        if (date) return std::const_pointer_cast<AbstractExpression>(left);
+        FailInput("'" + std::string{date_string} + "' is not a valid date");
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       AssertInput(data_type_iter != supported_hsql_data_types.cend(),

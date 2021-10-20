@@ -794,9 +794,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
   EXPECT_TRUE(test_expression<pmr_string>(*cast_(5.5, DataType::String), {"5.5"}));
   EXPECT_TRUE(test_expression<int32_t>(*cast_(null_(), DataType::Int), {std::nullopt}));
 
+  // Ensure requested data type is cast data type
+  EXPECT_THROW(test_expression<int32_t>(*cast_("1.2", DataType::Float), {}), std::logic_error);
   // Following SQL standard, CAST("Hello" AS INT) errors
-  EXPECT_ANY_THROW(test_expression<int32_t>(*cast_("Hello", DataType::Int), {}));
-  EXPECT_ANY_THROW(test_expression<float>(*cast_("Hello", DataType::Float), {}));
+  EXPECT_THROW(test_expression<int32_t>(*cast_("Hello", DataType::Int), {}), std::logic_error);
+  EXPECT_THROW(test_expression<float>(*cast_("Hello", DataType::Float), {}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(*cast_("1.2", DataType::Int), {}), std::logic_error);
+  // Cast as Null is undefined
+  EXPECT_THROW(test_expression<pmr_string>(*cast_("Hello", DataType::Null), {}), std::logic_error);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
