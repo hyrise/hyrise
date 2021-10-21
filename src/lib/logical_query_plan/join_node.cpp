@@ -268,7 +268,7 @@ std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
     for (const auto& left_ind : left_dependencies) {
       is_known = is_known || right_ind == left_ind;
     }
-    if (!is_known) _inclusion_dependencies.emplace_back(right_ind);
+    if (!is_known) inclusion_dependencies.emplace_back(right_ind);
   }
   return inclusion_dependencies;
 }

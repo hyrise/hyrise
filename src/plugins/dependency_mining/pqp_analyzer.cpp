@@ -11,10 +11,10 @@
 namespace opossum {
 
 PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue) : _queue(queue) {
-  if (_enable_groupby_reduction) add_rule(std::make_unique<DependentGroupByCandidateRule>());
-  if (_enable_join_to_semi) add_rule(std::make_unique<JoinToSemiCandidateRule>());
-  if (_enable_join_to_predicate) add_rule(std::make_unique<JoinToPredicateCandidateRule>());
-  if (_enable_join_elimination) add_rule(std::make_unique<JoinEliminationCandidateRule>());
+  if (ENABLE_GROUPBY_REDUCTION) add_rule(std::make_unique<DependentGroupByCandidateRule>());
+  if (ENABLE_JOIN_TO_SEMI) add_rule(std::make_unique<JoinToSemiCandidateRule>());
+  if (ENABLE_JOIN_TO_PREDICATE) add_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  if (ENABLE_JOIN_ELIMINATION) add_rule(std::make_unique<JoinEliminationCandidateRule>());
 }
 
 void PQPAnalyzer::run() {

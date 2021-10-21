@@ -111,7 +111,7 @@ std::vector<OrderDependency> UnionNode::order_dependencies() {
     }
   }
 
-  return _order_dependencies;
+  return order_dependencies;
 }
 
 std::vector<InclusionDependency> UnionNode::inclusion_dependencies() {
