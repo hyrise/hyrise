@@ -32,7 +32,6 @@ class JoinHash : public AbstractJoinOperator {
            const std::optional<size_t>& radix_bits = std::nullopt);
 
   const std::string& name() const override;
-  std::string description(DescriptionMode description_mode) const override;
 
   static size_t calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode);
 

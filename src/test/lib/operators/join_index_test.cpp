@@ -164,26 +164,26 @@ TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
                                   std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Right);
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Left");
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)\nIndex side: Left");
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Right");
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)\nIndex side: Right");
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Right");
 
   dummy_input->execute();
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where a = a AND a != a) Index side: Left");
+            "JoinIndex (Inner) a = a AND a != a Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a AND a != a)\nIndex side: Left");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where a = a AND a != a) Index side: Right");
+            "JoinIndex (Inner) a = a AND a != a Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a AND a != a)\nIndex side: Right");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Right");
 
   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
 }
