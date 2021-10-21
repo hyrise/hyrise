@@ -65,7 +65,6 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     std::iota(std::begin(chunks_to_process), std::end(chunks_to_process), ChunkID{0});
   } else {
     const auto chunks_to_process_count = std::max(100u, std::min(1'000u, 4 + chunk_count / 10)); // 4 to always include first and last two chunks
-    std::cout << "Using " << chunks_to_process_count << std::endl;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -77,11 +76,6 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
       chunks_to_process_set.emplace(dis(gen));
     }
     chunks_to_process = std::vector<ChunkID>(chunks_to_process_set.begin(), chunks_to_process_set.end());
-    std::cout << "Using: ";
-    for (const auto& c : chunks_to_process) {
-      std::cout << c << ",";
-    }
-    std::cout << std::endl;
   }
 
   for (const auto& chunk_id : chunks_to_process) {
