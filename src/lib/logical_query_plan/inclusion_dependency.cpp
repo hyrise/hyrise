@@ -3,8 +3,8 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/lqp_column_expression.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace opossum {
 
@@ -121,7 +121,7 @@ std::vector<InclusionDependency> deflate_inds(const std::vector<InclusionDepende
 }
 
 std::vector<InclusionDependency> union_inds(const std::vector<InclusionDependency>& inds_a,
-                                       const std::vector<InclusionDependency>& inds_b) {
+                                            const std::vector<InclusionDependency>& inds_b) {
   return {};
   /*if constexpr (HYRISE_DEBUG) {
     auto fds_a_set = std::unordered_set<InclusionDependency>(fds_a.begin(), fds_a.end());
@@ -142,7 +142,7 @@ std::vector<InclusionDependency> union_inds(const std::vector<InclusionDependenc
 }
 
 std::vector<InclusionDependency> intersect_ins(const std::vector<InclusionDependency>& inds_a,
-                                           const std::vector<InclusionDependency>& inds_b) {
+                                               const std::vector<InclusionDependency>& inds_b) {
   return {};
   /*if (fds_a.empty() || fds_b.empty()) return {};
 
@@ -165,6 +165,8 @@ std::vector<InclusionDependency> intersect_ins(const std::vector<InclusionDepend
 
 namespace std {
 
-size_t hash<opossum::InclusionDependency>::operator()(const opossum::InclusionDependency& ind) const { return ind.hash(); }
+size_t hash<opossum::InclusionDependency>::operator()(const opossum::InclusionDependency& ind) const {
+  return ind.hash();
+}
 
 }  // namespace std

@@ -231,7 +231,6 @@ std::vector<OrderDependency> JoinNode::order_dependencies() {
   // TO DO transitive ODs:
   // A.a -> A.b, B.a -> B.b
   // Join on A.b = B.a yields new dependency A.a -> B.b
-  if (_retrieved_ods) return _order_dependencies;
 
   auto left_dependencies = left_input()->order_dependencies();
   auto right_dependencies = right_input()->order_dependencies();
@@ -239,16 +238,15 @@ std::vector<OrderDependency> JoinNode::order_dependencies() {
   remove_invalid_ods(shared_from_this(), right_dependencies);
 
   // make sure not to have anything twice on self joins
-  _order_dependencies = left_dependencies;
+  auto order_dependencies = left_dependencies;
   for (const auto& right_od : right_dependencies) {
     bool is_known = false;
     for (const auto& left_od : left_dependencies) {
       is_known = is_known || right_od == left_od;
     }
-    if (!is_known) _order_dependencies.emplace_back(right_od);
+    if (!is_known) order_dependencies.emplace_back(right_od);
   }
-  _retrieved_ods = true;
-  return _order_dependencies;
+  return order_dependencies;
 }
 
 std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
@@ -256,7 +254,7 @@ std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
   // TO DO transitive ODs:
   // A.a -> A.b, B.a -> B.b
   // Join on A.b = B.a yields new dependency A.a -> B.b
-  if (_retrieved_inds) return _inclusion_dependencies;
+  //if (_retrieved_inds) return _inclusion_dependencies;
 
   auto left_dependencies = left_input()->inclusion_dependencies();
   auto right_dependencies = right_input()->inclusion_dependencies();
@@ -264,7 +262,7 @@ std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
   remove_invalid_inds(shared_from_this(), right_dependencies);
 
   // make sure not to have anything twice on self joins
-  _inclusion_dependencies = left_dependencies;
+  auto inclusion_dependencies = left_dependencies;
   for (const auto& right_ind : right_dependencies) {
     bool is_known = false;
     for (const auto& left_ind : left_dependencies) {
@@ -272,8 +270,7 @@ std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
     }
     if (!is_known) _inclusion_dependencies.emplace_back(right_ind);
   }
-  _retrieved_inds = true;
-  return _inclusion_dependencies;
+  return inclusion_dependencies;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }

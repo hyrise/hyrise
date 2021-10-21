@@ -318,11 +318,11 @@ std::vector<OrderDependency> AbstractLQPNode::order_dependencies() {
   // make sure that there is one single input
   Assert(left_input() && !right_input(), "Expect one input for OD forwarding. Please override this function. " +
                                              std::string{magic_enum::enum_name(type)});
-  if (!_retrieved_ods) {
-    _order_dependencies = left_input()->order_dependencies();
-    _retrieved_ods = true;
-  }
-  return _order_dependencies;
+  //if (!_retrieved_ods) {
+  //  _order_dependencies = left_input()->order_dependencies();
+  //  _retrieved_ods = true;
+  //}
+  return left_input()->order_dependencies();
 }
 
 std::vector<InclusionDependency> AbstractLQPNode::inclusion_dependencies() {
@@ -330,11 +330,11 @@ std::vector<InclusionDependency> AbstractLQPNode::inclusion_dependencies() {
   // make sure that there is one single input
   Assert(left_input() && !right_input(), "Expect one input for IND forwarding. Please override this function. " +
                                              std::string{magic_enum::enum_name(type)});
-  if (!_retrieved_inds) {
-    _inclusion_dependencies = left_input()->inclusion_dependencies();
-    _retrieved_inds = true;
-  }
-  return _inclusion_dependencies;
+  //if (!_retrieved_inds) {
+  //  _inclusion_dependencies = left_input()->inclusion_dependencies();
+  //  _retrieved_inds = true;
+  //}
+  return left_input()->inclusion_dependencies();
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {

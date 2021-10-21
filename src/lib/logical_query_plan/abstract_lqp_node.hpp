@@ -249,11 +249,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
-  bool _retrieved_ods = false;
-  bool _retrieved_inds = false;
-  std::vector<OrderDependency> _order_dependencies;
-  std::vector<InclusionDependency> _inclusion_dependencies;
-
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
   std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping& node_mapping) const;

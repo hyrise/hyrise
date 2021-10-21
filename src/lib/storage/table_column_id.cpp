@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+TableColumnID::TableColumnID() : TableColumnID{"", INVALID_COLUMN_ID} {}
+
 TableColumnID::TableColumnID(const std::string init_table_name, const ColumnID init_column_id)
     : table_name(std::move(init_table_name)), column_id(init_column_id) {}
 
@@ -34,7 +36,6 @@ size_t TableColumnID::hash() const {
   return hash;
 }
 
-
 std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column_id) {
   stream << table_column_id.description();
   return stream;
@@ -42,7 +43,8 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 
 TableColumnID resolve_column_expression(const std::shared_ptr<const AbstractExpression>& column_expression) {
   //Assert(column_expression, "Got nullptr");
-  Assert(column_expression->type == ExpressionType::LQPColumn, "Expected LQPColumnExpression, got " + std::string{magic_enum::enum_name(column_expression->type)});
+  Assert(column_expression->type == ExpressionType::LQPColumn,
+         "Expected LQPColumnExpression, got " + std::string{magic_enum::enum_name(column_expression->type)});
   const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*column_expression);
   const auto orig_node = lqp_column_expression.original_node.lock();
   if (orig_node->type != LQPNodeType::StoredTable) {

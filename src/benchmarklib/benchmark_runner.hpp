@@ -78,7 +78,7 @@ class BenchmarkRunner : public Noncopyable {
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
   void _mine_dependencies();
-  
+
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;

@@ -43,13 +43,13 @@ std::vector<InclusionDependency> deflate_inds(const std::vector<InclusionDepende
  *         expressions are merged into single objects by merging their dependent expressions.
  */
 std::vector<InclusionDependency> union_inds(const std::vector<InclusionDependency>& inds_a,
-                                       const std::vector<InclusionDependency>& inds_b);
+                                            const std::vector<InclusionDependency>& inds_b);
 
 /**
  * @return Returns FDs that are included in both of the given vectors.
  */
 std::vector<InclusionDependency> intersect_inds(const std::vector<InclusionDependency>& inds_a,
-                                           const std::vector<InclusionDependency>& inds_b);
+                                                const std::vector<InclusionDependency>& inds_b);
 
 /**
  * Future Work: Transitive FDs

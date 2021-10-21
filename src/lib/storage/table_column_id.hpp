@@ -9,6 +9,7 @@
 namespace opossum {
 
 struct TableColumnID {
+  TableColumnID();
   TableColumnID(const std::string init_table_name, const ColumnID init_column_id);
   std::string table_name;
   ColumnID column_id;

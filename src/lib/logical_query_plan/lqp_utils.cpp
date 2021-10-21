@@ -540,19 +540,19 @@ void remove_invalid_inds(const std::shared_ptr<const AbstractLQPNode>& lqp, std:
 
   // Remove invalid or unnecessary INDs
   inds.erase(std::remove_if(inds.begin(), inds.end(),
-                           [&output_expressions_set](auto& ind) {
-                             /**
-                              * Remove INDs with determinant expressions that are
+                            [&output_expressions_set](auto& ind) {
+                              /**
+                              * Remove INDs with dependent expressions that are
                               *  a) not part of the node's output expressions
                               */
-                             for (const auto& ind_dependent_expression : ind.dependents) {
-                               if (!output_expressions_set.contains(ind_dependent_expression)) {
-                                 return true;
-                               }
-                             }
-                             return false;
-                           }),
-            inds.end());
+                              for (const auto& ind_dependent_expression : ind.dependents) {
+                                if (!output_expressions_set.contains(ind_dependent_expression)) {
+                                  return true;
+                                }
+                              }
+                              return false;
+                            }),
+             inds.end());
 }
 
 }  // namespace opossum

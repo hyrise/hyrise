@@ -13,31 +13,21 @@ JoinToSemiCandidateRule::JoinToSemiCandidateRule() : AbstractDependencyCandidate
 std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
     const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
-  if (join_node->join_mode != JoinMode::Inner) {
-    return {};
-  }
+  if (join_node->join_mode != JoinMode::Inner) return {};
 
   const auto& predicates = join_node->join_predicates();
-  if (predicates.size() != 1) {
-    return {};
+  if (predicates.size() != 1) return {};
+
+  const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
+  if (!predicate) return {};
+  std::vector<DependencyCandidate> candidates;
+  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
+    if (expression->type != ExpressionType::LQPColumn) return {};
+    const auto join_column_id = resolve_column_expression(expression);
+    if (join_column_id == INVALID_TABLE_COLUMN_ID) continue;
+    candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
   }
 
-  const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
-  const auto& predicate_arguments = predicate->arguments;
-  std::vector<DependencyCandidate> candidates;
-  // check for given inputs
-  for (const auto& input : {join_node->left_input(), join_node->right_input()}) {
-    for (const auto& expression : predicate_arguments) {
-      if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
-        continue;
-      }
-      const auto join_column_id = resolve_column_expression(expression);
-      if (join_column_id == INVALID_TABLE_COLUMN_ID) {
-        continue;
-      }
-      candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
-    }
-  }
   return candidates;
 }
 

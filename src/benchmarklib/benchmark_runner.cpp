@@ -622,8 +622,8 @@ void BenchmarkRunner::_mine_dependencies() {
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
-    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
-    Hyrise::get().plugin_manager.load_plugin(*(_config.dependency_mining_plugin_path));
+  _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+  Hyrise::get().plugin_manager.load_plugin(*(_config.dependency_mining_plugin_path));
 }
 
 }  // namespace opossum

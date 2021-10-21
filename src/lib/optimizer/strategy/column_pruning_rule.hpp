@@ -22,11 +22,12 @@ class ColumnPruningRule : public AbstractRule {
  public:
   std::string name() const override;
 
+  constexpr static bool ENABLE_JOIN_TO_SEMI = true;
+  constexpr static bool ENABLE_JOIN_TO_PREDICATE = true;
+  constexpr static bool ENABLE_JOIN_ELIMINATION = true;
+
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-  constexpr static bool _enable_join_to_semi = false;
-  constexpr static bool _enable_join_to_predicate = false;
-  constexpr static bool _enable_join_elimination = true;
 };
 
 }  // namespace opossum

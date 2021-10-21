@@ -29,29 +29,24 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     inputs.emplace_back(join_node->left_input());
   }
 
-  const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
-  const auto& predicate_arguments = predicate->arguments;
+  const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
+  if (!predicate) return {};
+  std::unordered_map<std::string, TableColumnID> join_column_ids;
+  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
+    if (expression->type != ExpressionType::LQPColumn) return {};
+    auto table_column_id = resolve_column_expression(expression);
+    if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
+    join_column_ids.emplace(table_column_id.table_name, std::move(table_column_id));
+  }
+
   std::vector<DependencyCandidate> candidates;
+
 
   // check for given inputs
   for (const auto& input : inputs) {
-    for (const auto& expression : predicate_arguments) {
-      if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
-        continue;
-      }
-      const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
-      const auto join_column_id = resolve_column_expression(expression);
-      if (join_column_id == INVALID_TABLE_COLUMN_ID) {
-        continue;
-      }
-
       std::vector<DependencyCandidate> my_candidates;
-      // add join column as UCC candidate
-      if (join_node->join_mode == JoinMode::Inner) {
-        my_candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
-      }
-
       bool abort = false;
+      std::string candidate_table;
       visit_lqp(input, [&](const auto& node) {
         switch (node->type) {
           case LQPNodeType::Validate:
@@ -71,6 +66,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                   if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                     continue;
                   }
+                  candidate_table = scan_column_id.table_name;
                   my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{}, DependencyType::Unique,
                                              priority);
                 }
@@ -84,7 +80,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                   if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
                     continue;
                   }
-                  my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_id},
+                  candidate_table = scan_column_id.table_name;
+                  my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_ids[candidate_table]},
                                              DependencyType::Order, priority);
                 }
               }
@@ -100,8 +97,12 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
       if (!abort) {
         candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),
                           std::make_move_iterator(my_candidates.end()));
+        // add join column as UCC candidate
+        if (join_node->join_mode == JoinMode::Inner) {
+          my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]}, TableColumnIDs{}, DependencyType::Unique, priority);
+        }
       }
-    }
+
   }
   return candidates;
 }

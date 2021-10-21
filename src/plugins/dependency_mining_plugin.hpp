@@ -27,7 +27,7 @@ class DependencyMiningPlugin : public AbstractPlugin {
   void stop() final;
 
   constexpr static size_t NUM_VALIDATORS = 1;
-  constexpr static bool DO_VALIDATE = false;
+  constexpr static bool DO_VALIDATE = true;
 
  protected:
   std::shared_ptr<DependencyCandidateQueue> _queue;

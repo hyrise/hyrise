@@ -5,7 +5,6 @@
 #include "abstract_table_constraint.hpp"
 #include "storage/table_column_id.hpp"
 
-
 namespace opossum {
 
 /**
@@ -25,6 +24,8 @@ class TableInclusionConstraint final : public AbstractTableConstraint {
   std::vector<TableColumnID> _determinants;
   std::vector<ColumnID> _dependents;
 };
+
+std::ostream& operator<<(std::ostream& stream, const TableInclusionConstraint& expression);
 
 using TableInclusionConstraints = tbb::concurrent_vector<TableInclusionConstraint>;
 

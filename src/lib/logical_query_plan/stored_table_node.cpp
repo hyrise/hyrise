@@ -124,10 +124,9 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
 }
 
 std::vector<OrderDependency> StoredTableNode::order_dependencies() {
-  if (_retrieved_ods) return _order_dependencies;
-
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_order_constraints = table->soft_order_constraints();
+  std::vector<OrderDependency> order_dependencies;
 
   for (const TableOrderConstraint& table_order_constraint : table_order_constraints) {
     // Discard order constraints that involve pruned column id(s).
@@ -177,18 +176,16 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
     }
 
     // Create OrderDependency
-    _order_dependencies.emplace_back(OrderDependency{determinant_expressions, dependent_expressions});
+    order_dependencies.emplace_back(OrderDependency{determinant_expressions, dependent_expressions});
   }
-  _retrieved_ods = true;
 
-  return _order_dependencies;
+  return order_dependencies;
 }
 
 std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
-  if (_retrieved_inds) return _inclusion_dependencies;
-
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_inclusion_constraints = table->soft_inclusion_constraints();
+  std::vector<InclusionDependency> inclusion_dependencies;
 
   for (const auto& table_inclusion_constraint : table_inclusion_constraints) {
     // Discard inclusion constraints that involve pruned column id(s).
@@ -197,7 +194,7 @@ std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
     if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
                     [&dependent_column_ids](const auto& pruned_column_id) {
                       return std::find(dependent_column_ids.begin(), dependent_column_ids.end(), pruned_column_id) !=
-                                 dependent_column_ids.end();
+                             dependent_column_ids.end();
                     })) {
       continue;
     }
@@ -222,11 +219,11 @@ std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
 
     // Create InclusionDependency
     // The existence of determinant tables and column ids has been checked by table
-    _inclusion_dependencies.emplace_back(InclusionDependency{determinant_column_id_pairs, dependent_expressions});
+    const auto ind = InclusionDependency{determinant_column_id_pairs, dependent_expressions};
+    inclusion_dependencies.emplace_back(ind);
   }
-  _retrieved_ods = true;
 
-  return _inclusion_dependencies;
+  return inclusion_dependencies;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {

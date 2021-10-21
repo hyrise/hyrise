@@ -1,9 +1,9 @@
 #include "pqp_analyzer.hpp"
 
 #include "candidate_strategy/dependent_group_by_candidate_rule.hpp"
+#include "candidate_strategy/join_elimination_candidate_rule.hpp"
 #include "candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "candidate_strategy/join_to_semi_candidate_rule.hpp"
-#include "candidate_strategy/join_elimination_candidate_rule.hpp"
 #include "hyrise.hpp"
 #include "operators/pqp_utils.hpp"
 #include "utils/timer.hpp"
@@ -65,7 +65,8 @@ void PQPAnalyzer::run() {
     }
   }
 
-  std::cout << "PQPAnalyzer generated " << _known_candidates.size() << " candidates in " << timer.lap_formatted() << std::endl;
+  std::cout << "PQPAnalyzer generated " << _known_candidates.size() << " candidates in " << timer.lap_formatted()
+            << std::endl;
 }
 
 void PQPAnalyzer::add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {

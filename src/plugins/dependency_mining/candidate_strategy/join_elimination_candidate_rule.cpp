@@ -6,8 +6,8 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace opossum {
 
@@ -21,55 +21,50 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
   }
 
   // skip semi join reductions
-  if (join_node->comment == "Semi Reduction") {
-    //std::cout << "red" << std::endl;
-    return {};
-  }
-  if (join_node->comment != "") {
-    std::cout << join_node->comment << std::endl;
-  }
+  if (join_node->comment == "Semi Reduction") return {};
 
   const auto& predicates = join_node->join_predicates();
-  if (predicates.size() != 1) {
-    return {};
-  }
+  if (predicates.size() != 1) return {};
 
   const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[0]);
-  if (!predicate) {
-    return {};
-  }
-  const auto inputs = std::vector<std::shared_ptr<AbstractExpression>>{predicate->left_operand(), predicate->right_operand()};
-  //std::cout << std::endl << lqp_node->description() << std::endl;
-  for (const auto& expression : inputs) {
+  if (!predicate) return {};
+
+  std::unordered_map<std::string, TableColumnID> table_columns;
+  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
     if (expression->type != ExpressionType::LQPColumn) return {};
+    auto table_column_id = resolve_column_expression(expression);
+    if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
+    table_columns.emplace(table_column_id.table_name, std::move(table_column_id));
   }
-  const auto table_columns = TableColumnIDs{resolve_column_expression(predicate->left_operand()), resolve_column_expression(predicate->right_operand())};
-  if (table_columns[0] == INVALID_TABLE_COLUMN_ID || table_columns[1] == INVALID_TABLE_COLUMN_ID) return {};
 
   std::vector<DependencyCandidate> candidates;
-  auto inputs_to_visit = std::vector<uint8_t>{1};
-  if (join_node->join_mode == JoinMode::Inner) inputs_to_visit.emplace_back(0);
+  auto inputs_to_visit = std::vector<std::shared_ptr<AbstractLQPNode>>{join_node->right_input()};
+  if (join_node->join_mode == JoinMode::Inner) inputs_to_visit.emplace_back(join_node->left_input());
   // check for given inputs
-  for (const auto& i : inputs_to_visit) {
+  for (const auto& input_node : inputs_to_visit) {
     // find StoredTableNode, ensure that the table is not modified
     std::shared_ptr<StoredTableNode> actual_input;
-    const auto& determinant = table_columns[i];
+    std::string determinant_name;
     bool abort = false;
     bool found_input = false;
-    const auto input_node = i == 0 ? join_node->left_input() : join_node->right_input();
-    visit_lqp(input_node, [&](const auto& node){
+    visit_lqp(input_node, [&](const auto& node) {
       if (abort) return LQPVisitation::DoNotVisitInputs;
       switch (node->type) {
         case LQPNodeType::StoredTable: {
           const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
-          if (stored_table_node->table_name != determinant.table_name) return LQPVisitation::DoNotVisitInputs;
+          if (table_columns.find(stored_table_node->table_name) == table_columns.cend()) {
+            return LQPVisitation::DoNotVisitInputs;
+          }
           if (found_input) {
             abort = true;
             return LQPVisitation::DoNotVisitInputs;
           }
           found_input = true;
-        } return LQPVisitation::DoNotVisitInputs;
-        case LQPNodeType::Validate: return LQPVisitation::VisitInputs;
+          determinant_name = stored_table_node->table_name;
+        }
+          return LQPVisitation::DoNotVisitInputs;
+        case LQPNodeType::Validate:
+          return LQPVisitation::VisitInputs;
         case LQPNodeType::Join: {
           // only allow that table is reduced
           const auto& my_join_node = static_cast<const JoinNode&>(*node);
@@ -77,7 +72,8 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
             return LQPVisitation::VisitLeftInput;
           }
           abort = true;
-        } return LQPVisitation::DoNotVisitInputs;
+        }
+          return LQPVisitation::DoNotVisitInputs;
         default:
           abort = true;
           return LQPVisitation::DoNotVisitInputs;
@@ -85,10 +81,13 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     });
 
     if (abort || !found_input) continue;
-    const auto& dependent = table_columns[i == 1 ? 0 : 1];
-    //std::cout << "add " <<  determinant_column_id << " --> " << dependent_column_id << std::endl;
-    candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{dependent}, DependencyType::Inclusion, priority);
+    const auto& determinant = table_columns[determinant_name];
     candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{}, DependencyType::Unique, priority);
+    for (const auto& [table_name, table_column] : table_columns) {
+      if (table_name == determinant_name) continue;
+      candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{table_column}, DependencyType::Inclusion,
+                              priority);
+    }
   }
   return candidates;
 }

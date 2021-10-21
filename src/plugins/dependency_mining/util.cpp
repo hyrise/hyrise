@@ -11,7 +11,9 @@ DependencyCandidate::DependencyCandidate(const TableColumnIDs& init_determinants
 
 bool DependencyCandidate::operator<(const DependencyCandidate& other) const { return priority < other.priority; }
 
-bool DependencyCandidate::operator==(const DependencyCandidate& other) const { return type == other.type && determinants == other.determinants && dependents == other.dependents; }
+bool DependencyCandidate::operator==(const DependencyCandidate& other) const {
+  return type == other.type && determinants == other.determinants && dependents == other.dependents;
+}
 
 void DependencyCandidate::output_to_stream(std::ostream& stream) const {
   stream << "Type " << magic_enum::enum_name(type) << ", Priority " << priority << ", Columns ";
@@ -50,5 +52,7 @@ std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& depend
 }  // namespace opossum
 
 namespace std {
-  size_t hash<opossum::DependencyCandidate>::operator()(const opossum::DependencyCandidate& dependency_candidate) const { return dependency_candidate.hash(); };
+size_t hash<opossum::DependencyCandidate>::operator()(const opossum::DependencyCandidate& dependency_candidate) const {
+  return dependency_candidate.hash();
+};
 }  // namespace std

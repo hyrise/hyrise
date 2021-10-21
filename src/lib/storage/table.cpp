@@ -11,6 +11,7 @@
 #include <magic_enum.hpp>
 
 #include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -18,7 +19,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
-#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -381,8 +381,8 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   //  auto scoped_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
     if (existing_constraint == table_order_constraint) return;
-    _table_order_constraints.push_back(table_order_constraint);
   }
+    _table_order_constraints.push_back(table_order_constraint);
   //}
 }
 
@@ -410,8 +410,8 @@ void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_
   //  auto scoped_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_inclusion_constraints) {
     if (existing_constraint == table_inclusion_constraint) return;
-    _table_inclusion_constraints.push_back(table_inclusion_constraint);
   }
+    _table_inclusion_constraints.emplace_back(table_inclusion_constraint);
   //}
 }
 

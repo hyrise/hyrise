@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "types.hpp"
 #include "storage/table_column_id.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
