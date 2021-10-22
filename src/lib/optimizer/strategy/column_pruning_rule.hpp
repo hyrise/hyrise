@@ -22,7 +22,7 @@ class ColumnPruningRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  constexpr static bool ENABLE_JOIN_TO_SEMI = false;
+  constexpr static bool ENABLE_JOIN_TO_SEMI = true;
   constexpr static bool ENABLE_JOIN_TO_PREDICATE = false;
   constexpr static bool ENABLE_JOIN_ELIMINATION = false;
 

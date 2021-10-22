@@ -18,8 +18,8 @@ class PQPAnalyzer {
   void run();
 
   // switches for mining specific optimizations
-  constexpr static bool ENABLE_GROUPBY_REDUCTION = true;
-  constexpr static bool ENABLE_JOIN_TO_SEMI = false;
+  constexpr static bool ENABLE_GROUPBY_REDUCTION = false;
+  constexpr static bool ENABLE_JOIN_TO_SEMI = true;
   constexpr static bool ENABLE_JOIN_TO_PREDICATE = false;
   constexpr static bool ENABLE_JOIN_ELIMINATION = false;
 
