@@ -1,3 +1,11 @@
+// Include before Fail() is defined
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Woverflow"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wattributes"
+#pragma GCC diagnostic pop
+
 #include <iostream>
 #include <fstream>
 
@@ -24,8 +32,8 @@
 #include "visualization/pqp_visualizer.hpp"
 
 #include "memory/dram_memory_resource.hpp"
-//#include "memory/umap_memory_resource.hpp"
-#include "memory/nvm_memory_resource.hpp"
+#include "memory/umap_memory_resource.hpp"
+//#include "memory/nvm_memory_resource.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -267,7 +275,11 @@ int main() {
     // Apply specified configuration schema
     std::cout << "Preparing table (encoding, sorting, ...) with given configuration: " << conf_name << " ... ";
     Timer preparation_timer;
-    
+
+    // Create new ploymorphic resource
+    static auto global_umap_resource = new UmapMemoryResource("global");
+    (void) global_umap_resource;
+
     const auto sorted_table = std::make_shared<Table>(table->column_definitions(), 
       TableType::Data, CHUNK_SIZE, UseMvcc::No);
     const auto chunk_count = table->chunk_count();
@@ -339,11 +351,13 @@ int main() {
         const auto storage_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][5]));
         auto allocator = PolymorphicAllocator<void>{};
 
-        if (storage_id == 0) {
-          allocator = PolymorphicAllocator<void>{&DRAMMemoryResource::get()};
-        } else {
-          allocator = PolymorphicAllocator<void>{&NVMMemoryResource::get()};
-          std::cout << " NVM " << std::endl;
+        if (storage_id > 0) {
+           auto resource = global_umap_resource;
+           auto allocator = PolymorphicAllocator<void>{resource};
+
+           const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
+           sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+           std::cout << 'Segment (' << chunk_id << ',' << column_id << ')' << std::endl;
         }
 
         const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
@@ -356,6 +370,15 @@ int main() {
           Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
           const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
           index_memory_consumption += added_index->memory_consumption();
+
+          if (storage_id > 0) {
+            auto resource = global_umap_resource;
+            auto allocator = PolymorphicAllocator<void>{resource};
+
+            const auto  migrated_index = added_index->copy_using_allocator(allocator);
+            sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
+            std::cout << 'Index (' << chunk_id << ',' << column_id << ')' << std::endl;
+          }
         }
 
         ++conf_line_count;
