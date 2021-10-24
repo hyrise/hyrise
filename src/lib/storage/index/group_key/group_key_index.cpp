@@ -92,7 +92,7 @@ GroupKeyIndex::GroupKeyIndex(const std::shared_ptr<const BaseDictionarySegment>&
   			     pmr_vector<ChunkOffset> positions)
     : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
       _indexed_segment(segment_to_index), _value_start_offsets(std::move(value_start_offsets)), _positions(std::move(positions)) {
-  std::cout << "Called copy constructor." << std::endl;
+  //std::cout << "Called copy constructor." << std::endl;
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {

@@ -360,7 +360,7 @@ int main() {
 
            const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
            sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
-           std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
+           //std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
         }
 
         const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
@@ -380,7 +380,7 @@ int main() {
 
             const auto  migrated_index = added_index->copy_using_allocator(allocator);
             sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
-            std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
+            //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
           }
         }
 
