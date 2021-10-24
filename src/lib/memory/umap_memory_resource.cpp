@@ -32,8 +32,6 @@ static void* extent_alloc_hook(extent_hooks_t *extent_hooks, void *new_addr, siz
   }
 
   Assert(offset + size < target_size, "exceeded");
-  Assert(getenv("UMAP_BUFSIZE"), "Environment variable UMAP_BUFSIZE should be set for umap to work as expected");
-  Assert(getenv("TIERING_DEV"), "Environment variable TIERING_DEV should be set to specify the device");
 
   static int fd = 0;
   static void *base_addr;

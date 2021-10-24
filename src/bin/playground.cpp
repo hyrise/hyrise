@@ -252,6 +252,13 @@ int main() {
   memory_consumption_csv_file << "CONFIG_NAME, MEMORY_CONSUMPTION,INDEX,TABLE\n";
   performance_csv_file << "CONFIG_NAME,QUERY_ID,EXECUTION_TIME\n";
 
+  Assert(getenv("UMAP_BUFSIZE") != NULL, "Environment variable UMAP_BUFSIZE should be set for umap to work as expected");
+  Assert(getenv("TIERING_DEV") != NULL, "Environment variable TIERING_DEV should be set to specify the device");
+
+  // Create new ploymorphic resource
+  static auto global_umap_resource = new UmapMemoryResource("global");
+  (void) global_umap_resource;
+
   for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
     const auto conf_path = entry.path();
     const auto conf_name = conf_path.stem();
@@ -275,10 +282,6 @@ int main() {
     // Apply specified configuration schema
     std::cout << "Preparing table (encoding, sorting, ...) with given configuration: " << conf_name << " ... ";
     Timer preparation_timer;
-
-    // Create new ploymorphic resource
-    static auto global_umap_resource = new UmapMemoryResource("global");
-    (void) global_umap_resource;
 
     const auto sorted_table = std::make_shared<Table>(table->column_definitions(), 
       TableType::Data, CHUNK_SIZE, UseMvcc::No);
