@@ -700,7 +700,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
         try {
           values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
         } catch (boost::bad_lexical_cast&) {
-          Fail("Cannot cast as " + std::string{magic_enum::enum_name(cast_expression.data_type())});
+          std::stringstream error_message;
+          error_message << "Cannot cast '" << argument_value << "' as "
+                        << magic_enum::enum_name(cast_expression.data_type());
+          Fail(error_message.str());
         }
       }
     }
