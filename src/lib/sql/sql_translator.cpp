@@ -1762,7 +1762,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (expr.columnType.data_type == hsql::DataType::DATE) {
         AssertInput(source_data_type == DataType::String, "Cannot cast " + left->as_column_name() + " as Date");
         // We do not know if an expression to be casted other than a ValueExpression actually contains dates, and we
-        // cannot check this later due to the lack of a Date DataType
+        // cannot check this later due to the lack of a Date data type
         AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as Date");
         const auto date_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
         const auto date = string_to_date(std::string{date_string});
