@@ -17,6 +17,7 @@ extern "C" {
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
+#include "utils/date_utils.hpp"
 
 namespace opossum {
 
@@ -59,16 +60,6 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   const auto [status, table] = sql_executor.execute(sql, expected_result_table);
   Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail");
   return true;
-}
-
-std::string TPCHBenchmarkItemRunner::_calculate_date(boost::gregorian::date date, int months, int days) {
-  date = date + boost::gregorian::months(months) + boost::gregorian::days(days);
-
-  std::stringstream output;
-  output << static_cast<short>(date.year()) << "-" << std::setw(2) << std::setfill('0')  // NOLINT
-         << static_cast<short>(date.month())                                             // NOLINT
-         << "-" << std::setw(2) << std::setfill('0') << static_cast<short>(date.day());  // NOLINT
-  return output.str();
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
@@ -150,9 +141,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
       std::uniform_int_distribution<> date_diff_dist{60, 120};
-      const auto date = _calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -date_diff_dist(random_engine));
+      const auto date =
+          date_interval(boost::gregorian::date{1998, 12, 01}, -date_diff_dist(random_engine), DatetimeComponent::Day);
 
-      parameters.emplace_back("'"s + date + "'");
+      parameters.emplace_back("'"s + date_to_string(date) + "'");
       break;
     }
 
@@ -172,22 +164,23 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 3 - 1: {
       const auto* const segment = c_mseg_set.list[segment_dist(random_engine)].text;
       std::uniform_int_distribution<> date_diff_dist{0, 30};
-      const auto date = _calculate_date(boost::gregorian::date{1995, 03, 01}, 0, date_diff_dist(random_engine));
+      const auto date =
+          date_interval(boost::gregorian::date{1995, 03, 01}, date_diff_dist(random_engine), DatetimeComponent::Day);
 
       parameters.emplace_back("'"s + segment + "'");
-      parameters.emplace_back("'"s + date + "'");
-      parameters.emplace_back("'"s + date + "'");
+      parameters.emplace_back("'"s + date_to_string(date) + "'");
+      parameters.emplace_back("'"s + date_to_string(date) + "'");
       break;
     }
 
     case 4 - 1: {
       std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
+      const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
@@ -196,20 +189,20 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + region + "'");
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
     case 6 - 1: {
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       static std::uniform_int_distribution<> discount_dist{2, 9};
       const auto discount = 0.01f * static_cast<float>(discount_dist(random_engine));
@@ -217,8 +210,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);
 
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(quantity));
@@ -275,11 +268,11 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 10 - 1: {
       std::uniform_int_distribution<> date_diff_dist{0, 23};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 3));
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
+      const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
@@ -302,13 +295,13 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + shipmode1 + "'");
       parameters.emplace_back("'"s + shipmode2 + "'");
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
@@ -325,11 +318,11 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 14 - 1: {
       std::uniform_int_distribution<> date_diff_dist{0, 5 * 12};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 1);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       break;
     }
 
@@ -338,8 +331,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
+      const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
       // By manually replacing the `?` from tpch_queries.cpp, we can keep all queries in a readable form there.
@@ -349,8 +342,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&
                    std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),
                   "TPC-H 15 string has been modified");
-      query_15.replace(BEGIN_DATE_OFFSET, 10, begin_date);
-      query_15.replace(END_DATE_OFFSET, 10, end_date);
+      query_15.replace(BEGIN_DATE_OFFSET, 10, date_to_string(begin_date));
+      query_15.replace(END_DATE_OFFSET, 10, date_to_string(end_date));
 
       const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
       boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
@@ -419,13 +412,13 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const color = colors.list[color_dist(random_engine)].text;
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
-      const auto end_date = _calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
+      const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
+      const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
       parameters.emplace_back("'"s + color + "%'");
-      parameters.emplace_back("'"s + begin_date + "'");
-      parameters.emplace_back("'"s + end_date + "'");
+      parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
+      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
       parameters.emplace_back("'"s + nation + "'");
       break;
     }

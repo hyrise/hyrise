@@ -12,6 +12,7 @@ from scipy.stats import ttest_ind
 p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
+min_iterations_disabling_min_runtime = 100
 
 
 def format_diff(diff):
@@ -46,7 +47,13 @@ def calculate_and_format_p_value(old_durations, new_durations):
 
     old_runtime = sum(runtime for runtime in old_durations)
     new_runtime = sum(runtime for runtime in new_durations)
-    if old_runtime < min_runtime_ns or new_runtime < min_runtime_ns:
+
+    # The results for a query are considered to be statistically not significant if the runtime is too short. However,
+    # if the item has been executed > `min_iterations_disabling_min_runtime` times, it is considered significant.
+    if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns) and (
+        len(old_durations) < min_iterations_disabling_min_runtime
+        or len(new_durations) < min_iterations_disabling_min_runtime
+    ):
         is_significant = False
         return "(run time too short)"
     elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
@@ -347,9 +354,9 @@ if github_format:
         + "```diff\n"
     )
     for line in table_string.splitlines():
-        if (green_control_sequence + "+" in line) or ("| Sum " in line and green_control_sequence in line):
+        if green_control_sequence in line:
             table_string_reformatted += "+"
-        elif (red_control_sequence + "-" in line) or ("| Sum " in line and red_control_sequence in line):
+        elif red_control_sequence in line:
             table_string_reformatted += "-"
         else:
             table_string_reformatted += " "

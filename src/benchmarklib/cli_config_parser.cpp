@@ -29,6 +29,11 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
   std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
             << std::endl;
+  const auto data_preparation_cores = parse_result["data_preparation_cores"].as<uint32_t>();
+  const auto number_of_data_preparation_cores_str =
+      (data_preparation_cores == 0) ? "all available" : std::to_string(data_preparation_cores);
+  std::cout << "- Data preparation will use " << number_of_data_preparation_cores_str
+            << (data_preparation_cores == 1 ? " core" : " cores") << std::endl;
 
   const auto clients = parse_result["clients"].as<uint32_t>();
   std::cout << "- " + std::to_string(clients) + " simulated ";
@@ -137,15 +142,23 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   if (!dep_mining_plugin_path_str.empty()) {
     dependency_mining_plugin_path = dep_mining_plugin_path_str;
   }
-
-  return BenchmarkConfig{benchmark_mode,   chunk_size,
-                         *encoding_config, indexes,
-                         max_runs,         timeout_duration,
-                         warmup_duration,  output_file_path,
-                         enable_scheduler, cores,
-                         clients,          enable_visualization,
-                         verify,           cache_binary_tables,
-                         metrics,          dependency_mining_plugin_path};
+  return BenchmarkConfig{benchmark_mode,
+                         chunk_size,
+                         *encoding_config,
+                         indexes,
+                         max_runs,
+                         timeout_duration,
+                         warmup_duration,
+                         output_file_path,
+                         enable_scheduler,
+                         cores,
+                         data_preparation_cores,
+                         clients,
+                         enable_visualization,
+                         verify,
+                         cache_binary_tables,
+                         metrics,
+                         dependency_mining_plugin_path};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

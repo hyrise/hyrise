@@ -25,6 +25,7 @@ enum class ExpressionType {
   Exists,
   Extract,
   Function,
+  Interval,
   List,
   Logical,
   Placeholder,

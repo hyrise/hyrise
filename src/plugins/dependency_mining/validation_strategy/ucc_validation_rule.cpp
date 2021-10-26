@@ -74,7 +74,7 @@ bool get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results, 
         results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
       }
       auto& result = results[result_id];
-      if (result.row_id != NULL_ROW_ID) {
+      if (!(result.row_id == NULL_ROW_ID)) {
         return false;
       }
       results[result_id].row_id = row_id;

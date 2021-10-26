@@ -33,7 +33,6 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
          config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
 
-
 // The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 // join_sort_merge.hpp. This is how the join works:
 // -> The input tables are materialized and clustered into a specified number of clusters.
@@ -713,7 +712,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
   }
-
 
   // Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
   // This method adds those rows from the left table to the output that do not find a join partner.
