@@ -149,7 +149,7 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
     determinant_expressions.reserve(determinant_column_ids.size());
     dependent_expressions.reserve(dependent_column_ids.size());
 
-    for (const auto determinant_column_id : determinant_column_ids) {
+    for (const auto& determinant_column_id : determinant_column_ids) {
       for (const auto& output_expression : output_ex) {
         const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
         if (!column_expression || *column_expression->original_node.lock() != *this) {
@@ -162,7 +162,7 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
       }
     }
 
-    for (const auto dependent_column_id : dependent_column_ids) {
+    for (const auto& dependent_column_id : dependent_column_ids) {
       for (const auto& output_expression : output_ex) {
         const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
         if (!column_expression || *column_expression->original_node.lock() != *this) {
@@ -204,7 +204,7 @@ std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
     ExpressionList dependent_expressions;
     dependent_expressions.reserve(dependent_column_ids.size());
 
-    for (const auto dependent_column_id : dependent_column_ids) {
+    for (const auto& dependent_column_id : dependent_column_ids) {
       for (const auto& output_expression : output_ex) {
         const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
         if (!column_expression || *column_expression->original_node.lock() != *this) {
