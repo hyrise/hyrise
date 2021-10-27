@@ -21,6 +21,7 @@ add_executable(
     operators/union_all_benchmark.cpp
     ping_data_micro_benchmark.cpp
     ping_data_micro_benchmark_storage.cpp
+    ping_data_micro_benchmark_storage_short.cpp
     ping_data_multi_column_index_benchmark.cpp
     tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
