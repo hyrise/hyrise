@@ -109,7 +109,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     return std::make_shared<LQPUniqueConstraints>();
   }
 
-
   // Usually, the left operand is part of the left input's output expressions, and the other operand is part of the
   // right input's output expressions. Sometimes, however, this is not the case.
   // To not omit valid unique constraints, we swap both operands when interchanged.

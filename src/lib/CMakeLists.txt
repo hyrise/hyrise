@@ -61,6 +61,8 @@ set(
     expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
+    expression/interval_expression.cpp
+    expression/interval_expression.hpp
     expression/is_null_expression.cpp
     expression/is_null_expression.hpp
     expression/list_expression.cpp
@@ -566,6 +568,8 @@ set(
     utils/column_ids_after_pruning.cpp
     utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
+    utils/date_utils.cpp
+    utils/date_utils.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
@@ -654,6 +658,7 @@ set(
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}

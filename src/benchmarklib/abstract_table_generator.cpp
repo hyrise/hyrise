@@ -7,6 +7,8 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterate.hpp"
@@ -32,6 +34,13 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
 
 void AbstractTableGenerator::generate_and_store() {
   Timer timer;
+
+  // Encoding table data and generating table statistics are time consuming processes. To reduce the required execution
+  // time, we execute these data preparation steps in a multi-threaded way. We store the current scheduler here in case
+  // a single-threaded scheduler is used. After data preparation, we switch back to the initially used scheduler.
+  const auto initial_scheduler = Hyrise::get().scheduler();
+  Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::cout << "- Loading/Generating tables " << std::endl;
   auto table_info_by_name = generate();
@@ -72,16 +81,15 @@ void AbstractTableGenerator::generate_and_store() {
     } else {
       std::cout << "- Sorting tables" << std::endl;
 
-      // We do not use JobTasks here (and in the rest of this file) because we want this part to be multi-threaded even
-      // if Hyrise uses no scheduler.
-      auto threads = std::vector<std::thread>{};
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(sort_order_by_table.size());
       for (const auto& sort_order_pair : sort_order_by_table) {
         // Cannot use structured binding here as it cannot be captured in the lambda:
         // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#2313
         const auto& table_name = sort_order_pair.first;
         const auto& column_name = sort_order_pair.second;
 
-        threads.emplace_back([&] {
+        const auto sort_table = [&]() {
           auto& table = table_info_by_name[table_name].table;
           const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
           const auto sort_column_id = table->column_id_by_name(column_name);
@@ -173,9 +181,10 @@ void AbstractTableGenerator::generate_and_store() {
           output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
                  << ")\n";
           std::cout << output.str() << std::flush;
-        });
+        };
+        jobs.emplace_back(std::make_shared<JobTask>(sort_table));
       }
-      for (auto& thread : threads) thread.join();
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
       metrics.sort_duration = timer.lap();
       std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
@@ -193,12 +202,13 @@ void AbstractTableGenerator::generate_and_store() {
   {
     std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
 
-    auto threads = std::vector<std::thread>{};
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(table_info_by_name.size());
     for (auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
       auto& table_info = table_info_by_name_pair.second;
 
-      threads.emplace_back([&] {
+      const auto encode_table = [&]() {
         Timer per_table_timer;
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
@@ -207,10 +217,10 @@ void AbstractTableGenerator::generate_and_store() {
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
                << per_table_timer.lap_formatted() << ")\n";
         std::cout << output.str() << std::flush;
-      });
+      };
+      jobs.emplace_back(std::make_shared<JobTask>(encode_table));
     }
-
-    for (auto& thread : threads) thread.join();
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
     metrics.encoding_duration = timer.lap();
     std::cout << "- Encoding tables and generating pruning statistic done ("
@@ -261,21 +271,23 @@ void AbstractTableGenerator::generate_and_store() {
   {
     std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
     auto& storage_manager = Hyrise::get().storage_manager;
-    auto threads = std::vector<std::thread>{};
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(table_info_by_name.size());
     for (auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
       auto& table_info = table_info_by_name_pair.second;
 
-      threads.emplace_back([&] {
+      const auto add_table = [&]() {
         Timer per_table_timer;
         if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
         storage_manager.add_table(table_name, table_info.table);
         const auto output =
             std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
         std::cout << output << std::flush;
-      });
+      };
+      jobs.emplace_back(std::make_shared<JobTask>(add_table));
     }
-    for (auto& thread : threads) thread.join();
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
     metrics.store_duration = timer.lap();
 
@@ -323,6 +335,10 @@ void AbstractTableGenerator::generate_and_store() {
   } else {
     std::cout << "- No indexes created as --indexes was not specified or set to false" << std::endl;
   }
+
+  // Set scheduler back to previously used scheduler.
+  Hyrise::get().topology.use_default_topology(_benchmark_config->cores);
+  Hyrise::get().set_scheduler(initial_scheduler);
 }
 
 std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
