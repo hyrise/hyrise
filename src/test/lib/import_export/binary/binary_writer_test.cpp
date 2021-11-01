@@ -60,6 +60,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
+/*
 TEST_F(BinaryWriterTest, FSSTSingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -123,6 +124,7 @@ TEST_F(BinaryWriterTest, FSSTMultipleChunks) {
   auto read_table = BinaryParser::parse(filename);
   EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }
+*/
 
 TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
