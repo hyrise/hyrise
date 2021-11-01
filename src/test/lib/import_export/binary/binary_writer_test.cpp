@@ -60,7 +60,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(BinaryWriterTest, DISABLED_FSSTSingleChunk /* #1717 */) {
+TEST_F(BinaryWriterTest, FSSTSingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
