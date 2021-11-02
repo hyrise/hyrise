@@ -32,7 +32,7 @@ namespace hana = boost::hana;
 namespace detail {
 
 // clang-format off
-#define DATA_TYPE_INFO                  \
+#define DATA_TYPE_INFO                 \
   ((int32_t,    Int,        "int"))    \
   ((int64_t,    Long,       "long"))   \
   ((float,      Float,      "float"))  \

@@ -1656,7 +1656,6 @@ TEST_F(SQLTranslatorTest, Extract) {
 
   std::shared_ptr<opossum::AbstractLQPNode> actual_lqp;
   std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;
-  ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Year, "1993-08-01")), DummyTableNode::make());
 
   for (const auto& component : components) {
     std::stringstream query_str;
@@ -3009,6 +3008,93 @@ TEST_F(SQLTranslatorTest, ImportStatement) {
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(SQLTranslatorTest, DateLiteral) {
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-35';"), InvalidInputException);
+
+  const auto value_expression = expression_vector(value_(pmr_string{"2000-01-31"}));
+  // clang-format off
+  const auto expected_lqp =
+    AliasNode::make(value_expression, std::vector<std::string>{"2000-01-31"},
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make()));
+  // clang-format on
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DATE '2000-01-31';");
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, IntervalLiteral) {
+  // Though most of these queries are valid SQL, we want to ensure to reject expressions Hyrise cannot handle
+  EXPECT_THROW(sql_to_lqp_helper("SELECT INTERVAL '3' day from int_string;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT * from int_string WHERE b = INTERVAL '3' day;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT 'abc' + 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT 1 + 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-01' / 3 days;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DATE '2001-01-01' + 1 second;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT INTERVAL '1' day + INTERVAL '1' day;"), InvalidInputException);
+
+  // clang-format off
+  const auto expected_lqp =
+    ProjectionNode::make(expression_vector(value_(pmr_string{"2000-01-31"})),
+      DummyTableNode::make());
+  // clang-format on
+
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2000-01-01' + INTERVAL '30' day;");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '2002-01-31' - INTERVAL '2 years';");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT '1999-12-31' + 1 month;");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(SQLTranslatorTest, CastStatement) {
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('abc' AS DATE)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(1 AS DATE)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(a AS DATE) FROM int_string"), InvalidInputException);
+  // We do not have a real Date data type, so we cannot pass this cast anywhere else.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(b AS DATE) FROM int_string"), InvalidInputException);
+  // This is valid SQL, but we do not have a DateTime data type
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01 00:00:00' AS DATETIME)"), InvalidInputException);
+
+  {
+    const auto cast_expression = expression_vector(cast_(value_(pmr_string{'1'}), DataType::Int));
+    // clang-format off
+    const auto expected_lqp =
+      ProjectionNode::make(cast_expression,
+        DummyTableNode::make());
+    // clang-format on
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('1' as INT);");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // Omit the cast when source and target data type are identical
+    const auto value_expression = expression_vector(value_(pmr_string{'1'}));
+    // clang-format off
+    const auto expected_lqp =
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make());
+    // clang-format on
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('1' as TEXT);");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // Dates need to be resolved, as we do not have a Date DataType
+    const auto value_expression = expression_vector(value_(pmr_string{"2000-01-01"}));
+    // clang-format off
+    const auto expected_lqp =
+      ProjectionNode::make(value_expression,
+        DummyTableNode::make());
+    // clang-format on
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('2000-01-01' as DATE);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
