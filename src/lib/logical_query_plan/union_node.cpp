@@ -19,8 +19,10 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
-  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
-         "Input Expressions must match");
+  if (set_operation_mode != SetOperationMode::Positions) {
+    Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
+           "Input Expressions must match");
+  }
   return left_input()->output_expressions();
 }
 
