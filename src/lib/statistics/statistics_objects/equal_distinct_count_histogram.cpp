@@ -56,15 +56,15 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   // allows us to pre-size the robin_map which helps a lot with performance (no resizes for large maps) and memory
   // consumption (as we can avoid pre-sizes all maps with the table size, which is often by far too large).
 
-  // The following values are defensive defaults in case we cannot get good estimates (i.e., no dictionary-encoded data).
+  // Use a defensive default in case we cannot get a better estimate (i.e., no dictionary-encoded data).
   auto estimated_distinct_value_count = size_t{1'024};
+
   auto max_load_factor = std::optional<float>{}; 
   // To use a monotonic buffer pool, which can be advantegous for string maps.
   auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
-
   const auto chunk_count = table.chunk_count();
 
-  // Meta table do not have chunks, we thus check for having at least one chunk.
+  // Meta tables do not have chunks, we thus need to check for having a chunk count larger zero.
   if (chunk_count > 0 && table.get_chunk(ChunkID{0})) {
     // Check if first chunk is dictionary-encoded.
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
@@ -93,7 +93,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     if (!chunk) continue;
 
     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
-  }
+  
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
