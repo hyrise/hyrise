@@ -15,7 +15,10 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
+NodeQueueScheduler::NodeQueueScheduler() {
+  _worker_id_allocator = std::make_shared<UidAllocator>();
+  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 2;
+}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
