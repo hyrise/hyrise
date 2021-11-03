@@ -11,19 +11,17 @@ namespace opossum {
 JoinToSemiCandidateRule::JoinToSemiCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
   if (join_node->join_mode != JoinMode::Inner) return {};
 
   const auto& predicates = join_node->join_predicates();
   if (predicates.size() != 1) return {};
-
-  const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
-  if (!predicate) return {};
+  const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
   std::vector<DependencyCandidate> candidates;
-  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
-    if (expression->type != ExpressionType::LQPColumn) return {};
-    const auto join_column_id = resolve_column_expression(expression);
+  for (const auto& input : inputs_to_visit) {
+    // _inputs_to_visit() ensured that (i) the input has 1 required column (i.e., join column) and the column is not used later
+    const auto join_column_id = resolve_column_expression(required_expressions_by_node.at(input).begin());
     if (join_column_id == INVALID_TABLE_COLUMN_ID) continue;
     candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
   }

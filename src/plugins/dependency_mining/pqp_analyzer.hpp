@@ -26,8 +26,7 @@ class PQPAnalyzer {
  private:
   void _add_if_new(DependencyCandidate& candidate);
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
-  std::vector<DependencyCandidate> _known_candidates;
-  //std::unordered_set<DependencyCandidate> _known_candidates;
+  std::unordered_set<DependencyCandidate> _known_candidates;
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _rules;
 };
 

@@ -11,7 +11,7 @@ namespace opossum {
 JoinToPredicateCandidateRule::JoinToPredicateCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
   if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi) {
     return {};
@@ -22,12 +22,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     return {};
   }
 
-  // determine if we need to check both inputsa
-  std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-  inputs.emplace_back(join_node->right_input());
-  if (join_node->join_mode == JoinMode::Inner) {
-    inputs.emplace_back(join_node->left_input());
-  }
+  // determine if we need to check both inputs
+  const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
 
   const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
   if (!predicate) return {};
@@ -43,7 +39,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
 
 
   // check for given inputs
-  for (const auto& input : inputs) {
+  for (const auto& input : inputs_to_visit) {
       std::vector<DependencyCandidate> my_candidates;
       bool abort = false;
       std::string candidate_table;
@@ -55,8 +51,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
           case LQPNodeType::StaticTable:
             return LQPVisitation::DoNotVisitInputs;
           case LQPNodeType::Predicate: {
-            const auto predicate_node = static_pointer_cast<PredicateNode>(node);
-            const auto scan_predicate = predicate_node->predicate();
+            const auto& predicate_node = static_cast<const PredicateNode&>(*node);
+            const auto scan_predicate = predicate_node.predicate();
             const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
             if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
               const auto scan_inputs = predicate_expression->arguments;
