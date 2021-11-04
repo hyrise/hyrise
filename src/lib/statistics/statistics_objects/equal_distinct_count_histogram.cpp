@@ -24,9 +24,9 @@ using namespace opossum;  // NOLINT
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+using ValueDistributionMap = tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
+                                            std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>,
+                                            std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
@@ -59,7 +59,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   // Use a defensive default in case we cannot get a better estimate (i.e., no dictionary-encoded data).
   auto estimated_distinct_value_count = size_t{1'024};
 
-  auto max_load_factor = std::optional<float>{}; 
+  auto max_load_factor = std::optional<float>{};
   // To use a monotonic buffer pool, which can be advantegous for string maps.
   auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
   const auto chunk_count = table.chunk_count();
@@ -67,18 +67,21 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   // Meta tables do not have chunks, we thus need to check for having a chunk count larger zero.
   if (chunk_count > 0 && table.get_chunk(ChunkID{0})) {
     // Check if first chunk is dictionary-encoded.
-    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
-      estimated_distinct_value_count = std::max(table.row_count(), static_cast<size_t>(1.1 * static_cast<double>(chunk_count * dictionary_segment->unique_values_count())));
+    if (const auto* dictionary_segment =
+            dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
+      estimated_distinct_value_count = std::max(
+          table.row_count(),
+          static_cast<size_t>(1.1 * static_cast<double>(chunk_count * dictionary_segment->unique_values_count())));
       // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
       // resize will happen.
       max_load_factor = 0.9f;
-      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
+      pool = std::make_unique<std::pmr::monotonic_buffer_resource>(static_cast<size_t>(
+          1.2 * static_cast<double>(estimated_distinct_value_count * sizeof(std::pair<T, HistogramCountType>))));
     }
-  } 
+  }
 
   if (!pool) {
     // In case we are not able to estimate the cardinality, we use a memory pool of 1 MiB.
-    constexpr auto 1_MiB = 1'048'576;
     pool = std::make_unique<std::pmr::monotonic_buffer_resource>(1'048'576);
   }
 
@@ -93,7 +96,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     if (!chunk) continue;
 
     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
-  
+  }
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
