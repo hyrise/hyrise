@@ -205,6 +205,7 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
+    lib/utils/date_utils_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp

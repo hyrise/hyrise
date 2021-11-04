@@ -2,6 +2,7 @@
 
 exitcode=0
 
+# Run cpplint
 find src \( -iname "*.cpp" -o -iname "*.hpp" \) -a -not -path "src/lib/utils/boost_curry_override.hpp" -a -not -path "src/lib/utils/boost_bimap_core_override.hpp" -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
@@ -52,7 +53,6 @@ fi
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
 regex='#include .*\.cpp'
 namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 grep -rHn "$regex" | grep -v NOLINT)
-
 let "exitcode |= ! $?"
 while IFS= read -r line
 do
@@ -62,6 +62,7 @@ do
 	fi
 done <<< "$namecheck"
 
+# Check that all cpp and hpp files in src/ are listed in the corresponding CMakeLists.txt
 for dir in src/*
 do
 	for file in $(find $dir -name *.cpp -o -name *.hpp)
