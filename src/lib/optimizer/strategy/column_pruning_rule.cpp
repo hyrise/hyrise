@@ -369,6 +369,7 @@ bool try_join_to_scan_rewrite(
               const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
               const auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
               replace_node(join, predicate_node, join_column_expression);
+              //std::cout << "rewrote Join2Pred (i)" << std::endl;
             });
           }
         }
@@ -422,6 +423,7 @@ bool try_join_to_scan_rewrite(
                 const auto predicate_node =
                     PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
                 replace_node(join, predicate_node, join_column_expression);
+                //std::cout << "rewrote Join2Pred (ii)" << std::endl;
               });
             }
           }
@@ -440,7 +442,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   //std::cout << 438 << std::endl;
   //std::cout << "\ntry rewrite " << join->description() << " with IND" << std::endl;
   auto unused_input = join->input(unused_side);
-
+  // std::cout << " try_eliminate_join " << unused_input->description() << std::endl;
 
   if (unused_input->output_count() > 1) return;
   //std::cout << 441 << std::endl;
@@ -454,6 +456,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
           unused_input = node;
         } return LQPVisitation::DoNotVisitInputs;
         default: {
+          // std::cout << " abort " << node->description() << std::endl;
           abort = true;
         } return LQPVisitation::DoNotVisitInputs;
       }
@@ -461,6 +464,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
 
   if (abort  || unused_input->type != LQPNodeType::StoredTable) return;
   //std::cout << 445 << std::endl;
+  // std::cout << " 466 " << unused_input->description() << std::endl;
   const auto& stored_table_node = static_cast<StoredTableNode&>(*unused_input);
   //std::cout << 447 << std::endl;
   const auto used_side = unused_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -481,10 +485,11 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
     if (*dependent != *used_side_join_column_expression) continue;
     //std::cout << 462 << std::endl;
     if (determinant.table_name == unused_side_table_name && determinant.column_id == unused_side_column_id) {
-      //std::cout << "rewrite " << join->description() << "    with " << ind << std::endl;
+      // std::cout << "rewrite " << join->description() << "    with " << ind << std::endl;
       join->set_left_input(used_input);
       join->set_right_input(nullptr);
       lqp_remove_node(join);
+      // std::cout << "rewrote JoinElimination" << std::endl;
       //std::cout << 467 << std::endl;
       return;
     }
@@ -502,6 +507,7 @@ void try_join_to_semi_rewrite(
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   if (join_node->join_mode != JoinMode::Inner) return;
+  //std::cout << join_node->description() << std::endl;
 
   // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
@@ -556,8 +562,8 @@ void try_join_to_semi_rewrite(
       const auto temp = join_node->left_input();
       join_node->set_left_input(join_node->right_input());
       join_node->set_right_input(temp);
-      join_node->comment = "Rewritten";
       flipped_inputs = true;
+      //std::cout << "rewrote Join2Semi (i)" << std::endl;
       //std::cout << "rewrite " << join_node->description() << " with ";
       //for (const auto& e : equals_predicate_expressions_left) {
       //  std::cout << " " << e->description();
@@ -567,7 +573,7 @@ void try_join_to_semi_rewrite(
     if (!right_input_is_used &&
         join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
       join_node->join_mode = JoinMode::Semi;
-      join_node->comment = "Rewritten";
+      //std::cout << "rewrote Join2Semi (ii)" << std::endl;
       //std::cout << "rewrite " << join_node->description() << " with ";
       //for (const auto& e : equals_predicate_expressions_right) {
       //  std::cout << " " << e->description();

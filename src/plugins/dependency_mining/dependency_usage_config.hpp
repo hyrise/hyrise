@@ -8,6 +8,8 @@ class DependencyUsageConfig {
   constexpr static bool ENABLE_JOIN_TO_SEMI = true;
   constexpr static bool ENABLE_JOIN_TO_PREDICATE = true;
   constexpr static bool ENABLE_JOIN_ELIMINATION = true;
+
+  constexpr static bool ALLOW_PRESET_CONSTRAINTS = false;
 };
 
 }

@@ -15,6 +15,8 @@
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
+#include "../plugins/dependency_mining/dependency_usage_config.hpp"
+
 
 namespace opossum {
 
@@ -194,7 +196,9 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add constraints if defined by the benchmark
    */
-  // _add_constraints(table_info_by_name);
+  if constexpr (DependencyUsageConfig::ALLOW_PRESET_CONSTRAINTS) {
+    _add_constraints(table_info_by_name);
+  }
 
   /**
    * Encode the tables
