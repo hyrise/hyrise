@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_set>
 
+#include "../plugins/dependency_mining/dependency_usage_config.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -27,7 +28,6 @@
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
-#include "../plugins/dependency_mining/dependency_usage_config.hpp"
 
 namespace opossum {
 

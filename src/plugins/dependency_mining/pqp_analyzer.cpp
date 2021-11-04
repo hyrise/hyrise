@@ -4,13 +4,13 @@
 #include "candidate_strategy/join_elimination_candidate_rule.hpp"
 #include "candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "candidate_strategy/join_to_semi_candidate_rule.hpp"
+#include "dependency_usage_config.hpp"
+#include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/pqp_utils.hpp"
 #include "utils/timer.hpp"
-#include "expression/expression_functional.hpp"
-#include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "dependency_usage_config.hpp"
 
 namespace {
 
@@ -46,7 +46,8 @@ void gather_expressions_not_computed_by_expression_evaluator(
 }
 
 ExpressionUnorderedSet gather_locally_required_expressions(
-    const std::shared_ptr<const AbstractLQPNode>& node, const ExpressionUnorderedSet& expressions_required_by_consumers) {
+    const std::shared_ptr<const AbstractLQPNode>& node,
+    const ExpressionUnorderedSet& expressions_required_by_consumers) {
   // Gathers all expressions required by THIS node, i.e., expressions needed by the node to do its job. For example, a
   // PredicateNode `a < 3` requires the LQPColumn a.
   auto locally_required_expressions = ExpressionUnorderedSet{};
@@ -228,14 +229,16 @@ void recursively_gather_required_expressions(
 
 }  // namespace
 
-
 namespace opossum {
 
 PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue) : _queue(queue) {
-  if constexpr (DependencyUsageConfig::ENABLE_GROUPBY_REDUCTION) add_rule(std::make_unique<DependentGroupByCandidateRule>());
+  if constexpr (DependencyUsageConfig::ENABLE_GROUPBY_REDUCTION)
+    add_rule(std::make_unique<DependentGroupByCandidateRule>());
   if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) add_rule(std::make_unique<JoinToSemiCandidateRule>());
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE) add_rule(std::make_unique<JoinToPredicateCandidateRule>());
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) add_rule(std::make_unique<JoinEliminationCandidateRule>());
+  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE)
+    add_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION)
+    add_rule(std::make_unique<JoinEliminationCandidateRule>());
 }
 
 void PQPAnalyzer::run() {
@@ -264,7 +267,8 @@ void PQPAnalyzer::run() {
 
     std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
     std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> outputs_visited_by_node;
-    if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI || DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE || DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
+    if (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI || DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE ||
+        DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
       // Add top-level columns that need to be included as they are the actual output
       const auto output_expressions = lqp_root->output_expressions();
       required_expressions_by_node[lqp_root].insert(output_expressions.cbegin(), output_expressions.cend());

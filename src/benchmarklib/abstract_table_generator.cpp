@@ -1,5 +1,6 @@
 #include "abstract_table_generator.hpp"
 
+#include "../plugins/dependency_mining/dependency_usage_config.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -15,8 +16,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
-#include "../plugins/dependency_mining/dependency_usage_config.hpp"
-
 
 namespace opossum {
 

@@ -14,7 +14,9 @@ namespace opossum {
 JoinEliminationCandidateRule::JoinEliminationCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,
+    const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
+        required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
   if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi) {
     return {};

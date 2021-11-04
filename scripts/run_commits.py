@@ -9,13 +9,15 @@ def main():
     # exec_path = "../scripts/visualize_commit.sh"
     exec_path = "../scripts/benchmark_commit.sh"
 
-    configs = ["all_on", "only_dgr", "only_jts", "only_join2pred"]
-    commits = [
-        "4a0657bb03ce5555147b6e8bb87f904e1f5feabc",
-        "8bf352ef02332572002f6bf20d8211afbf03c014",
-        "604a3119cd1a874c43a46e25627154ab2c8cc145",
-        "e961ab2c8d9c1caa856252d9cd7197879e4bef1d",
-    ]
+    commits = {
+        "all_off": "f4d9326910e5b35a8002cac29f6a587841a6feb5",
+        "only_dgr": "6f74487cb8f9249c785706f959252bd765a78e6c",
+        "only_jts": "8c4056246a10f4731e2b66d5c194604d3ea6c062",
+        "only_join2pred": "d1ae4ded3457bc01b5b8ca7271be1dbf1e82d61e",
+        "only_join_elim": "95b137541cd01090c195ea2d0309c8f25bc00b38",
+        "all_on": "79cf1841ac54bfa2da036a46c14f1116175da487",
+        "dgr_jts_join2pred": "ccb5064ce1cb2c54249246d9cdd07ec5259315b4",
+    }
 
     cached_table_dirs = ["imdb_data", "tpch_cached_tables", "tpcds_cached_tables"]
     cached_dir_prefix = ".."
@@ -30,7 +32,7 @@ def main():
             for file_name in files_to_delete:
                 os.remove(os.path.join(cached_table_path, file_name))
 
-    for config, commit in zip(configs, commits):
+    for config, commit in commits.items():
         print(f"\n{config}\t{commit}")
         command = f"numactl -N 1 -m 1 {exec_path} {commit} {config}"
         with Popen(command, shell=True) as p:
