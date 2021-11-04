@@ -188,7 +188,10 @@ if paper_mode:
 
 handles, labels = ax_relative_queries.get_legend_handles_labels()
 fig.legend(
-    reversed(handles), reversed(labels), loc="upper center", ncol=10,
+    reversed(handles),
+    reversed(labels),
+    loc="upper center",
+    ncol=10,
 )
 fig.subplots_adjust(wspace=0.5)  # add a little horizontal margin between the charts (0.2 is the default)
 fig.savefig("operator_breakdown.pdf", bbox_inches="tight")

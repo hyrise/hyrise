@@ -99,10 +99,14 @@ class CompareBenchmarkScriptTest:
 
             # Check the latency values for both JSON files
             assert_latency_equals(
-                len(old_successful_runs), [run["duration"] for run in old_successful_runs], fields[3],
+                len(old_successful_runs),
+                [run["duration"] for run in old_successful_runs],
+                fields[3],
             )
             assert_latency_equals(
-                len(new_successful_runs), [run["duration"] for run in new_successful_runs], fields[4],
+                len(new_successful_runs),
+                [run["duration"] for run in new_successful_runs],
+                fields[4],
             )
 
             # Get the divisors for both benchmark files. They differ for Ordered and Shuffled mode.
@@ -133,7 +137,9 @@ class CompareBenchmarkScriptTest:
 
                 if len(old_unsuccessful_runs) > 0:
                     assert_latency_equals(
-                        len(old_unsuccessful_runs), [run["duration"] for run in old_unsuccessful_runs], fields[3],
+                        len(old_unsuccessful_runs),
+                        [run["duration"] for run in old_unsuccessful_runs],
+                        fields[3],
                     )
                     assert_throughput_equals(len(old_unsuccessful_runs), divisors[0], fields[7])
                 else:
@@ -142,7 +148,9 @@ class CompareBenchmarkScriptTest:
 
                 if len(new_unsuccessful_runs) > 0:
                     assert_latency_equals(
-                        len(new_unsuccessful_runs), [run["duration"] for run in new_unsuccessful_runs], fields[4],
+                        len(new_unsuccessful_runs),
+                        [run["duration"] for run in new_unsuccessful_runs],
+                        fields[4],
                     )
                     assert_throughput_equals(len(new_unsuccessful_runs), divisors[1], fields[8])
                 else:
