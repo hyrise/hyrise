@@ -24,6 +24,7 @@
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/semi_join_reduction_rule.hpp"
+#include "strategy/semi_join_removal_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
@@ -104,6 +105,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
+
+  // TODO(Julian) Benchmark after enabling this rule... 18a is reduced to ~600ms runtime
+  // optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   return optimizer;
 }

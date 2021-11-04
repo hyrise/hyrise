@@ -52,9 +52,21 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
+  /**
+   * @returns true if the SemiJoinReductionRule added this node to the LQP.
+   */
+  bool is_reducer() const;
+
+  /**
+   * This function should be called by the SemiJoinReductionRule only.
+   */
+  void mark_as_reducer();
+
   JoinMode join_mode;
 
  protected:
+  bool _is_reducer = false;
+
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
    *         right_unique_constraints that remains valid despite the join operation.

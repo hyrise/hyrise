@@ -6,6 +6,7 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -70,6 +71,14 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     stream << column_name(true, secondary_predicate.column_ids.first) << " ";
     stream << secondary_predicate.predicate_condition << " ";
     stream << column_name(false, secondary_predicate.column_ids.second);
+  }
+
+  // Add comment about semi join reduction if known.
+  if (_mode == JoinMode::Semi && lqp_node) {
+    const auto semi_join_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
+    if (semi_join_node->is_reducer()) {
+      stream << separator << "Semi Reduction";
+    }
   }
 
   return stream.str();

@@ -109,13 +109,21 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     return std::make_shared<LQPUniqueConstraints>();
   }
 
+  // Usually, the left operand is part of the left input's output expressions, and the other operand is part of the
+  // right input's output expressions. Sometimes, however, this is not the case.
+  // To not omit valid unique constraints, we swap both operands when interchanged.
+  auto left_operand = join_predicate->left_operand();
+  auto right_operand = join_predicate->right_operand();
+  if (!left_input()->find_column_id(*left_operand)) {
+    std::swap(left_operand, right_operand);
+  }
+  DebugAssert(left_input()->find_column_id(*left_operand), "Cannot find join operand");
+
   // Check uniqueness of join columns
   bool left_operand_is_unique =
-      !left_unique_constraints->empty() &&
-      contains_matching_unique_constraint(left_unique_constraints, {join_predicate->left_operand()});
-  bool right_operand_is_unique =
-      !right_unique_constraints->empty() &&
-      contains_matching_unique_constraint(right_unique_constraints, {join_predicate->right_operand()});
+      !left_unique_constraints->empty() && contains_matching_unique_constraint(left_unique_constraints, {left_operand});
+  bool right_operand_is_unique = !right_unique_constraints->empty() &&
+                                 contains_matching_unique_constraint(right_unique_constraints, {right_operand});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
@@ -227,6 +235,13 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
+
+void JoinNode::mark_as_reducer() {
+  DebugAssert(join_mode == JoinMode::Semi, "Only semi joins can be marked as reducer join nodes.");
+  _is_reducer = true;
+}
+
+bool JoinNode::is_reducer() const { return _is_reducer; }
 
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
 
