@@ -65,6 +65,8 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/dependency_usage_config.hpp
     dependency_mining/util.cpp
     dependency_mining/util.hpp
+    dependency_mining/validation_state.cpp
+    dependency_mining/validation_state.hpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.cpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.hpp
     dependency_mining/validation_strategy/fd_validation_rule.cpp

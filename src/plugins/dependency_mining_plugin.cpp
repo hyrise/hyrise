@@ -2,6 +2,7 @@
 
 #include "hyrise.hpp"
 #include "utils/timer.hpp"
+#include "dependency_mining/validation_state.hpp"
 
 namespace opossum {
 
@@ -9,38 +10,30 @@ std::string DependencyMiningPlugin::description() const { return "Dependency Min
 
 DependencyMiningPlugin::DependencyMiningPlugin()
     : _queue(std::make_shared<DependencyCandidateQueue>()), _pqp_analyzer(_queue) {
-  //_queue = std::make_shared<DependencyCandidateQueue>();
-  //_pqp_analyzer(_queue);
-  //_dependency_validator(_queue);
 }
 
 void DependencyMiningPlugin::start() {
-  //_queue = std::make_shared<tbb::concurrent_priority_queue<DependencyCandidate>>();
-  //_pqp_analyzer.set_queue(_queue);
-  //_dependency_validator.set_queue(_queue);
+
   Timer timer;
   std::cout << "====================================================\nStarting DependencyMiningPlugin\n";
   _pqp_analyzer.run();
-  if (DO_VALIDATE) {
     std::vector<std::thread> validator_threads;
-    //auto table_constraint_mutexes = tbb::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>>{};
+    const bool is_limited = MAX_VALIDATION_CANDIDATES > -1 || MAX_VALIDATION_TIME > std::chrono::seconds{-1};
+    const bool use_time = is_limited ? MAX_VALIDATION_CANDIDATES < 0 : false;
+    const auto validation_state = std::make_shared<ValidationState>(is_limited, MAX_VALIDATION_CANDIDATES, use_time, MAX_VALIDATION_TIME);
+
     for (size_t validator_id{0}; validator_id < NUM_VALIDATORS; ++validator_id) {
-      //_dependency_validators.emplace_back(std::make_unique<DependencyValidator>(_queue));
       validator_threads.emplace_back(
           [&](size_t i) {
-            const auto validator = std::make_unique<DependencyValidator>(_queue, i);
+            const auto validator = std::make_unique<DependencyValidator>(_queue, i, validation_state);
             validator->start();
           },
           validator_id);
     }
-    /*for (auto& validator : _dependency_validators) {
-      validator->start();
-    }*/
     for (auto& thread : validator_threads) thread.join();
     std::cout << "Clear Cache" << std::endl;
     Hyrise::get().default_pqp_cache->clear();
     Hyrise::get().default_lqp_cache->clear();
-  }
   std::cout << "DependencyMiningPlugin finished in " << timer.lap_formatted() << std::endl;
 }
 

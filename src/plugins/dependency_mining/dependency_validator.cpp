@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id)
-    : _queue(queue), _id(id) {
+DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id, const std::shared_ptr<ValidationState>& validation_state)
+    : _queue(queue), _id(id), _validation_state(validation_state) {
   add_rule(std::make_unique<ODValidationRule>());
   add_rule(std::make_unique<UCCValidationRule>());
   add_rule(std::make_unique<FDValidationRule>());
@@ -24,11 +24,20 @@ void DependencyValidator::start() {
   std::cout << "Run DependencyValidator " + std::to_string(_id) + "\n";
   Timer timer;
   DependencyCandidate candidate;
-  while (_queue->try_pop(candidate)) {
+  while (_validation_state->keep_running()) {
+    if (!_queue->try_pop(candidate)) {
+      // stop if the queue is empty
+      break;
+    }
     Timer candidate_timer;
     std::stringstream my_out;
     my_out << "[" << _id << "] Check candidate: " << candidate << std::endl;
     const auto validate_result = _rules[candidate.type]->validate(candidate);
+    // During validation, the time budget might have been consumed.
+    // To stay fair, we discard the discovered results and stop.
+    // We do not use keep_running(), as this increases the number of performed validations,
+    // which has been done in the loop head.
+    if (!_validation_state->time_left()) break;
     if (validate_result->status == DependencyValidationStatus::Valid) {
       for (const auto& [table_name, constraints] : validate_result->constraints) {
         _add_constraints(table_name, constraints);

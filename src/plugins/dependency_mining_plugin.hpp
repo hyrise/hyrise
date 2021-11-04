@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "dependency_mining/dependency_validator.hpp"
 #include "dependency_mining/pqp_analyzer.hpp"
 #include "dependency_mining/util.hpp"
@@ -30,7 +32,8 @@ class DependencyMiningPlugin : public AbstractPlugin {
   void stop() final;
 
   constexpr static size_t NUM_VALIDATORS = 1;
-  constexpr static bool DO_VALIDATE = true;
+  constexpr static int64_t MAX_VALIDATION_CANDIDATES = -1;
+  constexpr static std::chrono::high_resolution_clock::duration MAX_VALIDATION_TIME = std::chrono::seconds{-1};
 
  protected:
   std::shared_ptr<DependencyCandidateQueue> _queue;
