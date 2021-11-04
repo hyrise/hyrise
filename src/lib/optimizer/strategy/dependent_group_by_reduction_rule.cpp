@@ -132,7 +132,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       const auto projection_node = std::make_shared<ProjectionNode>(root_output_expressions);
       lqp_insert_node(lqp_root, LQPInputSide::Left, projection_node);
     }
-    std::cout << "rewrote DGR" << std::endl;
+    // std::cout << "rewrote DGR" << std::endl;
 
     return LQPVisitation::VisitInputs;
   });
