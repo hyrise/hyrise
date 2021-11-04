@@ -10,13 +10,13 @@ def main():
     exec_path = "../scripts/benchmark_commit.sh"
 
     commits = {
-        "all_off": "7285db4980bf9aff7b61e9b7a325b37314787f2d",
-        "only_dgr": "afff5a7d2dd89618c4556ed09cf1a72244dc6483",
-        "only_jts": "4911dc1a2b4356961152965cbf630bf821ca3a07",
-        "only_join2pred": "f9447c3074f36ce6c7caa0a5f2aac10da4178fc9",
-        "only_join_elim": "e10ff4bbf9407414859da21678103c4907ff520b",
-        "all_on": "5cf066ed918015492f78dde5129c1a9e6fe48c8e",
-        "dgr_jts_join2pred": "99a294a95e1d6227c72fa87181fc21e3dee353b4",
+        "all_off": "b404a332600828bb47344470ab6b3cce3550ff6c",
+        "only_dgr": "95d90f88419b7a4a6a71c9e7bce722359f48f80c",
+        "only_jts": "cbfe249ce9eccdc4b4bc67559fb0d2e03f45c012",
+        "only_join2pred": "f89e3d04701835fa172a75c0af7e435579d5a7eb",
+        "only_join_elim": "2dc15124f1f605663ef6a9b0ffd4a461098a73d6",
+        "all_on": "d9e8c3f4f47be0c5a501f2e4125025a9bfb993a1",
+        "dgr_jts_join2pred": "9b5f88481bec252bbceb06b4680a0c7f2f94a755",
     }
 
     cached_table_dirs = ["imdb_data", "tpch_cached_tables", "tpcds_cached_tables"]
