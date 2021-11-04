@@ -458,6 +458,10 @@ set(
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
+    storage/fsst_segment.cpp
+    storage/fsst_segment.hpp
+    storage/fsst_segment/fsst_encoder.hpp
+    storage/fsst_segment/fsst_segment_iterable.hpp
     storage/index/abstract_index.cpp
     storage/index/abstract_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
@@ -654,6 +658,7 @@ set(
     LIBRARIES
     compact_vector
     lz4
+    fsst
     sqlparser
     uninitialized_vector
     zstd

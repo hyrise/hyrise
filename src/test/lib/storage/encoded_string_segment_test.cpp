@@ -325,6 +325,9 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
 
   encoded_segment = this->_encode_segment(value_segment, DataType::String, SegmentEncodingSpec{EncodingType::LZ4});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+
+  encoded_segment = this->_encode_segment(value_segment, DataType::String, SegmentEncodingSpec{EncodingType::FSST});
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 
 }  // namespace opossum

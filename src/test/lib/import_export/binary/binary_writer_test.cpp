@@ -7,6 +7,7 @@
 
 #include "base_test.hpp"
 
+#include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -40,6 +41,7 @@ auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> i
   return string;
 };
 
+// Intentionally left out FSST encoding because of non-deterministic behaviour.
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
@@ -56,6 +58,70 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, FSSTSingleChunk) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  // TODO(anyone): Cannot compare against pre-generated binary files currently because FSST creates a different
+  // symbol table in each run. Make sure BinaryWriter produces constant results across different runs.
+  auto read_table = BinaryParser::parse(filename);
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
+}
+
+TEST_F(BinaryWriterTest, FSSTNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({opossum::NULL_VALUE});
+  table->append({"test"});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  auto read_table = BinaryParser::parse(filename);
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
+}
+
+TEST_F(BinaryWriterTest, FSSTMultipleChunks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FSST});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+
+  auto read_table = BinaryParser::parse(filename);
+  EXPECT_TABLE_EQ_ORDERED(table, read_table);
 }
 
 TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {

@@ -2,6 +2,7 @@
 
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
+#include "storage/fsst_segment/fsst_segment_iterable.hpp"
 #include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -79,6 +80,11 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // LZ4Segment always gets erased as its decoding is so slow, the virtual function calls won't make
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
   return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
+}
+
+template <typename T, bool EraseSegmentType>
+auto create_iterable_from_segment(const FSSTSegment<T>& segment) {
+  return AnySegmentIterable<T>(FSSTSegmentIterable<T>(segment));
 }
 
 }  // namespace opossum

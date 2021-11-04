@@ -279,6 +279,46 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
+void BinaryWriter::_write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable,
+                                  std::ofstream& ofstream) {
+  export_value(ofstream, EncodingType::FSST);
+
+  // Write vector compression id
+  const auto compressed_vector_type_id = _compressed_vector_type_id<T>(fsst_segment);
+  export_value(ofstream, compressed_vector_type_id);
+
+  // Write compressed_values
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.compressed_values().size()));
+  export_values(ofstream, fsst_segment.compressed_values());
+
+  // Write compressed_offsets
+  _export_compressed_vector(ofstream, *fsst_segment.compressed_vector_type(), *fsst_segment.compressed_offsets());
+
+  // Write _reference_offsets
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.reference_offsets().size()));
+  export_values(ofstream, fsst_segment.reference_offsets());
+
+  if (fsst_segment.null_values()) {
+    // Write NULL values
+    export_value(ofstream, static_cast<uint32_t>(fsst_segment.null_values()->size()));
+    export_values(ofstream, *fsst_segment.null_values());
+  } else {
+    // No NULL values - simply write the size of 0
+    export_value(ofstream, uint32_t{0});
+  }
+
+  // Write number of elements in a reference bucket
+  export_value(ofstream, static_cast<uint32_t>(fsst_segment.number_elements_per_reference_bucket()));
+
+  // Write decoder
+  const auto& decoder = fsst_segment.decoder();
+  export_value(ofstream, static_cast<uint64_t>(decoder.version));
+  export_value(ofstream, decoder.zeroTerminated);
+  export_values(ofstream, std::vector(std::begin(decoder.len), std::end(decoder.len)));
+  export_values(ofstream, std::vector(std::begin(decoder.symbol), std::end(decoder.symbol)));
+}
+
+template <typename T>
 void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 

@@ -7,6 +7,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/fsst_segment.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
@@ -108,7 +109,7 @@ class BinaryWriter {
    * Dictionary Values^          | std::string                         | Sum of all string lengths
    * Vector compress. bit width¹ | uint8_t                             | 1
    * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -135,7 +136,7 @@ class BinaryWriter {
    * Dictionary Values           | char array                          | Dictionary size * FixedString length
    * Vector compress. bit width¹ | uint8_t                             | 1
    * Attribute vector values¹    | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Attribute vector values²    | uint(8|16|32)_t                     | Rows * width of attribute vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -178,7 +179,7 @@ class BinaryWriter {
    * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
    * Vector compress. bit width² | uint8_t                             | 1
    * Offset values²              | uint8_t                             | Rows * (vector compr. bit width) / 8
-   *                                                                     rounded up to next multiple of word (8 byte)
+   *                             |                                     | rounded up to next multiple of word (8 byte)
    * Offset values³              | uint(8|16|32)_t                     | Rows * width of offset vector
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -222,6 +223,37 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
+
+  /**
+   * FSSTSegments are dumped with the following layout:
+   *
+   * Description                 | Type                                | Size in bytes
+   * --------------------------------------------------------------------------------------------------------
+   * Encoding Type               | EncodingType                        | 1
+   * Attribute vector compr. ID. | CompressedVectorTypeID              | 1
+   * Compressed values size      | uint32_t                            | 4
+   * Compressed values           | vector<unsigned char>               | Compressed values size * 1
+   * Vector compress. bit width  | uint8_t                             | 1
+   * Offset values               | uint8_t                             | (Rows + 1) * (vector compr. bit width) / 8
+   *                             |                                     | rounded up to next multiple of word (8 byte)
+   * Reference offsets size      | uint32_t                            | 4
+   * Reference offsets           | vector<uint64_t>                    | 64
+   * NULL values size            | uint32_t                            | 4
+   * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
+   * # elements in a bucket      | uint32_t                            | 4
+   * Decoder version id          | uint64_t                            | 8
+   * Decoder zero terminated flag| char                                | 1
+   * Decoder symbol lengths      | vector<char>                        | 255
+   * Decoder symbols             | vector<uint64_t>                    | 2040
+   * 
+   * 
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   * ¹: This field is only written when the optional NULL values are stored
+   */
+  template <typename T>
+  static void _write_segment(const FSSTSegment<T>& fsst_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   template <typename T>
   static CompressedVectorTypeID _compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment);

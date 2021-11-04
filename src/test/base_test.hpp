@@ -101,5 +101,6 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::BitPacking},
     SegmentEncodingSpec{EncodingType::FrameOfReference},
     SegmentEncodingSpec{EncodingType::LZ4},
+    SegmentEncodingSpec{EncodingType::FSST},
     SegmentEncodingSpec{EncodingType::RunLength}};
 }  // namespace opossum

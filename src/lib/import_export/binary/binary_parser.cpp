@@ -168,6 +168,13 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FSST:
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FSST>,
+                                                hana::type_c<ColumnDataType>)) {
+        return _import_fsst_segment(file, row_count);
+      } else {
+        Fail("Unsupported data type for FSST encoding");
+      }
   }
 
   Fail("Invalid EncodingType");
@@ -238,6 +245,46 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   auto offset_values = _import_offset_value_vector(file, row_count, compressed_vector_type_id);
 
   return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
+}
+
+std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std::ifstream& file,
+                                                                            ChunkOffset row_count) {
+  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
+
+  const auto compressed_value_size = _read_value<uint32_t>(file);
+  auto compressed_values = _read_values<unsigned char>(file, compressed_value_size);
+
+  auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
+
+  const auto reference_offsets_size = _read_value<uint32_t>(file);
+  auto reference_offsets = _read_values<uint64_t>(file, reference_offsets_size);
+
+  const auto null_values_size = _read_value<uint32_t>(file);
+  std::optional<pmr_vector<bool>> null_values;
+  if (null_values_size != 0) {
+    null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
+  }
+
+  const auto number_elements_per_reference_bucket = _read_value<uint32_t>(file);
+
+  // Read decoder
+  fsst_decoder_t decoder;
+
+  const auto version = _read_value<uint64_t>(file);
+  const auto zero_terminated = _read_value<bool>(file);
+  const size_t number_elements = sizeof(decoder.len);
+  const auto lengths = _read_values<char>(file, number_elements);
+  const auto symbols = _read_values<uint64_t>(file, number_elements);
+
+  decoder.version = version;
+  decoder.zeroTerminated = zero_terminated;
+  for (auto index = size_t{0}; index < number_elements; ++index) {
+    decoder.len[index] = lengths[index];
+    decoder.symbol[index] = symbols[index];
+  }
+
+  return std::make_shared<FSSTSegment<pmr_string>>(compressed_values, offset_values, reference_offsets, null_values,
+                                                   number_elements_per_reference_bucket, decoder);
 }
 
 template <typename T>
