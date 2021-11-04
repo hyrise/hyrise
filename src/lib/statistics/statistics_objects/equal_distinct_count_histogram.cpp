@@ -85,7 +85,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     pool = std::make_unique<std::pmr::monotonic_buffer_resource>(1'048'576);
   }
 
-  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, &*pool};
+  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, pool.get()};
   if (max_load_factor) {
     // Only use non-default load factor of robin_map for cases where we have sufficient information.
     value_distribution_map.max_load_factor(*max_load_factor);
