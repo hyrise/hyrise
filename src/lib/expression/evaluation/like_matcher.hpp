@@ -36,7 +36,7 @@ class LikeMatcher {
   static size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset = 0);
   static bool contains_wildcard(const pmr_string& pattern);
 
-  explicit LikeMatcher(const pmr_string& pattern);
+  explicit LikeMatcher(const pmr_string& pattern, const size_t skip_chars_for_like = 0);
 
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
@@ -116,7 +116,8 @@ class LikeMatcher {
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
       functor([&](const auto& string) -> bool {
-        return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
+        return (std::search(string.begin() + _skip_chars_for_like, string.end(), searcher) != string.end()) ^
+               invert_results;
       });
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
@@ -151,6 +152,7 @@ class LikeMatcher {
 
  private:
   AllPatternVariant _pattern_variant;
+  size_t _skip_chars_for_like;
 };
 
 std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wildcard);

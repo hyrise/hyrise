@@ -106,47 +106,6 @@ TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
   EXPECT_EQ(*expression_c, *in_(a, list_(5)));
 }
 
-TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
-  // Test LIKE patterns where a rewrite to simple comparison is possible
-  auto expression_a = std::shared_ptr<AbstractExpression>(like_(s, "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_a);
-  EXPECT_EQ(*expression_a, *between_upper_exclusive_(s, "RED", "REE"));
-
-  auto expression_i = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_i);
-  EXPECT_EQ(*expression_i, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
-
-  auto expression_b = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_b);
-  EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
-
-  // Test LIKE patterns where a rewrite to BETWEEN UPPER EXCLUSIVE is NOT possible
-  auto expression_c = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_c);
-  EXPECT_EQ(*expression_c, *like_(s, "RED%E%"));
-
-  auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_d);
-  EXPECT_EQ(*expression_d, *like_(s, "%"));
-
-  auto expression_e = std::shared_ptr<AbstractExpression>(like_(s, "%RED"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_e);
-  EXPECT_EQ(*expression_e, *like_(s, "%RED"));
-
-  auto expression_f = std::shared_ptr<AbstractExpression>(like_(s, "R_D%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_f);
-  EXPECT_EQ(*expression_f, *like_(s, "R_D%"));
-
-  auto expression_g = std::shared_ptr<AbstractExpression>(like_(s, "RE\x7F%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_g);
-  EXPECT_EQ(*expression_g, *like_(s, "RE\x7F%"));
-
-  // Test that non-LIKE expressions remain unaltered
-  auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
-  EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
-}
-
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   const auto table_definition = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
   const auto table = Table::create_dummy_table(table_definition);
@@ -290,9 +249,8 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(a_and_b, a_and_c),
-    PredicateNode::make(like_(s, "RED%"),
-      PredicateNode::make(equals_(3, add_(4, 3)),
-        mock_node)));
+    PredicateNode::make(equals_(3, add_(4, 3)),
+      mock_node));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
@@ -300,9 +258,8 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto expected_lqp =
   PredicateNode::make(and_(a, or_(b, c)),
-    PredicateNode::make(between_upper_exclusive_(s, "RED", "REE"),
-      PredicateNode::make(equals_(3, 7),
-        mock_node)));
+    PredicateNode::make(equals_(3, 7),
+      mock_node));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

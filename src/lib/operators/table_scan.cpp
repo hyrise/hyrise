@@ -372,7 +372,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
         right_value) {
       return std::make_unique<ColumnLikeTableScanImpl>(left_input_table(), left_column_expression->column_id,
-                                                       predicate_condition, boost::get<pmr_string>(*right_value));
+                                                       predicate_condition, boost::get<pmr_string>(*right_value),
+                                                       binary_predicate_expression->skip_chars_for_like);
     }
 
     // Predicate pattern: <column of type T> <binary predicate_condition> <value of type T>

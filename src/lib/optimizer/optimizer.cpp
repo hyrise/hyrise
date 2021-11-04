@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/like_rewrite_rule.hpp"
 #include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -39,6 +40,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
+  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
+
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
@@ -58,6 +61,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
+  // Run LikeRewrites after disjunctions have been split up.
+  optimizer->add_rule(std::make_unique<LikeRewriteRule>());
 
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 

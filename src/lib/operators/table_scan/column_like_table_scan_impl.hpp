@@ -33,7 +33,8 @@ class Table;
 class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                          const PredicateCondition init_predicate_condition, const pmr_string& pattern);
+                          const PredicateCondition init_predicate_condition, const pmr_string& pattern,
+                          const size_t skip_chars_for_like);
 
   std::string description() const override;
 
