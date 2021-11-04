@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "operators/pqp_utils.hpp"
 #include "utils/timer.hpp"
+#include "gather_required_expressions.hpp"
 
 namespace opossum {
 
@@ -41,6 +42,17 @@ void PQPAnalyzer::run() {
       continue;
     }
 
+    std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
+    if constexpr (ENABLE_JOIN_TO_SEMI || ENABLE_JOIN_TO_PREDICATE || ENABLE_JOIN_ELIMINATION) {
+      // Add top-level columns that need to be included as they are the actual output
+      const auto output_expressions = lqp_root->output_expressions();
+      required_expressions_by_node[lqp_root].insert(output_expressions.cbegin(), output_expressions.cend());
+
+      std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> outputs_visited_by_node;
+      recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
+    }
+
+
     visit_pqp(pqp_root, [&](const auto& op) {
       const auto& lqp_node = op->lqp_node;
       if (!lqp_node) {
@@ -50,7 +62,7 @@ void PQPAnalyzer::run() {
 
       const auto& current_rules = _rules[lqp_node->type];
       for (const auto& rule : current_rules) {
-        auto candidates = rule->apply_to_node(lqp_node, prio);
+        auto candidates = rule->apply_to_node(lqp_node, prio, required_expressions_by_node);
         for (auto& candidate : candidates) {
           _add_if_new(candidate);
         }

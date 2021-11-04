@@ -14,7 +14,7 @@ namespace opossum {
 JoinEliminationCandidateRule::JoinEliminationCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
   if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi) {
     return {};
@@ -36,10 +36,11 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
     table_columns.emplace(table_column_id.table_name, std::move(table_column_id));
   }
+  std::cout << join_node->description() << std::endl;
 
   std::vector<DependencyCandidate> candidates;
-  auto inputs_to_visit = std::vector<std::shared_ptr<AbstractLQPNode>>{join_node->right_input()};
-  if (join_node->join_mode == JoinMode::Inner) inputs_to_visit.emplace_back(join_node->left_input());
+
+  const auto inputs_to_visit = _get_nodes_to_visit(join_node, required_expressions_by_node);
   // check for given inputs
   for (const auto& input_node : inputs_to_visit) {
     // find StoredTableNode, ensure that the table is not modified
@@ -51,8 +52,8 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
       if (abort) return LQPVisitation::DoNotVisitInputs;
       switch (node->type) {
         case LQPNodeType::StoredTable: {
-          const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
-          if (table_columns.find(stored_table_node->table_name) == table_columns.cend()) {
+          const auto& stored_table_node = static_cast<const StoredTableNode&>(*node);
+          if (table_columns.find(stored_table_node.table_name) == table_columns.cend()) {
             return LQPVisitation::DoNotVisitInputs;
           }
           if (found_input) {
@@ -60,7 +61,7 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
             return LQPVisitation::DoNotVisitInputs;
           }
           found_input = true;
-          determinant_name = stored_table_node->table_name;
+          determinant_name = stored_table_node.table_name;
         }
           return LQPVisitation::DoNotVisitInputs;
         case LQPNodeType::Validate:
@@ -81,6 +82,7 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     });
 
     if (abort || !found_input) continue;
+
     const auto& determinant = table_columns[determinant_name];
     candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{}, DependencyType::Unique, priority);
     for (const auto& [table_name, table_column] : table_columns) {

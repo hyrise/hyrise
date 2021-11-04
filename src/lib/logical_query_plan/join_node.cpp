@@ -57,11 +57,12 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
    */
 
   const auto& left_expressions = left_input()->output_expressions();
-  const auto& right_expressions = right_input()->output_expressions();
 
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
-
+  if (!output_both_inputs) return left_expressions;
+  
+  const auto& right_expressions = right_input()->output_expressions();
   auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   output_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
